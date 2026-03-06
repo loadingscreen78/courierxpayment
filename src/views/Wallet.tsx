@@ -94,51 +94,6 @@ const InvoiceStatusBadge = ({ status }: { status: InvoiceStatus }) => {
   );
 };
 
-const PaymentMethodButton = ({ 
-  method, 
-  icon: Icon, 
-  label,
-  description,
-  selected, 
-  onClick 
-}: { 
-  method: PaymentMethod; 
-  icon: React.ElementType; 
-  label: string;
-  description: string;
-  selected: boolean; 
-  onClick: () => void;
-}) => (
-  <button
-    onClick={onClick}
-    className={cn(
-      "flex items-center gap-3 p-3.5 rounded-2xl border-2 transition-all duration-200 text-left w-full",
-      selected 
-        ? "border-coke-red bg-coke-red/5 shadow-sm shadow-coke-red/10" 
-        : "border-border/60 hover:border-border bg-muted/30 hover:bg-muted/50"
-    )}
-  >
-    <div className={cn(
-      "p-2.5 rounded-xl shrink-0 transition-colors",
-      selected ? "bg-coke-red/15 text-coke-red" : "bg-muted text-muted-foreground"
-    )}>
-      <Icon className="h-5 w-5" />
-    </div>
-    <div className="flex-1 min-w-0">
-      <p className={cn("font-semibold text-sm", selected ? "text-foreground" : "text-muted-foreground")}>
-        {label}
-      </p>
-      <p className="text-xs text-muted-foreground mt-0.5">{description}</p>
-    </div>
-    <div className={cn(
-      "w-4 h-4 rounded-full border-2 shrink-0 transition-all",
-      selected ? "border-coke-red bg-coke-red" : "border-muted-foreground/30"
-    )}>
-      {selected && <div className="w-full h-full rounded-full bg-white scale-[0.4]" />}
-    </div>
-  </button>
-);
-
 const WalletPage = () => {
   const { 
     balance, 
@@ -479,37 +434,37 @@ const WalletPage = () => {
 
       {/* Add Money Dialog */}
       <Dialog open={showRechargeDialog} onOpenChange={setShowRechargeDialog}>
-        <DialogContent className="sm:max-w-sm rounded-3xl p-0 overflow-hidden gap-0">
+        <DialogContent className="w-[calc(100vw-2rem)] max-w-sm rounded-3xl p-0 overflow-hidden gap-0 max-h-[90vh] flex flex-col">
           {/* Dialog Header */}
-          <div className="bg-gradient-to-br from-[#1a1a1a] to-[#2d1010] p-6 text-white">
+          <div className="bg-gradient-to-br from-[#1a1a1a] to-[#2d1010] px-5 py-5 text-white shrink-0">
             <DialogHeader>
-              <DialogTitle className="font-typewriter text-xl text-white">Add Money</DialogTitle>
-              <DialogDescription className="text-white/50 text-sm mt-1">
-                Min. ₹{MIN_RECHARGE_AMOUNT} · Secure payment via Razorpay
+              <DialogTitle className="font-typewriter text-lg text-white">Add Money</DialogTitle>
+              <DialogDescription className="text-white/50 text-xs mt-0.5">
+                Min. ₹{MIN_RECHARGE_AMOUNT} · Secured by Razorpay
               </DialogDescription>
             </DialogHeader>
             {rechargeAmount && parseInt(rechargeAmount) >= MIN_RECHARGE_AMOUNT && (
               <motion.p
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
-                className="font-typewriter text-3xl font-bold mt-4"
+                className="font-typewriter text-2xl font-bold mt-3"
               >
                 ₹{parseInt(rechargeAmount).toLocaleString('en-IN')}
               </motion.p>
             )}
           </div>
 
-          <div className="p-5 space-y-5">
+          <div className="p-4 space-y-4 overflow-y-auto flex-1">
             {/* Quick Amounts */}
             <div>
-              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2.5">Quick Select</p>
+              <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">Quick Select</p>
               <div className="grid grid-cols-4 gap-2">
                 {quickRechargeAmounts.map((amount) => (
                   <button
                     key={amount}
                     onClick={() => setRechargeAmount(amount.toString())}
                     className={cn(
-                      "py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 border",
+                      "py-2 rounded-xl text-sm font-semibold transition-all duration-200 border",
                       rechargeAmount === amount.toString()
                         ? "bg-foreground text-background border-foreground shadow-sm"
                         : "bg-muted/50 border-border/50 text-muted-foreground hover:bg-muted hover:text-foreground"
@@ -523,7 +478,7 @@ const WalletPage = () => {
 
             {/* Custom Amount */}
             <div>
-              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2.5">Custom Amount</p>
+              <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">Custom Amount</p>
               <div className="relative">
                 <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground font-medium text-sm">₹</span>
                 <Input
@@ -531,7 +486,7 @@ const WalletPage = () => {
                   placeholder="Enter amount"
                   value={rechargeAmount}
                   onChange={(e) => setRechargeAmount(e.target.value)}
-                  className="pl-8 font-typewriter rounded-xl h-11 border-border/60 focus:border-coke-red"
+                  className="pl-8 font-typewriter rounded-xl h-10 border-border/60 focus:border-coke-red"
                   min={MIN_RECHARGE_AMOUNT}
                 />
               </div>
@@ -539,42 +494,53 @@ const WalletPage = () => {
 
             {/* Payment Method */}
             <div>
-              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2.5">Payment Method</p>
+              <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">Payment Method</p>
               <div className="space-y-2">
-                <PaymentMethodButton
-                  method="upi"
-                  icon={Smartphone}
-                  label="UPI"
-                  description="GPay, PhonePe, Paytm & more"
-                  selected={selectedPaymentMethod === 'upi'}
-                  onClick={() => setSelectedPaymentMethod('upi')}
-                />
-                <PaymentMethodButton
-                  method="card"
-                  icon={CreditCard}
-                  label="Debit / Credit Card"
-                  description="Visa, Mastercard, RuPay"
-                  selected={selectedPaymentMethod === 'card'}
-                  onClick={() => setSelectedPaymentMethod('card')}
-                />
-                <PaymentMethodButton
-                  method="netbanking"
-                  icon={Building2}
-                  label="Net Banking"
-                  description="All major Indian banks"
-                  selected={selectedPaymentMethod === 'netbanking'}
-                  onClick={() => setSelectedPaymentMethod('netbanking')}
-                />
+                {[
+                  { method: 'upi' as PaymentMethod, icon: Smartphone, label: 'UPI', description: 'GPay, PhonePe, Paytm' },
+                  { method: 'card' as PaymentMethod, icon: CreditCard, label: 'Card', description: 'Visa, Mastercard, RuPay' },
+                  { method: 'netbanking' as PaymentMethod, icon: Building2, label: 'Net Banking', description: 'All major banks' },
+                ].map(({ method, icon: Icon, label, description }) => (
+                  <button
+                    key={method}
+                    onClick={() => setSelectedPaymentMethod(method)}
+                    className={cn(
+                      "w-full flex items-center gap-3 p-3 rounded-2xl border-2 transition-all duration-200 text-left",
+                      selectedPaymentMethod === method
+                        ? "border-coke-red bg-coke-red/5"
+                        : "border-border/60 bg-muted/30 hover:border-border"
+                    )}
+                  >
+                    <div className={cn(
+                      "p-2 rounded-xl shrink-0 transition-colors",
+                      selectedPaymentMethod === method ? "bg-coke-red/15 text-coke-red" : "bg-muted text-muted-foreground"
+                    )}>
+                      <Icon className="h-4 w-4" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className={cn("font-semibold text-sm", selectedPaymentMethod === method ? "text-foreground" : "text-muted-foreground")}>
+                        {label}
+                      </p>
+                      <p className="text-xs text-muted-foreground truncate">{description}</p>
+                    </div>
+                    <div className={cn(
+                      "w-4 h-4 rounded-full border-2 shrink-0 flex items-center justify-center transition-all",
+                      selectedPaymentMethod === method ? "border-coke-red bg-coke-red" : "border-muted-foreground/30"
+                    )}>
+                      {selectedPaymentMethod === method && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+                    </div>
+                  </button>
+                ))}
               </div>
             </div>
 
             <button
               onClick={handleRecharge}
               disabled={!rechargeAmount || parseInt(rechargeAmount) < MIN_RECHARGE_AMOUNT}
-              className="w-full flex items-center justify-center gap-2 py-3.5 bg-coke-red hover:bg-red-600 disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-2xl font-semibold text-sm transition-all duration-200 shadow-md shadow-coke-red/25 hover:shadow-coke-red/40"
+              className="w-full flex items-center justify-center gap-2 py-3 bg-coke-red hover:bg-red-600 disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-2xl font-semibold text-sm transition-all duration-200 shadow-md shadow-coke-red/25"
             >
-              <Shield className="h-4 w-4" />
-              Pay Securely
+              <Shield className="h-4 w-4 shrink-0" />
+              <span>Pay Securely</span>
               {rechargeAmount && parseInt(rechargeAmount) >= MIN_RECHARGE_AMOUNT && (
                 <span className="font-typewriter">· ₹{parseInt(rechargeAmount).toLocaleString('en-IN')}</span>
               )}
