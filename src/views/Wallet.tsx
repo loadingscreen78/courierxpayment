@@ -14,12 +14,9 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from '@/components/ui/dialog';
+  Sheet,
+  SheetContent,
+} from '@/components/ui/sheet';
 import {
   Wallet as WalletIcon,
   Plus,
@@ -432,17 +429,21 @@ const WalletPage = () => {
         </Tabs>
       </div>
 
-      {/* Add Money Dialog */}
-      <Dialog open={showRechargeDialog} onOpenChange={setShowRechargeDialog}>
-        <DialogContent className="w-[calc(100vw-2rem)] max-w-sm rounded-3xl p-0 overflow-hidden gap-0 max-h-[90vh] flex flex-col">
-          {/* Dialog Header */}
+      {/* Add Money Sheet */}
+      <Sheet open={showRechargeDialog} onOpenChange={setShowRechargeDialog}>
+        <SheetContent
+          side="bottom"
+          className="p-0 rounded-t-3xl overflow-hidden border-0 max-h-[92vh] flex flex-col sm:max-w-sm sm:mx-auto sm:rounded-3xl sm:bottom-auto sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 sm:inset-x-auto sm:inset-y-auto [&>button]:hidden"
+        >
+          {/* Drag handle (mobile) */}
+          <div className="flex justify-center pt-3 pb-1 shrink-0 sm:hidden">
+            <div className="w-10 h-1 rounded-full bg-muted-foreground/20" />
+          </div>
+
+          {/* Sheet Header */}
           <div className="bg-gradient-to-br from-[#1a1a1a] to-[#2d1010] px-5 py-5 text-white shrink-0">
-            <DialogHeader>
-              <DialogTitle className="font-typewriter text-lg text-white">Add Money</DialogTitle>
-              <DialogDescription className="text-white/50 text-xs mt-0.5">
-                Min. ₹{MIN_RECHARGE_AMOUNT} · Secured by Razorpay
-              </DialogDescription>
-            </DialogHeader>
+            <p className="font-typewriter text-lg font-bold text-white">Add Money</p>
+            <p className="text-white/50 text-xs mt-0.5">Min. ₹{MIN_RECHARGE_AMOUNT} · Secured by Razorpay</p>
             {rechargeAmount && parseInt(rechargeAmount) >= MIN_RECHARGE_AMOUNT && (
               <motion.p
                 initial={{ opacity: 0, scale: 0.9 }}
@@ -546,8 +547,8 @@ const WalletPage = () => {
               )}
             </button>
           </div>
-        </DialogContent>
-      </Dialog>
+        </SheetContent>
+      </Sheet>
 
       {/* Payment Loading Overlay */}
       <PaymentLoadingOverlay
