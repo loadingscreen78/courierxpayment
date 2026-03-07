@@ -31,6 +31,8 @@ interface AuthContextType {
   signInWithOtp: (phone: string) => Promise<{ error: Error | null }>;
   verifyOtp: (phone: string, token: string) => Promise<{ error: Error | null }>;
   signInWithGoogle: (idToken: string) => Promise<{ error: Error | null }>;
+  sendWhatsAppOtp: (phone: string) => Promise<{ error: Error | null }>;
+  verifyWhatsAppOtp: (phone: string, code: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
   updateProfile: (updates: Partial<Profile>) => Promise<{ error: Error | null }>;
   completeAadhaarKyc: (aadhaarNumber: string, otp: string) => Promise<{ error: Error | null; address?: string }>;
@@ -167,6 +169,65 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  /** Send WhatsApp OTP via Twilio Verify */
+  const sendWhatsAppOtp = async (phone: string): Promise<{ error: Error | null }> => {
+    try {
+      const res = await fetch('/api/auth/whatsapp/send-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        return { error: new Error(data.error || 'Failed to send WhatsApp OTP') };
+      }
+      return { error: null };
+    } catch (err) {
+      return { error: err as Error };
+    }
+  };
+
+  /** Verify WhatsApp OTP via Twilio Verify, then sign into Supabase */
+  const verifyWhatsAppOtp = async (phone: string, code: string): Promise<{ error: Error | null }> => {
+    try {
+      const res = await fetch('/api/auth/whatsapp/verify-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone, code }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        return { error: new Error(data.error || 'WhatsApp OTP verification failed') };
+      }
+
+      // If we got an action link, use it to sign in via Supabase
+      if (data.actionLink) {
+        // Extract token from the magic link and verify it
+        const url = new URL(data.actionLink);
+        const token_hash = url.searchParams.get('token') || url.hash?.replace('#', '');
+        if (token_hash) {
+          const { error } = await supabase.auth.verifyOtp({
+            type: 'magiclink',
+            token_hash,
+          });
+          if (error) {
+            // Fallback: try phone OTP sign-in
+            const { error: phoneErr } = await supabase.auth.signInWithOtp({ phone });
+            if (phoneErr) return { error: phoneErr as Error };
+          }
+        }
+      } else {
+        // Fallback: use Supabase phone OTP to create session
+        const { error: otpErr } = await supabase.auth.signInWithOtp({ phone });
+        if (otpErr) return { error: otpErr as Error };
+      }
+
+      return { error: null };
+    } catch (err) {
+      return { error: err as Error };
+    }
+  };
+
   const signOut = async () => {
       try {
         if (typeof google !== 'undefined' && google.accounts?.id) {
@@ -245,6 +306,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       signInWithOtp,
       verifyOtp,
       signInWithGoogle,
+      sendWhatsAppOtp,
+      verifyWhatsAppOtp,
       signOut,
       updateProfile,
       completeAadhaarKyc,

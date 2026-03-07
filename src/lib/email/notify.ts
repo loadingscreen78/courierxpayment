@@ -43,3 +43,50 @@ export async function sendStatusNotification(
     console.error('[Notify] Status email request failed:', err);
   }
 }
+
+
+/**
+ * Sends a WhatsApp status notification (fire-and-forget).
+ */
+export async function sendWhatsAppStatusNotification(
+  shipmentId: string,
+  status: string
+): Promise<void> {
+  try {
+    const res = await fetch('/api/whatsapp/send-status-update', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ shipmentId, status }),
+    });
+
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      console.error('[Notify] WhatsApp status failed:', data.error || res.statusText);
+    }
+  } catch (err) {
+    console.error('[Notify] WhatsApp status request failed:', err);
+  }
+}
+
+/**
+ * Sends a WhatsApp invoice notification (fire-and-forget).
+ */
+export async function sendWhatsAppInvoiceNotification(
+  shipmentId: string,
+  invoiceId: string
+): Promise<void> {
+  try {
+    const res = await fetch('/api/whatsapp/send-invoice', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ shipmentId, invoiceId }),
+    });
+
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      console.error('[Notify] WhatsApp invoice failed:', data.error || res.statusText);
+    }
+  } catch (err) {
+    console.error('[Notify] WhatsApp invoice request failed:', err);
+  }
+}

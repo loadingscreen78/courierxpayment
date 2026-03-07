@@ -110,7 +110,7 @@ async function cxbcDualLookup(userId: string, userEmail: string | undefined) {
 const Auth = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { user, signInWithEmail, signUpWithEmail, signInWithOtp, verifyOtp, signInWithGoogle } = useAuth();
+  const { user, signInWithEmail, signUpWithEmail, signInWithOtp, verifyOtp, signInWithGoogle, sendWhatsAppOtp, verifyWhatsAppOtp } = useAuth();
   const { toast } = useToast();
   
   const [step, setStep] = useState<AuthStep>('panel-select');
@@ -427,17 +427,19 @@ const Auth = () => {
 
   const handleSendOtp = async (values: PhoneFormValues) => {
     setIsLoading(true);
-    const { error } = await signInWithOtp(values.phone);
+    const { error } = await sendWhatsAppOtp(values.phone);
     setIsLoading(false);
     if (error) { toast({ title: 'Error', description: error.message, variant: 'destructive' }); return; }
     setPhoneNumber(values.phone);
     setStep('otp');
-    toast({ title: 'OTP Sent', description: `Code sent to ${values.phone}` });
+    toast({ title: 'OTP Sent', description: `Code sent to ${values.phone} via WhatsApp` });
   };
 
   const handleVerifyOtp = async (values: OtpFormValues) => {
     setIsLoading(true);
-    const { error } = await verifyOtp(phoneNumber, values.otp);
+    const { error } = method === 'whatsapp'
+      ? await verifyWhatsAppOtp(phoneNumber, values.otp)
+      : await verifyOtp(phoneNumber, values.otp);
     setIsLoading(false);
     if (error) { toast({ title: 'Failed', description: error.message, variant: 'destructive' }); return; }
     toast({ title: 'Welcome!', description: 'Signed in.' });
@@ -445,7 +447,9 @@ const Auth = () => {
 
   const handleResendOtp = async () => {
     setIsLoading(true);
-    const { error } = await signInWithOtp(phoneNumber);
+    const { error } = method === 'whatsapp'
+      ? await sendWhatsAppOtp(phoneNumber)
+      : await signInWithOtp(phoneNumber);
     setIsLoading(false);
     if (error) { toast({ title: 'Error', description: 'Failed to resend.', variant: 'destructive' }); return; }
     toast({ title: 'OTP Resent', description: `New code sent to ${phoneNumber}` });

@@ -1,5 +1,6 @@
 import { ShipmentRow, ShipmentStatus, ShipmentLeg } from './types';
 import { getServiceRoleClient } from './supabaseAdmin';
+import { dispatchStatusWhatsApp } from '@/lib/whatsapp/dispatcher';
 
 const WAREHOUSE_ADDRESS = process.env.WAREHOUSE_ADDRESS ?? 'CourierX Warehouse';
 
@@ -36,6 +37,11 @@ export async function handleStatusChange(
         `Recipient: ${shipment.recipient_name}, Phone: ${shipment.recipient_phone}`
       );
 
+      // Send WhatsApp notification (fire-and-forget)
+      dispatchStatusWhatsApp(shipment.id, newStatus).catch((err) => {
+        console.error('[statusHandler] WhatsApp notification failed:', err);
+      });
+
       const supabase = getServiceRoleClient();
       await supabase
         .from('shipments')
@@ -49,4 +55,9 @@ export async function handleStatusChange(
   // INTL_DELIVERED → COMPLETED leg transition is now handled automatically
   // by the state machine (auto-sets current_leg = 'COMPLETED' when
   // transitioning to INTL_DELIVERED), so no side-effect needed here.
+
+  // Send WhatsApp notification for all meaningful status changes (fire-and-forget)
+  dispatchStatusWhatsApp(shipment.id, newStatus).catch((err) => {
+    console.error('[statusHandler] WhatsApp notification failed:', err);
+  });
 }
