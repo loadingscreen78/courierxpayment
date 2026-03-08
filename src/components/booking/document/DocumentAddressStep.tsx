@@ -54,11 +54,15 @@ const DocumentAddressStepComponent = ({ data, onUpdate }: DocumentAddressStepPro
     ? CITIES_BY_STATE[localPickupAddress.state] || []
     : [];
 
-  const handleBlur = useCallback(() => {
-    onUpdate({
-      pickupAddress: localPickupAddress,
-      consigneeAddress: localConsigneeAddress
-    });
+  const handleBlur = useCallback((e: React.FocusEvent) => {
+    // Only sync when leaving the entire address section, not when moving between inputs
+    const relatedTarget = e.relatedTarget as HTMLElement;
+    if (!relatedTarget || !e.currentTarget.contains(relatedTarget)) {
+      onUpdate({
+        pickupAddress: localPickupAddress,
+        consigneeAddress: localConsigneeAddress
+      });
+    }
   }, [localPickupAddress, localConsigneeAddress, onUpdate]);
 
   const updatePickupAddress = useCallback((field: string, value: string) => {
