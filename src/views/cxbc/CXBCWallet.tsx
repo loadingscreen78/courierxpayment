@@ -232,7 +232,7 @@ export default function CXBCWallet() {
 
   return (
     <CXBCLayout title="Wallet" subtitle="Manage your wallet balance and transactions">
-      <div className="space-y-6">
+      <div className="max-w-4xl mx-auto space-y-6">
         {/* Balance Card */}
         <Card className="bg-gradient-to-br from-primary to-primary/80 text-primary-foreground">
           <CardContent className="p-6">
