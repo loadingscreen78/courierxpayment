@@ -35,7 +35,7 @@ function ledgerEntryToTransaction(entry: LedgerEntry): Transaction {
 interface WalletContextType {
   balance: number;
   transactions: Transaction[];
-  addFunds: (amount: number, description?: string) => void;
+  addFunds: (amount: number, description?: string) => Promise<{ success: boolean; receipt?: Receipt; error?: string }>;
   deductFunds: (amount: number, description?: string) => boolean;
   addRefund: (amount: number, description: string, referenceId?: string) => void;
   hasMinimumBalance: (requiredAmount?: number) => boolean;
@@ -62,8 +62,8 @@ export const WalletProvider = ({ children }: { children: ReactNode }) => {
   const wallet = useWalletLedger();
   const transactions: Transaction[] = wallet.transactions.map(ledgerEntryToTransaction);
   
-  const addFunds = (amount: number) => {
-    wallet.addFunds(amount, 'upi');
+  const addFunds = async (amount: number) => {
+    return wallet.addFunds(amount, 'upi');
   };
   
   const deductFunds = (amount: number, description?: string): boolean => {

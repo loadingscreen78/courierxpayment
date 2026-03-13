@@ -23,19 +23,32 @@ export const WalletBalanceCheck = ({ totalAmount, onProceed }: WalletBalanceChec
   const [showRechargeDialog, setShowRechargeDialog] = useState(false);
   const [rechargeAmount, setRechargeAmount] = useState('');
 
+  const [isRecharging, setIsRecharging] = useState(false);
+
   const canProceed = hasMinimumBalance(totalAmount);
   const shortfall = Math.max(0, totalAmount - balance, MIN_BALANCE_REQUIRED - balance);
 
-  const handleRecharge = () => {
+  const handleRecharge = async () => {
     const amount = parseInt(rechargeAmount);
     if (isNaN(amount) || amount < 500) {
       toast.error('Minimum recharge amount is ₹500');
       return;
     }
-    addFunds(amount);
-    toast.success(`₹${amount.toLocaleString('en-IN')} added to wallet`);
     setShowRechargeDialog(false);
-    setRechargeAmount('');
+    setIsRecharging(true);
+    try {
+      const result = await addFunds(amount);
+      if (result.success) {
+        toast.success(`₹${amount.toLocaleString('en-IN')} added to wallet`);
+      } else if (result.error) {
+        toast.error(result.error);
+      }
+    } catch {
+      toast.error('Payment failed');
+    } finally {
+      setIsRecharging(false);
+      setRechargeAmount('');
+    }
   };
 
   const quickRechargeAmounts = [500, 1000, 2000, 5000];
@@ -147,8 +160,8 @@ export const WalletBalanceCheck = ({ totalAmount, onProceed }: WalletBalanceChec
                 min={500}
               />
             </div>
-            <Button onClick={handleRecharge} className="w-full" disabled={!rechargeAmount}>
-              Add ₹{rechargeAmount || '0'} to Wallet
+            <Button onClick={handleRecharge} className="w-full" disabled={!rechargeAmount || isRecharging}>
+              {isRecharging ? 'Processing...' : `Add ₹${rechargeAmount || '0'} to Wallet`}
             </Button>
           </div>
         </DialogContent>
