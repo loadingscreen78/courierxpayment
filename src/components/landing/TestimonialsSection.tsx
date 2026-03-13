@@ -230,7 +230,7 @@ export const TestimonialsSection = () => {
         </AnimatedSection>
 
         {/* 3D Marquee Testimonials */}
-        <div className="border border-border rounded-2xl relative flex h-[420px] w-full max-w-[900px] mx-auto flex-row items-center justify-center overflow-hidden gap-1.5 [perspective:300px] mb-20">
+        <div className="relative flex h-[420px] w-full max-w-[900px] mx-auto flex-row items-center justify-center overflow-hidden gap-1.5 [perspective:300px] mb-20">
           <div
             className="flex flex-row items-center gap-4"
             style={{
@@ -260,10 +260,10 @@ export const TestimonialsSection = () => {
             </Marquee>
 
             {/* Gradient overlays */}
-            <div className="pointer-events-none absolute inset-x-0 top-0 h-1/4 bg-gradient-to-b from-muted/30"></div>
-            <div className="pointer-events-none absolute inset-x-0 bottom-0 h-1/4 bg-gradient-to-t from-muted/30"></div>
-            <div className="pointer-events-none absolute inset-y-0 left-0 w-1/4 bg-gradient-to-r from-muted/30"></div>
-            <div className="pointer-events-none absolute inset-y-0 right-0 w-1/4 bg-gradient-to-l from-muted/30"></div>
+            <div className="pointer-events-none absolute inset-x-0 top-0 h-1/3 bg-gradient-to-b from-background/80 to-transparent z-10"></div>
+            <div className="pointer-events-none absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-background/80 to-transparent z-10"></div>
+            <div className="pointer-events-none absolute inset-y-0 left-0 w-1/3 bg-gradient-to-r from-background/80 to-transparent z-10"></div>
+            <div className="pointer-events-none absolute inset-y-0 right-0 w-1/3 bg-gradient-to-l from-background/80 to-transparent z-10"></div>
           </div>
         </div>
 
