@@ -50,7 +50,7 @@ interface Coupon {
 const emptyCoupon = {
   code: '',
   description: '',
-  discount_type: 'percentage' as const,
+  discount_type: 'percentage' as 'percentage' | 'fixed',
   discount_value: '',
   min_recharge_amount: '500',
   max_discount: '',
