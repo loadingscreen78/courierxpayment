@@ -6,3 +6,4 @@ export { default as OutboundManifest } from './OutboundManifest';
 export { default as AllShipments } from './AllShipments';
 export { RoleManagement } from './RoleManagement';
 export { default as CXBCPartnerManagement } from './CXBCPartnerManagement';
+export { CouponManagement } from './CouponManagement';

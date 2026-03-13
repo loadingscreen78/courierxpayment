@@ -46,7 +46,7 @@ interface WalletContextType {
   isPaymentProcessing: boolean;
   paymentStatus: PaymentStatus;
   paymentMessage: string;
-  addFundsWithPayment: (amount: number, method: PaymentMethod) => Promise<{ success: boolean; receipt?: Receipt; error?: string }>;
+  addFundsWithPayment: (amount: number, method: PaymentMethod, couponCode?: string) => Promise<{ success: boolean; receipt?: Receipt; error?: string; bonusAmount?: number }>;
   deductFundsForShipment: (amount: number, shipmentId: string, description?: string) => Promise<{ success: boolean; error?: string }>;
   processRefund: (amount: number, shipmentId: string, description?: string) => Promise<{ success: boolean; error?: string }>;
   refreshBalance: () => Promise<void>;

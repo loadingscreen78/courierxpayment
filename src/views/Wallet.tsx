@@ -8,6 +8,7 @@ import { useInvoices } from '@/hooks/useInvoices';
 import { generateInvoicePDF, generateAllInvoicesPDF } from '@/lib/generateInvoicePDF';
 import { PaymentLoadingOverlay } from '@/components/wallet/PaymentLoadingOverlay';
 import { PaymentMethod } from '@/lib/wallet/types';
+import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -37,6 +38,9 @@ import {
   ChevronRight,
   Shield,
   Info,
+  Tag,
+  Check,
+  X,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { Database } from '@/integrations/supabase/types';
@@ -109,6 +113,52 @@ const WalletPage = () => {
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<PaymentMethod>('upi');
   const [filter, setFilter] = useState<FilterType>('all');
   const [activeTab, setActiveTab] = useState('transactions');
+  const [couponCode, setCouponCode] = useState('');
+  const [couponLoading, setCouponLoading] = useState(false);
+  const [couponResult, setCouponResult] = useState<{
+    valid: boolean;
+    bonusAmount?: number;
+    discountType?: string;
+    discountValue?: number;
+    error?: string;
+  } | null>(null);
+
+  const handleApplyCoupon = async () => {
+    if (!couponCode.trim()) return;
+    const amount = parseInt(rechargeAmount);
+    if (isNaN(amount) || amount < MIN_RECHARGE_AMOUNT) {
+      toast.error(`Enter an amount of at least ₹${MIN_RECHARGE_AMOUNT} first`);
+      return;
+    }
+    setCouponLoading(true);
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData?.session?.access_token;
+      const res = await fetch('/api/coupons/validate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ code: couponCode.trim(), amount }),
+      });
+      const data = await res.json();
+      if (data.valid) {
+        setCouponResult({ valid: true, bonusAmount: data.bonusAmount, discountType: data.discountType, discountValue: data.discountValue });
+      } else {
+        setCouponResult({ valid: false, error: data.error || 'Invalid coupon' });
+      }
+    } catch {
+      setCouponResult({ valid: false, error: 'Failed to validate coupon' });
+    } finally {
+      setCouponLoading(false);
+    }
+  };
+
+  const handleRemoveCoupon = () => {
+    setCouponCode('');
+    setCouponResult(null);
+  };
 
   const handleRecharge = async () => {
     const amount = parseInt(rechargeAmount);
@@ -116,12 +166,16 @@ const WalletPage = () => {
       toast.error(`Minimum recharge amount is ₹${MIN_RECHARGE_AMOUNT}`);
       return;
     }
+    const appliedCoupon = couponResult?.valid ? couponCode.trim() : undefined;
     setShowRechargeDialog(false);
-    const result = await addFundsWithPayment(amount, selectedPaymentMethod);
+    const result = await addFundsWithPayment(amount, selectedPaymentMethod, appliedCoupon);
     if (result.success && result.receipt) {
+      const bonusMsg = result.bonusAmount && result.bonusAmount > 0
+        ? ` + ₹${result.bonusAmount.toLocaleString('en-IN')} bonus`
+        : '';
       toast.success(
         <div className="flex flex-col gap-1">
-          <span>₹{amount.toLocaleString('en-IN')} added to wallet</span>
+          <span>₹{amount.toLocaleString('en-IN')} added to wallet{bonusMsg}</span>
           <button 
             onClick={() => downloadTransactionReceipt(result.receipt!.ledgerEntryId)}
             className="text-xs text-primary underline text-left"
@@ -134,6 +188,8 @@ const WalletPage = () => {
       toast.error(result.error || 'Payment failed');
     }
     setRechargeAmount('');
+    setCouponCode('');
+    setCouponResult(null);
   };
 
   const quickRechargeAmounts = [500, 1000, 2000, 5000];
@@ -486,11 +542,53 @@ const WalletPage = () => {
                   type="number"
                   placeholder="Enter amount"
                   value={rechargeAmount}
-                  onChange={(e) => setRechargeAmount(e.target.value)}
+                  onChange={(e) => { setRechargeAmount(e.target.value); setCouponResult(null); }}
                   className="pl-8 font-typewriter rounded-xl h-10 border-border/60 focus:border-coke-red"
                   min={MIN_RECHARGE_AMOUNT}
                 />
               </div>
+            </div>
+
+            {/* Coupon Code */}
+            <div>
+              <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">Promo Code</p>
+              {couponResult?.valid ? (
+                <div className="flex items-center gap-2 p-3 rounded-2xl border-2 border-green-500/40 bg-green-500/5">
+                  <div className="p-1.5 rounded-lg bg-green-500/15">
+                    <Check className="h-3.5 w-3.5 text-green-600" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-green-700 dark:text-green-400">{couponCode.toUpperCase()}</p>
+                    <p className="text-xs text-green-600/80">+₹{couponResult.bonusAmount?.toLocaleString('en-IN')} bonus will be credited</p>
+                  </div>
+                  <button onClick={handleRemoveCoupon} className="p-1 rounded-lg hover:bg-muted transition-colors">
+                    <X className="h-4 w-4 text-muted-foreground" />
+                  </button>
+                </div>
+              ) : (
+                <div className="flex gap-2">
+                  <div className="relative flex-1">
+                    <Tag className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                    <Input
+                      type="text"
+                      placeholder="Enter coupon code"
+                      value={couponCode}
+                      onChange={(e) => { setCouponCode(e.target.value.toUpperCase()); setCouponResult(null); }}
+                      className="pl-9 font-typewriter rounded-xl h-10 border-border/60 focus:border-coke-red uppercase"
+                    />
+                  </div>
+                  <button
+                    onClick={handleApplyCoupon}
+                    disabled={!couponCode.trim() || couponLoading}
+                    className="px-4 h-10 rounded-xl bg-foreground text-background text-sm font-semibold disabled:opacity-40 transition-all shrink-0"
+                  >
+                    {couponLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Apply'}
+                  </button>
+                </div>
+              )}
+              {couponResult && !couponResult.valid && (
+                <p className="text-xs text-red-500 mt-1.5 ml-1">{couponResult.error}</p>
+              )}
             </div>
 
             {/* Payment Method */}
@@ -543,7 +641,10 @@ const WalletPage = () => {
               <Shield className="h-4 w-4 shrink-0" />
               <span>Pay Securely</span>
               {rechargeAmount && parseInt(rechargeAmount) >= MIN_RECHARGE_AMOUNT && (
-                <span className="font-typewriter">· ₹{parseInt(rechargeAmount).toLocaleString('en-IN')}</span>
+                <span className="font-typewriter">
+                  · ₹{parseInt(rechargeAmount).toLocaleString('en-IN')}
+                  {couponResult?.valid && couponResult.bonusAmount ? ` + ₹${couponResult.bonusAmount.toLocaleString('en-IN')} bonus` : ''}
+                </span>
               )}
             </button>
           </div>

@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { razorpay_payment_id, razorpay_order_id, razorpay_signature } =
+    const { razorpay_payment_id, razorpay_order_id, razorpay_signature, couponCode } =
       await request.json();
 
     if (!razorpay_payment_id || !razorpay_order_id || !razorpay_signature) {
@@ -127,11 +127,69 @@ export async function POST(request: NextRequest) {
       })
       .eq('id', ledgerEntryId);
 
+    // Apply coupon bonus if coupon was used
+    let bonusAmount = 0;
+    let bonusLedgerEntryId: string | null = null;
+    if (couponCode) {
+      const { data: validation, error: valError } = await supabase.rpc('validate_coupon', {
+        p_code: couponCode,
+        p_user_id: user.id,
+        p_amount: amountInRupees,
+      });
+
+      if (!valError && validation?.[0]?.is_valid) {
+        bonusAmount = Number(validation[0].bonus_amount);
+        const couponId = validation[0].coupon_id;
+
+        // Credit bonus to wallet
+        const bonusIdempotencyKey = `bonus_${razorpay_payment_id}`;
+        const { data: bonusEntryId, error: bonusError } = await supabase.rpc(
+          'add_wallet_funds',
+          {
+            p_user_id: user.id,
+            p_amount: bonusAmount,
+            p_description: `Coupon bonus (${couponCode.toUpperCase()})`,
+            p_reference_id: razorpay_payment_id,
+            p_idempotency_key: bonusIdempotencyKey,
+          },
+        );
+
+        if (!bonusError && bonusEntryId) {
+          bonusLedgerEntryId = bonusEntryId;
+
+          // Update bonus ledger entry metadata
+          await supabase
+            .from('wallet_ledger')
+            .update({
+              metadata: {
+                coupon_code: couponCode.toUpperCase(),
+                coupon_id: couponId,
+                razorpay_payment_id,
+                type: 'coupon_bonus',
+              },
+            })
+            .eq('id', bonusEntryId);
+
+          // Record coupon usage
+          await supabase.from('coupon_usage').insert({
+            coupon_id: couponId,
+            user_id: user.id,
+            recharge_amount: amountInRupees,
+            bonus_amount: bonusAmount,
+            razorpay_order_id,
+            ledger_entry_id: bonusEntryId,
+          });
+        }
+      }
+    }
+
     return NextResponse.json({
       success: true,
       ledgerEntryId,
       amount: amountInRupees,
       paymentMethod,
+      bonusAmount,
+      bonusLedgerEntryId,
     });
   } catch (error) {
     console.error('[razorpay/verify] Unexpected error:', error);

@@ -24,6 +24,8 @@ export interface VerifyPaymentResponse {
   ledgerEntryId: string;
   amount: number;         // in rupees
   paymentMethod: string;  // "upi" | "card" | "netbanking"
+  bonusAmount?: number;   // coupon bonus in rupees
+  bonusLedgerEntryId?: string;
 }
 
 export interface ErrorResponse {

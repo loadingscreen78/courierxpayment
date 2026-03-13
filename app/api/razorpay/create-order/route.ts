@@ -33,6 +33,7 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
     const amount = Number(body.amount);
+    const couponCode = body.couponCode || null;
 
     if (!Number.isFinite(amount) || amount < MIN_RECHARGE_AMOUNT) {
       return NextResponse.json(
@@ -41,9 +42,38 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Validate coupon if provided
+    let couponData: { couponId: string; bonusAmount: number } | null = null;
+    if (couponCode) {
+      const { data: validation, error: valError } = await supabase.rpc('validate_coupon', {
+        p_code: couponCode,
+        p_user_id: user.id,
+        p_amount: amount,
+      });
+
+      if (valError || !validation?.[0]?.is_valid) {
+        return NextResponse.json(
+          { error: validation?.[0]?.error_message || 'Invalid coupon' },
+          { status: 400 },
+        );
+      }
+
+      couponData = {
+        couponId: validation[0].coupon_id,
+        bonusAmount: Number(validation[0].bonus_amount),
+      };
+    }
+
     // Create Razorpay order
     const paise = Math.round(amount * 100);
     const receiptId = `rcpt_${user.id.slice(0, 8)}_${Date.now()}`;
+
+    const notes: Record<string, string> = { user_id: user.id };
+    if (couponCode) notes.coupon_code = couponCode;
+    if (couponData) {
+      notes.coupon_id = couponData.couponId;
+      notes.bonus_amount = couponData.bonusAmount.toString();
+    }
 
     const razorpayRes = await fetch(`${RAZORPAY_API_BASE}/v1/orders`, {
       method: 'POST',
@@ -55,7 +85,7 @@ export async function POST(request: NextRequest) {
         amount: paise,
         currency: 'INR',
         receipt: receiptId,
-        notes: { user_id: user.id },
+        notes,
       }),
     });
 

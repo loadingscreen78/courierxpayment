@@ -40,7 +40,7 @@ export interface UseWalletLedgerReturn {
   isPaymentProcessing: boolean;
   paymentStatus: PaymentStatus;
   paymentMessage: string;
-  addFunds: (amount: number, method: PaymentMethod) => Promise<{ success: boolean; receipt?: Receipt; error?: string }>;
+  addFunds: (amount: number, method: PaymentMethod, couponCode?: string) => Promise<{ success: boolean; receipt?: Receipt; error?: string; bonusAmount?: number }>;
   deductFunds: (amount: number, shipmentId: string, description?: string) => Promise<{ success: boolean; entry?: LedgerEntry; error?: string }>;
   processRefund: (amount: number, shipmentId: string, description?: string) => Promise<{ success: boolean; entry?: LedgerEntry; error?: string }>;
   refreshBalance: () => Promise<void>;
@@ -142,7 +142,7 @@ export function useWalletLedger(): UseWalletLedgerReturn {
     };
   }, [refreshBalance, user?.id]);
 
-  const addFunds = useCallback(async (amount: number, _method: PaymentMethod) => {
+  const addFunds = useCallback(async (amount: number, _method: PaymentMethod, couponCode?: string) => {
     if (!user?.id) {
       return { success: false, error: 'Not authenticated' };
     }
@@ -171,7 +171,7 @@ export function useWalletLedger(): UseWalletLedgerReturn {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ amount }),
+        body: JSON.stringify({ amount, couponCode: couponCode || undefined }),
       });
 
       if (!orderRes.ok) {
@@ -229,7 +229,7 @@ export function useWalletLedger(): UseWalletLedgerReturn {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify(razorpayResult),
+        body: JSON.stringify({ ...razorpayResult, couponCode: couponCode || undefined }),
       });
 
       if (!verifyRes.ok) {
@@ -244,6 +244,7 @@ export function useWalletLedger(): UseWalletLedgerReturn {
 
       const verifyData: VerifyPaymentResponse = await verifyRes.json();
       const resolvedMethod = (verifyData.paymentMethod || 'upi') as PaymentMethod;
+      const bonusAmount = verifyData.bonusAmount || 0;
 
       // Step 5: Generate receipt
       const baseAmount = verifyData.amount / (1 + GST_RATE);
@@ -275,8 +276,8 @@ export function useWalletLedger(): UseWalletLedgerReturn {
       });
 
       await refreshBalance();
-      setPaymentState({ isProcessing: false, status: 'success', message: 'Payment successful!' });
-      return { success: true, receipt };
+      setPaymentState({ isProcessing: false, status: 'success', message: bonusAmount > 0 ? `Payment successful! +₹${bonusAmount} bonus credited` : 'Payment successful!' });
+      return { success: true, receipt, bonusAmount };
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Payment failed';
       const isCancelled = errorMessage === 'Payment cancelled';
