@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { LandingHeader, LandingFooter } from '@/components/landing';
 import { useSeo } from '@/hooks/useSeo';
+import { WorldMap } from '@/components/ui/world-map';
 
 // Typing effect hook
 const useTypingEffect = (text: string, speed: number = 50, startOnView: boolean = true) => {
@@ -685,120 +686,38 @@ const About = () => {
         </div>
         
         {/* World Map Background */}
-        <div className="absolute inset-0 flex items-center justify-center opacity-[0.08] dark:opacity-[0.15]">
-          <svg
-            viewBox="0 0 1000 500"
-            className="w-full h-full max-w-6xl"
-            fill="currentColor"
-          >
-            {/* Simplified World Map Path */}
-            <path d="M170,110 L180,100 L200,105 L210,95 L230,100 L240,90 L260,95 L280,85 L300,90 L310,80 L330,85 L350,75 L370,80 L390,70 L410,75 L430,65 L450,70 L470,60 L490,65 L510,55 L530,60 L550,50 L570,55 L590,45 L610,50 L630,40 L650,45 L670,35 L690,40 L710,30 L730,35 L750,25 L770,30 L790,20 L810,25 L830,15 L850,20" stroke="currentColor" strokeWidth="2" fill="none" className="text-coke-red" />
-            
-            {/* North America */}
-            <path d="M120,120 Q140,100 180,110 Q220,90 250,100 Q280,85 300,95 L290,130 Q270,150 240,160 Q200,180 170,170 Q140,160 130,140 Z" className="text-foreground" />
-            
-            {/* South America */}
-            <path d="M200,250 Q230,230 250,250 Q270,280 260,320 Q250,360 230,380 Q200,400 180,380 Q160,350 170,310 Q180,270 200,250 Z" className="text-foreground" />
-            
-            {/* Europe */}
-            <path d="M450,100 Q480,80 520,90 Q560,85 580,100 Q600,120 590,140 Q570,160 540,155 Q500,150 470,140 Q440,130 450,100 Z" className="text-foreground" />
-            
-            {/* Africa */}
-            <path d="M480,180 Q520,160 560,180 Q590,210 580,260 Q570,310 540,340 Q500,370 460,350 Q430,320 440,270 Q450,220 480,180 Z" className="text-foreground" />
-            
-            {/* Asia */}
-            <path d="M600,80 Q660,60 720,70 Q780,65 830,80 Q870,100 860,140 Q840,180 790,190 Q730,200 680,185 Q630,170 610,140 Q590,110 600,80 Z" className="text-foreground" />
-            
-            {/* India - Highlighted */}
-            <motion.path
-              d="M680,180 Q700,170 720,180 Q740,200 735,230 Q725,260 700,270 Q670,275 660,250 Q650,220 660,195 Q670,180 680,180 Z"
-              className="text-coke-red"
-              initial={{ scale: 1 }}
-              animate={{ scale: [1, 1.05, 1] }}
-              transition={{ duration: 2, repeat: Infinity }}
+        <div className="absolute inset-0 flex items-end justify-center opacity-20 dark:opacity-30 overflow-hidden">
+          <div className="w-full max-w-7xl translate-y-[15%]">
+            <WorldMap
+              lineColor="#dc2626"
+              dots={[
+                {
+                  start: { lat: 20.5937, lng: 78.9629 }, // India
+                  end: { lat: 40.7128, lng: -74.006 }, // New York
+                },
+                {
+                  start: { lat: 20.5937, lng: 78.9629 }, // India
+                  end: { lat: 51.5074, lng: -0.1278 }, // London
+                },
+                {
+                  start: { lat: 20.5937, lng: 78.9629 }, // India
+                  end: { lat: -33.8688, lng: 151.2093 }, // Sydney
+                },
+                {
+                  start: { lat: 20.5937, lng: 78.9629 }, // India
+                  end: { lat: 25.2048, lng: 55.2708 }, // Dubai
+                },
+                {
+                  start: { lat: 20.5937, lng: 78.9629 }, // India
+                  end: { lat: 1.3521, lng: 103.8198 }, // Singapore
+                },
+                {
+                  start: { lat: 20.5937, lng: 78.9629 }, // India
+                  end: { lat: -1.2921, lng: 36.8219 }, // Nairobi
+                },
+              ]}
             />
-            
-            {/* Australia */}
-            <path d="M780,300 Q820,280 860,290 Q890,310 880,350 Q860,380 820,385 Q780,380 760,350 Q750,320 780,300 Z" className="text-foreground" />
-            
-            {/* Connection Lines from India */}
-            <motion.g className="text-coke-red/60">
-              {/* India to USA */}
-              <motion.line
-                x1="690" y1="220" x2="200" y2="140"
-                stroke="currentColor"
-                strokeWidth="1"
-                strokeDasharray="5,5"
-                initial={{ pathLength: 0, opacity: 0 }}
-                animate={{ pathLength: 1, opacity: [0, 0.6, 0] }}
-                transition={{ duration: 3, repeat: Infinity, delay: 0 }}
-              />
-              {/* India to UK */}
-              <motion.line
-                x1="690" y1="200" x2="520" y2="110"
-                stroke="currentColor"
-                strokeWidth="1"
-                strokeDasharray="5,5"
-                initial={{ pathLength: 0, opacity: 0 }}
-                animate={{ pathLength: 1, opacity: [0, 0.6, 0] }}
-                transition={{ duration: 3, repeat: Infinity, delay: 0.5 }}
-              />
-              {/* India to Australia */}
-              <motion.line
-                x1="700" y1="260" x2="820" y2="320"
-                stroke="currentColor"
-                strokeWidth="1"
-                strokeDasharray="5,5"
-                initial={{ pathLength: 0, opacity: 0 }}
-                animate={{ pathLength: 1, opacity: [0, 0.6, 0] }}
-                transition={{ duration: 3, repeat: Infinity, delay: 1 }}
-              />
-              {/* India to UAE */}
-              <motion.line
-                x1="680" y1="230" x2="600" y2="200"
-                stroke="currentColor"
-                strokeWidth="1"
-                strokeDasharray="5,5"
-                initial={{ pathLength: 0, opacity: 0 }}
-                animate={{ pathLength: 1, opacity: [0, 0.6, 0] }}
-                transition={{ duration: 3, repeat: Infinity, delay: 1.5 }}
-              />
-            </motion.g>
-            
-            {/* Animated Dots on Routes */}
-            <motion.circle
-              cx="200" cy="140" r="4"
-              className="text-coke-red fill-current"
-              animate={{ scale: [1, 1.5, 1], opacity: [0.5, 1, 0.5] }}
-              transition={{ duration: 2, repeat: Infinity }}
-            />
-            <motion.circle
-              cx="520" cy="110" r="4"
-              className="text-coke-red fill-current"
-              animate={{ scale: [1, 1.5, 1], opacity: [0.5, 1, 0.5] }}
-              transition={{ duration: 2, repeat: Infinity, delay: 0.3 }}
-            />
-            <motion.circle
-              cx="820" cy="320" r="4"
-              className="text-coke-red fill-current"
-              animate={{ scale: [1, 1.5, 1], opacity: [0.5, 1, 0.5] }}
-              transition={{ duration: 2, repeat: Infinity, delay: 0.6 }}
-            />
-            <motion.circle
-              cx="600" cy="200" r="4"
-              className="text-coke-red fill-current"
-              animate={{ scale: [1, 1.5, 1], opacity: [0.5, 1, 0.5] }}
-              transition={{ duration: 2, repeat: Infinity, delay: 0.9 }}
-            />
-            
-            {/* India Marker */}
-            <motion.circle
-              cx="690" cy="225" r="8"
-              className="text-coke-red fill-current"
-              animate={{ scale: [1, 1.3, 1] }}
-              transition={{ duration: 1.5, repeat: Infinity }}
-            />
-          </svg>
+          </div>
         </div>
         
         <div className="absolute inset-0">
