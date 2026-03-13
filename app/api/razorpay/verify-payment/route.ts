@@ -5,8 +5,8 @@ import { RAZORPAY_API_BASE } from '@/lib/wallet/razorpayConfig';
 
 export async function POST(request: NextRequest) {
   try {
-    const keyId = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID;
-    const keySecret = process.env.RAZORPAY_KEY_SECRET;
+    const keyId = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID?.trim();
+    const keySecret = process.env.RAZORPAY_KEY_SECRET?.trim();
 
     if (!keySecret || !keyId) {
       console.error('[razorpay/verify] Missing Razorpay credentials');

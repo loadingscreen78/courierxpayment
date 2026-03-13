@@ -4,7 +4,7 @@ import { getServiceRoleClient } from '@/lib/shipment-lifecycle/supabaseAdmin';
 
 export async function POST(request: NextRequest) {
   try {
-    const webhookSecret = process.env.RAZORPAY_WEBHOOK_SECRET;
+    const webhookSecret = process.env.RAZORPAY_WEBHOOK_SECRET?.trim();
 
     if (!webhookSecret) {
       console.error('[razorpay/webhook] Missing RAZORPAY_WEBHOOK_SECRET');

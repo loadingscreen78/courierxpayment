@@ -3,9 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Star, Quote } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Marquee } from '@/components/ui/3d-testimonials';
-import { AnimatedSection } from './AnimatedSection';
+import { AnimatedSection, StaggerContainer, StaggerItem } from './AnimatedSection';
 import { motion, useInView } from 'framer-motion';
 
 // Counter animation hook
@@ -23,8 +21,10 @@ const useCountUp = (end: number, duration: number = 2000, startOnView: boolean =
     const animate = () => {
       const elapsed = Date.now() - startTime;
       const progress = Math.min(elapsed / duration, 1);
+      // Ease out cubic
       const easeOut = 1 - Math.pow(1 - progress, 3);
       setCount(Math.floor(easeOut * end));
+      
       if (progress < 1) {
         requestAnimationFrame(animate);
       } else {
@@ -37,18 +37,24 @@ const useCountUp = (end: number, duration: number = 2000, startOnView: boolean =
   return { count, ref };
 };
 
+// Counter component for different stat formats
 const AnimatedStat = ({ value, label }: { value: string; label: string }) => {
+  // Parse the value to extract number and suffix
   const parseValue = (val: string) => {
     if (val.includes('/')) {
+      // Rating format: 4.9/5
       const [num] = val.split('/');
       return { number: parseFloat(num) * 10, suffix: '/5', divisor: 10, isDecimal: true };
     } else if (val.includes('%')) {
+      // Percentage: 99.5%
       const num = parseFloat(val);
       return { number: num * 10, suffix: '%', divisor: 10, isDecimal: true };
     } else if (val.includes(',')) {
+      // Large number: 50,000+
       const num = parseInt(val.replace(/,/g, '').replace('+', ''));
       return { number: num, suffix: '+', divisor: 1, isDecimal: false };
     } else {
+      // Simple number: 150+
       const num = parseInt(val.replace('+', ''));
       return { number: num, suffix: '+', divisor: 1, isDecimal: false };
     }
@@ -57,7 +63,7 @@ const AnimatedStat = ({ value, label }: { value: string; label: string }) => {
   const { number, suffix, divisor, isDecimal } = parseValue(value);
   const { count, ref } = useCountUp(number, 2000);
 
-  const displayValue = isDecimal
+  const displayValue = isDecimal 
     ? (count / divisor).toFixed(1)
     : count.toLocaleString('en-IN');
 
@@ -87,8 +93,6 @@ const testimonials = [
     rating: 5,
     text: 'CourierX made shipping my mother\'s medicines to London so easy. The prescription verification was smooth and delivery was faster than expected!',
     avatar: 'PS',
-    img: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop&crop=face',
-    country: '🇮🇳 India',
   },
   {
     name: 'Rajesh Kumar',
@@ -97,8 +101,6 @@ const testimonials = [
     rating: 5,
     text: 'Sent important legal documents for my visa application. Tracking was excellent and documents arrived safely within 3 days.',
     avatar: 'RK',
-    img: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=face',
-    country: '🇮🇳 India',
   },
   {
     name: 'Anita Desai',
@@ -107,8 +109,6 @@ const testimonials = [
     rating: 5,
     text: 'Shipped Diwali sweets and gifts to my son in the US. CourierX handled customs perfectly and everything arrived fresh!',
     avatar: 'AD',
-    img: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100&h=100&fit=crop&crop=face',
-    country: '🇮🇳 India',
   },
   {
     name: 'Mohammed Ali',
@@ -117,58 +117,6 @@ const testimonials = [
     rating: 5,
     text: 'Regular customer for 2 years now. Their medicine shipping compliance and customer support is unmatched.',
     avatar: 'MA',
-    img: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop&crop=face',
-    country: '🇮🇳 India',
-  },
-  {
-    name: 'Sarah Johnson',
-    location: 'London → Mumbai',
-    type: 'Gift Package',
-    rating: 5,
-    text: 'Sent birthday gifts to my friend in India. The tracking updates were real-time and delivery was right on schedule!',
-    avatar: 'SJ',
-    img: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100&h=100&fit=crop&crop=face',
-    country: '🇬🇧 UK',
-  },
-  {
-    name: 'David Chen',
-    location: 'Singapore → Delhi',
-    type: 'Document Delivery',
-    rating: 5,
-    text: 'Fast and reliable document shipping. The customs clearance was handled seamlessly. Highly recommend!',
-    avatar: 'DC',
-    img: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&h=100&fit=crop&crop=face',
-    country: '🇸🇬 Singapore',
-  },
-  {
-    name: 'Fatima Al-Rashid',
-    location: 'Dubai → Hyderabad',
-    type: 'Medicine Shipment',
-    rating: 5,
-    text: 'Needed urgent medicines delivered to my parents. CourierX expedited the shipment and it arrived in 2 days!',
-    avatar: 'FA',
-    img: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop&crop=face',
-    country: '🇦🇪 UAE',
-  },
-  {
-    name: 'Arjun Mehta',
-    location: 'Pune → Toronto',
-    type: 'Gift Package',
-    rating: 5,
-    text: 'Shipped homemade snacks and gifts for Raksha Bandhan. Everything was packed perfectly and arrived fresh!',
-    avatar: 'AM',
-    img: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=100&h=100&fit=crop&crop=face',
-    country: '🇮🇳 India',
-  },
-  {
-    name: 'Lisa Wong',
-    location: 'Hong Kong → Kolkata',
-    type: 'Document Delivery',
-    rating: 5,
-    text: 'Professional service for business documents. The online booking was super easy and tracking was spot on.',
-    avatar: 'LW',
-    img: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=100&h=100&fit=crop&crop=face',
-    country: '🇭🇰 Hong Kong',
   },
 ];
 
@@ -179,43 +127,14 @@ const stats = [
   { value: '4.9/5', label: 'Customer Rating' },
 ];
 
-function TestimonialCard({ img, name, avatar, location, text, country, rating }: (typeof testimonials)[number]) {
-  return (
-    <Card className="w-52 shrink-0">
-      <CardContent className="p-4">
-        <div className="flex items-center gap-2.5">
-          <Avatar className="size-9">
-            <AvatarImage src={img} alt={name} />
-            <AvatarFallback>{avatar}</AvatarFallback>
-          </Avatar>
-          <div className="flex flex-col">
-            <figcaption className="text-sm font-medium text-foreground flex items-center gap-1">
-              {name} <span className="text-xs">{country}</span>
-            </figcaption>
-            <p className="text-xs font-medium text-muted-foreground">{location}</p>
-          </div>
-        </div>
-        <blockquote className="mt-3 text-xs text-muted-foreground leading-relaxed">
-          &quot;{text}&quot;
-        </blockquote>
-        <div className="flex gap-0.5 mt-2">
-          {Array.from({ length: rating }).map((_, i) => (
-            <Star key={i} className="h-3 w-3 fill-amber-400 text-amber-400" />
-          ))}
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
-
 export const TestimonialsSection = () => {
   return (
-    <section className="py-24 bg-background relative overflow-hidden">
+    <section className="py-24 bg-muted/30 relative overflow-hidden">
       {/* Decorative Quote */}
       <div className="absolute top-20 left-10 opacity-[0.03]">
         <Quote className="w-64 h-64 text-foreground" />
       </div>
-
+      
       <div className="container relative">
         <AnimatedSection className="text-center mb-16">
           <span className="inline-block px-4 py-1.5 rounded-full bg-primary/10 text-primary text-sm font-medium mb-4">
@@ -229,43 +148,55 @@ export const TestimonialsSection = () => {
           </p>
         </AnimatedSection>
 
-        {/* 3D Marquee Testimonials */}
-        <div className="relative flex h-[420px] w-full max-w-[900px] mx-auto flex-row items-center justify-center overflow-hidden gap-1.5 [perspective:300px] mb-20">
-          <div
-            className="flex flex-row items-center gap-4"
-            style={{
-              transform:
-                'translateX(-100px) translateY(0px) translateZ(-100px) rotateX(20deg) rotateY(-10deg) rotateZ(20deg)',
-            }}
-          >
-            <Marquee vertical pauseOnHover repeat={3} className="[--duration:40s]">
-              {testimonials.map((review) => (
-                <TestimonialCard key={review.name} {...review} />
-              ))}
-            </Marquee>
-            <Marquee vertical pauseOnHover reverse repeat={3} className="[--duration:40s]">
-              {testimonials.map((review) => (
-                <TestimonialCard key={review.name} {...review} />
-              ))}
-            </Marquee>
-            <Marquee vertical pauseOnHover repeat={3} className="[--duration:40s]">
-              {testimonials.map((review) => (
-                <TestimonialCard key={review.name} {...review} />
-              ))}
-            </Marquee>
-            <Marquee vertical pauseOnHover reverse repeat={3} className="[--duration:40s]">
-              {testimonials.map((review) => (
-                <TestimonialCard key={review.name} {...review} />
-              ))}
-            </Marquee>
-
-            {/* Gradient overlays */}
-            <div className="pointer-events-none absolute inset-x-0 top-0 h-1/3 bg-gradient-to-b from-background to-transparent z-10"></div>
-            <div className="pointer-events-none absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-background to-transparent z-10"></div>
-            <div className="pointer-events-none absolute inset-y-0 left-0 w-1/3 bg-gradient-to-r from-background to-transparent z-10"></div>
-            <div className="pointer-events-none absolute inset-y-0 right-0 w-1/3 bg-gradient-to-l from-background to-transparent z-10"></div>
-          </div>
-        </div>
+        <StaggerContainer className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-20" staggerDelay={0.12}>
+          {testimonials.map((testimonial) => (
+            <StaggerItem key={testimonial.name}>
+              <motion.div whileHover={{ y: -8 }} transition={{ duration: 0.3 }}>
+                <Card className="h-full hover:shadow-xl transition-all duration-300 border-2 hover:border-primary/20 bg-card/80 backdrop-blur-sm">
+                  <CardContent className="p-6 space-y-4 h-full flex flex-col">
+                    <motion.div
+                      whileHover={{ rotate: 10, scale: 1.1 }}
+                      transition={{ type: "spring", stiffness: 400 }}
+                    >
+                      <Quote className="h-8 w-8 text-coke-red/30" />
+                    </motion.div>
+                    
+                    <p className="text-sm text-muted-foreground leading-relaxed flex-grow">
+                      &quot;{testimonial.text}&quot;
+                    </p>
+                    
+                    <div className="flex gap-0.5">
+                      {Array.from({ length: testimonial.rating }).map((_, i) => (
+                        <motion.div
+                          key={i}
+                          initial={{ opacity: 0, scale: 0 }}
+                          whileInView={{ opacity: 1, scale: 1 }}
+                          viewport={{ once: true }}
+                          transition={{ delay: i * 0.1 }}
+                        >
+                          <Star className="h-4 w-4 fill-amber-400 text-amber-400" />
+                        </motion.div>
+                      ))}
+                    </div>
+                    
+                    <div className="pt-4 border-t border-border flex items-center gap-3">
+                      <motion.div
+                        whileHover={{ scale: 1.1 }}
+                        className="w-10 h-10 rounded-full bg-gradient-to-br from-coke-red/20 to-primary/20 flex items-center justify-center text-sm font-bold text-primary"
+                      >
+                        {testimonial.avatar}
+                      </motion.div>
+                      <div>
+                        <p className="font-semibold text-sm">{testimonial.name}</p>
+                        <p className="text-xs text-muted-foreground">{testimonial.location}</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            </StaggerItem>
+          ))}
+        </StaggerContainer>
 
         {/* Stats Section */}
         <AnimatedSection delay={0.3}>

@@ -5,8 +5,8 @@ import { MIN_RECHARGE_AMOUNT } from '@/lib/wallet/types';
 
 export async function POST(request: NextRequest) {
   try {
-    const keyId = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID;
-    const keySecret = process.env.RAZORPAY_KEY_SECRET;
+    const keyId = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID?.trim();
+    const keySecret = process.env.RAZORPAY_KEY_SECRET?.trim();
 
     if (!keyId || !keySecret) {
       console.error('[razorpay/create-order] Missing Razorpay credentials');
@@ -61,7 +61,8 @@ export async function POST(request: NextRequest) {
 
     if (!razorpayRes.ok) {
       const errText = await razorpayRes.text();
-      console.error('[razorpay/create-order] Razorpay API error:', errText);
+      console.error('[razorpay/create-order] Razorpay API error:', razorpayRes.status, errText);
+      console.error('[razorpay/create-order] Key ID length:', keyId.length, 'Secret length:', keySecret.length);
       return NextResponse.json(
         { error: 'Failed to create payment order' },
         { status: 500 },
