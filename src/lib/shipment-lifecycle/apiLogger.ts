@@ -41,7 +41,7 @@ export function maskSensitiveFields(
  */
 export async function logApiCall(params: {
   shipmentId: string | null;
-  apiType: 'nimbus_create' | 'nimbus_track' | 'nimbus_auth';
+  apiType: 'nimbus_create' | 'nimbus_track' | 'nimbus_auth' | 'nimbus_label';
   requestPayload: unknown;
   responsePayload: unknown;
   httpStatus: number;
