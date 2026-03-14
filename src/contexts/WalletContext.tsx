@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, ReactNode } from 'react';
+import { createContext, useContext, ReactNode, useMemo } from 'react';
 import { useWalletLedger, MIN_RECHARGE_AMOUNT, MIN_BALANCE_REQUIRED } from '@/hooks/useWalletLedger';
 import { LedgerEntry, PaymentMethod, PaymentStatus, Receipt, TransactionFilters } from '@/lib/wallet/types';
 
@@ -82,7 +82,7 @@ export const WalletProvider = ({ children }: { children: ReactNode }) => {
     return wallet.hasMinimumBalance(requiredAmount);
   };
 
-  const contextValue: WalletContextType = {
+  const contextValue: WalletContextType = useMemo(() => ({
     balance: wallet.balance,
     transactions,
     addFunds,
@@ -109,7 +109,8 @@ export const WalletProvider = ({ children }: { children: ReactNode }) => {
     getHistory: wallet.getHistory,
     downloadTransactionReceipt: wallet.downloadTransactionReceipt,
     resetPaymentState: wallet.resetPaymentState,
-  };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }), [wallet.balance, wallet.availableBalance, wallet.heldAmount, wallet.isLoading, wallet.error, wallet.isPaymentProcessing, wallet.paymentStatus, wallet.paymentMessage, transactions]);
 
   return (
     <WalletContext.Provider value={contextValue}>

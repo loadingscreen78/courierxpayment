@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, useMemo, ReactNode } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -90,19 +90,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return () => subscription.unsubscribe();
   }, []);
 
-  const signInWithEmail = async (email: string, password: string) => {
+  const signInWithEmail = useCallback(async (email: string, password: string) => {
     try {
-      const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
       return { error: error as Error | null };
     } catch (err) {
       return { error: err as Error };
     }
-  };
+  }, []);
 
-  const signUpWithEmail = async (email: string, password: string) => {
+  const signUpWithEmail = useCallback(async (email: string, password: string) => {
     try {
       const { data, error } = await supabase.auth.signUp({
         email,
@@ -193,46 +190,37 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
       return { error };
     }
-  };
+  }, []);
 
-  const signInWithOtp = async (phone: string) => {
+  const signInWithOtp = useCallback(async (phone: string) => {
     try {
-      const { error } = await supabase.auth.signInWithOtp({
-        phone,
-      });
+      const { error } = await supabase.auth.signInWithOtp({ phone });
       return { error: error as Error | null };
     } catch (err) {
       return { error: err as Error };
     }
-  };
+  }, []);
 
-  const verifyOtp = async (phone: string, token: string) => {
+  const verifyOtp = useCallback(async (phone: string, token: string) => {
     try {
-      const { error } = await supabase.auth.verifyOtp({
-        type: 'sms',
-        phone,
-        token,
-      });
+      const { error } = await supabase.auth.verifyOtp({ type: 'sms', phone, token });
       return { error: error as Error | null };
     } catch (err) {
       return { error: err as Error };
     }
-  };
+  }, []);
 
-  const signInWithGoogle = async (idToken: string): Promise<{ error: Error | null }> => {
+  const signInWithGoogle = useCallback(async (idToken: string): Promise<{ error: Error | null }> => {
     try {
-      const { error } = await supabase.auth.signInWithIdToken({
-        provider: 'google',
-        token: idToken,
-      });
+      const { error } = await supabase.auth.signInWithIdToken({ provider: 'google', token: idToken });
       return { error: error as Error | null };
     } catch (err) {
       return { error: err as Error };
     }
-  };
+  }, []);
 
   /** Send WhatsApp OTP via Twilio Verify */
-  const sendWhatsAppOtp = async (phone: string): Promise<{ error: Error | null }> => {
+  const sendWhatsAppOtp = useCallback(async (phone: string): Promise<{ error: Error | null }> => {
     try {
       const res = await fetch('/api/auth/whatsapp/send-otp', {
         method: 'POST',
@@ -247,10 +235,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     } catch (err) {
       return { error: err as Error };
     }
-  };
+  }, []);
 
   /** Verify WhatsApp OTP via Twilio Verify, then sign into Supabase */
-  const verifyWhatsAppOtp = async (phone: string, code: string): Promise<{ error: Error | null }> => {
+  const verifyWhatsAppOtp = useCallback(async (phone: string, code: string): Promise<{ error: Error | null }> => {
     try {
       const res = await fetch('/api/auth/whatsapp/verify-otp', {
         method: 'POST',
@@ -262,24 +250,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         return { error: new Error(data.error || 'WhatsApp OTP verification failed') };
       }
 
-      // If we got an action link, use it to sign in via Supabase
       if (data.actionLink) {
-        // Extract token from the magic link and verify it
         const url = new URL(data.actionLink);
         const token_hash = url.searchParams.get('token') || url.hash?.replace('#', '');
         if (token_hash) {
-          const { error } = await supabase.auth.verifyOtp({
-            type: 'magiclink',
-            token_hash,
-          });
+          const { error } = await supabase.auth.verifyOtp({ type: 'magiclink', token_hash });
           if (error) {
-            // Fallback: try phone OTP sign-in
             const { error: phoneErr } = await supabase.auth.signInWithOtp({ phone });
             if (phoneErr) return { error: phoneErr as Error };
           }
         }
       } else {
-        // Fallback: use Supabase phone OTP to create session
         const { error: otpErr } = await supabase.auth.signInWithOtp({ phone });
         if (otpErr) return { error: otpErr as Error };
       }
@@ -288,59 +269,40 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     } catch (err) {
       return { error: err as Error };
     }
-  };
+  }, []);
 
-  const signOut = async () => {
-      try {
-        if (typeof google !== 'undefined' && google.accounts?.id) {
-          google.accounts.id.disableAutoSelect();
-        }
-      } catch {
-        // GSI not loaded, safe to ignore
+  const signOut = useCallback(async () => {
+    try {
+      if (typeof google !== 'undefined' && google.accounts?.id) {
+        google.accounts.id.disableAutoSelect();
       }
-      await supabase.auth.signOut();
-      setProfile(null);
-    };
+    } catch {
+      // GSI not loaded, safe to ignore
+    }
+    await supabase.auth.signOut();
+    setProfile(null);
+  }, []);
 
-
-  const updateProfile = async (updates: Partial<Profile>) => {
+  const updateProfile = useCallback(async (updates: Partial<Profile>) => {
     if (!user) return { error: new Error('Not authenticated') };
-    
-    const { error } = await supabase
-      .from('profiles')
-      .update(updates)
-      .eq('user_id', user.id);
-    
+    const { error } = await supabase.from('profiles').update(updates).eq('user_id', user.id);
     if (!error) {
       setProfile(prev => prev ? { ...prev, ...updates } : null);
     }
-    
     return { error: error as Error | null };
-  };
+  }, [user]);
 
-  const completeAadhaarKyc = async (aadhaarNumber: string, otp: string) => {
-    // MOCK KYC - Bypassing real Aadhaar verification for development
-    // TODO: Connect real KYC API (Sandbox/Karza/Digilocker) in production
+  const completeAadhaarKyc = useCallback(async (_aadhaarNumber: string, _otp: string) => {
     try {
       console.log('[KYC Mock] Auto-completing KYC verification...');
-      
-      // Simulate brief API delay for UX
       await new Promise(resolve => setTimeout(resolve, 800));
-      
-      // Mock address data
       const mockAddress = '123, Mock Street, Sample City, Sample State - 123456';
-      
-      // Auto-complete KYC with mock data
       if (user) {
-        await supabase
-          .from('profiles')
-          .update({
-            aadhaar_verified: true,
-            aadhaar_address: mockAddress,
-            kyc_completed_at: new Date().toISOString(),
-          })
-          .eq('user_id', user.id);
-        
+        await supabase.from('profiles').update({
+          aadhaar_verified: true,
+          aadhaar_address: mockAddress,
+          kyc_completed_at: new Date().toISOString(),
+        }).eq('user_id', user.id);
         setProfile(prev => prev ? {
           ...prev,
           aadhaar_verified: true,
@@ -348,32 +310,33 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           kyc_completed_at: new Date().toISOString(),
         } : null);
       }
-      
       console.log('[KYC Mock] KYC verification completed successfully');
       return { error: null, address: mockAddress };
     } catch (err) {
       console.error('[KYC Mock] Error:', err);
       return { error: err as Error };
     }
-  };
+  }, [user]);
+
+  const contextValue = useMemo(() => ({
+    user,
+    session,
+    profile,
+    loading,
+    signInWithEmail,
+    signUpWithEmail,
+    signInWithOtp,
+    verifyOtp,
+    signInWithGoogle,
+    sendWhatsAppOtp,
+    verifyWhatsAppOtp,
+    signOut,
+    updateProfile,
+    completeAadhaarKyc,
+  }), [user, session, profile, loading, signInWithEmail, signUpWithEmail, signInWithOtp, verifyOtp, signInWithGoogle, sendWhatsAppOtp, verifyWhatsAppOtp, signOut, updateProfile, completeAadhaarKyc]);
 
   return (
-    <AuthContext.Provider value={{
-      user,
-      session,
-      profile,
-      loading,
-      signInWithEmail,
-      signUpWithEmail,
-      signInWithOtp,
-      verifyOtp,
-      signInWithGoogle,
-      sendWhatsAppOtp,
-      verifyWhatsAppOtp,
-      signOut,
-      updateProfile,
-      completeAadhaarKyc,
-    }}>
+    <AuthContext.Provider value={contextValue}>
       {children}
     </AuthContext.Provider>
   );
