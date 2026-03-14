@@ -8,34 +8,47 @@ import { renderAuthEmail } from '@/lib/email/templates/authEmail';
  */
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
-    
-    // Support both GoTrue hook payload format and our direct format
-    // GoTrue hook sends: { user: { email }, email_data: { token_hash, email_action_type, redirect_to, ... } }
-    // Our direct format: { email, type, token_hash, redirect_to }
-    let email: string;
-    let type: string;
-    let token_hash: string;
+    let body: any;
+    try {
+      body = await request.json();
+    } catch {
+      console.error('[Auth Email] Failed to parse request body');
+      return NextResponse.json({ success: false, error: 'Invalid JSON body' }, { status: 200 });
+    }
+
+    console.log('[Auth Email] Received hook payload keys:', Object.keys(body || {}));
+
+    // GoTrue hook format (Supabase auth hook):
+    //   { user: { email, ... }, email_data: { token_hash, email_action_type, redirect_to, ... } }
+    // Direct format (our own calls):
+    //   { email, type, token_hash, redirect_to }
+    let email: string = '';
+    let type: string = '';
+    let token_hash: string = '';
     let redirect_to: string | undefined;
 
-    if (body.email_data) {
+    if (body?.email_data) {
       // GoTrue hook format
-      email = body.user?.email || body.email;
-      type = body.email_data.email_action_type;
-      token_hash = body.email_data.token_hash;
-      redirect_to = body.email_data.redirect_to;
+      email = body.user?.email || body.email || '';
+      type = body.email_data?.email_action_type || body.email_data?.type || '';
+      token_hash = body.email_data?.token_hash || body.email_data?.hashed_token || '';
+      redirect_to = body.email_data?.redirect_to;
     } else {
       // Direct format
-      email = body.email;
-      type = body.type;
-      token_hash = body.token_hash;
-      redirect_to = body.redirect_to;
+      email = body?.email || '';
+      type = body?.type || '';
+      token_hash = body?.token_hash || body?.hashed_token || '';
+      redirect_to = body?.redirect_to;
     }
-    
+
+    console.log('[Auth Email] Parsed:', { email, type, hasToken: !!token_hash });
+
     if (!email || !type || !token_hash) {
+      console.error('[Auth Email] Missing required fields:', { email: !!email, type: !!type, token_hash: !!token_hash });
+      // Return 200 so Supabase doesn't block the auth action
       return NextResponse.json(
-        { error: 'Missing required fields: email, type, token_hash' },
-        { status: 400 }
+        { success: false, error: 'Missing required fields: email, type, token_hash' },
+        { status: 200 }
       );
     }
 
@@ -58,9 +71,11 @@ export async function POST(request: NextRequest) {
         confirmationUrl = `${baseUrl}/auth/v1/verify?token=${token_hash}&type=email_change${redirect_to ? `&redirect_to=${encodeURIComponent(redirect_to)}` : ''}`;
         break;
       default:
+        console.error('[Auth Email] Unsupported email type:', type);
+        // Return 200 so Supabase doesn't block the auth action
         return NextResponse.json(
-          { error: `Unsupported email type: ${type}` },
-          { status: 400 }
+          { success: false, error: `Unsupported email type: ${type}` },
+          { status: 200 }
         );
     }
 
@@ -87,10 +102,12 @@ export async function POST(request: NextRequest) {
     });
 
     if (!result.success) {
-      console.error('[Auth Email] Failed to send:', result.error);
+      // Log the failure but return 200 so Supabase doesn't block the auth action.
+      // Supabase will fall back to its own email sender if the hook returns non-2xx.
+      console.error('[Auth Email] Failed to send via Resend:', result.error);
       return NextResponse.json(
-        { error: result.error || 'Failed to send email' },
-        { status: 500 }
+        { success: false, error: result.error || 'Failed to send email' },
+        { status: 200 }
       );
     }
 
@@ -101,10 +118,11 @@ export async function POST(request: NextRequest) {
       messageId: result.id,
     });
   } catch (error: any) {
+    // Always return 200 to prevent Supabase from blocking the auth action
     console.error('[Auth Email] Error:', error);
     return NextResponse.json(
-      { error: error.message || 'Internal server error' },
-      { status: 500 }
+      { success: false, error: error.message || 'Internal server error' },
+      { status: 200 }
     );
   }
 }
