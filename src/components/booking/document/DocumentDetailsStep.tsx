@@ -54,17 +54,20 @@ const StableInput = memo(({
   isTextarea = false,
 }: StableInputProps) => {
   const [localValue, setLocalValue] = useState(String(value ?? ''));
+  const isFocused = useRef(false);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Sync from parent only when parent value changes externally
+  // Only sync from parent when the input is NOT focused (programmatic updates only)
   useEffect(() => {
-    const parentStr = String(value ?? '');
-    setLocalValue(prev => {
-      // Don't override if user is actively typing the same value
-      if (prev === parentStr) return prev;
-      return parentStr;
-    });
+    if (!isFocused.current) {
+      const parentStr = String(value ?? '');
+      setLocalValue(parentStr);
+    }
   }, [value]);
+
+  const handleFocus = useCallback(() => {
+    isFocused.current = true;
+  }, []);
 
   const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const newVal = e.target.value;
@@ -79,6 +82,7 @@ const StableInput = memo(({
 
   // Flush on blur so parent always gets the latest value
   const handleBlur = useCallback(() => {
+    isFocused.current = false;
     if (timeoutRef.current) {
       clearTimeout(timeoutRef.current);
       timeoutRef.current = null;
@@ -107,6 +111,7 @@ const StableInput = memo(({
         id={id}
         value={localValue}
         onChange={handleChange}
+        onFocus={handleFocus}
         onBlur={handleBlur}
         placeholder={placeholder}
         rows={rows || 3}
@@ -121,6 +126,7 @@ const StableInput = memo(({
       type={type}
       value={localValue}
       onChange={handleChange}
+      onFocus={handleFocus}
       onBlur={handleBlur}
       placeholder={placeholder}
       min={min}
