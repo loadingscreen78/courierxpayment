@@ -79,8 +79,12 @@ export const GiftAddressStep = ({ data, onUpdate }: GiftAddressStepProps) => {
   }, [localPickupAddress, localConsigneeAddress, onUpdate]);
 
   const updatePickupAddress = useCallback((field: string, value: string) => {
-    setLocalPickupAddress(prev => ({ ...prev, [field]: value }));
-  }, []);
+    setLocalPickupAddress(prev => {
+      const updated = { ...prev, [field]: value };
+      onUpdate({ pickupAddress: updated });
+      return updated;
+    });
+  }, [onUpdate]);
 
   // Handle PIN code change with auto-fill
   const handlePincodeChange = async (pincode: string) => {
@@ -121,9 +125,7 @@ export const GiftAddressStep = ({ data, onUpdate }: GiftAddressStepProps) => {
   const updateConsigneeAddress = useCallback((field: string, value: string) => {
     setLocalConsigneeAddress(prev => {
       const updated = { ...prev, [field]: value };
-      if (field === 'phone') {
-        onUpdate({ consigneeAddress: updated });
-      }
+      onUpdate({ consigneeAddress: updated });
       return updated;
     });
   }, [onUpdate]);
@@ -286,6 +288,7 @@ export const GiftAddressStep = ({ data, onUpdate }: GiftAddressStepProps) => {
                   className="input-premium pl-10"
                 />
               </div>
+              <p className="text-xs text-muted-foreground">Indian mobile number (+91 optional)</p>
             </div>
           </div>
 

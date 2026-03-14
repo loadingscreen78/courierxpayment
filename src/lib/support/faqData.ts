@@ -104,7 +104,7 @@ export const faqData: FAQCategory[] = [
       },
       {
         question: 'What is the minimum recharge amount?',
-        answer: 'The minimum wallet recharge amount is ₹500. You can add funds via UPI, Debit Card, Credit Card, or Net Banking through our secure payment gateway (Razorpay).'
+        answer: 'The minimum wallet recharge amount is ₹500. You can add funds via UPI, Debit Card, Credit Card, or Net Banking through our secure payment gateway (Cashfree).'
       },
       {
         question: 'Can I get a refund to my wallet?',

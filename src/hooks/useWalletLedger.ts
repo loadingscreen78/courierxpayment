@@ -26,9 +26,9 @@ import {
   storeReceipt,
   getReceiptByLedgerEntryId,
 } from '@/lib/wallet/supabaseWalletService';
-import { loadRazorpayScript } from '@/lib/wallet/razorpayLoader';
+import { loadCashfreeScript } from '@/lib/wallet/cashfreeLoader';
 import { generateWalletReceiptPDF } from '@/lib/wallet/generateWalletReceiptPDF';
-import type { CreateOrderResponse, VerifyPaymentResponse } from '@/lib/wallet/razorpayConfig';
+import type { VerifyPaymentResponse } from '@/lib/wallet/cashfreeConfig';
 
 export interface UseWalletLedgerReturn {
   balance: number;
@@ -163,9 +163,9 @@ export function useWalletLedger(): UseWalletLedgerReturn {
         return { success: false, error: 'Session expired' };
       }
 
-      // Step 1: Create Razorpay order
+      // Step 1: Create Cashfree order
       setPaymentState(prev => ({ ...prev, message: 'Connecting to payment gateway...' }));
-      const orderRes = await fetch('/api/razorpay/create-order', {
+      const orderRes = await fetch('/api/cashfree/create-order', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -182,102 +182,31 @@ export function useWalletLedger(): UseWalletLedgerReturn {
 
       const orderData: CreateOrderResponse = await orderRes.json();
 
-      // Step 2: Load Razorpay script
+      // Step 2: Load Cashfree JS SDK
       setPaymentState(prev => ({ ...prev, message: 'Loading payment interface...' }));
-      await loadRazorpayScript();
+      await loadCashfreeScript();
 
-      // Step 3: Open Razorpay checkout modal
-      setPaymentState(prev => ({ ...prev, status: 'processing', message: 'Waiting for payment...' }));
+      // Step 3: Initiate Cashfree hosted checkout — browser will redirect away.
+      // Verification happens in Wallet.tsx via ?order_id= query param on return.
+      setPaymentState(prev => ({ ...prev, status: 'processing', message: 'Redirecting to payment...' }));
 
-      const razorpayResult = await new Promise<{
-        razorpay_payment_id: string;
-        razorpay_order_id: string;
-        razorpay_signature: string;
-      }>((resolve, reject) => {
-        const options = {
-          key: orderData.keyId,
-          amount: orderData.amount,
-          currency: orderData.currency,
-          name: 'CourierX',
-          description: 'Wallet Recharge',
-          order_id: orderData.orderId,
-          prefill: {
-            name: profile?.full_name || '',
-            email: profile?.email || '',
-            contact: profile?.phone_number || '',
-          },
-          theme: { color: '#4F46E5' },
-          handler: (response: any) => resolve(response),
-          modal: {
-            ondismiss: () => reject(new Error('Payment cancelled')),
-          },
-        };
-
-        const rzp = new (window as any).Razorpay(options);
-        rzp.on('payment.failed', (response: any) => {
-          reject(new Error(response.error?.description || 'Payment failed'));
-        });
-        rzp.open();
+      const cashfree = (window as any).Cashfree({
+        mode: process.env.NEXT_PUBLIC_CASHFREE_ENV === 'sandbox' ? 'sandbox' : 'production',
       });
 
-      // Step 4: Verify payment on server
-      setPaymentState(prev => ({ ...prev, message: 'Verifying payment...' }));
-
-      const verifyRes = await fetch('/api/razorpay/verify-payment', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ ...razorpayResult, couponCode: couponCode || undefined }),
+      const checkoutResult = await cashfree.checkout({
+        paymentSessionId: orderData.paymentSessionId,
+        redirectTarget: '_self',
       });
 
-      if (!verifyRes.ok) {
-        const err = await verifyRes.json().catch(() => ({ error: 'Verification failed' }));
-        setPaymentState({
-          isProcessing: false,
-          status: 'failed',
-          message: 'Payment was received but verification failed. If money was deducted, it will be refunded automatically.',
-        });
-        return { success: false, error: err.error };
+      // If we reach here, checkout returned an error (redirect didn't happen)
+      if (checkoutResult?.error) {
+        throw new Error(checkoutResult.error.message || 'Payment failed');
       }
 
-      const verifyData: VerifyPaymentResponse = await verifyRes.json();
-      const resolvedMethod = (verifyData.paymentMethod || 'upi') as PaymentMethod;
-      const bonusAmount = verifyData.bonusAmount || 0;
-
-      // Step 5: Generate receipt
-      const baseAmount = verifyData.amount / (1 + GST_RATE);
-      const gstAmount = verifyData.amount - baseAmount;
-      const receipt: Receipt = {
-        id: `rcp_${Date.now()}`,
-        receiptNumber: generateReceiptNumber(),
-        transactionId: razorpayResult.razorpay_payment_id,
-        ledgerEntryId: verifyData.ledgerEntryId,
-        amount: Math.round(baseAmount * 100) / 100,
-        gstAmount: Math.round(gstAmount * 100) / 100,
-        totalAmount: verifyData.amount,
-        paymentMethod: resolvedMethod,
-        date: new Date().toISOString(),
-        customerName: profile?.full_name || 'Customer',
-        customerEmail: profile?.email || undefined,
-        companyDetails: COMPANY_DETAILS,
-      };
-
-      await storeReceipt(user.id, verifyData.ledgerEntryId, {
-        receiptNumber: receipt.receiptNumber,
-        transactionId: receipt.transactionId,
-        amount: receipt.amount,
-        gstAmount: receipt.gstAmount,
-        totalAmount: receipt.totalAmount,
-        paymentMethod: resolvedMethod,
-        customerName: receipt.customerName,
-        customerEmail: receipt.customerEmail,
-      });
-
-      await refreshBalance();
-      setPaymentState({ isProcessing: false, status: 'success', message: bonusAmount > 0 ? `Payment successful! +₹${bonusAmount} bonus credited` : 'Payment successful!' });
-      return { success: true, receipt, bonusAmount };
+      // Redirect is in progress — return a pending state.
+      // The page will reload on return and Wallet.tsx handles verification.
+      return { success: true };
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Payment failed';
       const isCancelled = errorMessage === 'Payment cancelled';
@@ -288,7 +217,7 @@ export function useWalletLedger(): UseWalletLedgerReturn {
       });
       return { success: false, error: errorMessage };
     }
-  }, [user?.id, profile, refreshBalance]);
+  }, [user?.id, refreshBalance]);
 
   const deductFunds = useCallback(async (amount: number, shipmentId: string, description?: string) => {
     if (!user?.id) return { success: false, error: 'Not authenticated' };

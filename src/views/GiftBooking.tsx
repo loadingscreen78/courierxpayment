@@ -214,6 +214,7 @@ const GiftBooking = () => {
       case 2:
         if (!bookingData.pickupAddress.fullName.trim()) errors.push('Please enter pickup contact name');
         if (!bookingData.pickupAddress.phone.trim()) errors.push('Please enter pickup phone number');
+        else if (!/^(\+91[\s-]?)?[6-9]\d{9}$/.test(bookingData.pickupAddress.phone.replace(/\s/g, ''))) errors.push('Pickup phone must be a valid Indian mobile number (e.g. +91 98765 43210)');
         if (!bookingData.pickupAddress.addressLine1.trim()) errors.push('Please enter pickup address');
         if (!bookingData.pickupAddress.pincode.trim() || bookingData.pickupAddress.pincode.length !== 6) {
           errors.push('Please enter valid 6-digit pincode');
@@ -222,9 +223,6 @@ const GiftBooking = () => {
         if (!bookingData.consigneeAddress.country.trim()) errors.push('Please select destination country');
         if (!bookingData.consigneeAddress.addressLine1.trim()) errors.push('Please enter consignee address');
         break;
-      case 3:
-        break;
-      case 4:
         // Validation step - only block if explicitly marked as prohibited
         if (bookingData.prohibitedItemAttempted) {
           errors.push('Prohibited items detected. This shipment cannot proceed.');

@@ -66,16 +66,17 @@ const DocumentAddressStepComponent = ({ data, onUpdate }: DocumentAddressStepPro
   }, [localPickupAddress, localConsigneeAddress, onUpdate]);
 
   const updatePickupAddress = useCallback((field: string, value: string) => {
-    setLocalPickupAddress(prev => ({ ...prev, [field]: value }));
-  }, []);
+    setLocalPickupAddress(prev => {
+      const updated = { ...prev, [field]: value };
+      onUpdate({ pickupAddress: updated });
+      return updated;
+    });
+  }, [onUpdate]);
 
   const updateConsigneeAddress = useCallback((field: string, value: string) => {
     setLocalConsigneeAddress(prev => {
       const updated = { ...prev, [field]: value };
-      // Immediately sync phone to parent so validation uses latest value
-      if (field === 'phone') {
-        onUpdate({ consigneeAddress: updated });
-      }
+      onUpdate({ consigneeAddress: updated });
       return updated;
     });
   }, [onUpdate]);
@@ -220,6 +221,7 @@ const DocumentAddressStepComponent = ({ data, onUpdate }: DocumentAddressStepPro
                   className="input-premium pl-10"
                 />
               </div>
+              <p className="text-xs text-muted-foreground">Indian mobile number (+91 optional)</p>
             </div>
           </div>
 

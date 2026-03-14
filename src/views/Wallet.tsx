@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { format } from 'date-fns';
 import { AppLayout } from '@/components/layout';
 import { useWallet, MIN_RECHARGE_AMOUNT, Transaction } from '@/contexts/WalletContext';
@@ -107,6 +108,7 @@ const WalletPage = () => {
     downloadTransactionReceipt,
   } = useWallet();
   
+  const searchParams = useSearchParams();
   const { invoices, loading: invoicesLoading } = useInvoices();
   const [showRechargeDialog, setShowRechargeDialog] = useState(false);
   const [rechargeAmount, setRechargeAmount] = useState('');
@@ -122,6 +124,52 @@ const WalletPage = () => {
     discountValue?: number;
     error?: string;
   } | null>(null);
+
+  // Handle return from Cashfree hosted checkout
+  useEffect(() => {
+    const orderId = searchParams.get('order_id');
+    if (!orderId) return;
+
+    // Clean URL without reload
+    window.history.replaceState({}, '', '/wallet');
+
+    const verifyReturn = async () => {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData?.session?.access_token;
+      if (!token) return;
+
+      try {
+        const res = await fetch('/api/cashfree/verify-payment', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ orderId }),
+        });
+        const data = await res.json();
+        if (data.success) {
+          toast.success(
+            data.bonusAmount > 0
+              ? `₹${data.amount} added! +₹${data.bonusAmount} bonus credited`
+              : `₹${data.amount} added to wallet`
+          );
+        } else {
+          // Non-success status (e.g. ACTIVE = pending, EXPIRED = timed out)
+          const msg = data.error || '';
+          if (msg.includes('ACTIVE') || msg.includes('pending')) {
+            toast.info('Payment is still processing. Your wallet will update shortly.');
+          } else if (msg.includes('EXPIRED')) {
+            toast.error('Payment session expired. Please try again.');
+          } else {
+            toast.error(msg || 'Payment verification failed. Contact support if amount was deducted.');
+          }
+        }
+      } catch {
+        toast.error('Could not verify payment. Contact support if amount was deducted.');
+      }
+    };
+
+    verifyReturn();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleApplyCoupon = async () => {
     if (!couponCode.trim()) return;
@@ -499,7 +547,7 @@ const WalletPage = () => {
           {/* Sheet Header */}
           <div className="bg-gradient-to-br from-[#1a1a1a] to-[#2d1010] px-5 py-5 text-white shrink-0">
             <p className="font-typewriter text-lg font-bold text-white">Add Money</p>
-            <p className="text-white/50 text-xs mt-0.5">Min. ₹{MIN_RECHARGE_AMOUNT} · Secured by Razorpay</p>
+            <p className="text-white/50 text-xs mt-0.5">Min. ₹{MIN_RECHARGE_AMOUNT} · Secured by Cashfree</p>
             {rechargeAmount && parseInt(rechargeAmount) >= MIN_RECHARGE_AMOUNT && (
               <motion.p
                 initial={{ opacity: 0, scale: 0.9 }}
@@ -665,4 +713,14 @@ const WalletPage = () => {
   );
 };
 
-export default WalletPage;
+import { Suspense } from 'react';
+
+function WalletPageWrapper() {
+  return (
+    <Suspense fallback={null}>
+      <WalletPage />
+    </Suspense>
+  );
+}
+
+export default WalletPageWrapper;
