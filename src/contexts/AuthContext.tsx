@@ -101,18 +101,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const signUpWithEmail = useCallback(async (email: string, password: string) => {
     try {
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          emailRedirectTo: `${window.location.origin}/`,
-          data: {
-            email_confirmed: false,
-          }
-        },
-      });
-      
-      // Handle specific error cases with user-friendly messages
+      const { data, error } = await supabase.auth.signUp({ email, password });
+
+      if (error) {
+        if (error.message.includes('duplicate key') ||
+            error.message.includes('already registered') ||
+            error.message.includes('users_email_partial_key')) {
+          return { error: new Error('This email is already registered. Please sign in instead.') };
+        }
+        return { error: error as Error };
+      }
+
+      return { error: nullrror cases with user-friendly messages
       if (error) {
         // Check for duplicate email error
         if (error.message.includes('duplicate key') || 
@@ -131,35 +131,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         }
         
         return { error: error as Error };
-      }
-      
-      // Send verification email via Resend
-      if (data.user && !data.user.email_confirmed_at) {
-        console.log('[Auth] Sending verification email via Resend...');
-        
-        try {
-          // Get the confirmation token from the session
-          const { data: sessionData } = await supabase.auth.getSession();
-          
-          // Call our custom email API
-          const response = await fetch('/api/auth/send-verification', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              email: data.user.email,
-              userId: data.user.id,
-            }),
-          });
-          
-          if (!response.ok) {
-            console.error('[Auth] Failed to send verification email');
-          } else {
-            console.log('[Auth] Verification email sent successfully');
-          }
-        } catch (emailError) {
-          console.error('[Auth] Error sending verification email:', emailError);
-          // Don't fail signup if email sending fails
-        }
       }
       
       // Auto-complete KYC for new users (MOCK MODE)

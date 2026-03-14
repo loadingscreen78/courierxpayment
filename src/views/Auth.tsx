@@ -261,11 +261,14 @@ const Auth = () => {
     }
     
     console.log('[Auth] Sign in successful, showing toast...');
-    toast({ title: mode === 'signup' ? 'Account Created' : 'Welcome!', description: mode === 'signup' ? 'Check your email.' : 'Signed in.' });
+    toast({ title: mode === 'signup' ? 'Account Created' : 'Welcome!', description: mode === 'signup' ? 'Account created successfully!' : 'Signed in.' });
     
-    // For sign up, don't redirect (user needs to verify email)
+    // For sign up, proceed with redirect (no email verification required)
     if (mode === 'signup') {
+      const { data: { user: currentUser } } = await supabase.auth.getUser();
+      if (!currentUser) { setIsLoading(false); return; }
       setIsLoading(false);
+      window.location.href = '/onboarding';
       return;
     }
     
