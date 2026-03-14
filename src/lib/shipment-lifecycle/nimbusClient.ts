@@ -43,6 +43,13 @@ export interface NimbusTrackResponse {
   error?: string;
 }
 
+export interface NimbusLabelResponse {
+  success: boolean;
+  labelUrl?: string;
+  labelBase64?: string;
+  error?: string;
+}
+
 // ---------------------------------------------------------------------------
 // Token cache
 // ---------------------------------------------------------------------------
@@ -273,6 +280,80 @@ export async function createShipment(
           executionTimeMs: Date.now() - start,
           correlationId,
         }).catch((e) => console.error('[nimbusClient] Failed to log create call:', e));
+      }
+    },
+    async () => {
+      tokenCache = null;
+      await authenticate();
+    },
+  );
+}
+
+// ---------------------------------------------------------------------------
+// fetchLabel()
+// ---------------------------------------------------------------------------
+
+/**
+ * Fetches the AWB label for a domestic shipment via Nimbus GET /label.
+ * Returns a URL or base64 PDF depending on what Nimbus provides.
+ * Auto-refreshes token on 401, retries up to 3 times with exponential backoff.
+ */
+export async function fetchLabel(awb: string): Promise<NimbusLabelResponse> {
+  const url = `${baseUrl()}/label?awb=${encodeURIComponent(awb)}`;
+  const correlationId = generateCorrelationId();
+
+  return withRetry(
+    async () => {
+      const token = await getToken();
+      const start = Date.now();
+      let httpStatus = 0;
+      let responseBody: Record<string, unknown> = {};
+
+      try {
+        const res = await fetch(url, {
+          method: 'GET',
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        httpStatus = res.status;
+
+        if (res.status === 401) {
+          throw new NimbusApiError('Nimbus token expired or invalid', 401);
+        }
+
+        // Nimbus may return PDF bytes directly or JSON with a URL
+        const contentType = res.headers.get('content-type') ?? '';
+        if (contentType.includes('application/pdf')) {
+          const buffer = await res.arrayBuffer();
+          const base64 = Buffer.from(buffer).toString('base64');
+          responseBody = { type: 'pdf_bytes', size: buffer.byteLength };
+          return { success: true, labelBase64: base64 };
+        }
+
+        responseBody = (await res.json().catch(() => ({}))) as Record<string, unknown>;
+
+        if (!res.ok) {
+          throw new NimbusApiError(
+            `Nimbus label fetch failed: ${res.status} ${res.statusText}`,
+            res.status,
+          );
+        }
+
+        return {
+          success: true,
+          labelUrl: responseBody.label_url as string | undefined,
+          labelBase64: responseBody.label as string | undefined,
+        };
+      } finally {
+        await logApiCall({
+          shipmentId: null,
+          apiType: 'nimbus_label',
+          requestPayload: { url, awb },
+          responsePayload: responseBody,
+          httpStatus: httpStatus || 0,
+          executionTimeMs: Date.now() - start,
+          correlationId,
+        }).catch((e) => console.error('[nimbusClient] Failed to log label call:', e));
       }
     },
     async () => {

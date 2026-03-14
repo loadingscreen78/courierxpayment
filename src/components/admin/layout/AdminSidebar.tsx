@@ -14,6 +14,7 @@ import {
   ChevronRight,
   Zap,
   Tag,
+  FileBarChart2,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAdminAuth } from '@/hooks/useAdminAuth';
@@ -23,6 +24,7 @@ import { motion } from 'framer-motion';
 const navItems = [
   { title: 'Dashboard', href: '/admin', icon: LayoutDashboard, end: true },
   { title: 'Inbound Station', href: '/admin/inbound', icon: ScanLine },
+  { title: 'AWB Labels', href: '/admin/awb-labels', icon: FileBarChart2 },
   { title: 'QC Workbench', href: '/admin/qc', icon: ClipboardCheck },
   { title: 'Outbound', href: '/admin/outbound', icon: Truck },
   { title: 'All Shipments', href: '/admin/shipments', icon: Package },

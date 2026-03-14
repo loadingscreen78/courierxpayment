@@ -176,6 +176,22 @@ export async function createBooking(req: BookingRequest): Promise<BookingResult>
     .update({ domestic_awb: nimbusResponse.awb })
     .eq('id', shipment.id);
 
+  // 5a. Fetch AWB label from Nimbus (non-blocking — failure doesn't abort booking)
+  try {
+    const labelResponse = await nimbusClient.fetchLabel(nimbusResponse.awb!);
+    if (labelResponse.success) {
+      const labelValue = labelResponse.labelUrl ?? labelResponse.labelBase64 ?? null;
+      if (labelValue) {
+        await supabase
+          .from('shipments')
+          .update({ domestic_label_url: labelValue })
+          .eq('id', shipment.id);
+      }
+    }
+  } catch (err) {
+    console.warn('[bookingService] Label fetch failed (non-fatal):', err instanceof Error ? err.message : err);
+  }
+
   const result = await updateShipmentStatus({
     shipmentId: shipment.id,
     newStatus: 'BOOKING_CONFIRMED',
