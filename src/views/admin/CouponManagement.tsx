@@ -411,7 +411,7 @@ export function CouponManagement() {
 
       {/* Create/Edit Dialog — fixed centering with dark theme */}
       <Dialog open={showDialog} onOpenChange={setShowDialog}>
-        <DialogContent className="bg-[#16161a] border-white/10 text-white max-w-md w-[calc(100%-2rem)] max-h-[90vh] overflow-y-auto">
+        <DialogContent className="bg-[#16161a] border-white/10 text-white max-w-md max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="font-mono text-white">
               {editingCoupon ? 'Edit Coupon' : 'Create Coupon'}
