@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useDraft } from '@/hooks/useDraft';
 import { formatRelativeTime } from '@/lib/drafts/draftService';
@@ -123,6 +123,16 @@ const DocumentBooking = () => {
   const [bookingReferenceId, setBookingReferenceId] = useState<string | null>(null);
   const { mediumTap, errorFeedback, successFeedback } = useHaptics();
   const { playClick, playError, playSuccess } = useSoundEffects();
+
+  // Stable snapshot for AddressStep — captured once when step 2 is entered.
+  // Prevents re-renders from propagating into the address form while typing.
+  const addressStepDataRef = useRef<DocumentBookingData | null>(null);
+  if (currentStep === 2 && addressStepDataRef.current === null) {
+    addressStepDataRef.current = bookingData;
+  }
+  if (currentStep !== 2) {
+    addressStepDataRef.current = null;
+  }
 
   const updateBookingData = useCallback((updates: Partial<DocumentBookingData>) => {
     setData(prev => {
@@ -344,7 +354,7 @@ const DocumentBooking = () => {
       case 1:
         return <DocumentDetailsStep data={bookingData} onUpdate={updateBookingData} />;
       case 2:
-        return <DocumentAddressStep data={bookingData} onUpdate={updateBookingData} />;
+        return <DocumentAddressStep data={addressStepDataRef.current ?? bookingData} onUpdate={updateBookingData} />;
       case 3:
         return <DocumentAddonsStep data={bookingData} onUpdate={updateBookingData} />;
       case 4:

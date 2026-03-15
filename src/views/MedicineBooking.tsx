@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useDraft } from '@/hooks/useDraft';
 import { formatRelativeTime } from '@/lib/drafts/draftService';
@@ -128,6 +128,16 @@ const MedicineBooking = ({ isAdminMode = false }: MedicineBookingProps) => {
   const [bookingReferenceId, setBookingReferenceId] = useState<string | null>(null);
   const { mediumTap, errorFeedback, successFeedback } = useHaptics();
   const { playClick, playError, playSuccess } = useSoundEffects();
+
+  // Stable snapshot for AddressStep — captured once when step 2 is entered.
+  // Prevents AddressStep from re-rendering every time bookingData changes during typing.
+  const addressStepDataRef = useRef<MedicineBookingData | null>(null);
+  if (currentStep === 2 && addressStepDataRef.current === null) {
+    addressStepDataRef.current = bookingData;
+  }
+  if (currentStep !== 2) {
+    addressStepDataRef.current = null; // reset so next visit to step 2 gets fresh snapshot
+  }
 
   // Calculate aggregated values across all medicines
   const aggregatedSupplyDays = bookingData.medicines.reduce((max, med) => {
@@ -443,7 +453,7 @@ const MedicineBooking = ({ isAdminMode = false }: MedicineBookingProps) => {
       case 2:
         return (
           <AddressStep
-            data={bookingData}
+            data={addressStepDataRef.current ?? bookingData}
             onUpdate={updateBookingData}
           />
         );

@@ -1,4 +1,4 @@
-import { memo, useState, useCallback, useMemo, useEffect, useRef } from 'react';
+import { memo, useState, useCallback, useMemo, useRef } from 'react';
 import { DocumentBookingData } from '@/views/DocumentBooking';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
@@ -54,44 +54,48 @@ const DocumentAddressStepComponent = ({ data, onUpdate }: DocumentAddressStepPro
     ? CITIES_BY_STATE[localPickupAddress.state] || []
     : [];
 
-  // Debounced sync to parent — fires 400ms after last change, not on every keystroke
+  // Refs hold latest values — timer closure reads from refs, never causes re-renders
   const onUpdateRef = useRef(onUpdate);
   onUpdateRef.current = onUpdate;
+  const pickupRef = useRef(localPickupAddress);
+  const consigneeRef = useRef(localConsigneeAddress);
   const syncTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Keep refs in sync with state (no re-render cost)
+  pickupRef.current = localPickupAddress;
+  consigneeRef.current = localConsigneeAddress;
+
+  // Stable — zero deps, never recreates, never triggers re-renders
   const scheduleSync = useCallback(() => {
     if (syncTimerRef.current) clearTimeout(syncTimerRef.current);
     syncTimerRef.current = setTimeout(() => {
       onUpdateRef.current({
-        pickupAddress: localPickupAddress,
-        consigneeAddress: localConsigneeAddress,
+        pickupAddress: pickupRef.current,
+        consigneeAddress: consigneeRef.current,
       });
-    }, 400);
-  }, [localPickupAddress, localConsigneeAddress]);
-
-  useEffect(() => {
-    scheduleSync();
-    return () => { if (syncTimerRef.current) clearTimeout(syncTimerRef.current); };
-  }, [scheduleSync]);
+    }, 800);
+  }, []);
 
   const handleBlur = useCallback((e: React.FocusEvent) => {
     const relatedTarget = e.relatedTarget as HTMLElement;
     if (!relatedTarget || !e.currentTarget.contains(relatedTarget)) {
       if (syncTimerRef.current) clearTimeout(syncTimerRef.current);
       onUpdateRef.current({
-        pickupAddress: localPickupAddress,
-        consigneeAddress: localConsigneeAddress,
+        pickupAddress: pickupRef.current,
+        consigneeAddress: consigneeRef.current,
       });
     }
-  }, [localPickupAddress, localConsigneeAddress]);
+  }, []);
 
   const updatePickupAddress = useCallback((field: string, value: string) => {
     setLocalPickupAddress(prev => ({ ...prev, [field]: value }));
-  }, []);
+    scheduleSync();
+  }, [scheduleSync]);
 
   const updateConsigneeAddress = useCallback((field: string, value: string) => {
     setLocalConsigneeAddress(prev => ({ ...prev, [field]: value }));
-  }, []);
+    scheduleSync();
+  }, [scheduleSync]);
 
   // PIN code auto-fill for pickup address
   const handlePincodeChange = async (pincode: string) => {
