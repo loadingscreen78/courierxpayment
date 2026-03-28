@@ -14,7 +14,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useToast } from '@/hooks/use-toast';
-import logoMain from '@/assets/logo-main.jpeg';
+const logoMain = { src: '/lovable-uploads/logo.png' };
 
 // Verhoeff algorithm for Aadhaar checksum validation
 const verhoeffD = [

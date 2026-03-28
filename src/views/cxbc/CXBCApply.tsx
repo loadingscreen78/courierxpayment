@@ -9,7 +9,7 @@ import { Progress } from "@/components/ui/progress";
 import { ArrowLeft, Store, CheckCircle, AlertCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import logoMain from "@/assets/logo-main.jpeg";
+const logoMain = { src: '/lovable-uploads/logo.png' };
 import { BusinessInfoStep } from "@/components/cxbc/apply/BusinessInfoStep";
 import { KYCDocumentsStep } from "@/components/cxbc/apply/KYCDocumentsStep";
 import { ReviewStep } from "@/components/cxbc/apply/ReviewStep";

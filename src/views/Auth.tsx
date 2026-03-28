@@ -14,7 +14,7 @@ import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp
 import { useToast } from '@/hooks/use-toast';
 import { useSeo } from '@/hooks/useSeo';
 import { supabase } from '@/integrations/supabase/client';
-import logoMain from '@/assets/logo-main.jpeg';
+const logoMain = { src: '/lovable-uploads/logo.png' };
 import { motion } from 'framer-motion';
 import { useGoogleGsi } from '@/hooks/useGoogleGsi';
 

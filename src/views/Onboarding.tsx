@@ -16,7 +16,7 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { useHaptics } from '@/hooks/useHaptics';
 import { useSoundEffects } from '@/hooks/useSoundEffects';
-import logoMain from '@/assets/logo-main.jpeg';
+const logoMain = { src: '/lovable-uploads/logo.png' };
 
 const profileSchema = z.object({
   fullName: z.string().min(2, 'Name must be at least 2 characters').max(100, 'Name is too long'),

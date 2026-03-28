@@ -11,8 +11,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormMessage } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
-import logoMain from '@/assets/logo-main.jpeg';
 import Image from 'next/image';
+
+const logoMain = '/lovable-uploads/logo.png';
 
 const resetSchema = z.object({
   password: z.string().min(8, 'Password must be at least 8 characters'),

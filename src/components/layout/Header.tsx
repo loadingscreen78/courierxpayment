@@ -14,7 +14,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useWallet, MIN_BALANCE_REQUIRED } from '@/contexts/WalletContext';
 import { useRouter } from 'next/navigation';
 import { VerificationBadge } from '@/components/ui/verification-badge';
-import logoMain from '@/assets/logo-main.jpeg';
+const logoMain = { src: '/lovable-uploads/logo.png' };
 import { cn } from '@/lib/utils';
 import { ShippingModeToggle } from '@/components/ui/ShippingModeToggle';
 import { useShippingMode } from '@/contexts/ShippingModeContext';

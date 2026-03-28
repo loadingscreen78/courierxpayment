@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Mail, Phone, MapPin, Facebook, Twitter, Instagram, Linkedin } from 'lucide-react';
-import logoMain from '@/assets/logo-main.jpeg';
+const logoMain = { src: '/lovable-uploads/logo.png' };
 import { motion } from 'framer-motion';
 import { AnimatedSection } from './AnimatedSection';
 import { useRouter } from 'next/navigation';
