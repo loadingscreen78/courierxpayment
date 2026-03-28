@@ -145,6 +145,29 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
   const watchedDomType = domForm.watch('shipmentType');
   const isDocumentDom = watchedDomType === 'document';
 
+  // ── Pre-fill from rate calculator localStorage data ──
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem('publicRateCalcData');
+      if (!raw) return;
+      const data = JSON.parse(raw);
+      // Only use data less than 30 minutes old
+      if (Date.now() - (data.timestamp || 0) > 30 * 60 * 1000) return;
+
+      if (!isInternational && data.mode === 'domestic') {
+        if (data.pickupPincode) domForm.setValue('pickupPincode', data.pickupPincode);
+        if (data.deliveryPincode) domForm.setValue('deliveryPincode', data.deliveryPincode);
+        if (data.shipmentType) domForm.setValue('shipmentType', data.shipmentType);
+        if (data.weightKg) domForm.setValue('weightKg', data.weightKg);
+        if (data.lengthCm) domForm.setValue('lengthCm', data.lengthCm);
+        if (data.widthCm) domForm.setValue('widthCm', data.widthCm);
+        if (data.heightCm) domForm.setValue('heightCm', data.heightCm);
+      }
+      // Clean up after reading
+      localStorage.removeItem('publicRateCalcData');
+    } catch { /* ignore parse errors */ }
+  }, [isInternational, domForm]);
+
   // ── Pincode lookups for domestic rate form (step 1) ──
   const ratePickupPin = domForm.watch('pickupPincode');
   const rateDeliveryPin = domForm.watch('deliveryPincode');

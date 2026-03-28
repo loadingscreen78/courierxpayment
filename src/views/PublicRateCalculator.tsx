@@ -693,7 +693,18 @@ const PublicRateCalculator = () => {
                           <SummaryCard title={getCarrierInfo(selectedOption.carrier).fullName}
                             price={selectedOption.price}
                             transitLabel={`${selectedOption.transitDays.min}-${selectedOption.transitDays.max} days`}
-                            onBook={() => router.push('/public/book/international')} />
+                            onBook={() => {
+                              localStorage.setItem('publicRateCalcData', JSON.stringify({
+                                mode: 'international',
+                                destinationCountry,
+                                weightGrams,
+                                selectedCarrier: selectedOption?.carrier,
+                                estimatedPrice: selectedOption?.price,
+                                transitDays: selectedOption?.transitDays,
+                                timestamp: Date.now(),
+                              }));
+                              router.push('/public/book/international');
+                            }} />
                         </div>
                         <div>{eta && <ETADisplay eta={eta} />}</div>
                       </div>
@@ -942,7 +953,21 @@ const PublicRateCalculator = () => {
                         <SummaryCard title={selectedDomesticCourier.courier_name}
                           price={selectedDomesticCourier.customer_price}
                           transitLabel={`${selectedDomesticCourier.estimated_delivery_days} day${selectedDomesticCourier.estimated_delivery_days !== 1 ? 's' : ''}`}
-                          onBook={() => router.push('/public/book/domestic')} />
+                          onBook={() => {
+                            localStorage.setItem('publicRateCalcData', JSON.stringify({
+                              mode: 'domestic',
+                              pickupPincode,
+                              deliveryPincode,
+                              weightKg: domesticWeightKg,
+                              lengthCm: domesticLength,
+                              widthCm: domesticWidth,
+                              heightCm: domesticHeight,
+                              shipmentType: domesticShipmentType,
+                              selectedCourier: selectedDomesticCourier,
+                              timestamp: Date.now(),
+                            }));
+                            router.push('/public/book/domestic');
+                          }} />
                       </div>
                     )}
                     <p className="text-xs text-center text-muted-foreground">
