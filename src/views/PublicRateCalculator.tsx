@@ -693,7 +693,7 @@ const PublicRateCalculator = () => {
                           <SummaryCard title={getCarrierInfo(selectedOption.carrier).fullName}
                             price={selectedOption.price}
                             transitLabel={`${selectedOption.transitDays.min}-${selectedOption.transitDays.max} days`}
-                            onBook={() => router.push('/auth')} />
+                            onBook={() => router.push('/public/book/international')} />
                         </div>
                         <div>{eta && <ETADisplay eta={eta} />}</div>
                       </div>
@@ -942,7 +942,7 @@ const PublicRateCalculator = () => {
                         <SummaryCard title={selectedDomesticCourier.courier_name}
                           price={selectedDomesticCourier.customer_price}
                           transitLabel={`${selectedDomesticCourier.estimated_delivery_days} day${selectedDomesticCourier.estimated_delivery_days !== 1 ? 's' : ''}`}
-                          onBook={() => router.push('/auth')} />
+                          onBook={() => router.push('/public/book/domestic')} />
                       </div>
                     )}
                     <p className="text-xs text-center text-muted-foreground">
