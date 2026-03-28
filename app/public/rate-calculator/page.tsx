@@ -2,9 +2,9 @@ import PublicRateCalculator from '@/views/PublicRateCalculator';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Shipping Rate Calculator — Compare International Courier Rates from India',
-  description: 'Calculate and compare international shipping rates from India instantly. Get quotes from DHL, FedEx, Aramex for medicines, documents & gifts to 150+ countries. Find the cheapest courier.',
-  keywords: ['shipping rate calculator', 'international courier rates India', 'compare shipping rates', 'DHL rates India', 'FedEx rates India', 'Aramex rates India', 'cheapest international courier India', 'courier cost calculator'],
+  title: 'Calculate Rate & Transit Time — Domestic & International Shipping | CourierX',
+  description: 'Calculate shipping rates and transit times for domestic and international shipments from India. Compare carriers, get instant quotes for documents, parcels & gifts.',
+  keywords: ['shipping rate calculator', 'transit time calculator', 'domestic courier rates India', 'international courier rates India', 'compare shipping rates', 'DHL rates India', 'FedEx rates India', 'courier cost calculator'],
   alternates: { canonical: 'https://courierx.in/public/rate-calculator' },
 };
 

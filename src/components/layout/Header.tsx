@@ -92,7 +92,7 @@ export const Header = () => {
             onClick={() => router.push('/rate-calculator')}
           >
             <Calculator className="h-4 w-4" />
-            <span className="hidden lg:inline text-sm">Rates</span>
+            <span className="hidden lg:inline text-sm">Calculate</span>
           </Button>
         </div>
 

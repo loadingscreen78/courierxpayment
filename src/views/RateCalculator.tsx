@@ -131,11 +131,11 @@ const RateCalculator = () => {
         <div className="text-center space-y-2">
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 text-primary">
             <Calculator size={20} weight="bold" />
-            <span className="font-semibold">Shipping Rate Calculator</span>
+            <span className="font-semibold">Rate & Transit Time</span>
           </div>
-          <h1 className="text-3xl font-bold font-typewriter">Estimate Your Shipping Cost</h1>
+          <h1 className="text-3xl font-bold font-typewriter">Calculate Rate & Transit Time</h1>
           <p className="text-muted-foreground max-w-2xl mx-auto">
-            Get instant quotes for international shipping from India. Just select destination and weight.
+            Get instant quotes and delivery estimates. Select destination and weight.
           </p>
         </div>
 

@@ -21,7 +21,7 @@ export const LandingHeader = () => {
 
   const navLinks = [
     { label: 'Track', href: '/public/track' },
-    { label: 'Rates', href: '/public/rate-calculator' },
+    { label: 'Calculate', href: '/public/rate-calculator' },
     { label: 'About', href: '/about' },
     { label: 'Contact', href: '/contact' },
   ];

@@ -473,13 +473,13 @@ const PublicRateCalculator = () => {
   const isHeroInView = useInView(heroRef, { once: true });
 
   useSeo({
-    title: 'Shipping Rate Calculator | CourierX - Compare Shipping Rates',
-    description: 'Calculate domestic and international shipping rates from India.',
+    title: 'Calculate Rate & Transit Time | CourierX',
+    description: 'Calculate domestic and international shipping rates and transit times from India.',
     canonicalPath: '/public/rate-calculator',
   });
 
-  const [showModal, setShowModal] = useState(true);
-  const [shippingMode, setShippingMode] = useState<ShippingMode>('international');
+  const [showModal, setShowModal] = useState(false);
+  const [shippingMode, setShippingMode] = useState<ShippingMode>('domestic');
 
   // International state
   const [destinationCountry, setDestinationCountry] = useState('');
@@ -601,13 +601,13 @@ const PublicRateCalculator = () => {
                 transition={{ type: 'spring', delay: 0.2 }}
                 className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-coke-red/10 text-coke-red">
                 <Sparkle className="h-5 w-5" />
-                <span className="font-semibold">Instant Rate Calculator</span>
+                <span className="font-semibold">Rate & Transit Time Calculator</span>
               </motion.div>
               <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold font-typewriter">
-                Calculate Your{' '}<span className="text-coke-red">Shipping Cost</span>
+                Calculate <span className="text-coke-red">Rate & Transit Time</span>
               </h1>
               <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-                Compare rates from top carriers for your {shippingMode === 'domestic' ? 'domestic' : 'international'} shipment
+                Get instant rates and delivery estimates for {shippingMode === 'domestic' ? 'domestic' : 'international'} shipments
               </p>
               <ShippingModeToggle mode={shippingMode} onChange={setShippingMode} />
             </motion.div>
