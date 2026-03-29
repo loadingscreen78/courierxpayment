@@ -1,11 +1,11 @@
 "use client";
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { ArrowLeft, ArrowRight, CircleNotch, UserPlus, Pill, FileText, Gift, Truck, Globe, User, Envelope, Phone, MapPin, Info, AirplaneTilt, Warning, X, IdentificationCard, Upload, IdentificationBadge, House, Plus, Trash, MagnifyingGlass, CaretUpDown, Check, PencilSimple, CaretDown, CaretRight } from '@phosphor-icons/react';
+import { ArrowLeft, ArrowRight, CircleNotch, UserPlus, Pill, FileText, Gift, Truck, Globe, User, Envelope, Phone, MapPin, Info, AirplaneTilt, Warning, X, IdentificationCard, Upload, IdentificationBadge, House, Plus, Trash, MagnifyingGlass, CaretUpDown, Check, PencilSimple, CaretDown, CaretRight, ShieldCheck, EnvelopeSimple } from '@phosphor-icons/react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
@@ -335,6 +335,13 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
   const [intlZipLookup, setIntlZipLookup] = useState<{ loading: boolean; city: string; state: string; error: string }>({ loading: false, city: '', state: '', error: '' });
   const [showWeightLimitModal, setShowWeightLimitModal] = useState(false);
 
+  // ── Email OTP verification state ──
+  const [emailOtpState, setEmailOtpState] = useState<'idle' | 'sending' | 'sent' | 'verifying' | 'verified'>('idle');
+  const [emailOtpCode, setEmailOtpCode] = useState(['', '', '', '', '', '']);
+  const [emailOtpToken, setEmailOtpToken] = useState('');
+  const [emailOtpError, setEmailOtpError] = useState('');
+  const [emailOtpCooldown, setEmailOtpCooldown] = useState(0);
+
   // ── International rate form ──
   const intlForm = useForm<InternationalRateValues>({
     resolver: zodResolver(internationalRateSchema),
@@ -570,8 +577,134 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
   const handleSenderNext = async () => {
     const senderFields = ['senderName', 'senderPhone', 'senderEmail'] as const;
     const result = await detailsForm.trigger(senderFields);
-    if (result) setAddressSubStep('receiver');
+    if (!result) return;
+    // Require email verification for international flows
+    if (isInternational && emailOtpState !== 'verified') {
+      toast({ title: 'Email not verified', description: 'Please verify your email address before continuing.', variant: 'destructive' });
+      return;
+    }
+    setAddressSubStep('receiver');
   };
+
+  // ── Email OTP refs for auto-focus ──
+  const otpInputRefs = useRef<(HTMLInputElement | null)[]>([]);
+
+  // ── Send email OTP ──
+  const handleSendEmailOtp = useCallback(async () => {
+    const email = detailsForm.getValues('senderEmail');
+    const valid = await detailsForm.trigger('senderEmail');
+    if (!valid || !email) return;
+
+    setEmailOtpState('sending');
+    setEmailOtpError('');
+    setEmailOtpCode(['', '', '', '', '', '']);
+
+    try {
+      const res = await fetch('/api/auth/guest-email-otp/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
+      const data = await res.json();
+
+      if (!res.ok || !data.success) {
+        setEmailOtpError(data.error || 'Failed to send code');
+        setEmailOtpState('idle');
+        return;
+      }
+
+      setEmailOtpToken(data.otpToken);
+      setEmailOtpState('sent');
+      // Start 60s cooldown for resend
+      setEmailOtpCooldown(60);
+      const timer = setInterval(() => {
+        setEmailOtpCooldown(prev => {
+          if (prev <= 1) { clearInterval(timer); return 0; }
+          return prev - 1;
+        });
+      }, 1000);
+      // Auto-focus first OTP input
+      setTimeout(() => otpInputRefs.current[0]?.focus(), 100);
+    } catch {
+      setEmailOtpError('Network error. Please try again.');
+      setEmailOtpState('idle');
+    }
+  }, [detailsForm, toast]);
+
+  // ── Handle OTP digit input ──
+  const handleOtpDigitChange = useCallback((index: number, value: string) => {
+    if (value.length > 1) value = value.slice(-1);
+    if (value && !/^\d$/.test(value)) return;
+
+    const newCode = [...emailOtpCode];
+    newCode[index] = value;
+    setEmailOtpCode(newCode);
+    setEmailOtpError('');
+
+    // Auto-focus next input
+    if (value && index < 5) {
+      otpInputRefs.current[index + 1]?.focus();
+    }
+
+    // Auto-verify when all 6 digits entered
+    if (value && index === 5 && newCode.every(d => d)) {
+      verifyEmailOtp(newCode.join(''));
+    }
+  }, [emailOtpCode]);
+
+  // ── Handle OTP paste ──
+  const handleOtpPaste = useCallback((e: React.ClipboardEvent) => {
+    e.preventDefault();
+    const pasted = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6);
+    if (pasted.length === 0) return;
+    const newCode = [...emailOtpCode];
+    for (let i = 0; i < pasted.length; i++) newCode[i] = pasted[i];
+    setEmailOtpCode(newCode);
+    // Focus the next empty or last
+    const nextEmpty = newCode.findIndex(d => !d);
+    otpInputRefs.current[nextEmpty === -1 ? 5 : nextEmpty]?.focus();
+    // Auto-verify if complete
+    if (pasted.length === 6) verifyEmailOtp(pasted);
+  }, [emailOtpCode]);
+
+  // ── Handle backspace navigation ──
+  const handleOtpKeyDown = useCallback((index: number, e: React.KeyboardEvent) => {
+    if (e.key === 'Backspace' && !emailOtpCode[index] && index > 0) {
+      otpInputRefs.current[index - 1]?.focus();
+    }
+  }, [emailOtpCode]);
+
+  // ── Verify OTP ──
+  const verifyEmailOtp = useCallback(async (code: string) => {
+    const email = detailsForm.getValues('senderEmail');
+    if (!email || !emailOtpToken) return;
+
+    setEmailOtpState('verifying');
+    setEmailOtpError('');
+
+    try {
+      const res = await fetch('/api/auth/guest-email-otp/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, otp: code, otpToken: emailOtpToken }),
+      });
+      const data = await res.json();
+
+      if (!res.ok || !data.verified) {
+        setEmailOtpError(data.error || 'Invalid code');
+        setEmailOtpState('sent');
+        setEmailOtpCode(['', '', '', '', '', '']);
+        setTimeout(() => otpInputRefs.current[0]?.focus(), 100);
+        return;
+      }
+
+      setEmailOtpState('verified');
+      toast({ title: 'Email verified ✓', description: 'Your email has been verified successfully.' });
+    } catch {
+      setEmailOtpError('Verification failed. Please try again.');
+      setEmailOtpState('sent');
+    }
+  }, [detailsForm, emailOtpToken, toast]);
 
   // ── Validate receiver fields before sliding to content ──
   const handleReceiverNext = async () => {
@@ -1360,8 +1493,138 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                             )} />
                           </div>
                           <FormField control={detailsForm.control} name="senderEmail" render={({ field }) => (
-                            <FormItem><FormLabel>Email</FormLabel><FormControl><Input {...field} type="email" placeholder="sender@email.com" className="h-11" /></FormControl><FormMessage /></FormItem>
+                            <FormItem>
+                              <FormLabel>Email</FormLabel>
+                              <div className="flex gap-2">
+                                <FormControl>
+                                  <Input
+                                    {...field}
+                                    type="email"
+                                    placeholder="sender@email.com"
+                                    className={`h-11 flex-1 ${emailOtpState === 'verified' ? 'border-candlestick-green bg-candlestick-green/5' : ''}`}
+                                    readOnly={emailOtpState === 'verified'}
+                                    onChange={(e) => {
+                                      field.onChange(e);
+                                      // Reset verification if email changes
+                                      if (emailOtpState !== 'idle') {
+                                        setEmailOtpState('idle');
+                                        setEmailOtpCode(['', '', '', '', '', '']);
+                                        setEmailOtpToken('');
+                                        setEmailOtpError('');
+                                      }
+                                    }}
+                                  />
+                                </FormControl>
+                                {isInternational && emailOtpState === 'verified' ? (
+                                  <div className="flex items-center gap-1.5 px-3 h-11 rounded-lg bg-candlestick-green/10 border border-candlestick-green/30 text-candlestick-green shrink-0">
+                                    <ShieldCheck className="h-4 w-4" weight="fill" />
+                                    <span className="text-xs font-semibold">Verified</span>
+                                  </div>
+                                ) : isInternational && emailOtpState !== 'sent' && emailOtpState !== 'verifying' ? (
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    onClick={handleSendEmailOtp}
+                                    disabled={emailOtpState === 'sending' || !field.value}
+                                    className="shrink-0 h-11 gap-1.5 border-coke-red/30 text-coke-red hover:bg-coke-red/5 hover:text-coke-red"
+                                  >
+                                    {emailOtpState === 'sending' ? (
+                                      <><CircleNotch className="h-4 w-4 animate-spin" /> Sending...</>
+                                    ) : (
+                                      <><EnvelopeSimple className="h-4 w-4" weight="duotone" /> Verify Email</>
+                                    )}
+                                  </Button>
+                                ) : null}
+                              </div>
+                              <FormMessage />
+                            </FormItem>
                           )} />
+
+                          {/* ── Email OTP Input Section ── */}
+                          {isInternational && (emailOtpState === 'sent' || emailOtpState === 'verifying') && (
+                            <motion.div
+                              initial={{ height: 0, opacity: 0 }}
+                              animate={{ height: 'auto', opacity: 1 }}
+                              transition={{ duration: 0.3, ease: 'easeOut' }}
+                              className="overflow-hidden"
+                            >
+                              <div className="rounded-xl border border-coke-red/20 bg-gradient-to-b from-coke-red/[0.03] to-transparent p-5 space-y-4">
+                                <div className="flex items-center gap-2.5">
+                                  <div className="w-8 h-8 rounded-full bg-coke-red/10 flex items-center justify-center">
+                                    <EnvelopeSimple className="h-4 w-4 text-coke-red" weight="fill" />
+                                  </div>
+                                  <div>
+                                    <p className="text-sm font-semibold">Enter verification code</p>
+                                    <p className="text-[11px] text-muted-foreground">We sent a 6-digit code to <span className="font-medium text-foreground">{detailsForm.getValues('senderEmail')}</span></p>
+                                  </div>
+                                </div>
+
+                                {/* OTP Input Boxes */}
+                                <div className="flex justify-center gap-2.5" onPaste={handleOtpPaste}>
+                                  {emailOtpCode.map((digit, i) => (
+                                    <input
+                                      key={i}
+                                      ref={(el) => { otpInputRefs.current[i] = el; }}
+                                      type="text"
+                                      inputMode="numeric"
+                                      maxLength={1}
+                                      value={digit}
+                                      onChange={(e) => handleOtpDigitChange(i, e.target.value)}
+                                      onKeyDown={(e) => handleOtpKeyDown(i, e)}
+                                      disabled={emailOtpState === 'verifying'}
+                                      className={`w-11 h-12 text-center text-lg font-bold rounded-lg border-2 bg-background outline-none transition-all duration-200
+                                        ${digit ? 'border-coke-red/50 text-foreground' : 'border-border text-muted-foreground'}
+                                        ${emailOtpState === 'verifying' ? 'opacity-50' : ''}
+                                        focus:border-coke-red focus:ring-2 focus:ring-coke-red/20`}
+                                      aria-label={`Digit ${i + 1}`}
+                                    />
+                                  ))}
+                                </div>
+
+                                {/* Verifying spinner */}
+                                {emailOtpState === 'verifying' && (
+                                  <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
+                                    <CircleNotch className="h-4 w-4 animate-spin text-coke-red" />
+                                    <span>Verifying...</span>
+                                  </div>
+                                )}
+
+                                {/* Error message */}
+                                {emailOtpError && (
+                                  <div className="flex items-center justify-center gap-1.5 text-xs text-destructive">
+                                    <Warning className="h-3.5 w-3.5" weight="fill" />
+                                    <span>{emailOtpError}</span>
+                                  </div>
+                                )}
+
+                                {/* Resend link */}
+                                <div className="flex items-center justify-center">
+                                  {emailOtpCooldown > 0 ? (
+                                    <p className="text-xs text-muted-foreground">Resend code in <span className="font-semibold text-foreground">{emailOtpCooldown}s</span></p>
+                                  ) : (
+                                    <button type="button" onClick={handleSendEmailOtp} className="text-xs text-coke-red hover:text-coke-red/80 font-medium transition-colors">
+                                      Didn't receive it? Resend code
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
+                            </motion.div>
+                          )}
+
+                          {/* Verified success banner */}
+                          {isInternational && emailOtpState === 'verified' && (
+                            <motion.div
+                              initial={{ height: 0, opacity: 0 }}
+                              animate={{ height: 'auto', opacity: 1 }}
+                              transition={{ duration: 0.3 }}
+                              className="overflow-hidden"
+                            >
+                              <div className="rounded-lg bg-candlestick-green/10 border border-candlestick-green/30 px-4 py-2.5 flex items-center gap-2.5">
+                                <ShieldCheck className="h-5 w-5 text-candlestick-green" weight="fill" />
+                                <span className="text-sm font-medium text-candlestick-green">Email verified successfully</span>
+                              </div>
+                            </motion.div>
+                          )}
                           {isMedicineFlow && (
                             <div className="space-y-4 pt-2">
                               <div className="flex items-center gap-2">
