@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { ArrowLeft, ArrowRight, CircleNotch, UserPlus, Pill, FileText, Gift, Truck, Globe, User, Envelope, Phone, MapPin, Info, AirplaneTilt, Warning, X, IdentificationCard, Upload, IdentificationBadge, House, Plus, Trash, MagnifyingGlass, CaretUpDown, Check } from '@phosphor-icons/react';
+import { ArrowLeft, ArrowRight, CircleNotch, UserPlus, Pill, FileText, Gift, Truck, Globe, User, Envelope, Phone, MapPin, Info, AirplaneTilt, Warning, X, IdentificationCard, Upload, IdentificationBadge, House, Plus, Trash, MagnifyingGlass, CaretUpDown, Check, PencilSimple, CaretDown, CaretRight } from '@phosphor-icons/react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
@@ -329,6 +329,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
   const [contentItems, setContentItems] = useState<Array<{ name: string; type: string; hsnCode: string; qty: number; unitPrice: number }>>([
     { name: '', type: '', hsnCode: '', qty: 1, unitPrice: 0 },
   ]);
+  const [expandedItemIndex, setExpandedItemIndex] = useState<number>(0);
   const [prescriptionDocs, setPrescriptionDocs] = useState<File[]>([]);
   const [pharmacyBillDocs, setPharmacyBillDocs] = useState<File[]>([]);
   const [intlZipLookup, setIntlZipLookup] = useState<{ loading: boolean; city: string; state: string; error: string }>({ loading: false, city: '', state: '', error: '' });
@@ -1620,13 +1621,48 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                               </div>
                             </div>
                           ) : (
-                          /* ── Medicine / Gift flow: multi-item view ── */
-                          contentItems.map((item, idx) => (
+                          /* ── Medicine / Gift flow: multi-item view with collapsible items ── */
+                          contentItems.map((item, idx) => {
+                            const isExpanded = expandedItemIndex === idx;
+                            const itemTotal = item.qty * item.unitPrice;
+                            
+                            // Collapsed view for items that aren't being edited
+                            if (!isExpanded && item.name.trim()) {
+                              return (
+                                <div key={idx} className="rounded-lg border border-border bg-muted/30 px-4 py-3 flex items-center justify-between gap-3">
+                                  <div className="flex items-center gap-3 min-w-0 flex-1">
+                                    <CaretRight className="h-4 w-4 text-muted-foreground shrink-0" weight="bold" />
+                                    <div className="min-w-0 flex-1">
+                                      <p className="text-sm font-medium truncate">{item.name}</p>
+                                      <p className="text-xs text-muted-foreground">
+                                        {item.type && `${item.type} · `}Qty: {item.qty}{item.unitPrice > 0 && ` · ₹${itemTotal.toLocaleString('en-IN')}`}
+                                      </p>
+                                    </div>
+                                  </div>
+                                  <div className="flex items-center gap-1 shrink-0">
+                                    <button type="button" onClick={() => setExpandedItemIndex(idx)} className="text-blue-600 hover:text-blue-700 p-1.5 rounded-md hover:bg-blue-50 dark:hover:bg-blue-950/30 transition-colors" title="Edit">
+                                      <PencilSimple className="h-4 w-4" weight="bold" />
+                                    </button>
+                                    {contentItems.length > 1 && (
+                                      <button type="button" onClick={() => { setContentItems(prev => prev.filter((_, i) => i !== idx)); if (expandedItemIndex >= contentItems.length - 1) setExpandedItemIndex(Math.max(0, contentItems.length - 2)); }} className="text-destructive hover:text-destructive/80 p-1.5 rounded-md hover:bg-destructive/10 transition-colors" title="Delete">
+                                        <Trash className="h-4 w-4" weight="bold" />
+                                      </button>
+                                    )}
+                                  </div>
+                                </div>
+                              );
+                            }
+                            
+                            // Expanded view (editing form)
+                            return (
                             <div key={idx} className="rounded-lg border border-border p-4 space-y-3 relative">
                               <div className="flex items-center justify-between">
-                                <p className="text-xs font-semibold text-muted-foreground">{isMedicineFlow ? `Medicine ${idx + 1}` : `Item ${idx + 1}`}</p>
+                                <button type="button" onClick={() => item.name.trim() ? setExpandedItemIndex(-1) : undefined} className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors">
+                                  <CaretDown className="h-3.5 w-3.5" weight="bold" />
+                                  {isMedicineFlow ? `Medicine ${idx + 1}` : `Item ${idx + 1}`}
+                                </button>
                                 {contentItems.length > 1 && (
-                                  <button type="button" onClick={() => setContentItems(prev => prev.filter((_, i) => i !== idx))} className="text-destructive hover:text-destructive/80 p-1">
+                                  <button type="button" onClick={() => { setContentItems(prev => prev.filter((_, i) => i !== idx)); if (expandedItemIndex >= contentItems.length - 1) setExpandedItemIndex(Math.max(0, contentItems.length - 2)); }} className="text-destructive hover:text-destructive/80 p-1">
                                     <Trash className="h-4 w-4" weight="bold" />
                                   </button>
                                 )}
@@ -1729,24 +1765,46 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                                 </div>
                               </div>
                             </div>
-                          ))
+                            );
+                          })
                           )}
                         </div>
 
                         {/* Add item button — hidden for document flow */}
-                        {!isDocumentFlow && (
-                        <Button type="button" variant="outline" onClick={() => setContentItems(prev => [...prev, { name: '', type: '', hsnCode: '', qty: 1, unitPrice: 0 }])} className="w-full gap-2 border-dashed">
-                          <Plus className="h-4 w-4" /> {isMedicineFlow ? 'Add Another Medicine' : 'Add Another Item'}
-                        </Button>
-                        )}
+                        {!isDocumentFlow && (() => {
+                          const totalValue = contentItems.reduce((sum, i) => sum + (i.qty * i.unitPrice), 0);
+                          const isOverLimit = totalValue > 25000;
+                          return (
+                          <Button type="button" variant="outline" onClick={() => {
+                            const newIdx = contentItems.length;
+                            setContentItems(prev => [...prev, { name: '', type: '', hsnCode: '', qty: 1, unitPrice: 0 }]);
+                            setExpandedItemIndex(newIdx);
+                          }} className="w-full gap-2 border-dashed">
+                            <Plus className="h-4 w-4" /> {isMedicineFlow ? 'Add Another Medicine' : 'Add Another Item'}
+                          </Button>
+                          );
+                        })()}
 
-                        {/* Total value display — hidden for document flow */}
-                        {!isDocumentFlow && contentItems.some(i => i.unitPrice > 0) && (
-                          <div className="flex justify-between items-center text-sm bg-muted/50 rounded-lg px-4 py-2">
-                            <span className="text-muted-foreground">Total Declared Value</span>
-                            <span className="font-semibold">₹{contentItems.reduce((sum, i) => sum + (i.qty * i.unitPrice), 0).toLocaleString('en-IN')}</span>
+                        {/* Total value display with ₹25,000 limit — hidden for document flow */}
+                        {!isDocumentFlow && (() => {
+                          const totalValue = contentItems.reduce((sum, i) => sum + (i.qty * i.unitPrice), 0);
+                          const isOverLimit = totalValue > 25000;
+                          return (
+                          <div className="space-y-2">
+                            <div className={`flex justify-between items-center text-sm rounded-lg px-4 py-2.5 ${isOverLimit ? 'bg-destructive/10 border border-destructive/30' : 'bg-muted/50'}`}>
+                              <span className={isOverLimit ? 'text-destructive font-medium' : 'text-muted-foreground'}>Total Declared Value</span>
+                              <span className={`font-semibold ${isOverLimit ? 'text-destructive' : ''}`}>₹{totalValue.toLocaleString('en-IN')}</span>
+                            </div>
+                            {isOverLimit && (
+                              <div className="flex items-start gap-2 text-xs text-destructive px-1">
+                                <Warning className="h-4 w-4 shrink-0 mt-0.5" weight="fill" />
+                                <span>Total declared value cannot exceed ₹25,000 for guest international shipments. Please reduce item quantities or prices.</span>
+                              </div>
+                            )}
+                            <p className="text-[10px] text-muted-foreground text-right px-1">Maximum allowed: ₹25,000</p>
                           </div>
-                        )}
+                          );
+                        })()}
 
                         {/* Medicine Documents — Separate Sections */}
                         {isMedicineFlow && (
@@ -1852,6 +1910,11 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                             }
                             const hasItems = contentItems.some(i => i.name.trim());
                             if (!hasItems) { return; }
+                            const totalValue = contentItems.reduce((sum, i) => sum + (i.qty * i.unitPrice), 0);
+                            if (totalValue > 25000) {
+                              toast({ title: 'Value limit exceeded', description: 'Total declared value cannot exceed ₹25,000 for guest international shipments.', variant: 'destructive' });
+                              return;
+                            }
                             const desc = contentItems.filter(i => i.name.trim()).map(i => `${i.name} (${i.type || 'other'}) x${i.qty} @ ₹${i.unitPrice} [HSN: ${i.hsnCode || 'N/A'}]`).join('; ');
                             detailsForm.setValue('contentDescription', desc);
                             detailsForm.handleSubmit(handleFinalSubmit)();
