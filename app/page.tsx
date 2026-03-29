@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { SectionLoader } from '@/components/landing/SectionLoader';
+import { LaunchGateWrapper } from '@/components/launch/LaunchGateWrapper';
 import dynamic from 'next/dynamic';
 
 // ── SEO Metadata (rendered server-side, fully crawlable) ──────────────────────
@@ -94,6 +95,7 @@ const CTASection = dynamic(
 // ── Page (Server Component — no "use client") ─────────────────────────────────
 export default function HomePage() {
   return (
+    <LaunchGateWrapper>
     <div className="min-h-screen flex flex-col bg-background">
       {/* Header is client-side (scroll detection, mobile menu) */}
       <LandingHeader />
@@ -143,5 +145,6 @@ export default function HomePage() {
         <a href="/cxbc/apply">Become a CourierX Business Partner</a>
       </div>
     </div>
+    </LaunchGateWrapper>
   );
 }
