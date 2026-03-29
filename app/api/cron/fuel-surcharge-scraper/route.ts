@@ -10,7 +10,7 @@
  *   → Updated twice monthly (1st-15th and 16th-31st)
  *   → Looks for the current period's percentage
  *
- * Schedule: Runs every 6 hours via Vercel cron (see vercel.json)
+ * Schedule: Runs once daily at 6 AM UTC via Vercel cron (Hobby plan = 1/day max)
  */
 
 import { NextRequest, NextResponse } from 'next/server';
