@@ -7,7 +7,6 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Search, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { getHsnCode, type MedicineSuggestion } from '@/lib/medicine/medicineData';
@@ -93,8 +92,7 @@ export function MedicineNameSearch({ value, onChange, onSelect }: MedicineNameSe
   };
 
   return (
-    <div ref={wrapperRef} className="relative space-y-2">
-      <Label className="text-sm font-semibold">Medicine Name *</Label>
+    <div ref={wrapperRef} className="relative">
       <div className="relative">
         <Input
           placeholder="Type medicine name (e.g., Dolo 650, Augmentin)"

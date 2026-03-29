@@ -12,6 +12,8 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
+import { MedicineNameSearch } from '@/components/booking/medicine/MedicineNameSearch';
+import { getHsnCode } from '@/lib/medicine/medicineData';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
@@ -1444,7 +1446,23 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                               <div className="grid grid-cols-2 gap-3">
                                 <div>
                                   <label className="text-xs font-medium">{isMedicineFlow ? 'Medicine Name' : 'Item Name'}</label>
-                                  <Input value={item.name} onChange={(e) => { const arr = [...contentItems]; arr[idx].name = e.target.value; setContentItems(arr); }} placeholder={isMedicineFlow ? 'e.g. Paracetamol 500mg' : 'e.g. Cotton T-Shirt'} className="h-10 mt-1" />
+                                  {isMedicineFlow ? (
+                                    <div className="mt-1">
+                                      <MedicineNameSearch
+                                        value={item.name}
+                                        onChange={(name) => { const arr = [...contentItems]; arr[idx].name = name; setContentItems(arr); }}
+                                        onSelect={(suggestion) => {
+                                          const arr = [...contentItems];
+                                          arr[idx].name = suggestion.name;
+                                          if (suggestion.form) arr[idx].type = suggestion.form;
+                                          arr[idx].hsnCode = suggestion.hsnCode;
+                                          setContentItems(arr);
+                                        }}
+                                      />
+                                    </div>
+                                  ) : (
+                                    <Input value={item.name} onChange={(e) => { const arr = [...contentItems]; arr[idx].name = e.target.value; setContentItems(arr); }} placeholder="e.g. Cotton T-Shirt" className="h-10 mt-1" />
+                                  )}
                                 </div>
                                 <div>
                                   <label className="text-xs font-medium">{isMedicineFlow ? 'Medicine Type' : 'Type of Item'}</label>
