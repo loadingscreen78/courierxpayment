@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { ArrowLeft, ArrowRight, CircleNotch, UserPlus, Pill, FileText, Gift, Truck, Globe, User, Envelope, Phone, MapPin, Info, AirplaneTilt, Warning, X, IdentificationCard, Upload, Passport, House } from '@phosphor-icons/react';
+import { ArrowLeft, ArrowRight, CircleNotch, UserPlus, Pill, FileText, Gift, Truck, Globe, User, Envelope, Phone, MapPin, Info, AirplaneTilt, Warning, X, IdentificationCard, Upload, IdentificationBadge, House } from '@phosphor-icons/react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
@@ -1187,7 +1187,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                         </div>
                         {isMedicineFlow && (
                           <div className="rounded-lg border border-blue-200 dark:border-blue-800/40 bg-blue-50 dark:bg-blue-950/20 p-3 text-xs text-blue-800 dark:text-blue-300 flex items-start gap-2">
-                            <Passport className="h-4 w-4 shrink-0 mt-0.5" weight="fill" />
+                            <IdentificationBadge className="h-4 w-4 shrink-0 mt-0.5" weight="fill" />
                             <span>Receiver name must match their passport exactly. Address should follow the destination country format.</span>
                           </div>
                         )}
@@ -1264,7 +1264,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                           {isMedicineFlow && (
                             <div className="space-y-4 pt-2">
                               <div className="flex items-center gap-2">
-                                <Passport className="h-5 w-5 text-blue-600" weight="duotone" />
+                                <IdentificationBadge className="h-5 w-5 text-blue-600" weight="duotone" />
                                 <h4 className="font-semibold text-sm">Receiver Passport Upload</h4>
                               </div>
                               <div className="rounded-lg border border-blue-200 dark:border-blue-800/40 bg-blue-50 dark:bg-blue-950/20 p-3 text-xs space-y-1">
@@ -1283,7 +1283,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                                     <input type="file" accept="image/*,.pdf" className="hidden" onChange={(e) => { if (e.target.files?.[0]) setPassportIdentity(e.target.files[0]); }} />
                                     {passportIdentity ? (
                                       <div className="text-center">
-                                        <Passport className="h-8 w-8 text-candlestick-green mx-auto" weight="duotone" />
+                                        <IdentificationBadge className="h-8 w-8 text-candlestick-green mx-auto" weight="duotone" />
                                         <p className="text-xs font-medium text-candlestick-green mt-1">Uploaded</p>
                                         <p className="text-xs text-muted-foreground truncate max-w-[120px]">{passportIdentity.name}</p>
                                       </div>
@@ -1302,7 +1302,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                                     <input type="file" accept="image/*,.pdf" className="hidden" onChange={(e) => { if (e.target.files?.[0]) setPassportAddress(e.target.files[0]); }} />
                                     {passportAddress ? (
                                       <div className="text-center">
-                                        <Passport className="h-8 w-8 text-candlestick-green mx-auto" weight="duotone" />
+                                        <IdentificationBadge className="h-8 w-8 text-candlestick-green mx-auto" weight="duotone" />
                                         <p className="text-xs font-medium text-candlestick-green mt-1">Uploaded</p>
                                         <p className="text-xs text-muted-foreground truncate max-w-[120px]">{passportAddress.name}</p>
                                       </div>
