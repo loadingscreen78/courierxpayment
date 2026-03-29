@@ -84,7 +84,7 @@ export const HeroSection = () => {
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.7, delay: 0.3 }}
-              className="text-[2.25rem] leading-[1.15] sm:text-4xl md:text-5xl lg:text-6xl font-bold font-typewriter sm:leading-tight tracking-tight"
+              className="text-[2rem] leading-[1.15] sm:text-4xl md:text-5xl lg:text-6xl font-bold font-typewriter sm:leading-tight tracking-tight"
               suppressHydrationWarning
             >
               Ship Your{' '}
@@ -154,7 +154,7 @@ export const HeroSection = () => {
             >
               <Button 
                 size="lg" 
-                className="group gap-2 text-base sm:text-lg px-6 sm:px-8 py-5 sm:py-6 bg-coke-red hover:bg-coke-red/90 shadow-lg shadow-coke-red/25 transition-all duration-300 hover:shadow-xl hover:shadow-coke-red/30 hover:-translate-y-0.5"
+                className="group gap-2 text-sm sm:text-lg px-5 sm:px-8 py-4 sm:py-6 bg-coke-red hover:bg-coke-red/90 shadow-lg shadow-coke-red/25 transition-all duration-300 hover:shadow-xl hover:shadow-coke-red/30 hover:-translate-y-0.5"
                 onClick={() => router.push('/public/book')}
               >
                 Ship Now
@@ -163,7 +163,7 @@ export const HeroSection = () => {
               <Button 
                 variant="outline" 
                 size="lg" 
-                className="group gap-2 text-base sm:text-lg px-6 sm:px-8 py-5 sm:py-6 border-2 hover:bg-primary/5 transition-all duration-300 hover:-translate-y-0.5"
+                className="group gap-2 text-sm sm:text-lg px-5 sm:px-8 py-4 sm:py-6 border-2 hover:bg-primary/5 transition-all duration-300 hover:-translate-y-0.5"
                 onClick={() => router.push('/open-account')}
               >
                 <UserPlus className="h-5 w-5" />
