@@ -599,7 +599,7 @@ const Auth = () => {
         </div>
 
         {/* Logo only — top left */}
-        <div className="relative z-10 p-10 pb-0">
+        <div className="relative z-10 p-10 pb-0 flex justify-center">
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -610,11 +610,12 @@ const Auth = () => {
         </div>
 
         {/* Center — Hero */}
-        <div className="relative z-10 flex-1 flex flex-col justify-center px-10">
+        <div className="relative z-10 flex-1 flex flex-col justify-center items-center px-10 text-center">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.7, delay: 0.1 }}
+            className="flex flex-col items-center"
           >
             <p className="text-coke-red/80 text-xs font-typewriter tracking-[0.3em] uppercase mb-6">
               Courier Solutions
@@ -635,7 +636,7 @@ const Auth = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.7, delay: 0.4 }}
-            className="mt-10 max-w-[280px]"
+            className="mt-10 w-full max-w-[280px]"
           >
             <AnimatePresence mode="wait">
               <motion.div
@@ -683,7 +684,7 @@ const Auth = () => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.7, delay: 0.6 }}
-            className="flex items-center gap-8"
+            className="flex items-center justify-center gap-8"
           >
             {stats.map((stat, i) => (
               <div key={i}>
