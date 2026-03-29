@@ -121,7 +121,7 @@ const testimonials = [
 ];
 
 const stats = [
-  { value: '1,400+', label: 'Shipments Delivered' },
+  { value: '50,000+', label: 'Shipments Delivered' },
   { value: '150+', label: 'Countries Served' },
   { value: '99.5%', label: 'On-Time Delivery' },
   { value: '4.9/5', label: 'Customer Rating' },

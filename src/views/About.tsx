@@ -82,14 +82,14 @@ const timelineData = [
   {
     year: '2019',
     title: 'The Beginning',
-    description: 'CourierX was founded with a vision to simplify international shipping from India.',
+    description: 'CourierX was founded with a vision to simplify person to person courier booking from India.',
     icon: Zap,
     color: 'bg-coke-red',
   },
   {
     year: '2020',
     title: 'Medicine Shipping Launch',
-    description: 'Became the first CSB-IV compliant platform for international medicine shipping.',
+    description: 'Became the first CSB-IV compliant platform for person to person international medicine shipping.',
     icon: Shield,
     color: 'bg-candlestick-green',
   },
@@ -102,22 +102,22 @@ const timelineData = [
   },
   {
     year: '2022',
-    title: '25,000 Shipments',
-    description: 'Crossed 25,000 successful shipments with 99.5% on-time delivery rate.',
+    title: 'Domestic Courier Launch',
+    description: 'Launched person to person domestic courier across India with BlueDart, DTDC, and Delhivery.',
     icon: TrendingUp,
     color: 'bg-amber-500',
   },
   {
     year: '2023',
     title: 'AI-Powered Platform',
-    description: 'Launched AI-driven customs compliance and real-time tracking system.',
+    description: 'Launched AI-driven customs compliance, real-time tracking, and smart rate comparison.',
     icon: Target,
     color: 'bg-purple-500',
   },
   {
     year: '2024',
     title: '50,000+ Shipments',
-    description: 'Serving 150+ countries with industry-leading customer satisfaction.',
+    description: 'Serving 150+ countries and all of India with industry-leading customer satisfaction.',
     icon: Award,
     color: 'bg-coke-red',
   },
@@ -136,22 +136,22 @@ const valuesData = [
   {
     icon: Shield,
     title: 'Trust & Compliance',
-    description: 'CSB-IV certified with 100% customs compliance',
+    description: 'CSB-IV certified with 100% customs compliance for international shipments',
   },
   {
     icon: Clock,
     title: 'Speed & Reliability',
-    description: '3-7 days delivery with real-time tracking',
+    description: 'Same-day domestic pickup, 1-7 days delivery with real-time tracking',
   },
   {
     icon: Heart,
-    title: 'Customer First',
-    description: '24/7 support with 4.9/5 customer rating',
+    title: 'Person to Person',
+    description: 'Built for individuals — send parcels to friends, family, and loved ones',
   },
   {
     icon: Globe,
-    title: 'Global Reach',
-    description: 'Shipping to 150+ countries worldwide',
+    title: 'Domestic & Global',
+    description: 'Pan-India domestic courier and shipping to 150+ countries worldwide',
   },
 ];
 
@@ -585,13 +585,13 @@ const About = () => {
   const heroScale = useTransform(scrollYProgress, [0, 0.1], [1, 0.95]);
 
   useSeo({
-    title: 'About Us | CourierX - India\'s Trusted International Courier',
-    description: 'Learn about CourierX, India\'s leading international courier aggregator. Our mission, values, team, and journey to becoming the most trusted shipping partner.',
+    title: 'About Us | CourierX - India\'s Only Person to Person Courier Booking Platform',
+    description: 'Learn about CourierX, India\'s only person to person courier booking platform. Domestic courier across India and international shipping to 150+ countries. Our mission, values, team, and journey.',
     canonicalPath: '/about',
   });
 
   const { displayText: heroText, ref: heroRef } = useTypingEffect(
-    'Connecting India to the World',
+    'Person to Person, Across India & the World',
     40
   );
 
@@ -795,8 +795,8 @@ const About = () => {
             transition={{ duration: 0.8, delay: 0.5 }}
             className="text-base sm:text-xl text-muted-foreground max-w-3xl mx-auto px-2"
           >
-            India&apos;s most trusted international courier aggregator, making global shipping
-            accessible, affordable, and compliant for everyone.
+            India&apos;s only person to person courier booking platform — making domestic and international
+            shipping accessible, affordable, and compliant for everyone.
           </motion.p>
         </div>
       </motion.section>
@@ -841,9 +841,9 @@ const About = () => {
                   <h3 className="text-2xl md:text-3xl font-bold font-typewriter mb-4">Our Mission</h3>
                 </div>
                 <p className="text-lg text-white/90 leading-relaxed">
-                  To democratize international shipping from India by providing fast, compliant,
-                  and affordable courier services that connect families, businesses, and communities
-                  across the globe.
+                  To democratize courier services in India by providing the only person to person
+                  courier booking platform — connecting families, friends, and communities with fast,
+                  compliant, and affordable domestic and international shipping.
                 </p>
               </div>
             </motion.div>
@@ -866,8 +866,8 @@ const About = () => {
                 <Plane className="h-10 w-10 mb-4 text-candlestick-green" />
                 <h3 className="text-xl font-bold font-typewriter mb-2">Our Vision</h3>
                 <p className="text-white/80">
-                  To become the most trusted and innovative international shipping platform,
-                  setting new standards in compliance, speed, and customer experience.
+                  To become India&apos;s most trusted person to person courier platform — setting new
+                  standards in domestic delivery, international compliance, speed, and customer experience.
                 </p>
               </div>
             </motion.div>
@@ -1132,7 +1132,7 @@ const About = () => {
                   Ready to Ship with <span className="text-coke-red">CourierX</span>?
                 </h2>
                 <p className="text-muted-foreground text-lg max-w-2xl mx-auto mb-8">
-                  Join thousands of satisfied customers who trust us for their international shipping needs.
+                  Join thousands of satisfied customers who trust us for person to person courier booking — domestic across India and international to 150+ countries.
                 </p>
                 <div className="flex flex-wrap justify-center gap-4">
                   <motion.a
