@@ -5,9 +5,9 @@
  * 1. Determine Zone & Carrier from country
  * 2. Billable Weight = max(actual, dimensional)  DIM = L×W×H / 5000
  * 3. Look up Base Rate from FedEx/Aramex rate tables (weight slab × zone)
- * 4. Fuel Surcharge = Base Rate × fuel %
- * 5. Export Clearance = ₹1,800 (mandatory for all FedEx intl exports)
- * 6. Subtotal = Base + Fuel + Export Clearance
+ * 4. Fuel Surcharge = Base Rate × fuel % (carrier-specific, scraped live)
+ * 5. Domestic Transit = billable weight × ₹80/kg
+ * 6. Subtotal = Base + Fuel + Domestic Transit
  * 7. GST = Subtotal × 18%
  * 8. Grand Total = Subtotal + GST
  *
@@ -64,11 +64,11 @@ let FEDEX_FUEL_SURCHARGE_PERCENT = 48.0;  // Current as of March 2026
 let ARAMEX_FUEL_SURCHARGE_PERCENT = 19.25; // Current as of March 16-31, 2026
 
 const GST_RATE = 0.18;
-const EXPORT_CLEARANCE_FEE = 1800; // ₹1,800 mandatory for all intl exports from India (applies to CSB-IV too)
+const DOMESTIC_TRANSIT_PER_KG = 80; // ₹80 per kg for domestic leg (pickup to warehouse/airport)
 const DIM_DIVISOR = 5000;
 
 // Pricing model:
-// costPrice = base + fuel + export clearance (our cost from carrier)
+// costPrice = base + fuel + domestic transit (our cost from carrier + domestic leg)
 // nonAccountPrice = costPrice × 2.65 (our selling price to non-account/guest users)
 // accountPrice = nonAccountPrice × 0.48 (52% discount for account holders)
 // This means: accountPrice = costPrice × 2.65 × 0.48 = costPrice × 1.272
@@ -303,11 +303,11 @@ export const calculateRate = (
   const fuelPercent = carrier === 'Aramex' ? ARAMEX_FUEL_SURCHARGE_PERCENT : FEDEX_FUEL_SURCHARGE_PERCENT;
   const fuelSurcharge = Math.round(baseRate * fuelPercent / 100);
 
-  // Step 5: Export Clearance (₹1,800 mandatory for all intl exports from India, including CSB-IV)
-  const exportClearance = EXPORT_CLEARANCE_FEE;
+  // Step 5: Domestic transit cost (pickup to warehouse/airport) — ₹80 per kg
+  const domesticTransit = Math.round(Math.max(billableWeightKg, 1) * DOMESTIC_TRANSIT_PER_KG);
 
-  // Step 6: Cost price (what we pay the carrier)
-  const costPrice = baseRate + fuelSurcharge + exportClearance;
+  // Step 6: Cost price (what we pay the carrier + domestic leg)
+  const costPrice = baseRate + fuelSurcharge + domesticTransit;
 
   // Step 7: GST @ 18% on cost
   const costGst = Math.round(costPrice * GST_RATE);
@@ -329,7 +329,7 @@ export const calculateRate = (
     insurance: 0,
     handlingFee: 0,
     customsFee: 0,
-    exportClearance,
+    exportClearance: domesticTransit,
     subtotal: costPrice,
     gst: costGst,
     total,
@@ -339,7 +339,7 @@ export const calculateRate = (
     breakdown: [
       { label: `Base rate (${carrier} ${country.rateZone}, ${billableWeightKg.toFixed(1)} kg)`, amount: baseRate },
       { label: `Fuel surcharge (${fuelPercent}%)`, amount: fuelSurcharge },
-      { label: 'Export clearance', amount: exportClearance },
+      { label: `Domestic transit (${Math.max(billableWeightKg, 1).toFixed(1)} kg × ₹80)`, amount: domesticTransit },
       { label: 'GST (18%)', amount: costGst },
       ...(isGuest && savings > 0 ? [{ label: 'Open account — save 52%', amount: -savings }] : []),
     ],
