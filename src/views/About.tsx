@@ -125,10 +125,27 @@ const timelineData = [
 
 // Team data
 const teamData = [
-  { name: 'Arjun Mehta', role: 'Founder & CEO', avatar: 'AM' },
-  { name: 'Priya Sharma', role: 'COO', avatar: 'PS' },
-  { name: 'Vikram Singh', role: 'CTO', avatar: 'VS' },
-  { name: 'Neha Gupta', role: 'Head of Operations', avatar: 'NG' },
+  {
+    name: 'Sangram Kesari Adhikary',
+    role: 'CEO',
+    avatar: 'SK',
+    linkedin: 'https://www.linkedin.com/in/sangram-keshari-adhikary-3418072ba/',
+    bio: 'Visionary leader driving CourierX\'s mission to revolutionize person-to-person courier services across India and beyond.',
+  },
+  {
+    name: 'Mohit O Bhagri',
+    role: 'COO',
+    avatar: 'MB',
+    linkedin: 'https://www.linkedin.com/in/bagrimohit619/',
+    bio: 'Operations strategist ensuring seamless logistics, carrier partnerships, and world-class delivery experiences.',
+  },
+  {
+    name: 'Jagannath Samratha Mishra',
+    role: 'CTO',
+    avatar: 'JM',
+    linkedin: 'https://www.linkedin.com/in/jagannath-mishra-58196229b/',
+    bio: 'Tech architect building the AI-powered platform that makes courier booking fast, compliant, and effortless.',
+  },
 ];
 
 // Values data
@@ -1015,26 +1032,56 @@ const About = () => {
             </h2>
           </motion.div>
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-5xl mx-auto">
             {teamData.map((member, index) => (
               <motion.div
                 key={member.name}
                 initial={{ opacity: 0, y: 30 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
-                transition={{ delay: index * 0.1 }}
+                transition={{ delay: index * 0.15 }}
                 whileHover={{ y: -10 }}
                 className="group"
               >
-                <div className="bg-card border border-border rounded-3xl p-8 text-center hover:border-coke-red/30 transition-all duration-300 hover:shadow-xl">
-                  <motion.div
-                    whileHover={{ scale: 1.1, rotate: 5 }}
-                    className="w-24 h-24 mx-auto rounded-full bg-gradient-to-br from-coke-red to-coke-red/60 flex items-center justify-center text-white text-2xl font-bold mb-6 shadow-lg"
-                  >
-                    {member.avatar}
-                  </motion.div>
-                  <h3 className="text-xl font-bold font-typewriter">{member.name}</h3>
-                  <p className="text-muted-foreground mt-1">{member.role}</p>
+                <div className="bg-card border border-border rounded-3xl overflow-hidden hover:border-coke-red/30 transition-all duration-300 hover:shadow-2xl">
+                  {/* Card Header Banner */}
+                  <div className="h-20 bg-gradient-to-r from-coke-red via-coke-red/90 to-coke-red/70 relative">
+                    <div className="absolute inset-0 opacity-20" style={{ backgroundImage: "url(\"data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23ffffff' fill-opacity='0.15'%3E%3Cpath d='M20 20h20v20H20z'/%3E%3C/g%3E%3C/svg%3E\")" }} />
+                  </div>
+
+                  {/* Avatar overlapping banner */}
+                  <div className="flex justify-center -mt-12 relative z-10">
+                    <motion.div
+                      whileHover={{ scale: 1.08 }}
+                      className="w-24 h-24 rounded-full bg-gradient-to-br from-coke-red to-coke-red/60 flex items-center justify-center text-white text-2xl font-bold shadow-xl border-4 border-card"
+                    >
+                      {member.avatar}
+                    </motion.div>
+                  </div>
+
+                  {/* Content */}
+                  <div className="p-6 pt-4 text-center">
+                    <h3 className="text-lg font-bold font-typewriter leading-tight">{member.name}</h3>
+                    <span className="inline-block mt-1.5 px-3 py-0.5 rounded-full bg-coke-red/10 text-coke-red text-xs font-semibold tracking-wide uppercase">
+                      {member.role}
+                    </span>
+                    <p className="text-muted-foreground text-sm mt-3 leading-relaxed">
+                      {member.bio}
+                    </p>
+
+                    {/* LinkedIn Button */}
+                    <a
+                      href={member.linkedin}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-2 mt-5 px-5 py-2.5 rounded-xl bg-[#0A66C2] text-white text-sm font-medium hover:bg-[#004182] transition-colors duration-200 shadow-md hover:shadow-lg"
+                    >
+                      <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" />
+                      </svg>
+                      <span>View LinkedIn Profile</span>
+                    </a>
+                  </div>
                 </div>
               </motion.div>
             ))}
