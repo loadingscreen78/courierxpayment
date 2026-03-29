@@ -5,6 +5,8 @@ import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { WalletBalanceCheck } from '@/components/booking/WalletBalanceCheck';
 import { toast } from 'sonner';
+import { calculateInternationalShippingCost } from '@/lib/shipping/rateCalculator';
+import { getCountryByCode } from '@/lib/shipping/countries';
 import { 
   Pill, 
   MapPin, 
@@ -26,45 +28,38 @@ interface ReviewStepProps {
   onConfirmBooking?: () => void;
 }
 
-// Mock courier options based on destination
-const COMING_SOON_COURIERS = ['Aramex', 'ShipGlobal Economy'];
-
-const getCourierOptions = (country: string) => {
-  const options = [
-    { name: 'DHL Express', price: 2450, days: '3-5', recommended: country.startsWith('DE') || country.startsWith('GB') || country.startsWith('FR') || country.startsWith('NL') },
-    { name: 'FedEx International', price: 2200, days: '4-6', recommended: country.startsWith('US') || country.startsWith('CA') },
-    { name: 'Aramex', price: 1850, days: '5-7', recommended: false, comingSoon: true },
-    { name: 'ShipGlobal Economy', price: 1450, days: '7-10', recommended: false, comingSoon: true },
-  ];
-  return options;
-};
-
-const COUNTRY_NAMES: Record<string, string> = {
-  'US': 'United States',
-  'GB': 'United Kingdom',
-  'DE': 'Germany',
-  'FR': 'France',
-  'AE': 'United Arab Emirates',
-  'SA': 'Saudi Arabia',
-  'SG': 'Singapore',
-  'AU': 'Australia',
-  'CA': 'Canada',
-  'NL': 'Netherlands',
-  'QA': 'Qatar',
-  'KW': 'Kuwait',
-  'OM': 'Oman',
-  'BH': 'Bahrain',
+// Real rate calculation using Unified Rate Card data
+const getRealShippingRate = (data: MedicineBookingData) => {
+  const weightKg = data.medicines.reduce((sum, med) => sum + med.unitCount * 0.05, 0);
+  const countryCode = data.consigneeAddress.country;
+  const country = getCountryByCode(countryCode);
+  const result = calculateInternationalShippingCost(countryCode, Math.max(weightKg, 0.5));
+  
+  if (result && country) {
+    const carrierName = country.carrier === 'Aramex' ? 'Aramex Express' : 'FedEx International Priority';
+    const transitDays = country.zone <= 2 ? '3-5' : country.zone <= 4 ? '5-8' : '7-12';
+    return {
+      name: carrierName,
+      carrier: country.carrier,
+      shippingCost: result.shippingCost,
+      gstAmount: result.gstAmount,
+      totalAmount: result.totalAmount,
+      days: transitDays,
+    };
+  }
+  // Fallback
+  return { name: 'FedEx International Priority', carrier: 'Fedex' as const, shippingCost: 2500, gstAmount: 450, totalAmount: 2950, days: '5-8' };
 };
 
 const INSURANCE_PRICE = 150;
 const SPECIAL_PACKAGING_PRICE = 200;
 
 export const ReviewStep = ({ data, aggregatedSupplyDays, aggregatedTotalValue, onConfirmBooking }: ReviewStepProps) => {
-  const courierOptions = getCourierOptions(data.consigneeAddress.country);
-  const recommendedCourier = courierOptions.find(c => c.recommended && !c.comingSoon) || courierOptions.find(c => !c.comingSoon) || courierOptions[0];
+  const shippingRate = getRealShippingRate(data);
+  const countryInfo = getCountryByCode(data.consigneeAddress.country);
 
   const addonsTotal = (data.insurance ? INSURANCE_PRICE : 0) + (data.specialPackaging ? SPECIAL_PACKAGING_PRICE : 0);
-  const shippingCost = recommendedCourier.price;
+  const shippingCost = shippingRate.totalAmount;
   const grandTotal = shippingCost + addonsTotal;
 
   const hasControlledSubstance = data.medicines.some(m => m.isControlled);
@@ -210,7 +205,7 @@ export const ReviewStep = ({ data, aggregatedSupplyDays, aggregatedTotalValue, o
                 {data.consigneeAddress.city}, {data.consigneeAddress.zipcode}
               </p>
               <p className="font-medium">
-                {COUNTRY_NAMES[data.consigneeAddress.country] || data.consigneeAddress.country}
+                {countryInfo?.name || data.consigneeAddress.country}
               </p>
             </div>
           </CardContent>
@@ -258,18 +253,34 @@ export const ReviewStep = ({ data, aggregatedSupplyDays, aggregatedTotalValue, o
           <div className="flex items-center justify-between p-4 bg-accent/20 rounded-lg border border-accent">
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 bg-background rounded-lg flex items-center justify-center font-typewriter font-bold text-sm">
-                {recommendedCourier.name.split(' ')[0].slice(0, 3).toUpperCase()}
+                {shippingRate.carrier === 'Aramex' ? 'ARX' : 'FDX'}
               </div>
               <div>
-                <p className="font-medium">{recommendedCourier.name}</p>
+                <p className="font-medium">{shippingRate.name}</p>
                 <p className="text-sm text-muted-foreground">
-                  Est. delivery: {recommendedCourier.days} business days
+                  Est. delivery: {shippingRate.days} business days
                 </p>
               </div>
             </div>
             <div className="text-right">
-              <p className="font-typewriter font-bold text-lg">₹{recommendedCourier.price}</p>
+              <p className="font-typewriter font-bold text-lg">₹{shippingRate.totalAmount.toLocaleString('en-IN')}</p>
               <Badge className="bg-accent text-accent-foreground">Recommended</Badge>
+            </div>
+          </div>
+          {/* Price Breakdown */}
+          <div className="mt-3 p-3 bg-muted/30 rounded-lg space-y-1.5 text-sm">
+            <div className="flex justify-between text-muted-foreground">
+              <span>Base rate + Fuel surcharge</span>
+              <span>₹{shippingRate.shippingCost.toLocaleString('en-IN')}</span>
+            </div>
+            <div className="flex justify-between text-muted-foreground">
+              <span>GST (18%)</span>
+              <span>₹{shippingRate.gstAmount.toLocaleString('en-IN')}</span>
+            </div>
+            <Separator className="my-1" />
+            <div className="flex justify-between font-medium">
+              <span>Shipping total</span>
+              <span>₹{shippingRate.totalAmount.toLocaleString('en-IN')}</span>
             </div>
           </div>
         </CardContent>
@@ -309,7 +320,7 @@ export const ReviewStep = ({ data, aggregatedSupplyDays, aggregatedTotalValue, o
         <CardContent className="py-6">
           <div className="space-y-3">
             <div className="flex justify-between text-sm opacity-80">
-              <span>Shipping ({recommendedCourier.name})</span>
+              <span>Shipping ({shippingRate.name})</span>
               <span>₹{shippingCost.toLocaleString('en-IN')}</span>
             </div>
             {addonsTotal > 0 && (

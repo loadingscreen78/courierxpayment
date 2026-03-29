@@ -4,6 +4,8 @@ import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { WalletBalanceCheck } from '@/components/booking/WalletBalanceCheck';
 import { toast } from 'sonner';
+import { calculateInternationalShippingCost } from '@/lib/shipping/rateCalculator';
+import { getCountryByCode } from '@/lib/shipping/countries';
 import { Gift, MapPin, Shield, Truck, Globe, Package, AlertTriangle } from 'lucide-react';
 
 interface GiftReviewStepProps {
@@ -12,22 +14,27 @@ interface GiftReviewStepProps {
   onConfirmBooking?: () => void;
 }
 
-const COUNTRY_NAMES: Record<string, string> = {
-  'US': 'United States', 'GB': 'United Kingdom', 'DE': 'Germany', 'FR': 'France',
-  'AE': 'United Arab Emirates', 'SA': 'Saudi Arabia', 'SG': 'Singapore',
-  'AU': 'Australia', 'CA': 'Canada', 'NL': 'Netherlands',
-};
-
 const INSURANCE_PRICE = 150;
 const GIFT_WRAPPING_PRICE = 100;
 
-const getShippingPrice = (itemCount: number, country: string) => {
-  const basePrice = country.startsWith('AE') || country.startsWith('SA') ? 1450 : 1850;
-  return basePrice + (itemCount > 3 ? (itemCount - 3) * 100 : 0);
+const getRealGiftShippingRate = (data: GiftBookingData) => {
+  const weightKg = data.items.reduce((sum, item) => sum + item.units * 0.5, 0);
+  const countryCode = data.consigneeAddress.country;
+  const country = getCountryByCode(countryCode);
+  const result = calculateInternationalShippingCost(countryCode, Math.max(weightKg, 0.5));
+
+  if (result && country) {
+    const carrierName = country.carrier === 'Aramex' ? 'Aramex Express' : 'FedEx International Priority';
+    const transitDays = country.zone <= 2 ? '3-5' : country.zone <= 4 ? '5-8' : '7-12';
+    return { name: carrierName, carrier: country.carrier, shippingCost: result.shippingCost, gstAmount: result.gstAmount, totalAmount: result.totalAmount, days: transitDays };
+  }
+  return { name: 'FedEx International Priority', carrier: 'Fedex' as const, shippingCost: 2500, gstAmount: 450, totalAmount: 2950, days: '5-8' };
 };
 
 export const GiftReviewStep = ({ data, totalValue, onConfirmBooking }: GiftReviewStepProps) => {
-  const shippingPrice = getShippingPrice(data.items.length, data.consigneeAddress.country);
+  const shippingRate = getRealGiftShippingRate(data);
+  const countryInfo = getCountryByCode(data.consigneeAddress.country);
+  const shippingPrice = shippingRate.totalAmount;
   const addonsTotal = (data.insurance ? INSURANCE_PRICE : 0) + (data.giftWrapping ? GIFT_WRAPPING_PRICE : 0);
   const grandTotal = shippingPrice + addonsTotal;
 
@@ -129,7 +136,7 @@ export const GiftReviewStep = ({ data, totalValue, onConfirmBooking }: GiftRevie
               <p className="text-muted-foreground">{data.consigneeAddress.phone}</p>
               <p className="text-muted-foreground">{data.consigneeAddress.addressLine1}</p>
               <p className="text-muted-foreground">{data.consigneeAddress.city}, {data.consigneeAddress.zipcode}</p>
-              <p className="font-medium">{COUNTRY_NAMES[data.consigneeAddress.country] || data.consigneeAddress.country}</p>
+              <p className="font-medium">{countryInfo?.name || data.consigneeAddress.country}</p>
             </div>
           </CardContent>
         </Card>
@@ -146,12 +153,27 @@ export const GiftReviewStep = ({ data, totalValue, onConfirmBooking }: GiftRevie
         <CardContent>
           <div className="flex items-center justify-between p-4 bg-accent/20 rounded-lg border border-accent">
             <div>
-              <p className="font-medium">FedEx International Priority</p>
-              <p className="text-sm text-muted-foreground">Est. delivery: 4-6 business days</p>
+              <p className="font-medium">{shippingRate.name}</p>
+              <p className="text-sm text-muted-foreground">Est. delivery: {shippingRate.days} business days</p>
             </div>
             <div className="text-right">
-              <p className="font-typewriter font-bold text-lg">₹{shippingPrice}</p>
+              <p className="font-typewriter font-bold text-lg">₹{shippingPrice.toLocaleString('en-IN')}</p>
               <Badge className="bg-accent text-accent-foreground">Best Value</Badge>
+            </div>
+          </div>
+          <div className="mt-3 p-3 bg-muted/30 rounded-lg space-y-1.5 text-sm">
+            <div className="flex justify-between text-muted-foreground">
+              <span>Base rate + Fuel surcharge</span>
+              <span>₹{shippingRate.shippingCost.toLocaleString('en-IN')}</span>
+            </div>
+            <div className="flex justify-between text-muted-foreground">
+              <span>GST (18%)</span>
+              <span>₹{shippingRate.gstAmount.toLocaleString('en-IN')}</span>
+            </div>
+            <Separator className="my-1" />
+            <div className="flex justify-between font-medium">
+              <span>Shipping total</span>
+              <span>₹{shippingRate.totalAmount.toLocaleString('en-IN')}</span>
             </div>
           </div>
         </CardContent>
