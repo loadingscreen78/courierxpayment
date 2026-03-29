@@ -263,9 +263,67 @@ const COUNTRY_ZONE_DATA: [string, string, RateZone, CarrierType][] = [
   ['Yemen','YE','ME4','Aramex'],
   ['Zambia','ZM','P','Fedex'],
   ['Zimbabwe','ZW','P','Fedex'],
+  // ── Countries from Excel that were missing ──
+  ['Aland Islands','AX','J','Fedex'],
+  ['Antarctica','AQ','J','Fedex'],
+  ['Belarus','BY','I','Fedex'],
+  ['Bouvet Island','BV','J','Fedex'],
+  ['British Indian Ocean Territory','IO','J','Fedex'],
+  ['Christmas Island','CX','J','Fedex'],
+  ['Cocos (Keeling) Islands','CC','J','Fedex'],
+  ['Cuba','CU','J','Fedex'],
+  ['Curaçao','CW','J','Fedex'],
+  ['Democratic Republic of the Congo','CD','Q','Fedex'],
+  ['Falkland Islands','FK','J','Fedex'],
+  ['French Southern Territories','TF','J','Fedex'],
+  ['Guernsey','GG','J','Fedex'],
+  ['Heard Island and McDonald Islands','HM','J','Fedex'],
+  ['Holy See (Vatican City)','VA','J','Fedex'],
+  ['Isle of Man','IM','J','Fedex'],
+  ['Jersey','JE','J','Fedex'],
+  ['Kiribati','KI','I','Fedex'],
+  ['Libya','LY','O','Fedex'],
+  ['Martinique','MQ','J','Fedex'],
+  ['Mayotte','YT','J','Fedex'],
+  ['Montserrat','MS','J','Fedex'],
+  ['Nauru','NR','J','Fedex'],
+  ['Niue','NU','J','Fedex'],
+  ['Norfolk Island','NF','J','Fedex'],
+  ['Northern Mariana Islands','MP','E','Fedex'],
+  ['Palau','PW','E','Fedex'],
+  ['Pitcairn','PN','J','Fedex'],
+  ['Republic of the Congo','CG','J','Fedex'],
+  ['Réunion','RE','Q','Fedex'],
+  ['Russia','RU','I','Fedex'],
+  ['Saint Barthélemy','BL','J','Fedex'],
+  ['Saint Helena','SH','J','Fedex'],
+  ['Saint Kitts and Nevis','KN','J','Fedex'],
+  ['Saint Lucia','LC','J','Fedex'],
+  ['Saint Martin','MF','J','Fedex'],
+  ['Saint Pierre and Miquelon','PM','J','Fedex'],
+  ['Saint Vincent and the Grenadines','VC','J','Fedex'],
+  ['Sao Tome and Principe','ST','J','Fedex'],
+  ['Sint Maarten','SX','J','Fedex'],
+  ['Somalia','SO','J','Fedex'],
+  ['South Georgia','GS','I','Fedex'],
+  ['Sudan','SD','N','Fedex'],
+  ['Svalbard and Jan Mayen','SJ','J','Fedex'],
+  ['Tokelau','TK','J','Fedex'],
+  ['Turks and Caicos Islands','TC','J','Fedex'],
+  ['Tuvalu','TV','E','Fedex'],
+  ['U.S. Virgin Islands','VI','J','Fedex'],
+  ['Uganda','UG','N','Fedex'],
+  ['Ukraine','UA','I','Fedex'],
+  ['Wallis and Futuna','WF','J','Fedex'],
+  ['Western Sahara','EH','J','Fedex'],
+  // ── Countries NOT in Excel rate card (no rate data) ──
+  ['Iran','IR','J','Fedex'],
+  ['North Korea','KP','J','Fedex'],
+  ['Pakistan','PK','B','Fedex'],
+  ['Kosovo','XK','I','Fedex'],
 ];
 
-// Not-served countries (sanctions, conflict, limited access)
+// Not-served countries (sanctions, conflict, limited access, or no rate data)
 const NOT_SERVED: Record<string, string> = {
   'AF': 'Limited courier access',
   'IQ': 'Limited courier access',
@@ -274,14 +332,30 @@ const NOT_SERVED: Record<string, string> = {
   'SS': 'Limited courier access',
   'SO': 'Limited courier access',
   'CU': 'Trade restrictions',
-  'KP': 'International sanctions',
-  'IR': 'International sanctions',
   'SD': 'International sanctions',
-  'VE': 'Banking restrictions',
-  'LY': 'Limited courier access',
   'ER': 'Limited courier access',
-  'TM': 'Limited courier access',
   'PS': 'Limited courier access',
+  'LY': 'Limited courier access',
+  // Countries NOT in Excel rate card — no rate data available
+  'IR': 'Rate not available',
+  'KP': 'Rate not available',
+  'PK': 'Rate not available',
+  'XK': 'Rate not available',
+  'BY': 'International sanctions',
+  'UA': 'Service suspended due to conflict',
+  'RU': 'International sanctions',
+  // Uninhabited/remote territories
+  'AQ': 'Rate not available',
+  'BV': 'Rate not available',
+  'CC': 'Rate not available',
+  'CX': 'Rate not available',
+  'HM': 'Rate not available',
+  'IO': 'Rate not available',
+  'TF': 'Rate not available',
+  'TK': 'Rate not available',
+  'PN': 'Rate not available',
+  'EH': 'Rate not available',
+  'SJ': 'Rate not available',
 };
 
 export const countries: Country[] = COUNTRY_ZONE_DATA.map(([name, code, rateZone, carrier]) => ({
@@ -305,6 +379,20 @@ export const getCountryByCode = (code: string): Country | undefined => {
 
 export const getServedCountries = (): Country[] => {
   return countries.filter(c => c.isServed).sort((a, b) => a.name.localeCompare(b.name));
+};
+
+/** Get all countries for dropdown display — served ones first, then not-served with reason */
+export const getAllCountriesForDropdown = (): Country[] => {
+  // Exclude uninhabited territories and sanctioned countries from dropdown entirely
+  const HIDE_FROM_DROPDOWN = new Set(['AQ','BV','CC','CX','HM','IO','TF','TK','PN','EH','SJ','KP','GG','JE','IM','NF','GS','BL','MF','PM','SH','MS','NR','NU','WF','YT','TV','PW','MP','AX','FK','ST','SX','TC','VI','NF']);
+  return countries
+    .filter(c => !HIDE_FROM_DROPDOWN.has(c.code))
+    .sort((a, b) => {
+      // Served countries first
+      if (a.isServed && !b.isServed) return -1;
+      if (!a.isServed && b.isServed) return 1;
+      return a.name.localeCompare(b.name);
+    });
 };
 
 export const getNotServedCountries = (): Country[] => {

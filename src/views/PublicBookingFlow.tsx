@@ -14,7 +14,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
 import { getCourierOptions, calculateRate, type CourierOption } from '@/lib/shipping/rateCalculator';
-import { getServedCountries, getCountryByCode } from '@/lib/shipping/countries';
+import { getAllCountriesForDropdown, getCountryByCode } from '@/lib/shipping/countries';
 import GuestSummaryStep from '@/components/guest-booking/GuestSummaryStep';
 import { usePincodeLookup } from '@/hooks/usePincodeLookup';
 import { INDIAN_STATES } from '@/lib/pincode-lookup';
@@ -149,7 +149,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
   const router = useRouter();
   const { toast } = useToast();
   const isInternational = mode === 'international';
-  const countries = getServedCountries();
+  const countries = getAllCountriesForDropdown();
 
   // Steps: 1=rate form, 2=rate results, 3=sender/receiver details
   const [step, setStep] = useState(1);
@@ -525,7 +525,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                             <SelectTrigger><SelectValue placeholder="Select country" /></SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            {countries.map(c => <SelectItem key={c.code} value={c.code}>{c.flag} {c.name}</SelectItem>)}
+                            {countries.map(c => <SelectItem key={c.code} value={c.code} disabled={!c.isServed}>{c.flag} {c.name}{!c.isServed ? ` — ${c.notServedReason || 'Rate not available'}` : ''}</SelectItem>)}
                           </SelectContent>
                         </Select>
                         <FormMessage />
