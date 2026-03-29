@@ -130,7 +130,7 @@ export const HeroSection = () => {
               {[
                 { icon: ShieldCheck, text: 'CSB-IV Compliant', color: 'text-candlestick-green' },
                 { icon: Clock, text: '3-7 Days Delivery', color: 'text-candlestick-green' },
-                { icon: Package, text: '50,000+ Shipments', color: 'text-candlestick-green' },
+                { icon: Package, text: '1,400+ Shipments', color: 'text-candlestick-green' },
               ].map((badge, i) => (
                 <motion.div
                   key={badge.text}
