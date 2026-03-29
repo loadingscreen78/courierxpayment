@@ -1,6 +1,6 @@
 "use client";
 
-import { Pill, FileText, Gift, Truck, Clock, Globe, Headphones, ShieldCheck, Shield } from '@phosphor-icons/react';
+import { Pill, FileText, Gift, Truck, Clock, Globe, Headphones, ShieldCheck, Shield, House } from '@phosphor-icons/react';
 import { Card, CardContent } from '@/components/ui/card';
 import { AnimatedSection, StaggerContainer, StaggerItem } from './AnimatedSection';
 import { motion } from 'framer-motion';
@@ -9,7 +9,7 @@ const shipmentTypes = [
   {
     icon: Pill,
     title: 'Medicines',
-    description: 'Ship prescription medicines with proper documentation and temperature control. CSB-IV compliant.',
+    description: 'Ship prescription medicines person to person with proper documentation and temperature control. CSB-IV compliant.',
     features: ['Doctor prescription support', '90-day supply limit', 'Temperature monitoring'],
     color: 'text-coke-red',
     bgColor: 'bg-coke-red/10',
@@ -18,7 +18,7 @@ const shipmentTypes = [
   {
     icon: FileText,
     title: 'Documents',
-    description: 'Legal documents, certificates, and important papers delivered securely worldwide.',
+    description: 'Send legal documents, certificates, and important papers person to person — delivered securely worldwide.',
     features: ['Tamper-proof packaging', 'Signature confirmation', 'Express delivery'],
     color: 'text-primary',
     bgColor: 'bg-primary/10',
@@ -26,35 +26,44 @@ const shipmentTypes = [
   },
   {
     icon: Gift,
-    title: 'Gifts & Samples',
-    description: 'Send personal gifts and product samples to loved ones across the globe.',
+    title: 'Gifts & Parcels',
+    description: 'Book person to person courier for personal gifts, care packages, and parcels to loved ones across the globe.',
     features: ['Custom declarations', 'Gift wrapping option', 'Duty-free guidance'],
     color: 'text-candlestick-green',
     bgColor: 'bg-candlestick-green/20',
     hoverBorder: 'hover:border-candlestick-green/30',
+  },
+  {
+    icon: House,
+    title: 'Domestic Courier',
+    description: 'Person to person domestic courier booking across India. Door-to-door parcel delivery with same-day pickup.',
+    features: ['Same-day pickup', 'Pan-India coverage', '1-5 day delivery'],
+    color: 'text-amber-600',
+    bgColor: 'bg-amber-500/10',
+    hoverBorder: 'hover:border-amber-500/30',
   },
 ];
 
 const features = [
   {
     icon: Shield,
-    title: 'Fully Compliant',
-    description: 'CSB-IV certified for personal shipments under ₹25,000 declared value.',
+    title: 'Person to Person',
+    description: 'India\'s only platform built for personal courier booking between individuals.',
   },
   {
     icon: Truck,
     title: 'Multiple Carriers',
-    description: 'Choose from DHL, FedEx, Aramex, and ShipGlobal based on your needs.',
+    description: 'Compare DHL, FedEx, Aramex, BlueDart, DTDC — pick the best rate.',
   },
   {
     icon: Clock,
-    title: 'Fast Delivery',
-    description: 'Express options available with delivery in 3-7 business days.',
+    title: 'Doorstep Pickup',
+    description: 'Same-day pickup from your door. No need to visit a courier office.',
   },
   {
     icon: Globe,
-    title: '150+ Countries',
-    description: 'Ship to destinations worldwide with real-time tracking.',
+    title: 'Domestic & International',
+    description: 'Ship across India or to 150+ countries with real-time tracking.',
   },
   {
     icon: Headphones,
@@ -80,12 +89,12 @@ export const FeaturesSection = () => {
             What Can You Ship?
           </h2>
           <p className="text-muted-foreground max-w-2xl mx-auto text-base sm:text-lg px-2">
-            Specialized shipping solutions for your personal items with full compliance and care.
+            Person to person courier booking for medicines, documents, gifts, and parcels — domestic and international.
           </p>
         </AnimatedSection>
 
         {/* Shipment Type Cards */}
-        <StaggerContainer className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-5 sm:gap-8 mb-16 sm:mb-24" staggerDelay={0.15}>
+        <StaggerContainer className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-5 sm:gap-8 mb-16 sm:mb-24" staggerDelay={0.15}>
           {shipmentTypes.map((type) => (
             <StaggerItem key={type.title}>
               <motion.div whileHover={{ y: -8 }} transition={{ duration: 0.3 }}>
@@ -130,7 +139,7 @@ export const FeaturesSection = () => {
             Why Choose CourierX?
           </h2>
           <p className="text-muted-foreground max-w-2xl mx-auto text-base sm:text-lg px-2">
-            We make international shipping simple, affordable, and worry-free.
+            The only courier platform in India built for person to person shipments — simple, affordable, and worry-free.
           </p>
         </AnimatedSection>
 

@@ -54,7 +54,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
       url: `${baseUrl}/services/domestic-courier`,
       lastModified: now,
       changeFrequency: 'weekly',
-      priority: 0.9,
+      priority: 0.95,
     },
 
     // ── Tools (high priority — user-facing utilities) ──

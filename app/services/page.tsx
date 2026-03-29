@@ -3,22 +3,26 @@ import Link from 'next/link';
 import { BreadcrumbJsonLd } from '@/components/seo/JsonLd';
 
 export const metadata: Metadata = {
-  title: 'Courier Services — International & Domestic Shipping from India',
+  title: 'Courier Services — Person to Person Domestic & International Shipping from India',
   description:
-    'CourierX offers international medicine courier, document courier, gift courier, and domestic parcel delivery from India. Compare DHL, FedEx, Aramex rates. CSB-IV compliant. 150+ countries.',
+    'CourierX is India\'s only person to person courier booking platform. Book domestic courier across India or international medicine, document & gift courier to 150+ countries. Compare BlueDart, DHL, FedEx, Aramex rates. Doorstep pickup, real-time tracking.',
   keywords: [
+    'person to person courier India',
+    'personal courier booking India',
     'courier services India',
+    'domestic courier booking India',
     'international courier India',
-    'domestic courier India',
     'medicine courier India',
     'document courier India',
     'gift courier India',
-    'shipping services India',
+    'book courier online India',
+    'door to door courier India',
     'parcel delivery India',
+    'send parcel person to person',
   ],
   openGraph: {
-    title: 'Courier Services — CourierX International & Domestic Shipping',
-    description: 'Medicine, document, gift & domestic courier from India. Compare rates from DHL, FedEx, Aramex.',
+    title: 'Courier Services — Person to Person Domestic & International | CourierX',
+    description: 'Book person to person courier — domestic across India or international to 150+ countries. Medicine, document, gift & parcel delivery.',
     url: 'https://courierx.in/services',
     type: 'website',
   },
@@ -27,28 +31,28 @@ export const metadata: Metadata = {
 
 const services = [
   {
+    title: 'Person to Person Domestic Courier',
+    description: 'Book domestic courier online — send parcels, medicines, documents & gifts person to person across India. Same-day doorstep pickup, 1-5 day delivery.',
+    href: '/services/domestic-courier',
+    emoji: '🚚',
+  },
+  {
     title: 'International Medicine Courier',
-    description: 'Ship prescription medicines, Ayurvedic medicines & health supplements from India to 150+ countries. CSB-IV compliant with customs documentation.',
+    description: 'Ship prescription medicines, Ayurvedic medicines & health supplements person to person from India to 150+ countries. CSB-IV compliant.',
     href: '/services/medicine-courier',
     emoji: '💊',
   },
   {
     title: 'International Document Courier',
-    description: 'Fast & secure delivery of legal papers, certificates, educational documents & business contracts from India worldwide.',
+    description: 'Fast & secure person to person delivery of legal papers, certificates, educational documents & business contracts from India worldwide.',
     href: '/services/document-courier',
     emoji: '📄',
   },
   {
     title: 'International Gift Courier',
-    description: 'Send personal gifts, care packages, festival gifts & parcels from India to loved ones abroad. Secure packaging & tracking.',
+    description: 'Send personal gifts, care packages, festival gifts & parcels person to person from India to loved ones abroad. Secure packaging & tracking.',
     href: '/services/gift-courier',
     emoji: '🎁',
-  },
-  {
-    title: 'Domestic Courier India',
-    description: 'Affordable door-to-door parcel delivery across India. Same-day pickup, real-time tracking, 1-5 day delivery.',
-    href: '/services/domestic-courier',
-    emoji: '🚚',
   },
 ];
 
@@ -76,10 +80,10 @@ export default function ServicesPage() {
 
         <main className="max-w-4xl mx-auto px-4 py-8 sm:py-12">
           <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-4">
-            Courier Services — International & Domestic Shipping from India
+            Person to Person Courier Services — Domestic & International from India
           </h1>
           <p className="text-base sm:text-lg text-muted-foreground mb-8 sm:mb-10">
-            CourierX is India's trusted courier aggregator. Ship medicines, documents, gifts internationally or send parcels domestically. Compare rates from DHL, FedEx, Aramex and more.
+            CourierX is India&apos;s only person to person courier booking platform. Send parcels, medicines, documents, and gifts to friends and family — across India or to 150+ countries. Compare rates from BlueDart, DHL, FedEx, Aramex and more.
           </p>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 mb-12">

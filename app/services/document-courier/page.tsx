@@ -9,6 +9,7 @@ export const metadata: Metadata = {
   keywords: [
     'send documents abroad from India',
     'international document courier India',
+    'person to person document courier India',
     'document courier India to USA',
     'document courier India to UK',
     'send legal documents internationally',
@@ -20,6 +21,8 @@ export const metadata: Metadata = {
     'send papers abroad from India',
     'international document shipping',
     'courier documents overseas from India',
+    'book document courier online India',
+    'personal document courier India',
   ],
   openGraph: {
     title: 'Send Documents Abroad from India — CourierX Document Courier',
@@ -80,10 +83,10 @@ export default function DocumentCourierPage() {
 
         <main className="max-w-4xl mx-auto px-4 py-12">
           <h1 className="text-3xl md:text-4xl font-bold mb-4">
-            Send Documents Abroad from India — International Document Courier
+            Send Documents Abroad from India — Person to Person Document Courier
           </h1>
           <p className="text-lg text-muted-foreground mb-8">
-            Fast, secure, and tracked international document courier from India. Ship legal papers, certificates, educational documents, and business contracts to USA, UK, Canada, Australia, UAE & 150+ countries.
+            Fast, secure, and tracked person to person document courier from India. Ship legal papers, certificates, educational documents, and business contracts to USA, UK, Canada, Australia, UAE & 150+ countries. Book online, doorstep pickup.
           </p>
 
           <div className="grid md:grid-cols-3 gap-6 mb-12">

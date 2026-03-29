@@ -95,7 +95,7 @@ export const CTASection = () => {
                 >
                   Ready to Ship?
                   <br />
-                  <span className="text-coke-red">Get Started Today</span>
+                  <span className="text-coke-red">Book Person to Person Courier</span>
                 </motion.h2>
                 
                 <motion.p
@@ -105,7 +105,7 @@ export const CTASection = () => {
                   transition={{ duration: 0.6, delay: 0.1 }}
                   className="text-muted-foreground text-lg leading-relaxed"
                 >
-                  Ship instantly without an account, or open a free account with Aadhaar KYC to unlock 
+                  Book your personal courier instantly — domestic across India or international to 150+ countries. Open a free account with Aadhaar KYC to unlock 
                   <span className="font-semibold text-foreground"> 52% lower rates</span> on every shipment.
                 </motion.p>
                 

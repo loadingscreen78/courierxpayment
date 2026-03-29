@@ -2,12 +2,12 @@ import About from '@/views/About';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'About Us — CourierX India\'s Trusted International Courier Aggregator',
-  description: 'Learn about CourierX, India\'s trusted international courier aggregator. Ship medicines, documents & gifts to 150+ countries via DHL, FedEx, Aramex. Our mission, team, and commitment to fast, compliant shipping.',
-  keywords: ['about courierx', 'international courier company India', 'courier aggregator India', 'shipping company India', 'who is courierx'],
+  title: 'About Us — CourierX India\'s Only Person to Person Courier Booking Platform',
+  description: 'Learn about CourierX, India\'s only person to person courier booking platform. Book domestic & international courier online for medicines, documents & gifts. Our mission, team, and commitment to fast, compliant, door-to-door delivery.',
+  keywords: ['about courierx', 'person to person courier company India', 'courier booking platform India', 'personal courier service India', 'who is courierx', 'domestic courier India'],
   openGraph: {
-    title: 'About CourierX — India\'s International Courier Aggregator',
-    description: 'India\'s trusted courier aggregator for medicines, documents & gifts. Ship to 150+ countries.',
+    title: 'About CourierX — India\'s Person to Person Courier Booking Platform',
+    description: 'India\'s only person to person courier booking platform. Domestic & international courier for medicines, documents & gifts.',
     url: 'https://courierx.in/about',
     type: 'website',
   },

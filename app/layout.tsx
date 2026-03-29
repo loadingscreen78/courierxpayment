@@ -7,11 +7,23 @@ import "@/index.css";
 
 export const metadata: Metadata = {
   title: {
-    default: "CourierX — Send Medicines, Documents & Gifts from India | International Courier",
+    default: "CourierX — Person to Person Courier Booking | Send Medicines, Documents & Gifts from India",
     template: "%s | CourierX"
   },
-  description: "India's #1 international courier aggregator. Ship prescription medicines, documents & gifts to USA, UK, Canada, Australia, UAE & 150+ countries. CSB-IV compliant. Compare DHL, FedEx, Aramex rates. 3-7 day delivery.",
+  description: "India's only person to person courier booking platform. Book domestic & international courier online — send medicines, documents & gifts door-to-door across India and to 150+ countries. Compare DHL, FedEx, Aramex, BlueDart rates. Doorstep pickup, real-time tracking.",
   keywords: [
+    "person to person courier booking",
+    "person to person courier India",
+    "personal courier service India",
+    "send parcel person to person India",
+    "book courier online India",
+    "domestic courier booking India",
+    "door to door courier India",
+    "courier booking for personal items",
+    "send parcel to friend India",
+    "send parcel to family India",
+    "individual courier booking India",
+    "personal parcel delivery India",
     "international courier India",
     "send medicines abroad from India",
     "ship prescription medicine internationally",
@@ -28,6 +40,7 @@ export const metadata: Metadata = {
     "DHL courier India",
     "FedEx courier India",
     "Aramex courier India",
+    "BlueDart courier India",
     "cheapest international courier India",
     "domestic courier India",
     "parcel delivery India",
@@ -36,7 +49,8 @@ export const metadata: Metadata = {
     "send medicine to UK from India",
     "prescription medicine courier",
     "international shipping rates India",
-    "person to person courier India",
+    "online courier booking India",
+    "book courier pickup online",
     "CourierX",
   ],
   authors: [{ name: "CourierX" }],
@@ -56,8 +70,8 @@ export const metadata: Metadata = {
     locale: 'en_IN',
     url: 'https://courierx.in',
     siteName: 'CourierX',
-    title: 'CourierX — International Courier for Medicines, Documents & Gifts from India',
-    description: 'Ship medicines, documents & gifts from India to 150+ countries. Compare DHL, FedEx, Aramex rates. CSB-IV compliant. Fast 3-7 day delivery.',
+    title: 'CourierX — Person to Person Courier Booking | Domestic & International Shipping India',
+    description: 'India's only person to person courier booking platform. Send medicines, documents & gifts across India and to 150+ countries. Book online, doorstep pickup, real-time tracking.',
     images: [
       {
         url: '/lovable-uploads/19a008e8-fa55-402b-94a0-f1a05b4d70b4.png',
@@ -69,8 +83,8 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'CourierX — International Courier from India',
-    description: 'Ship medicines, documents & gifts from India to 150+ countries. CSB-IV compliant. Fast 3-7 day delivery.',
+    title: 'CourierX — Person to Person Courier Booking India',
+    description: 'Book personal courier online — send medicines, documents & gifts person to person across India and to 150+ countries. Doorstep pickup, real-time tracking.',
     images: ['/lovable-uploads/19a008e8-fa55-402b-94a0-f1a05b4d70b4.png'],
   },
   robots: {

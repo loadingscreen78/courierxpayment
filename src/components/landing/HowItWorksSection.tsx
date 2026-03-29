@@ -8,31 +8,31 @@ const steps = [
   {
     icon: UserCirclePlus,
     title: 'Sign Up & KYC',
-    description: 'Quick registration with Aadhaar verification for compliance.',
+    description: 'Quick registration with Aadhaar verification. Or ship as guest instantly.',
     step: '01',
   },
   {
     icon: Package,
     title: 'Create Shipment',
-    description: 'Enter details, upload documents, and select your carrier.',
+    description: 'Enter pickup & delivery details, select domestic or international, and choose carrier.',
     step: '02',
   },
   {
     icon: CreditCard,
     title: 'Pay & Confirm',
-    description: 'Secure payment from your wallet. Minimum ₹1,000 balance required.',
+    description: 'Secure payment via wallet or online. Compare rates before you pay.',
     step: '03',
   },
   {
     icon: Truck,
-    title: 'Schedule Pickup',
-    description: 'We collect from your doorstep and handle all logistics.',
+    title: 'Doorstep Pickup',
+    description: 'We collect from your doorstep — same-day pickup in metro cities.',
     step: '04',
   },
   {
     icon: CheckCircle,
-    title: 'Track & Receive',
-    description: 'Real-time updates until safe delivery to your recipient.',
+    title: 'Track & Deliver',
+    description: 'Real-time tracking until safe person to person delivery to your recipient.',
     step: '05',
   },
 ];
@@ -52,7 +52,7 @@ export const HowItWorksSection = () => {
             How It Works
           </h2>
           <p className="text-muted-foreground max-w-2xl mx-auto text-base sm:text-lg px-2">
-            Ship your items internationally in 5 simple steps
+            Book your person to person courier in 5 simple steps — domestic or international
           </p>
         </AnimatedSection>
 

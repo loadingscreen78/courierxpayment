@@ -91,7 +91,7 @@ const testimonials = [
     location: 'Mumbai → London',
     type: 'Medicine Shipment',
     rating: 5,
-    text: 'CourierX made shipping my mother\'s medicines to London so easy. The prescription verification was smooth and delivery was faster than expected!',
+    text: 'CourierX made shipping my mother\'s medicines to London so easy. The person to person booking was smooth and delivery was faster than expected!',
     avatar: 'PS',
   },
   {
@@ -99,7 +99,7 @@ const testimonials = [
     location: 'Bangalore → Dubai',
     type: 'Document Delivery',
     rating: 5,
-    text: 'Sent important legal documents for my visa application. Tracking was excellent and documents arrived safely within 3 days.',
+    text: 'Sent important legal documents for my visa application. Person to person tracking was excellent and documents arrived safely within 3 days.',
     avatar: 'RK',
   },
   {
@@ -111,12 +111,12 @@ const testimonials = [
     avatar: 'AD',
   },
   {
-    name: 'Mohammed Ali',
-    location: 'Chennai → Singapore',
-    type: 'Medicine Shipment',
+    name: 'Suresh Patel',
+    location: 'Pune → Kolkata',
+    type: 'Domestic Courier',
     rating: 5,
-    text: 'Regular customer for 2 years now. Their medicine shipping compliance and customer support is unmatched.',
-    avatar: 'MA',
+    text: 'Booked a domestic courier to send a parcel to my brother in Kolkata. Same-day pickup, delivered in 2 days. Best person to person courier service!',
+    avatar: 'SP',
   },
 ];
 
@@ -144,7 +144,7 @@ export const TestimonialsSection = () => {
             What Our Customers Say
           </h2>
           <p className="text-muted-foreground max-w-2xl mx-auto text-base sm:text-lg px-2">
-            Join thousands of satisfied customers who trust CourierX for their international shipping needs.
+            Join thousands of satisfied customers who trust CourierX for person to person courier booking — domestic and international.
           </p>
         </AnimatedSection>
 

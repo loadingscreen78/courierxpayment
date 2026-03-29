@@ -5,10 +5,19 @@ import dynamic from 'next/dynamic';
 
 // ── SEO Metadata (rendered server-side, fully crawlable) ──────────────────────
 export const metadata: Metadata = {
-  title: 'CourierX — Send Medicines, Documents & Gifts Abroad from India | International Courier',
+  title: 'CourierX — Person to Person Courier Booking India | Send Medicines, Documents & Gifts',
   description:
-    'India\'s trusted international courier aggregator. Send prescription medicines, documents & personal gifts to USA, UK, Canada, Australia, UAE & 150+ countries. CSB-IV compliant. Compare DHL, FedEx, Aramex rates. Fast 3–7 day delivery.',
+    'India\'s only person to person courier booking platform. Book domestic & international courier online — send medicines, documents & personal gifts door-to-door across India and to USA, UK, Canada, Australia, UAE & 150+ countries. Compare DHL, FedEx, Aramex, BlueDart rates. Doorstep pickup, real-time tracking.',
   keywords: [
+    'person to person courier booking',
+    'person to person courier India',
+    'personal courier service India',
+    'book courier online India',
+    'domestic courier booking India',
+    'door to door courier India',
+    'send parcel person to person',
+    'individual courier booking India',
+    'personal parcel delivery India',
     'international courier India',
     'send medicines abroad from India',
     'ship prescription medicine internationally',
@@ -21,18 +30,17 @@ export const metadata: Metadata = {
     'courier India to UAE',
     'cheapest international courier India',
     'CSB-IV compliant shipping',
-    'DHL FedEx Aramex India',
+    'DHL FedEx Aramex BlueDart India',
     'medicine courier service India',
-    'person to person courier India',
-    'international parcel delivery India',
-    'domestic courier India',
+    'domestic parcel delivery India',
+    'online courier booking doorstep pickup',
     'courier aggregator India',
     'CourierX',
   ],
   openGraph: {
-    title: 'CourierX — Send Medicines, Documents & Gifts from India to 150+ Countries',
+    title: 'CourierX — India\'s Only Person to Person Courier Booking Platform',
     description:
-      'India\'s #1 international courier aggregator. Ship prescription medicines, documents & gifts. Compare DHL, FedEx, Aramex rates. CSB-IV compliant. 3–7 day delivery.',
+      'Book personal courier online. Send medicines, documents & gifts person to person — across India and to 150+ countries. Doorstep pickup, real-time tracking, best rates.',
     url: 'https://courierx.in',
     siteName: 'CourierX',
     type: 'website',
@@ -41,15 +49,15 @@ export const metadata: Metadata = {
         url: '/lovable-uploads/19a008e8-fa55-402b-94a0-f1a05b4d70b4.png',
         width: 1200,
         height: 630,
-        alt: 'CourierX — International Courier from India for Medicines, Documents & Gifts',
+        alt: 'CourierX — Person to Person Courier Booking India | Domestic & International',
       },
     ],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'CourierX — International Courier for Medicines, Documents & Gifts',
+    title: 'CourierX — Person to Person Courier Booking | Domestic & International',
     description:
-      'Send medicines, documents & gifts from India to 150+ countries. CSB-IV compliant. Compare DHL, FedEx, Aramex. 3–7 day delivery.',
+      'Book personal courier online. Send medicines, documents & gifts person to person across India and to 150+ countries. Doorstep pickup, real-time tracking.',
     images: ['/lovable-uploads/19a008e8-fa55-402b-94a0-f1a05b4d70b4.png'],
   },
   alternates: {
@@ -129,14 +137,15 @@ export default function HomePage() {
 
       {/* Static links for crawlers — hidden visually but present in HTML */}
       <div style={{ display: 'none' }}>
-        <a href="/about">About CourierX</a>
-        <a href="/public/rate-calculator">International Shipping Rate Calculator</a>
+        <a href="/about">About CourierX — Person to Person Courier Booking</a>
+        <a href="/public/rate-calculator">Courier Rate Calculator — Domestic & International</a>
         <a href="/public/track">Track Shipment</a>
         <a href="/contact">Contact Us</a>
-        <a href="/services/medicine-courier">Send Medicines Abroad from India</a>
-        <a href="/services/document-courier">International Document Courier</a>
-        <a href="/services/gift-courier">Send Gifts Abroad from India</a>
-        <a href="/services/domestic-courier">Domestic Courier India</a>
+        <a href="/services">Person to Person Courier Services India</a>
+        <a href="/services/domestic-courier">Person to Person Domestic Courier India</a>
+        <a href="/services/medicine-courier">Send Medicines Abroad from India — Person to Person</a>
+        <a href="/services/document-courier">Person to Person Document Courier from India</a>
+        <a href="/services/gift-courier">Send Gifts Abroad from India — Person to Person</a>
         <a href="/privacy-policy">Privacy Policy</a>
         <a href="/terms">Terms of Service</a>
         <a href="/refund-policy">Refund Policy</a>

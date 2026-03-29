@@ -9,6 +9,7 @@ export const metadata: Metadata = {
   keywords: [
     'send gifts abroad from India',
     'international gift courier India',
+    'person to person gift courier India',
     'send parcel from India to USA',
     'send parcel from India to UK',
     'gift courier India to Canada',
@@ -21,6 +22,7 @@ export const metadata: Metadata = {
     'cheapest gift courier India',
     'person to person courier India',
     'send birthday gift abroad from India',
+    'book gift courier online India',
   ],
   openGraph: {
     title: 'Send Gifts Abroad from India — CourierX Gift Courier',
@@ -81,10 +83,10 @@ export default function GiftCourierPage() {
 
         <main className="max-w-4xl mx-auto px-4 py-12">
           <h1 className="text-3xl md:text-4xl font-bold mb-4">
-            Send Gifts Abroad from India — International Gift & Parcel Courier
+            Send Gifts Abroad from India — Person to Person Gift & Parcel Courier
           </h1>
           <p className="text-lg text-muted-foreground mb-8">
-            Ship personal gifts, care packages, festival gifts, and parcels from India to USA, UK, Canada, Australia, UAE & 150+ countries. Secure packaging, real-time tracking, and doorstep pickup.
+            Ship personal gifts, care packages, festival gifts, and parcels person to person from India to USA, UK, Canada, Australia, UAE & 150+ countries. Secure packaging, real-time tracking, and doorstep pickup. Book online in 2 minutes.
           </p>
 
           <div className="grid md:grid-cols-3 gap-6 mb-12">

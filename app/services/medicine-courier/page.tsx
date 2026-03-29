@@ -10,6 +10,7 @@ export const metadata: Metadata = {
     'send medicines abroad from India',
     'international medicine courier India',
     'ship prescription medicine from India',
+    'person to person medicine courier India',
     'medicine courier India to USA',
     'medicine courier India to UK',
     'send medicine to Canada from India',
@@ -22,6 +23,8 @@ export const metadata: Metadata = {
     'send Ayurvedic medicine abroad',
     'medicine parcel India international',
     'cheapest medicine courier India',
+    'book medicine courier online India',
+    'personal medicine courier India',
   ],
   openGraph: {
     title: 'Send Medicines Abroad from India — CourierX Medicine Courier',
@@ -96,10 +99,10 @@ export default function MedicineCourierPage() {
 
         <main className="max-w-4xl mx-auto px-4 py-12">
           <h1 className="text-3xl md:text-4xl font-bold mb-4">
-            Send Medicines Abroad from India — International Medicine Courier
+            Send Medicines Abroad from India — Person to Person Medicine Courier
           </h1>
           <p className="text-lg text-muted-foreground mb-8">
-            Ship prescription medicines, Ayurvedic medicines, and health supplements from India to USA, UK, Canada, Australia, UAE, and 150+ countries. CSB-IV compliant, customs-cleared, with temperature-safe packaging.
+            Ship prescription medicines, Ayurvedic medicines, and health supplements person to person from India to USA, UK, Canada, Australia, UAE, and 150+ countries. CSB-IV compliant, customs-cleared, with temperature-safe packaging. Book online, doorstep pickup.
           </p>
 
           <div className="grid md:grid-cols-3 gap-6 mb-12">

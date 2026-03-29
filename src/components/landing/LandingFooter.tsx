@@ -17,6 +17,7 @@ const socialLinks = [
 const quickLinks = [
   { label: 'Track Shipment', href: '/public/track' },
   { label: 'Rate Calculator', href: '/public/rate-calculator' },
+  { label: 'Domestic Courier', href: '/services/domestic-courier' },
   { label: 'Ship Medicine', href: '/auth' },
   { label: 'Ship Documents', href: '/auth' },
   { label: 'Ship Gifts', href: '/auth' },
@@ -63,7 +64,7 @@ export const LandingFooter = () => {
                 <span className="font-bold text-xl font-typewriter">CourierX</span>
               </div>
               <p className="text-paper-white/60 text-sm leading-relaxed max-w-xs">
-                India&apos;s trusted international courier aggregator for medicines, documents, and personal gifts.
+                India&apos;s only person to person courier booking platform. Send medicines, documents, gifts &amp; parcels across India and worldwide.
               </p>
               <div className="flex gap-3">
                 {socialLinks.map((social) => (
@@ -93,8 +94,8 @@ export const LandingFooter = () => {
                 <span className="font-bold text-xl font-typewriter">CourierX</span>
               </div>
               <p className="text-paper-white/60 text-sm leading-relaxed">
-                India&apos;s trusted international courier aggregator for medicines, documents, and personal gifts. 
-                Fast, compliant, and secure shipping worldwide.
+                India&apos;s only person to person courier booking platform. Send medicines, documents, gifts &amp; parcels 
+                door-to-door across India and to 150+ countries.
               </p>
               <div className="flex gap-3">
                 {socialLinks.map((social) => (

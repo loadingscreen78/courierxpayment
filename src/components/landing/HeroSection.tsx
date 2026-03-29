@@ -8,7 +8,7 @@ import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { RealtimeShipmentTracker } from './RealtimeShipmentTracker';
 
-const rotatingWords = ['Essentials', 'Medicines', 'Documents', 'Gifts'];
+const rotatingWords = ['Essentials', 'Medicines', 'Documents', 'Gifts', 'Parcels'];
 
 export const HeroSection = () => {
   const router = useRouter();
@@ -76,7 +76,7 @@ export const HeroSection = () => {
               className="inline-flex items-center gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full border border-primary/20 bg-primary/5 text-primary text-xs sm:text-sm font-medium"
             >
               <Sparkle className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-coke-red" />
-              <span>Shipping to 150+ Countries</span>
+              <span>India&apos;s Only Person to Person Courier Booking</span>
             </motion.div>
             
             {/* Headline */}
@@ -106,7 +106,7 @@ export const HeroSection = () => {
                 </AnimatePresence>
               </span>
               <br />
-              Across the <span className="text-primary">Globe</span>
+              <span className="text-primary">Person to Person</span>
             </motion.h1>
             
             {/* Description — shorter on mobile */}
@@ -116,8 +116,8 @@ export const HeroSection = () => {
               transition={{ duration: 0.6, delay: 0.5 }}
               className="text-[15px] sm:text-lg md:text-xl text-muted-foreground max-w-xl leading-relaxed"
             >
-              <span className="sm:hidden">India&apos;s trusted courier aggregator. Ship medicines, documents &amp; gifts worldwide.</span>
-              <span className="hidden sm:inline">India&apos;s trusted international courier aggregator for medicines, documents, and personal gifts. Fast, compliant, and secure shipping worldwide.</span>
+              <span className="sm:hidden">India&apos;s only person to person courier booking. Send medicines, documents, gifts &amp; parcels across India &amp; worldwide.</span>
+              <span className="hidden sm:inline">India&apos;s only person to person courier booking platform. Book domestic and international courier online — send medicines, documents, gifts and personal parcels door-to-door across India and to 150+ countries.</span>
             </motion.p>
 
             {/* Trust Badges — hidden on mobile, shown on sm+ */}
@@ -128,9 +128,9 @@ export const HeroSection = () => {
               className="hidden sm:flex flex-wrap gap-4 sm:gap-6 text-sm"
             >
               {[
-                { icon: ShieldCheck, text: 'CSB-IV Compliant', color: 'text-candlestick-green' },
-                { icon: Clock, text: '3-7 Days Delivery', color: 'text-candlestick-green' },
-                { icon: Package, text: '1,400+ Shipments', color: 'text-candlestick-green' },
+                { icon: ShieldCheck, text: 'Person to Person', color: 'text-candlestick-green' },
+                { icon: Clock, text: 'Doorstep Pickup', color: 'text-candlestick-green' },
+                { icon: Package, text: 'Domestic & International', color: 'text-candlestick-green' },
               ].map((badge, i) => (
                 <motion.div
                   key={badge.text}
@@ -191,9 +191,9 @@ export const HeroSection = () => {
               transition={{ duration: 0.8, delay: 1 }}
               className="hidden sm:block pt-8 border-t border-border/50"
             >
-              <p className="text-xs text-muted-foreground mb-4 uppercase tracking-wider">Trusted Carrier Partners</p>
+              <p className="text-xs text-muted-foreground mb-4 uppercase tracking-wider">Trusted Carrier Partners — Domestic &amp; International</p>
               <div className="flex flex-wrap items-center gap-6 sm:gap-8">
-                {['DHL', 'FedEx', 'Aramex', 'ShipGlobal'].map((carrier) => (
+                {['DHL', 'FedEx', 'Aramex', 'BlueDart', 'DTDC', 'ShipGlobal'].map((carrier) => (
                   <span
                     key={carrier}
                     className="font-bold text-lg tracking-tight cursor-default opacity-50 hover:opacity-100 hover:scale-105 transition-all duration-75"

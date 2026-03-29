@@ -7,7 +7,7 @@ export function OrganizationJsonLd() {
     url: 'https://courierx.in',
     logo: 'https://courierx.in/logo.svg',
     description:
-      'India\'s trusted international courier aggregator for medicines, documents, and gifts. CSB-IV compliant shipping to 150+ countries.',
+      'India\'s only person to person courier booking platform. Book domestic and international courier online for medicines, documents, gifts, and personal parcels. Door-to-door delivery across India and to 150+ countries.',
     foundingDate: '2024',
     sameAs: [],
     contactPoint: [
@@ -39,7 +39,7 @@ export function WebSiteJsonLd() {
     name: 'CourierX',
     url: 'https://courierx.in',
     description:
-      'International courier service from India for medicines, documents, and gifts.',
+      'Person to person courier booking platform from India — domestic and international shipping for medicines, documents, and gifts.',
     potentialAction: {
       '@type': 'SearchAction',
       target: 'https://courierx.in/public/track?awb={search_term_string}',
@@ -60,19 +60,25 @@ export function CourierServiceJsonLd() {
   const data = {
     '@context': 'https://schema.org',
     '@type': 'Service',
-    serviceType: 'International Courier Service',
+    serviceType: 'Person to Person Courier Booking Service',
     provider: {
       '@type': 'Organization',
       name: 'CourierX',
       url: 'https://courierx.in',
     },
-    name: 'International Courier & Shipping from India',
+    name: 'Person to Person Courier Booking — Domestic & International from India',
     description:
-      'Ship medicines, documents, and personal gifts from India to 150+ countries via DHL, FedEx, and Aramex. CSB-IV compliant, door-to-door delivery in 3-7 days.',
-    areaServed: {
-      '@type': 'GeoShape',
-      name: 'Worldwide — 150+ countries',
-    },
+      'Book personal courier online — send medicines, documents, gifts, and parcels person to person. Domestic delivery across India and international shipping to 150+ countries via DHL, FedEx, Aramex, BlueDart. Door-to-door pickup, real-time tracking.',
+    areaServed: [
+      {
+        '@type': 'Country',
+        name: 'India',
+      },
+      {
+        '@type': 'GeoShape',
+        name: 'Worldwide — 150+ countries',
+      },
+    ],
     hasOfferCatalog: {
       '@type': 'OfferCatalog',
       name: 'Courier Services',
@@ -83,7 +89,7 @@ export function CourierServiceJsonLd() {
             '@type': 'Service',
             name: 'International Medicine Courier',
             description:
-              'Send prescription medicines from India to USA, UK, Canada, Australia, UAE, and 150+ countries. Compliant with customs regulations.',
+              'Send prescription medicines person to person from India to USA, UK, Canada, Australia, UAE, and 150+ countries. CSB-IV compliant with customs documentation.',
           },
         },
         {
@@ -92,7 +98,7 @@ export function CourierServiceJsonLd() {
             '@type': 'Service',
             name: 'International Document Courier',
             description:
-              'Fast and secure international document delivery from India. Ship legal papers, certificates, and important documents worldwide.',
+              'Fast and secure person to person document delivery from India. Ship legal papers, certificates, and important documents worldwide.',
           },
         },
         {
@@ -101,16 +107,16 @@ export function CourierServiceJsonLd() {
             '@type': 'Service',
             name: 'International Gift Courier',
             description:
-              'Send personal gifts from India to loved ones abroad. Secure packaging and reliable delivery to 150+ countries.',
+              'Send personal gifts person to person from India to loved ones abroad. Secure packaging and reliable delivery to 150+ countries.',
           },
         },
         {
           '@type': 'Offer',
           itemOffered: {
             '@type': 'Service',
-            name: 'Domestic Courier India',
+            name: 'Domestic Courier India — Person to Person',
             description:
-              'Fast and affordable domestic courier service across India. Door-to-door parcel delivery with real-time tracking.',
+              'Book person to person domestic courier across India. Door-to-door parcel delivery with same-day pickup, real-time tracking, and 1-5 day delivery.',
           },
         },
       ],
