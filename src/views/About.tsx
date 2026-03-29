@@ -127,7 +127,7 @@ const timelineData = [
 const teamData = [
   {
     name: 'Sangram Kesari Adhikary',
-    role: 'CEO',
+    role: 'Co-Founder',
     initials: 'SK',
     photo: 'https://unavatar.io/linkedin/sangram-keshari-adhikary-3418072ba',
     linkedin: 'https://www.linkedin.com/in/sangram-keshari-adhikary-3418072ba/',
@@ -135,9 +135,9 @@ const teamData = [
   },
   {
     name: 'Mohit O Bhagri',
-    role: 'COO',
+    role: 'Co-Founder',
     initials: 'MB',
-    photo: null as string | null,
+    photo: '/team-mohit.png',
     linkedin: 'https://www.linkedin.com/in/bagrimohit619/',
     bio: 'Operations strategist ensuring seamless logistics, carrier partnerships, and world-class delivery experiences.',
   },
@@ -145,7 +145,7 @@ const teamData = [
     name: 'Jagannath Samratha Mishra',
     role: 'CTO',
     initials: 'JM',
-    photo: null as string | null,
+    photo: '/team-jagannath.png',
     linkedin: 'https://www.linkedin.com/in/jagannath-mishra-58196229b/',
     bio: 'Tech architect building the AI-powered platform that makes courier booking fast, compliant, and effortless.',
   },
