@@ -54,9 +54,39 @@ export const LandingFooter = () => {
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-px bg-gradient-to-r from-transparent via-paper-white/20 to-transparent" />
       
       <div className="container py-10 sm:py-16">
-        <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-8 sm:gap-12">
-          {/* Brand */}
+        {/* ── Mobile: Brand section full-width on top ── */}
+        <div className="lg:hidden mb-8">
           <AnimatedSection direction="up" delay={0}>
+            <div className="flex flex-col items-center text-center space-y-4">
+              <div className="flex items-center gap-3">
+                <img src={logoMain.src} alt="CourierX" className="h-10 w-auto rounded-lg" />
+                <span className="font-bold text-xl font-typewriter">CourierX</span>
+              </div>
+              <p className="text-paper-white/60 text-sm leading-relaxed max-w-xs">
+                India&apos;s trusted international courier aggregator for medicines, documents, and personal gifts.
+              </p>
+              <div className="flex gap-3">
+                {socialLinks.map((social) => (
+                  <motion.a
+                    key={social.label}
+                    href={social.href}
+                    whileHover={{ scale: 1.1, y: -2 }}
+                    whileTap={{ scale: 0.95 }}
+                    className="w-10 h-10 rounded-full bg-paper-white/10 flex items-center justify-center hover:bg-coke-red/80 transition-colors duration-300"
+                    aria-label={social.label}
+                  >
+                    <social.icon className="h-5 w-5" />
+                  </motion.a>
+                ))}
+              </div>
+            </div>
+          </AnimatedSection>
+        </div>
+
+        {/* ── Link columns ── */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-8 sm:gap-12">
+          {/* Brand — desktop only (mobile version is above) */}
+          <AnimatedSection direction="up" delay={0} className="hidden lg:block">
             <div className="space-y-5">
               <div className="flex items-center gap-3">
                 <img src={logoMain.src} alt="CourierX" className="h-10 w-auto rounded-lg" />
@@ -67,7 +97,7 @@ export const LandingFooter = () => {
                 Fast, compliant, and secure shipping worldwide.
               </p>
               <div className="flex gap-3">
-                {socialLinks.map((social, index) => (
+                {socialLinks.map((social) => (
                   <motion.a
                     key={social.label}
                     href={social.href}
@@ -85,14 +115,14 @@ export const LandingFooter = () => {
 
           {/* Quick Links */}
           <AnimatedSection direction="up" delay={0.1}>
-            <div className="space-y-5">
-              <h3 className="font-semibold text-lg font-typewriter">Quick Links</h3>
-              <ul className="space-y-3">
+            <div className="space-y-4">
+              <h3 className="font-semibold text-sm sm:text-lg font-typewriter text-paper-white/90">Quick Links</h3>
+              <ul className="space-y-2.5">
                 {quickLinks.map((link) => (
                   <li key={link.label}>
                     <button
                       onClick={() => handleNavClick(link.href)}
-                      className="text-paper-white/60 hover:text-paper-white text-sm transition-all duration-200 inline-block hover:translate-x-1"
+                      className="text-paper-white/60 hover:text-paper-white text-xs sm:text-sm transition-all duration-200 inline-block hover:translate-x-1"
                     >
                       {link.label}
                     </button>
@@ -104,22 +134,22 @@ export const LandingFooter = () => {
 
           {/* Support */}
           <AnimatedSection direction="up" delay={0.2}>
-            <div className="space-y-5">
-              <h3 className="font-semibold text-lg font-typewriter">Support</h3>
-              <ul className="space-y-3">
+            <div className="space-y-4">
+              <h3 className="font-semibold text-sm sm:text-lg font-typewriter text-paper-white/90">Support</h3>
+              <ul className="space-y-2.5">
                 {supportLinks.map((link) => (
                   <li key={link.label}>
                     {link.href.startsWith('/') ? (
                       <button
                         onClick={() => handleNavClick(link.href)}
-                        className="text-paper-white/60 hover:text-paper-white text-sm transition-all duration-200 inline-block hover:translate-x-1"
+                        className="text-paper-white/60 hover:text-paper-white text-xs sm:text-sm transition-all duration-200 inline-block hover:translate-x-1"
                       >
                         {link.label}
                       </button>
                     ) : (
                       <a
                         href={link.href}
-                        className="text-paper-white/60 hover:text-paper-white text-sm transition-all duration-200 inline-block hover:translate-x-1"
+                        className="text-paper-white/60 hover:text-paper-white text-xs sm:text-sm transition-all duration-200 inline-block hover:translate-x-1"
                       >
                         {link.label}
                       </a>
@@ -130,11 +160,37 @@ export const LandingFooter = () => {
             </div>
           </AnimatedSection>
 
-          {/* Contact */}
-          <AnimatedSection direction="up" delay={0.3}>
-            <div className="space-y-5">
-              <h3 className="font-semibold text-lg font-typewriter">Contact Us</h3>
-              <ul className="space-y-4">
+          {/* Contact — full width on mobile */}
+          <AnimatedSection direction="up" delay={0.3} className="col-span-2 lg:col-span-1">
+            <div className="space-y-4">
+              <h3 className="font-semibold text-sm sm:text-lg font-typewriter text-paper-white/90">Contact Us</h3>
+              
+              {/* Mobile: compact horizontal layout */}
+              <div className="lg:hidden space-y-3">
+                <div className="flex items-start gap-3">
+                  <MapPin className="h-4 w-4 text-coke-red mt-0.5 shrink-0" />
+                  <span className="text-paper-white/60 text-xs leading-relaxed">
+                    A/1801, Gagan Unnati, Kondhwa BK, Pune – 411048, Maharashtra
+                  </span>
+                </div>
+                <div className="flex flex-wrap gap-x-5 gap-y-2">
+                  <a href="tel:+917008368628" className="flex items-center gap-2 text-paper-white/60 hover:text-paper-white text-xs transition-colors">
+                    <Phone className="h-3.5 w-3.5 text-coke-red shrink-0" />
+                    +91 7008368628
+                  </a>
+                  <a href="tel:+918484050057" className="flex items-center gap-2 text-paper-white/60 hover:text-paper-white text-xs transition-colors">
+                    <Phone className="h-3.5 w-3.5 text-coke-red shrink-0" />
+                    +91 8484050057
+                  </a>
+                  <a href="mailto:info@courierx.in" className="flex items-center gap-2 text-paper-white/60 hover:text-paper-white text-xs transition-colors">
+                    <Mail className="h-3.5 w-3.5 text-coke-red shrink-0" />
+                    info@courierx.in
+                  </a>
+                </div>
+              </div>
+
+              {/* Desktop: vertical layout */}
+              <ul className="hidden lg:block space-y-4">
                 <li className="flex items-start gap-3 group">
                   <MapPin className="h-5 w-5 text-paper-white/60 mt-0.5 group-hover:text-coke-red transition-colors" />
                   <span className="text-paper-white/60 text-sm">
@@ -200,7 +256,7 @@ export const LandingFooter = () => {
             whileInView={{ opacity: 1 }}
             viewport={{ once: true }}
             transition={{ delay: 0.2 }}
-            className="flex items-center gap-3 sm:gap-6 text-xs sm:text-sm text-paper-white/40 flex-wrap justify-center"
+            className="flex items-center gap-3 sm:gap-6 text-[10px] sm:text-sm text-paper-white/40 flex-wrap justify-center"
           >
             <span className="hover:text-paper-white/60 transition-colors cursor-default">CSB-IV Compliant</span>
             <span className="text-paper-white/20">•</span>
