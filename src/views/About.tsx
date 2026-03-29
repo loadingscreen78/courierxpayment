@@ -103,7 +103,7 @@ const timelineData = [
   {
     year: '2022',
     title: 'Domestic Courier Launch',
-    description: 'Launched person to person domestic courier across India with BlueDart, DTDC, and Delhivery. Crossed 500 shipments.',
+    description: 'Launched person to person domestic courier across India with BlueDart, DTDC, and Delhivery.',
     icon: TrendingUp,
     color: 'bg-amber-500',
   },
@@ -116,8 +116,8 @@ const timelineData = [
   },
   {
     year: '2024',
-    title: '1,400+ Shipments',
-    description: 'Crossed 1,400 successful shipments across India and 150+ countries with 99% on-time delivery.',
+    title: '1,100+ Shipments',
+    description: 'Crossed 1,100 successful shipments across India and 150+ countries with 99% on-time delivery.',
     icon: Award,
     color: 'bg-coke-red',
   },
@@ -157,7 +157,7 @@ const valuesData = [
 
 // Stats data
 const statsData = [
-  { value: 1400, suffix: '+', label: 'Shipments Delivered' },
+  { value: 1100, suffix: '+', label: 'Shipments Delivered' },
   { value: 150, suffix: '+', label: 'Countries Served' },
   { value: 99, suffix: '%', label: 'On-Time Delivery' },
   { value: 24, suffix: '/7', label: 'Customer Support' },
