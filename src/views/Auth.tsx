@@ -598,16 +598,8 @@ const Auth = () => {
           <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-coke-red/[0.03] rounded-full blur-[150px] -translate-y-1/2 translate-x-1/4" />
         </div>
 
-        {/* Logo only — top left */}
-        <div className="relative z-10 p-10 pb-0 flex justify-center">
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.5 }}
-          >
-            <img src={logoMain.src} alt="CourierX" className="h-10 w-auto rounded-lg" />
-          </motion.div>
-        </div>
+        {/* Top spacer (no logo) */}
+        <div className="relative z-10 p-10 pb-0" />
 
         {/* Center — Hero */}
         <div className="relative z-10 flex-1 flex flex-col justify-center items-center px-10 text-center">
