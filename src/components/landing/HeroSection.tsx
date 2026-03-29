@@ -22,12 +22,12 @@ export const HeroSection = () => {
   }, []);
 
   return (
-    <section className="relative min-h-[85vh] sm:min-h-[90vh] flex items-center overflow-hidden">
+    <section className="relative min-h-[80vh] sm:min-h-[90vh] flex items-center overflow-hidden">
       {/* Animated Background */}
       <div className="absolute inset-0 bg-gradient-to-br from-background via-background to-primary/5" />
       
-      {/* Floating Particles - deterministic positions */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+      {/* Floating Particles - hidden on mobile for cleanliness */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none hidden sm:block">
         {[
           { left: 15, top: 60, xOffset: 10 },
           { left: 30, top: 70, xOffset: -15 },
@@ -59,23 +59,23 @@ export const HeroSection = () => {
         ))}
       </div>
 
-      {/* Subtle Pattern */}
-      <div className="absolute inset-0 opacity-[0.015]" style={{
+      {/* Subtle Pattern — hidden on mobile */}
+      <div className="absolute inset-0 opacity-[0.015] hidden sm:block" style={{
         backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23000000' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
       }} />
       
-      <div className="container relative z-10 py-12 sm:py-16 md:py-20">
+      <div className="container relative z-10 py-16 sm:py-16 md:py-20">
         <div className="grid lg:grid-cols-2 gap-10 lg:gap-16 items-center">
           {/* Left Content */}
-          <div className="space-y-8">
+          <div className="space-y-6 sm:space-y-8">
             {/* Badge */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.2 }}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-primary/20 bg-primary/5 text-primary text-sm font-medium"
+              className="inline-flex items-center gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full border border-primary/20 bg-primary/5 text-primary text-xs sm:text-sm font-medium"
             >
-              <Sparkle className="h-4 w-4 text-coke-red" />
+              <Sparkle className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-coke-red" />
               <span>Shipping to 150+ Countries</span>
             </motion.div>
             
@@ -84,11 +84,11 @@ export const HeroSection = () => {
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.7, delay: 0.3 }}
-              className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold font-typewriter leading-tight tracking-tight"
+              className="text-[2.25rem] leading-[1.15] sm:text-4xl md:text-5xl lg:text-6xl font-bold font-typewriter sm:leading-tight tracking-tight"
               suppressHydrationWarning
             >
               Ship Your{' '}
-              <span className="inline-flex items-center h-[1.2em] overflow-hidden align-bottom min-w-[200px] sm:min-w-[280px]" suppressHydrationWarning>
+              <span className="inline-flex items-center h-[1.2em] overflow-hidden align-bottom min-w-[180px] sm:min-w-[280px]" suppressHydrationWarning>
                 <AnimatePresence mode="wait">
                   <motion.span
                     key={currentWordIndex}
@@ -109,23 +109,23 @@ export const HeroSection = () => {
               Across the <span className="text-primary">Globe</span>
             </motion.h1>
             
-            {/* Description */}
+            {/* Description — shorter on mobile */}
             <motion.p
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.5 }}
-              className="text-base sm:text-lg md:text-xl text-muted-foreground max-w-xl leading-relaxed"
+              className="text-[15px] sm:text-lg md:text-xl text-muted-foreground max-w-xl leading-relaxed"
             >
-              India&apos;s trusted international courier aggregator for medicines, documents, and personal gifts. 
-              Fast, compliant, and secure shipping worldwide.
+              <span className="sm:hidden">India&apos;s trusted courier aggregator. Ship medicines, documents &amp; gifts worldwide.</span>
+              <span className="hidden sm:inline">India&apos;s trusted international courier aggregator for medicines, documents, and personal gifts. Fast, compliant, and secure shipping worldwide.</span>
             </motion.p>
 
-            {/* Trust Badges */}
+            {/* Trust Badges — hidden on mobile, shown on sm+ */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.6 }}
-              className="flex flex-wrap gap-4 sm:gap-6 text-sm"
+              className="hidden sm:flex flex-wrap gap-4 sm:gap-6 text-sm"
             >
               {[
                 { icon: ShieldCheck, text: 'CSB-IV Compliant', color: 'text-candlestick-green' },
@@ -149,12 +149,12 @@ export const HeroSection = () => {
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.8 }}
-              className="flex flex-wrap gap-3 sm:gap-4"
+              transition={{ duration: 0.6, delay: 0.7 }}
+              className="flex gap-3 sm:gap-4 pt-1"
             >
               <Button 
                 size="lg" 
-                className="group gap-2 text-base sm:text-lg px-6 sm:px-8 py-5 sm:py-6 bg-coke-red hover:bg-coke-red/90 shadow-lg shadow-coke-red/25 transition-all duration-300 hover:shadow-xl hover:shadow-coke-red/30 hover:-translate-y-0.5 flex-1 sm:flex-none"
+                className="group gap-2 text-base sm:text-lg px-6 sm:px-8 py-5 sm:py-6 bg-coke-red hover:bg-coke-red/90 shadow-lg shadow-coke-red/25 transition-all duration-300 hover:shadow-xl hover:shadow-coke-red/30 hover:-translate-y-0.5"
                 onClick={() => router.push('/public/book')}
               >
                 Ship Now
@@ -163,7 +163,7 @@ export const HeroSection = () => {
               <Button 
                 variant="outline" 
                 size="lg" 
-                className="group gap-2 text-base sm:text-lg px-6 sm:px-8 py-5 sm:py-6 border-2 hover:bg-primary/5 transition-all duration-300 hover:-translate-y-0.5 flex-1 sm:flex-none"
+                className="group gap-2 text-base sm:text-lg px-6 sm:px-8 py-5 sm:py-6 border-2 hover:bg-primary/5 transition-all duration-300 hover:-translate-y-0.5"
                 onClick={() => router.push('/open-account')}
               >
                 <UserPlus className="h-5 w-5" />
@@ -171,12 +171,12 @@ export const HeroSection = () => {
               </Button>
             </motion.div>
 
-            {/* Account Benefit Note */}
+            {/* Account Benefit Note — hidden on mobile */}
             <motion.p
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ duration: 0.6, delay: 0.9 }}
-              className="text-sm text-muted-foreground"
+              className="hidden sm:block text-sm text-muted-foreground"
             >
               Account holders save up to <span className="font-semibold text-candlestick-green">52%</span> on every shipment.{' '}
               <button onClick={() => router.push('/open-account')} className="text-coke-red hover:underline font-medium">
@@ -184,12 +184,12 @@ export const HeroSection = () => {
               </button>
             </motion.p>
 
-            {/* Carrier Logos */}
+            {/* Carrier Logos — hidden on mobile */}
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ duration: 0.8, delay: 1 }}
-              className="pt-8 border-t border-border/50"
+              className="hidden sm:block pt-8 border-t border-border/50"
             >
               <p className="text-xs text-muted-foreground mb-4 uppercase tracking-wider">Trusted Carrier Partners</p>
               <div className="flex flex-wrap items-center gap-6 sm:gap-8">
