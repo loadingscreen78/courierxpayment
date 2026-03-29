@@ -170,6 +170,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
     { name: '', type: '', hsnCode: '', qty: 1, unitPrice: 0 },
   ]);
   const [medicineDocuments, setMedicineDocuments] = useState<File[]>([]);
+  const [intlZipLookup, setIntlZipLookup] = useState<{ loading: boolean; city: string; state: string; error: string }>({ loading: false, city: '', state: '', error: '' });
   const [showWeightLimitModal, setShowWeightLimitModal] = useState(false);
 
   // ── International rate form ──
@@ -290,6 +291,40 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
       if (!currentCity) detailsForm.setValue('receiverCity', receiverLookup.district);
     }
   }, [receiverLookup.district, isInternational, detailsForm]);
+
+  // ── International zip code lookup (zippopotam.us) ──
+  const receiverZip = detailsForm.watch('receiverZipcode');
+  useEffect(() => {
+    if (!isInternational || !destinationCountryInfo || !receiverZip || receiverZip.length < 3) {
+      setIntlZipLookup({ loading: false, city: '', state: '', error: '' });
+      return;
+    }
+    const countryCode = destinationCountryInfo.code.toLowerCase();
+    const timer = setTimeout(async () => {
+      setIntlZipLookup(prev => ({ ...prev, loading: true, error: '' }));
+      try {
+        const res = await fetch(`https://api.zippopotam.us/${countryCode}/${receiverZip}`);
+        if (res.ok) {
+          const data = await res.json();
+          const place = data.places?.[0];
+          if (place) {
+            const city = place['place name'] || '';
+            const state = place['state'] || place['state abbreviation'] || '';
+            setIntlZipLookup({ loading: false, city, state, error: '' });
+            if (city) detailsForm.setValue('receiverCity', city);
+            if (state) detailsForm.setValue('receiverState', state);
+          } else {
+            setIntlZipLookup({ loading: false, city: '', state: '', error: '' });
+          }
+        } else {
+          setIntlZipLookup({ loading: false, city: '', state: '', error: '' });
+        }
+      } catch {
+        setIntlZipLookup({ loading: false, city: '', state: '', error: '' });
+      }
+    }, 600);
+    return () => clearTimeout(timer);
+  }, [receiverZip, isInternational, destinationCountryInfo, detailsForm]);
 
   // ── Handle international rate calculation ──
   const handleIntlRateSubmit = (values: InternationalRateValues) => {
@@ -1271,6 +1306,8 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                                 <FormControl>
                                   <Input {...field} placeholder={isInternational ? 'Zipcode' : '400001'} maxLength={isInternational ? 10 : 6} readOnly={!isInternational && !!domesticDeliveryPincode} className={`h-11 ${!isInternational && domesticDeliveryPincode ? 'bg-muted' : ''}`} />
                                 </FormControl>
+                                {isInternational && intlZipLookup.loading && <p className="text-xs text-muted-foreground flex items-center gap-1"><CircleNotch className="h-3 w-3 animate-spin" /> Looking up...</p>}
+                                {isInternational && intlZipLookup.city && <p className="text-xs text-candlestick-green">📍 {intlZipLookup.city}{intlZipLookup.state ? `, ${intlZipLookup.state}` : ''}</p>}
                                 {!isInternational && receiverLookup.loading && <p className="text-xs text-muted-foreground flex items-center gap-1"><CircleNotch className="h-3 w-3 animate-spin" /> Looking up...</p>}
                                 {!isInternational && receiverLookup.state && <p className="text-xs text-candlestick-green">{receiverLookup.district}, {receiverLookup.state}</p>}
                                 {!isInternational && receiverLookup.error && <p className="text-xs text-destructive">{receiverLookup.error}</p>}
