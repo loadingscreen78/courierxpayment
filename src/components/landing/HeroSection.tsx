@@ -1,12 +1,11 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { ArrowRight as ArrowRightLucide } from 'lucide-react';
 import { Package, ShieldCheck, Clock, Globe, Sparkle, ArrowRight, UserPlus } from '@phosphor-icons/react';
 import { Button } from '@/components/ui/button';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { RealtimeShipmentTracker } from './RealtimeShipmentTracker';
+import { CourierXMotionGraphic } from './CourierXMotionGraphic';
 
 const rotatingWords = ['Essentials', 'Medicines', 'Documents', 'Gifts', 'Parcels'];
 
@@ -205,36 +204,14 @@ export const HeroSection = () => {
             </motion.div>
           </div>
 
-          {/* Right Visual - Real-time Shipment Tracker */}
+          {/* Right Visual - Motion Graphic Demo */}
           <motion.div
             initial={{ opacity: 0, x: 60 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.8, delay: 0.5 }}
             className="relative hidden lg:block"
           >
-            <div className="relative">
-              <motion.div
-                initial={{ y: 20 }}
-                animate={{ y: 0 }}
-                transition={{ duration: 1, delay: 0.6 }}
-              >
-                <RealtimeShipmentTracker />
-              </motion.div>
-              
-              {/* Floating ETA Badge */}
-              <motion.div
-                initial={{ opacity: 0, scale: 0.8, y: -20 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: 1.7, type: "spring" }}
-                whileHover={{ scale: 1.05 }}
-                className="absolute -bottom-4 -left-4 bg-card border border-border rounded-lg p-3 shadow-lg cursor-default"
-              >
-                <div className="flex items-center gap-2">
-                  <Clock className="h-4 w-4 text-candlestick-green" />
-                  <span className="text-sm font-medium">ETA: 2-7 days</span>
-                </div>
-              </motion.div>
-            </div>
+            <CourierXMotionGraphic />
           </motion.div>
         </div>
       </div>
