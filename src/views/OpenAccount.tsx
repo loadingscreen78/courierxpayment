@@ -8,7 +8,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import {
   Envelope, Lock, Eye, EyeSlash, ArrowRight, CircleNotch,
   ShieldCheck, Package, CurrencyInr, UserPlus, ArrowLeft,
-  IdentificationCard, Bank, User, CalendarBlank,
+  IdentificationCard, Bank, User, UploadSimple, FileText, CheckCircle, X,
 } from '@phosphor-icons/react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -18,6 +18,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { uploadWithValidation, generateFilePath, STORAGE_BUCKETS, FILE_TYPES } from '@/lib/storage/storageService';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -32,7 +33,7 @@ const signUpSchema = z.object({
   path: ['confirmPassword'],
 });
 
-const kycSchema = z.object({
+const personalSchema = z.object({
   fullName: z.string().min(2, 'Name must be at least 2 characters'),
   phone: z.string().regex(/^[6-9]\d{9}$/, 'Enter a valid 10-digit Indian mobile number'),
   age: z.string().min(1, 'Age is required').refine(v => {
@@ -43,6 +44,9 @@ const kycSchema = z.object({
   state: z.string().min(2, 'State is required'),
   city: z.string().min(2, 'City is required'),
   pincode: z.string().regex(/^\d{6}$/, 'Enter a valid 6-digit pincode'),
+});
+
+const docsSchema = z.object({
   aadhaarNumber: z.string().regex(/^\d{12}$/, 'Must be exactly 12 digits'),
   panNumber: z.string().regex(/^[A-Z]{5}\d{4}[A-Z]$/, 'Enter a valid PAN (e.g. ABCDE1234F)'),
   bankAccountNumber: z.string().min(8, 'Enter a valid account number').max(18, 'Too long'),
@@ -52,8 +56,19 @@ const kycSchema = z.object({
 });
 
 type SignUpFormValues = z.infer<typeof signUpSchema>;
-type KycFormValues = z.infer<typeof kycSchema>;
-type Step = 'signup' | 'otp' | 'kyc' | 'done';
+type PersonalFormValues = z.infer<typeof personalSchema>;
+type DocsFormValues = z.infer<typeof docsSchema>;
+type Step = 'signup' | 'otp' | 'kyc-personal' | 'kyc-docs' | 'done';
+
+interface FileUploadState {
+  file: File | null;
+  uploading: boolean;
+  uploaded: boolean;
+  url: string | null;
+  error: string | null;
+}
+
+const emptyFileState: FileUploadState = { file: null, uploading: false, uploaded: false, url: null, error: null };
 
 const benefits = [
   { icon: CurrencyInr, text: '52% lower rates on all shipments' },
@@ -70,6 +85,59 @@ const indianStates = [
   'Jammu & Kashmir','Ladakh','Puducherry','Andaman & Nicobar','Lakshadweep',
   'Dadra & Nagar Haveli and Daman & Diu',
 ];
+
+const stepLabels = ['Account', 'Verify', 'Personal', 'Documents', 'Done'];
+
+// ── File Upload Component ────────────────────────────────────────────
+
+function DocUpload({ label, accept, state, onSelect, onRemove }: {
+  label: string;
+  accept: string;
+  state: FileUploadState;
+  onSelect: (f: File) => void;
+  onRemove: () => void;
+}) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  return (
+    <div className="space-y-1.5">
+      <p className="text-sm font-medium">{label}</p>
+      {state.uploaded && state.file ? (
+        <div className="flex items-center gap-2 p-3 rounded-lg border border-candlestick-green/40 bg-candlestick-green/5">
+          <CheckCircle className="h-5 w-5 text-candlestick-green shrink-0" weight="fill" />
+          <span className="text-sm truncate flex-1">{state.file.name}</span>
+          <button type="button" onClick={onRemove} className="text-muted-foreground hover:text-foreground"><X className="h-4 w-4" /></button>
+        </div>
+      ) : state.uploading ? (
+        <div className="flex items-center gap-2 p-3 rounded-lg border border-border bg-muted/30">
+          <CircleNotch className="h-5 w-5 animate-spin text-coke-red" />
+          <span className="text-sm text-muted-foreground">Uploading {state.file?.name}...</span>
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={() => inputRef.current?.click()}
+          className="w-full flex items-center gap-3 p-3 rounded-lg border-2 border-dashed border-border hover:border-coke-red/50 hover:bg-coke-red/5 transition-colors"
+        >
+          <div className="h-9 w-9 rounded-lg bg-muted flex items-center justify-center shrink-0">
+            <UploadSimple className="h-4 w-4 text-muted-foreground" />
+          </div>
+          <div className="text-left">
+            <p className="text-sm font-medium">Upload {label}</p>
+            <p className="text-xs text-muted-foreground">PDF, JPG or PNG · Max 5MB</p>
+          </div>
+        </button>
+      )}
+      {state.error && <p className="text-xs text-destructive">{state.error}</p>}
+      <input ref={inputRef} type="file" accept={accept} className="hidden" onChange={(e) => {
+        const f = e.target.files?.[0];
+        if (f) onSelect(f);
+        e.target.value = '';
+      }} />
+    </div>
+  );
+}
+
+// ── Main Component ───────────────────────────────────────────────────
 
 export default function OpenAccount() {
   const router = useRouter();
@@ -88,6 +156,14 @@ export default function OpenAccount() {
   const [resendCooldown, setResendCooldown] = useState(0);
   const cooldownRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  // Personal info saved between steps
+  const [personalData, setPersonalData] = useState<PersonalFormValues | null>(null);
+
+  // Document uploads
+  const [aadhaarDoc, setAadhaarDoc] = useState<FileUploadState>({ ...emptyFileState });
+  const [panDoc, setPanDoc] = useState<FileUploadState>({ ...emptyFileState });
+  const [bankDoc, setBankDoc] = useState<FileUploadState>({ ...emptyFileState });
+
   // If already logged in, redirect
   useEffect(() => {
     if (!user) return;
@@ -98,7 +174,7 @@ export default function OpenAccount() {
         .eq('user_id', user.id)
         .single();
       if (!profile?.full_name) {
-        setStep('kyc');
+        setStep('kyc-personal');
       } else {
         router.replace('/dashboard');
       }
@@ -111,10 +187,7 @@ export default function OpenAccount() {
     if (resendCooldown > 0) {
       cooldownRef.current = setInterval(() => {
         setResendCooldown(prev => {
-          if (prev <= 1) {
-            if (cooldownRef.current) clearInterval(cooldownRef.current);
-            return 0;
-          }
+          if (prev <= 1) { if (cooldownRef.current) clearInterval(cooldownRef.current); return 0; }
           return prev - 1;
         });
       }, 1000);
@@ -127,15 +200,50 @@ export default function OpenAccount() {
     defaultValues: { email: '', password: '', confirmPassword: '' },
   });
 
-  const kycForm = useForm<KycFormValues>({
-    resolver: zodResolver(kycSchema),
+  const personalForm = useForm<PersonalFormValues>({
+    resolver: zodResolver(personalSchema),
+    defaultValues: { fullName: '', phone: '', age: '', sex: undefined, state: '', city: '', pincode: '' },
+  });
+
+  const docsForm = useForm<DocsFormValues>({
+    resolver: zodResolver(docsSchema),
     defaultValues: {
-      fullName: '', phone: '', age: '', sex: undefined,
-      state: '', city: '', pincode: '',
       aadhaarNumber: '', panNumber: '', bankAccountNumber: '',
       bankIfsc: '', bankName: '', estimatedShipmentsPerMonth: undefined,
     },
   });
+
+  // ── File upload handler ──
+
+  const handleFileSelect = async (
+    file: File,
+    docType: 'aadhaar' | 'pan' | 'bank',
+    setter: React.Dispatch<React.SetStateAction<FileUploadState>>,
+  ) => {
+    setter({ file, uploading: true, uploaded: false, url: null, error: null });
+    try {
+      const { data: { user: u } } = await supabase.auth.getUser();
+      if (!u) { setter({ ...emptyFileState, error: 'Not authenticated' }); return; }
+
+      const path = generateFilePath(u.id, docType, file.name);
+      const result = await uploadWithValidation({
+        bucket: STORAGE_BUCKETS.KYC_DOCUMENTS,
+        file,
+        path,
+        allowedTypes: FILE_TYPES.DOCUMENTS,
+        maxSizeMB: 5,
+        upsert: true,
+      });
+
+      if (!result.success) {
+        setter({ file, uploading: false, uploaded: false, url: null, error: result.error || 'Upload failed' });
+        return;
+      }
+      setter({ file, uploading: false, uploaded: true, url: result.url || null, error: null });
+    } catch {
+      setter({ file, uploading: false, uploaded: false, url: null, error: 'Upload failed' });
+    }
+  };
 
   // ── Step 1: Signup → send OTP ──
 
@@ -160,13 +268,13 @@ export default function OpenAccount() {
       setStep('otp');
       toast({ title: 'OTP Sent', description: `Verification code sent to ${values.email}` });
     } catch {
-      toast({ title: 'Error', description: 'Something went wrong. Please try again.', variant: 'destructive' });
+      toast({ title: 'Error', description: 'Something went wrong.', variant: 'destructive' });
     } finally {
       setIsLoading(false);
     }
   };
 
-  // ── Step 2: Verify OTP → create Supabase account ──
+  // ── Step 2: Verify OTP → create account ──
 
   const handleVerifyOtp = async () => {
     if (otpValue.length !== 6) return;
@@ -183,22 +291,19 @@ export default function OpenAccount() {
         setIsLoading(false);
         return;
       }
-      // OTP verified — create the Supabase account
       const { error } = await signUpWithEmail(signupEmail, signupPassword);
       if (error) {
         toast({ title: 'Error', description: error.message, variant: 'destructive' });
         setIsLoading(false);
         return;
       }
-      // Welcome email (fire-and-forget)
       fetch('/api/email/send-welcome', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userEmail: signupEmail }),
       }).catch(() => {});
-
-      toast({ title: 'Email Verified', description: 'Now complete your KYC details.' });
-      setStep('kyc');
+      toast({ title: 'Email Verified', description: 'Now complete your profile.' });
+      setStep('kyc-personal');
     } catch {
       toast({ title: 'Error', description: 'Verification failed.', variant: 'destructive' });
     } finally {
@@ -227,9 +332,21 @@ export default function OpenAccount() {
     }
   };
 
-  // ── Step 3: KYC form → save to profile ──
+  // ── Step 3: Personal info → next ──
 
-  const handleKycSubmit = async (values: KycFormValues) => {
+  const handlePersonalSubmit = (values: PersonalFormValues) => {
+    setPersonalData(values);
+    setStep('kyc-docs');
+  };
+
+  // ── Step 4: Documents + details → save everything ──
+
+  const handleDocsSubmit = async (values: DocsFormValues) => {
+    // Validate all 3 docs uploaded
+    if (!aadhaarDoc.uploaded) { toast({ title: 'Missing Document', description: 'Please upload your Aadhaar document.', variant: 'destructive' }); return; }
+    if (!panDoc.uploaded) { toast({ title: 'Missing Document', description: 'Please upload your PAN document.', variant: 'destructive' }); return; }
+    if (!bankDoc.uploaded) { toast({ title: 'Missing Document', description: 'Please upload your bank passbook or cancelled cheque.', variant: 'destructive' }); return; }
+
     setIsLoading(true);
     try {
       const { data: { user: currentUser } } = await supabase.auth.getUser();
@@ -238,25 +355,29 @@ export default function OpenAccount() {
         router.replace('/auth');
         return;
       }
+
       const { error } = await supabase.from('profiles').update({
-        full_name: values.fullName,
-        phone_number: `+91${values.phone}`,
-        age: parseInt(values.age),
-        sex: values.sex,
-        state: values.state,
-        city: values.city,
-        pincode: values.pincode,
+        full_name: personalData!.fullName,
+        phone_number: `+91${personalData!.phone}`,
+        age: parseInt(personalData!.age),
+        sex: personalData!.sex,
+        state: personalData!.state,
+        city: personalData!.city,
+        pincode: personalData!.pincode,
         aadhaar_number: values.aadhaarNumber,
         pan_number: values.panNumber,
         bank_account_number: values.bankAccountNumber,
         bank_ifsc: values.bankIfsc,
         bank_name: values.bankName,
         estimated_shipments_per_month: values.estimatedShipmentsPerMonth,
+        aadhaar_doc_url: aadhaarDoc.url,
+        pan_doc_url: panDoc.url,
+        bank_doc_url: bankDoc.url,
         kyc_completed_at: new Date().toISOString(),
       }).eq('user_id', currentUser.id);
 
       if (error) {
-        toast({ title: 'Error', description: 'Failed to save KYC details. Please try again.', variant: 'destructive' });
+        toast({ title: 'Error', description: 'Failed to save details. Please try again.', variant: 'destructive' });
         setIsLoading(false);
         return;
       }
@@ -270,18 +391,15 @@ export default function OpenAccount() {
     }
   };
 
-  const stepIndex = step === 'signup' ? 0 : step === 'otp' ? 1 : step === 'kyc' ? 2 : 3;
-  const stepLabels = ['Create Account', 'Verify Email', 'KYC Details', 'Done'];
+  const stepIndex = step === 'signup' ? 0 : step === 'otp' ? 1 : step === 'kyc-personal' ? 2 : step === 'kyc-docs' ? 3 : 4;
 
   return (
     <div className="min-h-screen bg-background flex">
-      {/* Left panel — benefits (desktop) */}
+      {/* Left panel (desktop) */}
       <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-primary/5 via-background to-coke-red/5 items-center justify-center p-12">
         <div className="max-w-md space-y-8">
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}>
-            <Link href="/">
-              <img alt="CourierX" src="/logo.svg" className="h-10 w-auto object-contain mb-8" />
-            </Link>
+            <Link href="/"><img alt="CourierX" src="/logo.svg" className="h-10 w-auto object-contain mb-8" /></Link>
             <h2 className="text-3xl font-bold font-typewriter mb-4">Open a Free Account</h2>
             <p className="text-muted-foreground text-lg leading-relaxed">
               Account holders get exclusive rates — <span className="font-semibold text-candlestick-green">52% lower</span> than standard pricing on every domestic and international shipment.
@@ -302,17 +420,16 @@ export default function OpenAccount() {
             <ol className="text-sm text-muted-foreground space-y-1.5 list-decimal list-inside">
               <li>Create your account with email & password</li>
               <li>Verify your email with OTP</li>
-              <li>Complete KYC (Aadhaar, PAN, bank details)</li>
-              <li>Start shipping at discounted rates</li>
+              <li>Fill in your personal & address details</li>
+              <li>Upload KYC documents & bank info</li>
             </ol>
           </motion.div>
         </div>
       </div>
 
-      {/* Right panel — form */}
+      {/* Right panel */}
       <div className="flex-1 flex items-start lg:items-center justify-center p-4 sm:p-6 overflow-y-auto">
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} className="w-full max-w-md space-y-6 py-8">
-          {/* Mobile logo */}
           <div className="lg:hidden mb-4">
             <Link href="/"><img alt="CourierX" src="/logo.svg" className="h-9 w-auto object-contain" /></Link>
           </div>
@@ -332,10 +449,7 @@ export default function OpenAccount() {
             {step === 'signup' && (
               <motion.div key="signup" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-5">
                 <div>
-                  <h1 className="text-2xl font-bold flex items-center gap-2">
-                    <UserPlus className="h-6 w-6 text-coke-red" />
-                    Open Account
-                  </h1>
+                  <h1 className="text-2xl font-bold flex items-center gap-2"><UserPlus className="h-6 w-6 text-coke-red" /> Open Account</h1>
                   <p className="text-muted-foreground text-sm mt-1">Create your account to unlock 52% lower shipping rates.</p>
                 </div>
                 <div className="lg:hidden rounded-xl border border-candlestick-green/30 bg-candlestick-green/5 p-3">
@@ -344,43 +458,13 @@ export default function OpenAccount() {
                 <Form {...signupForm}>
                   <form onSubmit={signupForm.handleSubmit(handleSignUp)} className="space-y-4">
                     <FormField control={signupForm.control} name="email" render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Email</FormLabel>
-                        <FormControl>
-                          <div className="relative">
-                            <Envelope className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                            <Input {...field} type="email" placeholder="you@example.com" className="pl-10" />
-                          </div>
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
+                      <FormItem><FormLabel>Email</FormLabel><FormControl><div className="relative"><Envelope className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" /><Input {...field} type="email" placeholder="you@example.com" className="pl-10" /></div></FormControl><FormMessage /></FormItem>
                     )} />
                     <FormField control={signupForm.control} name="password" render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Password</FormLabel>
-                        <FormControl>
-                          <div className="relative">
-                            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                            <Input {...field} type={showPassword ? 'text' : 'password'} placeholder="Min 6 characters" className="pl-10 pr-10" />
-                            <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
-                              {showPassword ? <EyeSlash className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                            </button>
-                          </div>
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
+                      <FormItem><FormLabel>Password</FormLabel><FormControl><div className="relative"><Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" /><Input {...field} type={showPassword ? 'text' : 'password'} placeholder="Min 6 characters" className="pl-10 pr-10" /><button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">{showPassword ? <EyeSlash className="h-4 w-4" /> : <Eye className="h-4 w-4" />}</button></div></FormControl><FormMessage /></FormItem>
                     )} />
                     <FormField control={signupForm.control} name="confirmPassword" render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Confirm Password</FormLabel>
-                        <FormControl>
-                          <div className="relative">
-                            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                            <Input {...field} type={showPassword ? 'text' : 'password'} placeholder="Re-enter password" className="pl-10" />
-                          </div>
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
+                      <FormItem><FormLabel>Confirm Password</FormLabel><FormControl><div className="relative"><Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" /><Input {...field} type={showPassword ? 'text' : 'password'} placeholder="Re-enter password" className="pl-10" /></div></FormControl><FormMessage /></FormItem>
                     )} />
                     <Button type="submit" className="w-full bg-coke-red hover:bg-red-600 text-white gap-2" disabled={isLoading}>
                       {isLoading ? <><CircleNotch className="h-4 w-4 animate-spin" /> Sending OTP...</> : <>Continue <ArrowRight className="h-4 w-4" /></>}
@@ -394,229 +478,144 @@ export default function OpenAccount() {
               </motion.div>
             )}
 
-            {/* ── STEP 2: OTP Verification ── */}
+            {/* ── STEP 2: OTP ── */}
             {step === 'otp' && (
               <motion.div key="otp" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-6">
                 <div>
-                  <button onClick={() => { setStep('signup'); setOtpValue(''); }} className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mb-3">
-                    <ArrowLeft className="h-4 w-4" /> Back
-                  </button>
-                  <h1 className="text-2xl font-bold flex items-center gap-2">
-                    <Envelope className="h-6 w-6 text-coke-red" />
-                    Verify Your Email
-                  </h1>
-                  <p className="text-muted-foreground text-sm mt-1">
-                    Enter the 6-digit code sent to <span className="font-medium text-foreground">{signupEmail}</span>
-                  </p>
+                  <button onClick={() => { setStep('signup'); setOtpValue(''); }} className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mb-3"><ArrowLeft className="h-4 w-4" /> Back</button>
+                  <h1 className="text-2xl font-bold flex items-center gap-2"><Envelope className="h-6 w-6 text-coke-red" /> Verify Your Email</h1>
+                  <p className="text-muted-foreground text-sm mt-1">Enter the 6-digit code sent to <span className="font-medium text-foreground">{signupEmail}</span></p>
                 </div>
-
                 <div className="flex justify-center">
                   <InputOTP maxLength={6} value={otpValue} onChange={setOtpValue}>
                     <InputOTPGroup>
-                      <InputOTPSlot index={0} />
-                      <InputOTPSlot index={1} />
-                      <InputOTPSlot index={2} />
-                      <InputOTPSlot index={3} />
-                      <InputOTPSlot index={4} />
-                      <InputOTPSlot index={5} />
+                      <InputOTPSlot index={0} /><InputOTPSlot index={1} /><InputOTPSlot index={2} />
+                      <InputOTPSlot index={3} /><InputOTPSlot index={4} /><InputOTPSlot index={5} />
                     </InputOTPGroup>
                   </InputOTP>
                 </div>
-
                 <Button onClick={handleVerifyOtp} className="w-full bg-coke-red hover:bg-red-600 text-white gap-2" disabled={isLoading || otpValue.length !== 6}>
                   {isLoading ? <><CircleNotch className="h-4 w-4 animate-spin" /> Verifying...</> : <>Verify & Continue <ArrowRight className="h-4 w-4" /></>}
                 </Button>
-
                 <div className="text-center text-sm text-muted-foreground">
-                  {resendCooldown > 0 ? (
-                    <p>Resend code in <span className="font-medium text-foreground">{resendCooldown}s</span></p>
-                  ) : (
-                    <button onClick={handleResendOtp} className="text-coke-red hover:underline font-medium" disabled={isLoading}>
-                      Resend Code
-                    </button>
-                  )}
+                  {resendCooldown > 0 ? <p>Resend code in <span className="font-medium text-foreground">{resendCooldown}s</span></p> : <button onClick={handleResendOtp} className="text-coke-red hover:underline font-medium" disabled={isLoading}>Resend Code</button>}
                 </div>
               </motion.div>
             )}
 
-            {/* ── STEP 3: KYC Form ── */}
-            {step === 'kyc' && (
-              <motion.div key="kyc" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-5">
+            {/* ── STEP 3: Personal Info & Address ── */}
+            {step === 'kyc-personal' && (
+              <motion.div key="personal" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-5">
                 <div>
-                  <h1 className="text-2xl font-bold flex items-center gap-2">
-                    <IdentificationCard className="h-6 w-6 text-coke-red" />
-                    KYC Details
-                  </h1>
-                  <p className="text-muted-foreground text-sm mt-1">Complete your identity verification to start shipping.</p>
+                  <h1 className="text-2xl font-bold flex items-center gap-2"><User className="h-6 w-6 text-coke-red" /> Personal Details</h1>
+                  <p className="text-muted-foreground text-sm mt-1">Tell us about yourself and your address.</p>
+                </div>
+                <Form {...personalForm}>
+                  <form onSubmit={personalForm.handleSubmit(handlePersonalSubmit)} className="space-y-4">
+                    <FormField control={personalForm.control} name="fullName" render={({ field }) => (
+                      <FormItem><FormLabel>Full Name (as per Aadhaar)</FormLabel><FormControl><Input {...field} placeholder="Enter your full name" /></FormControl><FormMessage /></FormItem>
+                    )} />
+                    <FormField control={personalForm.control} name="phone" render={({ field }) => (
+                      <FormItem><FormLabel>Mobile Number</FormLabel><FormControl><div className="relative"><span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">+91</span><Input {...field} placeholder="9876543210" className="pl-12" maxLength={10} /></div></FormControl><FormMessage /></FormItem>
+                    )} />
+                    <div className="grid grid-cols-2 gap-3">
+                      <FormField control={personalForm.control} name="age" render={({ field }) => (
+                        <FormItem><FormLabel>Age</FormLabel><FormControl><Input {...field} type="number" placeholder="25" min={18} max={100} /></FormControl><FormMessage /></FormItem>
+                      )} />
+                      <FormField control={personalForm.control} name="sex" render={({ field }) => (
+                        <FormItem><FormLabel>Sex</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger></FormControl><SelectContent><SelectItem value="male">Male</SelectItem><SelectItem value="female">Female</SelectItem><SelectItem value="other">Other</SelectItem></SelectContent></Select><FormMessage /></FormItem>
+                      )} />
+                    </div>
+                    <FormField control={personalForm.control} name="state" render={({ field }) => (
+                      <FormItem><FormLabel>State</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select state" /></SelectTrigger></FormControl><SelectContent>{indianStates.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>
+                    )} />
+                    <div className="grid grid-cols-2 gap-3">
+                      <FormField control={personalForm.control} name="city" render={({ field }) => (
+                        <FormItem><FormLabel>City</FormLabel><FormControl><Input {...field} placeholder="Mumbai" /></FormControl><FormMessage /></FormItem>
+                      )} />
+                      <FormField control={personalForm.control} name="pincode" render={({ field }) => (
+                        <FormItem><FormLabel>Pincode</FormLabel><FormControl><Input {...field} placeholder="400001" maxLength={6} /></FormControl><FormMessage /></FormItem>
+                      )} />
+                    </div>
+                    <Button type="submit" className="w-full bg-coke-red hover:bg-red-600 text-white gap-2">
+                      Continue <ArrowRight className="h-4 w-4" />
+                    </Button>
+                  </form>
+                </Form>
+              </motion.div>
+            )}
+
+            {/* ── STEP 4: Documents, Bank & Shipping ── */}
+            {step === 'kyc-docs' && (
+              <motion.div key="docs" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-5">
+                <div>
+                  <button onClick={() => setStep('kyc-personal')} className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mb-3"><ArrowLeft className="h-4 w-4" /> Back</button>
+                  <h1 className="text-2xl font-bold flex items-center gap-2"><IdentificationCard className="h-6 w-6 text-coke-red" /> Documents & Bank</h1>
+                  <p className="text-muted-foreground text-sm mt-1">Upload your KYC documents and enter bank details.</p>
                 </div>
 
-                <Form {...kycForm}>
-                  <form onSubmit={kycForm.handleSubmit(handleKycSubmit)} className="space-y-4">
-                    {/* Personal Info */}
+                <Form {...docsForm}>
+                  <form onSubmit={docsForm.handleSubmit(handleDocsSubmit)} className="space-y-4">
+                    {/* Document Uploads */}
                     <div className="rounded-lg border border-border/50 p-4 space-y-4">
-                      <h3 className="text-sm font-semibold flex items-center gap-2"><User className="h-4 w-4" /> Personal Information</h3>
-
-                      <FormField control={kycForm.control} name="fullName" render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Full Name (as per Aadhaar)</FormLabel>
-                          <FormControl><Input {...field} placeholder="Enter your full name" /></FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )} />
-
-                      <FormField control={kycForm.control} name="phone" render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Mobile Number</FormLabel>
-                          <FormControl>
-                            <div className="relative">
-                              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">+91</span>
-                              <Input {...field} placeholder="9876543210" className="pl-12" maxLength={10} />
-                            </div>
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )} />
-
-                      <div className="grid grid-cols-2 gap-3">
-                        <FormField control={kycForm.control} name="age" render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Age</FormLabel>
-                            <FormControl><Input {...field} type="number" placeholder="25" min={18} max={100} /></FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )} />
-
-                        <FormField control={kycForm.control} name="sex" render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Sex</FormLabel>
-                            <Select onValueChange={field.onChange} defaultValue={field.value}>
-                              <FormControl>
-                                <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                <SelectItem value="male">Male</SelectItem>
-                                <SelectItem value="female">Female</SelectItem>
-                                <SelectItem value="other">Other</SelectItem>
-                              </SelectContent>
-                            </Select>
-                            <FormMessage />
-                          </FormItem>
-                        )} />
-                      </div>
-
-                      <FormField control={kycForm.control} name="state" render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>State</FormLabel>
-                          <Select onValueChange={field.onChange} defaultValue={field.value}>
-                            <FormControl>
-                              <SelectTrigger><SelectValue placeholder="Select state" /></SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {indianStates.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )} />
-
-                      <div className="grid grid-cols-2 gap-3">
-                        <FormField control={kycForm.control} name="city" render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>City</FormLabel>
-                            <FormControl><Input {...field} placeholder="Mumbai" /></FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )} />
-                        <FormField control={kycForm.control} name="pincode" render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Pincode</FormLabel>
-                            <FormControl><Input {...field} placeholder="400001" maxLength={6} /></FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )} />
-                      </div>
+                      <h3 className="text-sm font-semibold flex items-center gap-2"><FileText className="h-4 w-4" /> Upload Documents</h3>
+                      <DocUpload
+                        label="Aadhaar Card"
+                        accept=".pdf,.jpg,.jpeg,.png"
+                        state={aadhaarDoc}
+                        onSelect={(f) => handleFileSelect(f, 'aadhaar', setAadhaarDoc)}
+                        onRemove={() => setAadhaarDoc({ ...emptyFileState })}
+                      />
+                      <DocUpload
+                        label="PAN Card"
+                        accept=".pdf,.jpg,.jpeg,.png"
+                        state={panDoc}
+                        onSelect={(f) => handleFileSelect(f, 'pan', setPanDoc)}
+                        onRemove={() => setPanDoc({ ...emptyFileState })}
+                      />
+                      <DocUpload
+                        label="Bank Passbook / Cancelled Cheque"
+                        accept=".pdf,.jpg,.jpeg,.png"
+                        state={bankDoc}
+                        onSelect={(f) => handleFileSelect(f, 'bank', setBankDoc)}
+                        onRemove={() => setBankDoc({ ...emptyFileState })}
+                      />
                     </div>
 
-                    {/* Identity Documents */}
+                    {/* Identity Numbers */}
                     <div className="rounded-lg border border-border/50 p-4 space-y-4">
-                      <h3 className="text-sm font-semibold flex items-center gap-2"><ShieldCheck className="h-4 w-4" /> Identity Documents</h3>
-
-                      <FormField control={kycForm.control} name="aadhaarNumber" render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Aadhaar Number</FormLabel>
-                          <FormControl><Input {...field} placeholder="123456789012" maxLength={12} /></FormControl>
-                          <FormMessage />
-                        </FormItem>
+                      <h3 className="text-sm font-semibold flex items-center gap-2"><ShieldCheck className="h-4 w-4" /> Identity Details</h3>
+                      <FormField control={docsForm.control} name="aadhaarNumber" render={({ field }) => (
+                        <FormItem><FormLabel>Aadhaar Number</FormLabel><FormControl><Input {...field} placeholder="123456789012" maxLength={12} /></FormControl><FormMessage /></FormItem>
                       )} />
-
-                      <FormField control={kycForm.control} name="panNumber" render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>PAN Number</FormLabel>
-                          <FormControl>
-                            <Input {...field} placeholder="ABCDE1234F" maxLength={10}
-                              onChange={(e) => field.onChange(e.target.value.toUpperCase())} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
+                      <FormField control={docsForm.control} name="panNumber" render={({ field }) => (
+                        <FormItem><FormLabel>PAN Number</FormLabel><FormControl><Input {...field} placeholder="ABCDE1234F" maxLength={10} onChange={(e) => field.onChange(e.target.value.toUpperCase())} /></FormControl><FormMessage /></FormItem>
                       )} />
                     </div>
 
                     {/* Bank Details */}
                     <div className="rounded-lg border border-border/50 p-4 space-y-4">
                       <h3 className="text-sm font-semibold flex items-center gap-2"><Bank className="h-4 w-4" /> Bank Details</h3>
-
-                      <FormField control={kycForm.control} name="bankName" render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Bank Name</FormLabel>
-                          <FormControl><Input {...field} placeholder="State Bank of India" /></FormControl>
-                          <FormMessage />
-                        </FormItem>
+                      <FormField control={docsForm.control} name="bankName" render={({ field }) => (
+                        <FormItem><FormLabel>Bank Name</FormLabel><FormControl><Input {...field} placeholder="State Bank of India" /></FormControl><FormMessage /></FormItem>
                       )} />
-
-                      <FormField control={kycForm.control} name="bankAccountNumber" render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Account Number</FormLabel>
-                          <FormControl><Input {...field} placeholder="Enter account number" maxLength={18} /></FormControl>
-                          <FormMessage />
-                        </FormItem>
+                      <FormField control={docsForm.control} name="bankAccountNumber" render={({ field }) => (
+                        <FormItem><FormLabel>Account Number</FormLabel><FormControl><Input {...field} placeholder="Enter account number" maxLength={18} /></FormControl><FormMessage /></FormItem>
                       )} />
-
-                      <FormField control={kycForm.control} name="bankIfsc" render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>IFSC Code</FormLabel>
-                          <FormControl>
-                            <Input {...field} placeholder="SBIN0001234" maxLength={11}
-                              onChange={(e) => field.onChange(e.target.value.toUpperCase())} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
+                      <FormField control={docsForm.control} name="bankIfsc" render={({ field }) => (
+                        <FormItem><FormLabel>IFSC Code</FormLabel><FormControl><Input {...field} placeholder="SBIN0001234" maxLength={11} onChange={(e) => field.onChange(e.target.value.toUpperCase())} /></FormControl><FormMessage /></FormItem>
                       )} />
                     </div>
 
                     {/* Shipping Estimate */}
                     <div className="rounded-lg border border-border/50 p-4 space-y-4">
                       <h3 className="text-sm font-semibold flex items-center gap-2"><Package className="h-4 w-4" /> Shipping Estimate</h3>
-
-                      <FormField control={kycForm.control} name="estimatedShipmentsPerMonth" render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Estimated Shipments Per Month</FormLabel>
-                          <Select onValueChange={field.onChange} defaultValue={field.value}>
-                            <FormControl>
-                              <SelectTrigger><SelectValue placeholder="Select range" /></SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value="1-10">1 – 10</SelectItem>
-                              <SelectItem value="11-50">11 – 50</SelectItem>
-                              <SelectItem value="51-100">51 – 100</SelectItem>
-                              <SelectItem value="100+">100+</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
+                      <FormField control={docsForm.control} name="estimatedShipmentsPerMonth" render={({ field }) => (
+                        <FormItem><FormLabel>Estimated Shipments Per Month</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select range" /></SelectTrigger></FormControl><SelectContent><SelectItem value="1-10">1 – 10</SelectItem><SelectItem value="11-50">11 – 50</SelectItem><SelectItem value="51-100">51 – 100</SelectItem><SelectItem value="100+">100+</SelectItem></SelectContent></Select><FormMessage /></FormItem>
                       )} />
                     </div>
 
-                    <Button type="submit" className="w-full bg-coke-red hover:bg-red-600 text-white gap-2" disabled={isLoading}>
+                    <Button type="submit" className="w-full bg-coke-red hover:bg-red-600 text-white gap-2" disabled={isLoading || aadhaarDoc.uploading || panDoc.uploading || bankDoc.uploading}>
                       {isLoading ? <><CircleNotch className="h-4 w-4 animate-spin" /> Saving...</> : <>Complete Registration <ArrowRight className="h-4 w-4" /></>}
                     </Button>
                   </form>
@@ -624,7 +623,7 @@ export default function OpenAccount() {
               </motion.div>
             )}
 
-            {/* ── STEP 4: Done ── */}
+            {/* ── STEP 5: Done ── */}
             {step === 'done' && (
               <motion.div key="done" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="text-center space-y-4 py-12">
                 <div className="mx-auto h-16 w-16 rounded-full bg-candlestick-green/10 flex items-center justify-center">
