@@ -57,11 +57,35 @@ export interface RateCalculationResult {
 }
 
 // ── Configuration ──
-const FUEL_SURCHARGE_PERCENT = 22; // Update monthly from fedex.com/in/fuelsurcharge
+// Fuel surcharge defaults — overridden at runtime by fuelSurcharge.ts from DB
+// FedEx: updated weekly every Monday (source: fedex.com/en-in/shipping/surcharges.html)
+// Aramex: updated twice monthly (source: aramex.com/in/en/services-solutions/fuel-surcharge)
+let FEDEX_FUEL_SURCHARGE_PERCENT = 48.0;  // Current as of March 2026
+let ARAMEX_FUEL_SURCHARGE_PERCENT = 19.25; // Current as of March 16-31, 2026
+
 const GST_RATE = 0.18;
-const EXPORT_CLEARANCE_FEE = 1800; // ₹1,800 mandatory for all intl exports from India
+const EXPORT_CLEARANCE_FEE = 1800; // ₹1,800 mandatory for all intl exports from India (applies to CSB-IV too)
 const DIM_DIVISOR = 5000;
-export const GUEST_MARKUP = 1.52;
+
+// Pricing model:
+// costPrice = base + fuel + export clearance (our cost from carrier)
+// nonAccountPrice = costPrice × 2.65 (our selling price to non-account/guest users)
+// accountPrice = nonAccountPrice × 0.48 (52% discount for account holders)
+// This means: accountPrice = costPrice × 2.65 × 0.48 = costPrice × 1.272
+const COST_TO_SELLING_MULTIPLIER = 2.65;
+const ACCOUNT_DISCOUNT = 0.52; // 52% discount for account holders
+
+/** @deprecated Use COST_TO_SELLING_MULTIPLIER instead */
+export const GUEST_MARKUP = COST_TO_SELLING_MULTIPLIER;
+
+/**
+ * Update fuel surcharge percentages at runtime.
+ * Called by the fuel surcharge module after reading from DB.
+ */
+export function setFuelSurcharges(fedex: number, aramex: number) {
+  FEDEX_FUEL_SURCHARGE_PERCENT = fedex;
+  ARAMEX_FUEL_SURCHARGE_PERCENT = aramex;
+}
 
 // ── FedEx Express Rate Table (₹ INR, rounded) ──
 // Columns: A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q
@@ -275,24 +299,28 @@ export const calculateRate = (
 
   if (baseRate === 0) return null;
 
-  // Step 4: Fuel Surcharge
-  const fuelSurcharge = Math.round(baseRate * FUEL_SURCHARGE_PERCENT / 100);
+  // Step 4: Fuel Surcharge (carrier-specific, updated via scraper)
+  const fuelPercent = carrier === 'Aramex' ? ARAMEX_FUEL_SURCHARGE_PERCENT : FEDEX_FUEL_SURCHARGE_PERCENT;
+  const fuelSurcharge = Math.round(baseRate * fuelPercent / 100);
 
-  // Step 5: Export Clearance (mandatory for all intl exports)
+  // Step 5: Export Clearance (₹1,800 mandatory for all intl exports from India, including CSB-IV)
   const exportClearance = EXPORT_CLEARANCE_FEE;
 
-  // Step 6: Subtotal
-  const subtotal = baseRate + fuelSurcharge + exportClearance;
+  // Step 6: Cost price (what we pay the carrier)
+  const costPrice = baseRate + fuelSurcharge + exportClearance;
 
-  // Step 7: GST @ 18%
-  const gst = Math.round(subtotal * GST_RATE);
+  // Step 7: GST @ 18% on cost
+  const costGst = Math.round(costPrice * GST_RATE);
+  const costWithGst = costPrice + costGst;
 
-  // Step 8: Grand Total
-  const accountTotal = subtotal + gst;
+  // Step 8: Selling prices
+  // Non-account (guest) price = cost × 2.65 (includes our margin)
+  // Account price = non-account × (1 - 0.52) = non-account × 0.48
+  const nonAccountTotal = Math.round(costWithGst * COST_TO_SELLING_MULTIPLIER);
+  const accountTotal = Math.round(nonAccountTotal * (1 - ACCOUNT_DISCOUNT));
 
-  // Guest markup
-  const total = isGuest ? Math.round(accountTotal * GUEST_MARKUP) : accountTotal;
-  const guestPremium = isGuest ? total - accountTotal : 0;
+  const total = isGuest ? nonAccountTotal : accountTotal;
+  const savings = isGuest ? (nonAccountTotal - accountTotal) : 0;
 
   return {
     baseRate,
@@ -302,18 +330,18 @@ export const calculateRate = (
     handlingFee: 0,
     customsFee: 0,
     exportClearance,
-    subtotal,
-    gst,
+    subtotal: costPrice,
+    gst: costGst,
     total,
     carrier,
     zone: country.rateZone,
     billableWeightKg,
     breakdown: [
       { label: `Base rate (${carrier} ${country.rateZone}, ${billableWeightKg.toFixed(1)} kg)`, amount: baseRate },
-      { label: `Fuel surcharge (${FUEL_SURCHARGE_PERCENT}%)`, amount: fuelSurcharge },
+      { label: `Fuel surcharge (${fuelPercent}%)`, amount: fuelSurcharge },
       { label: 'Export clearance', amount: exportClearance },
-      { label: 'GST (18%)', amount: gst },
-      ...(isGuest && guestPremium > 0 ? [{ label: 'Standard rate (non-account)', amount: guestPremium }] : []),
+      { label: 'GST (18%)', amount: costGst },
+      ...(isGuest && savings > 0 ? [{ label: 'Open account — save 52%', amount: -savings }] : []),
     ],
   };
 };
