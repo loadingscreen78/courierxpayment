@@ -224,10 +224,15 @@ export const MedicineForm = ({ medicine, onSave, onCancel, isEditing }: Medicine
           value={formData.medicineName}
           onChange={(name) => updateField('medicineName', name)}
           onSelect={(suggestion) => {
+            const formValue = (['tablet','capsule','liquid','semi-liquid','powder'] as const).includes(suggestion.form as any)
+              ? suggestion.form as Medicine['form']
+              : suggestion.form === 'cream' || suggestion.form === 'syrup' || suggestion.form === 'drops' ? 'liquid' as const
+              : suggestion.form === 'injection' ? 'liquid' as const
+              : '' as const;
             setFormData(prev => ({
               ...prev,
               medicineName: suggestion.name,
-              ...(suggestion.form && { form: suggestion.form }),
+              ...(formValue && { form: formValue }),
               ...(suggestion.type && { medicineType: suggestion.type }),
               ...(suggestion.manufacturer && { manufacturerName: suggestion.manufacturer }),
               hsnCode: suggestion.hsnCode,

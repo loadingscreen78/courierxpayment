@@ -119,7 +119,7 @@ export async function GET(request: NextRequest) {
   const results = combined.map(med => ({
     name: med.name,
     manufacturer: med.manufacturer,
-    form: detectForm(med.packSize),
+    form: detectForm(med.packSize, med.name),
     type: detectType(med.type),
     composition: [med.composition1, med.composition2].filter(Boolean).join(' + '),
   }));
