@@ -120,30 +120,6 @@ export const HeroSection = () => {
             </motion.p>
 
             {/* Trust Badges — hidden on mobile, shown on sm+ */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.6 }}
-              className="hidden sm:flex flex-wrap gap-4 sm:gap-6 text-sm"
-            >
-              {[
-                { icon: ShieldCheck, text: 'Person to Person', color: 'text-candlestick-green' },
-                { icon: Clock, text: 'Doorstep Pickup', color: 'text-candlestick-green' },
-                { icon: Package, text: 'Domestic & International', color: 'text-candlestick-green' },
-              ].map((badge, i) => (
-                <motion.div
-                  key={badge.text}
-                  initial={{ opacity: 0, scale: 0.8 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ duration: 0.4, delay: 0.7 + i * 0.1 }}
-                  className="flex items-center gap-2 text-muted-foreground"
-                >
-                  <badge.icon className={`h-5 w-5 ${badge.color}`} />
-                  <span>{badge.text}</span>
-                </motion.div>
-              ))}
-            </motion.div>
-
             {/* CTA Buttons */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
