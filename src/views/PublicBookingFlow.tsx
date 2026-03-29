@@ -1,15 +1,17 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { ArrowLeft, ArrowRight, CircleNotch, UserPlus, Pill, FileText, Gift, Truck, Globe, User, Envelope, Phone, MapPin, Info, AirplaneTilt, Warning, X, IdentificationCard, Upload, IdentificationBadge, House, Plus, Trash } from '@phosphor-icons/react';
+import { ArrowLeft, ArrowRight, CircleNotch, UserPlus, Pill, FileText, Gift, Truck, Globe, User, Envelope, Phone, MapPin, Info, AirplaneTilt, Warning, X, IdentificationCard, Upload, IdentificationBadge, House, Plus, Trash, MagnifyingGlass, CaretUpDown, Check } from '@phosphor-icons/react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
@@ -153,6 +155,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
 
   // Steps: 1=rate form, 2=rate results, 3=sender/receiver details
   const [step, setStep] = useState(1);
+  const [countryOpen, setCountryOpen] = useState(false);
   const [selectedCourier, setSelectedCourier] = useState<CourierOption | null>(null);
   const [rateFormData, setRateFormData] = useState<InternationalRateValues | DomesticRateValues | null>(null);
   const [guestCouriers, setGuestCouriers] = useState<CourierOption[]>([]);
@@ -517,20 +520,55 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                     )} />
 
                     {/* Destination */}
-                    <FormField control={intlForm.control} name="destinationCountry" render={({ field }) => (
-                      <FormItem>
+                    <FormField control={intlForm.control} name="destinationCountry" render={({ field }) => {
+                      const selectedCountry = countries.find(c => c.code === field.value);
+                      return (
+                      <FormItem className="flex flex-col">
                         <FormLabel>Destination Country</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
-                          <FormControl>
-                            <SelectTrigger><SelectValue placeholder="Select country" /></SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {countries.map(c => <SelectItem key={c.code} value={c.code} disabled={!c.isServed}>{c.flag} {c.name}{!c.isServed ? ` — ${c.notServedReason || 'Rate not available'}` : ''}</SelectItem>)}
-                          </SelectContent>
-                        </Select>
+                        <Popover open={countryOpen} onOpenChange={setCountryOpen}>
+                          <PopoverTrigger asChild>
+                            <FormControl>
+                              <Button variant="outline" role="combobox" aria-expanded={countryOpen} className="w-full justify-between font-normal">
+                                {selectedCountry ? (
+                                  <span>{selectedCountry.flag} {selectedCountry.name}</span>
+                                ) : (
+                                  <span className="text-muted-foreground">Search or select country...</span>
+                                )}
+                                <CaretUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                              </Button>
+                            </FormControl>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                            <Command>
+                              <CommandInput placeholder="Search country..." />
+                              <CommandList>
+                                <CommandEmpty>No country found.</CommandEmpty>
+                                <CommandGroup>
+                                  {countries.map(c => (
+                                    <CommandItem
+                                      key={c.code}
+                                      value={`${c.name} ${c.code}`}
+                                      disabled={!c.isServed}
+                                      onSelect={() => { field.onChange(c.code); setCountryOpen(false); }}
+                                      className="flex items-center justify-between"
+                                    >
+                                      <span>{c.flag} {c.name}</span>
+                                      {!c.isServed ? (
+                                        <span className="text-xs text-muted-foreground ml-2">{c.notServedReason || 'Rate not available'}</span>
+                                      ) : field.value === c.code ? (
+                                        <Check className="h-4 w-4 text-coke-red" />
+                                      ) : null}
+                                    </CommandItem>
+                                  ))}
+                                </CommandGroup>
+                              </CommandList>
+                            </Command>
+                          </PopoverContent>
+                        </Popover>
                         <FormMessage />
                       </FormItem>
-                    )} />
+                      );
+                    }} />
 
                     {/* Weight */}
                     <FormField control={intlForm.control} name="weightGrams" render={({ field }) => (

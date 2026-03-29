@@ -337,9 +337,9 @@ export const calculateRate = (
     zone: country.rateZone,
     billableWeightKg,
     breakdown: [
-      { label: `Base rate (${carrier} ${country.rateZone}, ${billableWeightKg.toFixed(1)} kg)`, amount: baseRate },
+      { label: 'Base rate', amount: baseRate },
       { label: `Fuel surcharge (${fuelPercent}%)`, amount: fuelSurcharge },
-      { label: `Domestic transit (${Math.max(billableWeightKg, 1).toFixed(1)} kg × ₹80)`, amount: domesticTransit },
+      { label: 'Domestic transit', amount: domesticTransit },
       { label: 'GST (18%)', amount: costGst },
       ...(isGuest && savings > 0 ? [{ label: 'Open account — save 52%', amount: -savings }] : []),
     ],
