@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Envelope, Phone, ArrowRight, CircleNotch, Eye, EyeSlash, User, Gear, Briefcase, ArrowLeft, Package, Airplane, MapPin, Globe, Truck } from '@phosphor-icons/react';
+import { Envelope, Phone, ArrowRight, CircleNotch, Eye, EyeSlash, User, Gear, Briefcase, ArrowLeft, Package, Airplane, MapPin, Globe, Truck, ShieldWarning, Warning } from '@phosphor-icons/react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,8 +15,9 @@ import { useToast } from '@/hooks/use-toast';
 import { useSeo } from '@/hooks/useSeo';
 import { supabase } from '@/integrations/supabase/client';
 const logoMain = { src: '/lovable-uploads/logo.png' };
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useGoogleGsi } from '@/hooks/useGoogleGsi';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 
 const emailPasswordSchema = z.object({
   email: z.string().email('Please enter a valid email address'),
@@ -41,20 +42,15 @@ type AuthMode = 'signin' | 'signup';
 type PanelType = 'customer' | 'admin' | 'cxbc';
 
 const panelOptions = [
-  { id: 'customer' as PanelType, title: 'Customer Panel', description: 'Ship internationally', icon: User, available: true },
-  { id: 'admin' as PanelType, title: 'Admin Panel', description: 'Manage operations', icon: Gear, available: true },
+  { id: 'customer' as PanelType, title: 'Account Login', description: 'Ship internationally', icon: User, available: true },
+  { id: 'admin' as PanelType, title: 'Admin Login', description: 'Manage operations', icon: Gear, available: true },
   { id: 'cxbc' as PanelType, title: 'CXBC Panel', description: 'Partner portal', icon: Briefcase, available: false },
 ];
 
 /**
  * Dual-lookup helper for CXBC partner access.
- * 1. Query cxbc_partners by user_id + approved
- * 2. Fallback: query by email + approved
- * 3. Auto-link user_id if found by email with null/mismatched user_id
- * 4. If no approved partner, check cxbc_partner_applications for status feedback
  */
 async function cxbcDualLookup(userId: string, userEmail: string | undefined) {
-  // Step 1: Query by user_id
   const { data: byUserId } = await supabase
     .from('cxbc_partners')
     .select('id, status, user_id')
@@ -66,7 +62,6 @@ async function cxbcDualLookup(userId: string, userEmail: string | undefined) {
     return { partner: byUserId, applicationStatus: null as string | null };
   }
 
-  // Step 2: Fallback — query by email
   if (userEmail) {
     const { data: byEmail } = await supabase
       .from('cxbc_partners')
@@ -76,7 +71,6 @@ async function cxbcDualLookup(userId: string, userEmail: string | undefined) {
       .maybeSingle();
 
     if (byEmail) {
-      // Step 3: Auto-link user_id if null or mismatched
       if (!byEmail.user_id || byEmail.user_id !== userId) {
         await supabase
           .from('cxbc_partners')
@@ -87,7 +81,6 @@ async function cxbcDualLookup(userId: string, userEmail: string | undefined) {
     }
   }
 
-  // Step 4: No approved partner — check applications for status feedback
   let applicationStatus: string | null = null;
   if (userEmail) {
     const { data: application } = await supabase
@@ -106,6 +99,19 @@ async function cxbcDualLookup(userId: string, userEmail: string | undefined) {
   return { partner: null, applicationStatus };
 }
 
+/* ── Shipping route data for left-panel animation ── */
+const shippingRoutes = [
+  { from: 'Delhi', to: 'London', type: 'Medicine', days: '3-5', price: '₹1,299' },
+  { from: 'Mumbai', to: 'New York', type: 'Documents', days: '2-4', price: '₹999' },
+  { from: 'Bangalore', to: 'Dubai', type: 'Electronics', days: '2-3', price: '₹1,499' },
+];
+
+const stats = [
+  { label: 'Countries', value: '50+' },
+  { label: 'Shipments', value: '10K+' },
+  { label: 'Partners', value: '200+' },
+];
+
 const Auth = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -123,6 +129,8 @@ const Auth = () => {
   const [forgotStep, setForgotStep] = useState<'idle' | 'form' | 'sent'>('idle');
   const [forgotEmail, setForgotEmail] = useState('');
   const [forgotLoading, setForgotLoading] = useState(false);
+  const [showAdminWarning, setShowAdminWarning] = useState(false);
+  const [routeIndex, setRouteIndex] = useState(0);
 
   useSeo({
     title: 'Sign In | CourierX',
@@ -131,10 +139,8 @@ const Auth = () => {
   });
 
   const from = searchParams.get('from');
-  // If user explicitly logged out, ignore the `from` redirect to prevent back-button loops
   const explicitLogout = typeof sessionStorage !== 'undefined' && sessionStorage.getItem('explicit_logout') === '1';
   const safeFrom = explicitLogout ? null : from;
-  // Clear the flag once read
   if (explicitLogout && typeof sessionStorage !== 'undefined') {
     sessionStorage.removeItem('explicit_logout');
   }
@@ -153,36 +159,30 @@ const Auth = () => {
       setMode(initialMode);
     }
   }, [initialMode]);
-  
-  // Handle redirect after sign in - DISABLED to prevent conflicts with handleEmailAuth
-  // The redirect is now handled directly in handleEmailAuth function
+
+  /* Rotate shipping routes on left panel */
   useEffect(() => {
-    // Only handle redirect if user is already logged in when page loads
+    const interval = setInterval(() => {
+      setRouteIndex((prev) => (prev + 1) % shippingRoutes.length);
+    }, 4000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Handle redirect after sign in
+  useEffect(() => {
     const handleRedirect = async () => {
       if (!user || !selectedPanel) return;
-      
-      // Check if we're in the middle of a login flow (isLoading)
-      // If so, skip this useEffect - let handleEmailAuth handle the redirect
       if (isLoading) return;
       
-      console.log('[Auth useEffect] Starting redirect handler');
-      console.log('[Auth useEffect] User:', user.id);
-      console.log('[Auth useEffect] Selected panel:', selectedPanel);
-      
-      // PRIORITY 1: Check for return URL from rate calculator FIRST
       const returnUrl = localStorage.getItem('authReturnUrl');
-      console.log('[Auth useEffect] Return URL from localStorage:', returnUrl);
       
       if (selectedPanel === 'admin') {
         const { data: roles } = await supabase.from('user_roles').select('role').eq('user_id', user.id);
-        console.log('[Auth useEffect] Admin roles check:', roles);
         const hasAdminAccess = roles?.some(r => r.role === 'admin' || r.role === 'warehouse_operator');
         if (hasAdminAccess) { 
-          console.log('[Auth useEffect] Has admin access, redirecting to /admin');
           router.replace('/admin'); 
         }
         else { 
-          console.log('[Auth useEffect] No admin access, signing out');
           toast({ title: 'Access Denied', description: 'No admin privileges.', variant: 'destructive' }); 
           await supabase.auth.signOut(); 
         }
@@ -205,35 +205,25 @@ const Auth = () => {
         return;
       }
       
-      // For customer panel, fetch profile directly
       if (selectedPanel === 'customer') {
-        console.log('[Auth useEffect] Customer panel, fetching profile...');
         const { data: profileData } = await supabase
           .from('profiles')
           .select('*')
           .eq('user_id', user.id)
           .single();
         
-        console.log('[Auth useEffect] Profile data:', profileData);
-        
         if (profileData) {
           if (!profileData.full_name) {
-            console.log('[Auth useEffect] No full_name, redirecting to onboarding');
             router.replace('/onboarding');
           } else {
-            // PRIORITY 1: Check for return URL from rate calculator
             if (returnUrl) {
-              console.log('[Auth useEffect] ✅ Found return URL, redirecting to:', returnUrl);
               localStorage.removeItem('authReturnUrl');
               router.replace(returnUrl);
             } else {
-              console.log('[Auth useEffect] ❌ No return URL, redirecting to dashboard');
-              // Default redirect
               router.replace(safeFrom || '/dashboard');
             }
           }
         } else {
-          console.log('[Auth useEffect] No profile, redirecting to onboarding');
           router.replace('/onboarding');
         }
       }
@@ -247,35 +237,39 @@ const Auth = () => {
   const otpForm = useForm<OtpFormValues>({ resolver: zodResolver(otpSchema), defaultValues: { otp: '' } });
 
   const handlePanelSelect = (panel: PanelType) => {
+    if (panel === 'admin') {
+      setShowAdminWarning(true);
+      return;
+    }
     setSelectedPanel(panel);
-    if (panel === 'admin') setMode('signin');
+    setStep('method');
+  };
+
+  const handleAdminWarningConfirm = () => {
+    setShowAdminWarning(false);
+    setSelectedPanel('admin');
+    setMode('signin');
     setStep('method');
   };
 
   const handleEmailAuth = async (values: EmailPasswordFormValues) => {
     setIsLoading(true);
-    console.log('[Auth] Starting sign in...', { email: values.email, mode, selectedPanel });
     
     const authFn = mode === 'signin' ? signInWithEmail : signUpWithEmail;
     const { error } = await authFn(values.email, values.password);
     
     if (error) { 
-      console.log('[Auth] Sign in error:', error.message);
       setIsLoading(false);
       toast({ title: 'Error', description: error.message, variant: 'destructive' }); 
       return; 
     }
     
-    console.log('[Auth] Sign in successful, showing toast...');
     toast({ title: mode === 'signup' ? 'Account Created' : 'Welcome!', description: mode === 'signup' ? 'Account created successfully!' : 'Signed in.' });
     
-    // For sign up, proceed with redirect (no email verification required)
     if (mode === 'signup') {
       const { data: { user: currentUser } } = await supabase.auth.getUser();
       if (!currentUser) { setIsLoading(false); return; }
 
-      // Send welcome + verification email via Resend (fire-and-forget)
-      // This ensures the email is sent even if Supabase's hook doesn't fire on VPS
       fetch('/api/email/send-welcome', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -287,32 +281,21 @@ const Auth = () => {
       return;
     }
     
-    // For sign in, get the current user and redirect
-    console.log('[Auth] Getting current user...');
     const { data: { user: currentUser }, error: userError } = await supabase.auth.getUser();
-    console.log('[Auth] Current user:', currentUser?.id, 'Error:', userError?.message);
     
     if (!currentUser) {
-      console.log('[Auth] No current user found, stopping');
       setIsLoading(false);
       return;
     }
     
-    // Handle redirect based on panel
-    console.log('[Auth] Handling redirect for panel:', selectedPanel);
-    
     if (selectedPanel === 'admin') {
-      const { data: roles, error: rolesError } = await supabase.from('user_roles').select('role').eq('user_id', currentUser.id);
-      console.log('[Auth] Admin roles:', roles, 'Error:', rolesError?.message);
+      const { data: roles } = await supabase.from('user_roles').select('role').eq('user_id', currentUser.id);
       const hasAdminAccess = roles?.some(r => r.role === 'admin' || r.role === 'warehouse_operator');
       if (hasAdminAccess) { 
-        console.log('[Auth] ✅ Admin access granted, redirecting to /admin');
-        // Use window.location for hard redirect to prevent useEffect interference
         setIsLoading(false);
         window.location.href = '/admin';
         return;
       } else { 
-        console.log('[Auth] ❌ No admin access');
         toast({ title: 'Access Denied', description: 'No admin privileges.', variant: 'destructive' }); 
         await supabase.auth.signOut(); 
         setIsLoading(false);
@@ -322,9 +305,7 @@ const Auth = () => {
     
     if (selectedPanel === 'cxbc') {
       const { partner, applicationStatus } = await cxbcDualLookup(currentUser.id, currentUser.email ?? undefined);
-      console.log('[Auth] CXBC dual-lookup result:', { partner, applicationStatus });
       if (partner) { 
-        console.log('[Auth] ✅ CXBC access granted (dual-lookup), redirecting to /cxbc');
         setIsLoading(false);
         window.location.href = '/cxbc';
         return;
@@ -340,7 +321,6 @@ const Auth = () => {
           setIsLoading(false);
           window.location.href = '/cxbc/apply';
         } else {
-          console.log('[Auth] No application found, redirecting to apply');
           toast({ title: 'Welcome!', description: 'Apply to become a CXBC partner to access the portal.' });
           setIsLoading(false);
           window.location.href = '/cxbc/apply';
@@ -349,37 +329,28 @@ const Auth = () => {
       }
     }
     
-    // Customer panel - check profile and redirect
-    console.log('[Auth] Fetching profile for customer panel...');
-    const { data: profileData, error: profileError } = await supabase
+    const { data: profileData } = await supabase
       .from('profiles')
       .select('*')
       .eq('user_id', currentUser.id)
       .single();
     
-    console.log('[Auth] Profile data:', profileData, 'Error:', profileError?.message);
-    
     if (profileData) {
       if (!profileData.full_name) {
-        console.log('[Auth] Redirecting to onboarding (no full_name)');
         setIsLoading(false);
         window.location.href = '/onboarding';
       } else {
-        // PRIORITY 1: Check for return URL from rate calculator
         const returnUrl = localStorage.getItem('authReturnUrl');
         if (returnUrl) {
-          console.log('[Auth] Redirecting to return URL from rate calculator:', returnUrl);
           localStorage.removeItem('authReturnUrl');
           setIsLoading(false);
           window.location.href = returnUrl;
         } else {
-          console.log('[Auth] No return URL, redirecting to dashboard');
           setIsLoading(false);
           window.location.href = from || '/dashboard';
         }
       }
     } else {
-      console.log('[Auth] No profile found, redirecting to onboarding');
       setIsLoading(false);
       window.location.href = '/onboarding';
     }
@@ -387,31 +358,23 @@ const Auth = () => {
 
   const handleGoogleCallback = async (idToken: string, nonce?: string) => {
     setIsLoading(true);
-    console.log('[Auth Google] Starting Google sign-in...');
     const { error } = await signInWithGoogle(idToken, nonce);
 
     if (error) {
-      console.log('[Auth Google] Sign-in error:', error.message);
       setIsLoading(false);
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
       return;
     }
 
-    // Get current user (session is now active)
     const { data: { user: currentUser } } = await supabase.auth.getUser();
-    console.log('[Auth Google] Current user:', currentUser?.id);
     if (!currentUser) { 
-      console.log('[Auth Google] No current user found');
       setIsLoading(false); 
       return; 
     }
 
-    // Panel-specific redirect (identical to handleEmailAuth)
     if (selectedPanel === 'cxbc') {
       const { partner, applicationStatus } = await cxbcDualLookup(currentUser.id, currentUser.email ?? undefined);
-      console.log('[Auth Google] CXBC dual-lookup result:', { partner, applicationStatus });
       if (partner) {
-        console.log('[Auth Google] ✅ CXBC access granted, redirecting to /cxbc');
         setIsLoading(false);
         window.location.href = '/cxbc';
       } else if (applicationStatus === 'pending') {
@@ -425,7 +388,6 @@ const Auth = () => {
         setIsLoading(false);
         window.location.href = '/cxbc/apply';
       } else {
-        console.log('[Auth Google] No CXBC application found, redirecting to apply');
         toast({ title: 'Welcome!', description: 'Apply to become a CXBC partner to access the portal.' });
         setIsLoading(false);
         window.location.href = '/cxbc/apply';
@@ -433,19 +395,13 @@ const Auth = () => {
       return;
     }
 
-    // Customer panel - check if profile exists and is complete
-    console.log('[Auth Google] Fetching profile for customer panel...');
-    const { data: profileData, error: profileError } = await supabase
+    const { data: profileData } = await supabase
       .from('profiles')
       .select('*')
       .eq('user_id', currentUser.id)
       .single();
 
-    console.log('[Auth Google] Profile data:', profileData, 'Error:', profileError?.message);
-
-    // Check if this is a new user (no profile or incomplete profile)
     if (!profileData || !profileData.full_name) {
-      console.log('[Auth Google] New user or incomplete profile, redirecting to onboarding');
       toast({ 
         title: 'Welcome to CourierX!', 
         description: 'Please complete your profile to get started.' 
@@ -455,16 +411,12 @@ const Auth = () => {
       return;
     }
 
-    // Existing user with complete profile
-    console.log('[Auth Google] Existing user with complete profile');
     const returnUrl = localStorage.getItem('authReturnUrl');
     if (returnUrl) {
-      console.log('[Auth Google] Redirecting to return URL:', returnUrl);
       localStorage.removeItem('authReturnUrl');
       setIsLoading(false);
       window.location.href = returnUrl;
     } else {
-      console.log('[Auth Google] Redirecting to dashboard');
       setIsLoading(false);
       window.location.href = safeFrom || '/dashboard';
     }
@@ -488,7 +440,6 @@ const Auth = () => {
     if (error) { setIsLoading(false); toast({ title: 'Failed', description: error.message, variant: 'destructive' }); return; }
     toast({ title: 'Welcome!', description: 'Signed in.' });
 
-    // After successful WhatsApp OTP, check profile and redirect
     const { data: { user: currentUser } } = await supabase.auth.getUser();
     if (!currentUser) { setIsLoading(false); return; }
 
@@ -547,14 +498,13 @@ const Auth = () => {
     isLoading,
   });
 
+  const currentRoute = shippingRoutes[routeIndex];
+
   return (
     <div className="min-h-screen flex bg-background relative">
       {/* Mobile Background Animations (visible only on mobile) */}
       <div className="lg:hidden absolute inset-0 overflow-hidden pointer-events-none">
-        {/* Gradient overlay */}
         <div className="absolute inset-0 bg-gradient-to-b from-coke-red/5 via-transparent to-coke-red/5" />
-        
-        {/* Animated circles */}
         <motion.div
           className="absolute -top-20 -right-20 w-64 h-64 rounded-full border border-coke-red/10"
           animate={{ rotate: 360, scale: [1, 1.1, 1] }}
@@ -565,8 +515,6 @@ const Auth = () => {
           animate={{ rotate: -360 }}
           transition={{ duration: 25, repeat: Infinity, ease: "linear" }}
         />
-        
-        {/* Floating packages */}
         <motion.div
           className="absolute top-20 right-8 opacity-20"
           animate={{ y: [0, -20, 0], rotate: [0, 10, 0] }}
@@ -575,215 +523,217 @@ const Auth = () => {
           <Package size={32} weight="bold" className="text-coke-red" />
         </motion.div>
         <motion.div
-          className="absolute top-40 left-6 opacity-15"
-          animate={{ y: [0, -15, 0], rotate: [0, -10, 0] }}
-          transition={{ duration: 3.5, repeat: Infinity, ease: "easeInOut", delay: 0.5 }}
-        >
-          <Package size={24} weight="bold" className="text-coke-red" />
-        </motion.div>
-        
-        {/* Flying plane */}
-        <motion.div
-          className="absolute top-32 opacity-20"
-          initial={{ x: -50 }}
-          animate={{ x: ['0%', '100%'] }}
-          transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
-        >
-          <Airplane size={24} weight="bold" className="text-coke-red transform -rotate-12" />
-        </motion.div>
-        
-        {/* Floating location pins */}
-        <motion.div
-          className="absolute bottom-40 right-10 opacity-15"
-          animate={{ y: [0, -10, 0] }}
-          transition={{ duration: 2.5, repeat: Infinity }}
-        >
-          <MapPin size={20} weight="bold" className="text-coke-red" />
-        </motion.div>
-        <motion.div
-          className="absolute bottom-60 left-8 opacity-10"
-          animate={{ y: [0, -8, 0] }}
-          transition={{ duration: 3, repeat: Infinity, delay: 1 }}
-        >
-          <MapPin size={16} weight="bold" className="text-coke-red" />
-        </motion.div>
-        
-        {/* Globe */}
-        <motion.div
           className="absolute top-1/4 left-1/2 -translate-x-1/2 opacity-5"
           animate={{ rotate: 360 }}
           transition={{ duration: 60, repeat: Infinity, ease: "linear" }}
         >
           <Globe size={192} weight="bold" className="text-coke-red" />
         </motion.div>
-        
-        {/* Truck animation at bottom */}
-        <motion.div
-          className="absolute bottom-24 opacity-10"
-          animate={{ x: ['-10%', '110%'] }}
-          transition={{ duration: 12, repeat: Infinity, ease: "linear" }}
-        >
-          <Truck size={32} weight="bold" className="text-coke-red" />
-        </motion.div>
-        
-        {/* Glowing dots */}
-        <motion.div
-          className="absolute top-1/3 right-1/4 w-2 h-2 bg-coke-red rounded-full"
-          animate={{ opacity: [0.2, 0.5, 0.2], scale: [1, 1.5, 1] }}
-          transition={{ duration: 2, repeat: Infinity }}
-        />
-        <motion.div
-          className="absolute top-2/3 left-1/4 w-1.5 h-1.5 bg-coke-red rounded-full"
-          animate={{ opacity: [0.1, 0.4, 0.1], scale: [1, 1.3, 1] }}
-          transition={{ duration: 2.5, repeat: Infinity, delay: 0.5 }}
-        />
-        <motion.div
-          className="absolute top-1/2 right-1/3 w-1 h-1 bg-coke-red rounded-full"
-          animate={{ opacity: [0.15, 0.35, 0.15] }}
-          transition={{ duration: 3, repeat: Infinity, delay: 1 }}
-        />
       </div>
 
-      {/* Left Side - Always Dark (Charcoal) - Desktop only */}
-      <div className="hidden lg:flex lg:w-1/2 bg-charcoal relative overflow-hidden flex-col justify-center items-center p-12">
-        {/* Subtle grid pattern */}
-        <div className="absolute inset-0 opacity-5">
-          <div className="absolute inset-0" style={{
-            backgroundImage: `radial-gradient(circle at 1px 1px, #F9F9F9 1px, transparent 0)`,
-            backgroundSize: '40px 40px'
+      {/* ── Left Side — Redesigned Professional Panel (Desktop only) ── */}
+      <div className="hidden lg:flex lg:w-1/2 bg-charcoal relative overflow-hidden flex-col justify-between p-0">
+        {/* Background layers */}
+        <div className="absolute inset-0">
+          {/* Subtle dot grid */}
+          <div className="absolute inset-0 opacity-[0.03]" style={{
+            backgroundImage: `radial-gradient(circle at 1px 1px, #F9F9F9 0.5px, transparent 0)`,
+            backgroundSize: '32px 32px'
           }} />
+          {/* Gradient overlay */}
+          <div className="absolute inset-0 bg-gradient-to-br from-charcoal via-charcoal to-[#1a1a1a]" />
+          {/* Accent glow */}
+          <div className="absolute -top-40 -right-40 w-[500px] h-[500px] bg-coke-red/5 rounded-full blur-[120px]" />
+          <div className="absolute -bottom-40 -left-40 w-[400px] h-[400px] bg-coke-red/3 rounded-full blur-[100px]" />
         </div>
-        
-        {/* Decorative circles */}
-        <div className="absolute top-20 left-20 w-64 h-64 border border-paper-white/10 rounded-full" />
-        <div className="absolute top-24 left-24 w-56 h-56 border border-paper-white/5 rounded-full" />
-        
-        {/* Content */}
-        <div className="relative z-10 text-center max-w-md">
-          <p className="text-paper-white/60 text-sm mb-8 font-typewriter">
-            International shipping made simple — courier solutions for you.
-          </p>
+
+        {/* Top section — Branding */}
+        <div className="relative z-10 p-10 pb-0">
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+            className="flex items-center gap-3 mb-2"
+          >
+            <img src={logoMain.src} alt="CourierX" className="h-9 w-auto rounded-lg" />
+            <span className="font-bold text-xl text-paper-white font-typewriter tracking-wide">
+              Courier<span className="text-coke-red">X</span>
+            </span>
+          </motion.div>
+        </div>
+
+        {/* Center section — Hero content */}
+        <div className="relative z-10 flex-1 flex flex-col justify-center px-10">
+          <motion.p
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.2 }}
+            className="text-paper-white/50 text-sm font-typewriter tracking-widest uppercase mb-4"
+          >
+            International Shipping Made Simple
+          </motion.p>
           
-          <h1 className="text-5xl font-bold text-paper-white mb-4 leading-tight font-typewriter">
+          <motion.h1
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.3 }}
+            className="text-5xl font-bold text-paper-white leading-tight font-typewriter mb-6"
+          >
             Ship Your<br />
             <span className="text-coke-red">Essentials</span>
-          </h1>
-          
-          {/* Animated Shipping Illustration */}
-          <div className="relative mt-12 h-80">
-            {/* World Map Dots Background */}
-            <div className="absolute inset-0 flex items-center justify-center">
+            <br />
+            <span className="text-paper-white/40 text-3xl">Worldwide</span>
+          </motion.h1>
+
+          {/* Animated route card */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.5 }}
+            className="mt-4 max-w-xs"
+          >
+            <AnimatePresence mode="wait">
               <motion.div
-                className="w-64 h-64 rounded-full border border-paper-white/10 flex items-center justify-center"
-                animate={{ rotate: 360 }}
-                transition={{ duration: 60, repeat: Infinity, ease: "linear" }}
+                key={routeIndex}
+                initial={{ opacity: 0, x: 30 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -30 }}
+                transition={{ duration: 0.4 }}
+                className="bg-paper-white/[0.06] backdrop-blur-sm rounded-2xl p-5 border border-paper-white/10"
               >
-                <Globe size={128} weight="bold" className="text-paper-white/10" />
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-10 h-10 bg-coke-red/15 rounded-xl flex items-center justify-center">
+                    <Package size={20} weight="bold" className="text-coke-red" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-paper-white font-semibold font-typewriter text-sm">{currentRoute.type} Shipment</p>
+                    <p className="text-paper-white/40 text-xs">{currentRoute.from} → {currentRoute.to}</p>
+                  </div>
+                  <Airplane size={18} weight="bold" className="text-coke-red/60" />
+                </div>
+                
+                <div className="space-y-2 mb-4">
+                  <div className="flex justify-between text-xs">
+                    <span className="text-paper-white/40">Progress</span>
+                    <span className="text-paper-white/70">75%</span>
+                  </div>
+                  <div className="h-1 bg-paper-white/10 rounded-full overflow-hidden">
+                    <motion.div
+                      className="h-full bg-coke-red rounded-full"
+                      initial={{ width: 0 }}
+                      animate={{ width: "75%" }}
+                      transition={{ duration: 1.2, delay: 0.2 }}
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="bg-paper-white/[0.04] rounded-lg p-2.5 text-center">
+                    <p className="text-lg font-bold text-paper-white font-typewriter">{currentRoute.days}</p>
+                    <p className="text-paper-white/40 text-[10px] uppercase tracking-wider">Days</p>
+                  </div>
+                  <div className="bg-paper-white/[0.04] rounded-lg p-2.5 text-center">
+                    <p className="text-lg font-bold text-coke-red font-typewriter">{currentRoute.price}</p>
+                    <p className="text-paper-white/40 text-[10px] uppercase tracking-wider">Starting</p>
+                  </div>
+                </div>
               </motion.div>
-            </div>
+            </AnimatePresence>
 
-            {/* Flying Plane Animation */}
-            <motion.div
-              className="absolute"
-              initial={{ x: -100, y: 100 }}
-              animate={{ x: [-100, 150, 300], y: [100, 20, 80] }}
-              transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-            >
-              <div className="relative">
-                <Airplane size={40} weight="bold" className="text-coke-red transform -rotate-45" />
+            {/* Route indicator dots */}
+            <div className="flex justify-center gap-1.5 mt-4">
+              {shippingRoutes.map((_, i) => (
                 <motion.div
-                  className="absolute -left-20 top-1/2 h-0.5 bg-gradient-to-r from-transparent to-coke-red/50"
-                  animate={{ width: [0, 80, 0] }}
-                  transition={{ duration: 4, repeat: Infinity }}
+                  key={i}
+                  className={`h-1 rounded-full transition-all duration-300 ${i === routeIndex ? 'w-6 bg-coke-red' : 'w-1.5 bg-paper-white/20'}`}
                 />
-              </div>
-            </motion.div>
-
-            {/* Package Card */}
-            <motion.div
-              className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-[#363636] rounded-2xl p-6 shadow-2xl border border-paper-white/10 w-64"
-              initial={{ y: 20, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              transition={{ delay: 0.5 }}
-            >
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-12 h-12 bg-coke-red/20 rounded-xl flex items-center justify-center">
-                  <Package size={24} weight="bold" className="text-coke-red" />
-                </div>
-                <div>
-                  <p className="text-paper-white font-semibold font-typewriter text-sm">Medicine Shipment</p>
-                  <p className="text-paper-white/50 text-xs">Delhi → London</p>
-                </div>
-              </div>
-              
-              <div className="space-y-2 mb-4">
-                <div className="flex justify-between text-xs">
-                  <span className="text-paper-white/50">Progress</span>
-                  <span className="text-paper-white">75%</span>
-                </div>
-                <div className="h-1.5 bg-paper-white/10 rounded-full overflow-hidden">
-                  <motion.div
-                    className="h-full bg-coke-red rounded-full"
-                    initial={{ width: 0 }}
-                    animate={{ width: "75%" }}
-                    transition={{ duration: 1.5, delay: 1 }}
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div className="bg-paper-white/5 rounded-lg p-3 text-center">
-                  <p className="text-xl font-bold text-paper-white font-typewriter">3-5</p>
-                  <p className="text-paper-white/50 text-xs">Days</p>
-                </div>
-                <div className="bg-paper-white/5 rounded-lg p-3 text-center">
-                  <p className="text-xl font-bold text-coke-red font-typewriter">₹1,299</p>
-                  <p className="text-paper-white/50 text-xs">Starting</p>
-                </div>
-              </div>
-            </motion.div>
-
-            {/* Floating Location Pins */}
-            <motion.div
-              className="absolute top-10 right-10"
-              animate={{ y: [0, -10, 0] }}
-              transition={{ duration: 2, repeat: Infinity }}
-            >
-              <div className="bg-coke-red/20 p-2 rounded-full">
-                <MapPin size={20} weight="bold" className="text-coke-red" />
-              </div>
-            </motion.div>
-            
-            <motion.div
-              className="absolute bottom-20 left-10"
-              animate={{ y: [0, -10, 0] }}
-              transition={{ duration: 2, repeat: Infinity, delay: 0.5 }}
-            >
-              <div className="bg-coke-red/20 p-2 rounded-full">
-                <MapPin size={20} weight="bold" className="text-coke-red" />
-              </div>
-            </motion.div>
-
-            <motion.div
-              className="absolute bottom-5 left-0"
-              animate={{ x: [0, 280, 0] }}
-              transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
-            >
-              <Truck size={32} weight="bold" className="text-paper-white/30" />
-            </motion.div>
-          </div>
+              ))}
+            </div>
+          </motion.div>
         </div>
 
-        <div className="absolute bottom-8 left-1/2 -translate-x-1/2">
+        {/* Bottom section — Stats + trust bar */}
+        <div className="relative z-10 p-10 pt-0">
           <motion.div
-            className="w-2 h-2 bg-coke-red rounded-full"
-            animate={{ scale: [1, 1.5, 1], opacity: [1, 0.5, 1] }}
-            transition={{ duration: 2, repeat: Infinity }}
-          />
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.7 }}
+            className="flex items-center gap-6 mb-6"
+          >
+            {stats.map((stat, i) => (
+              <div key={i} className="flex items-center gap-2">
+                <span className="text-xl font-bold text-paper-white font-typewriter">{stat.value}</span>
+                <span className="text-paper-white/40 text-xs">{stat.label}</span>
+              </div>
+            ))}
+          </motion.div>
+
+          {/* Animated route line */}
+          <div className="relative h-8 mb-4">
+            <div className="absolute top-1/2 left-0 right-0 h-px bg-paper-white/10" />
+            <motion.div
+              className="absolute top-1/2 -translate-y-1/2"
+              animate={{ x: ['0%', '100%'] }}
+              transition={{ duration: 6, repeat: Infinity, ease: "linear" }}
+            >
+              <div className="flex items-center gap-1">
+                <div className="w-2 h-2 bg-coke-red rounded-full" />
+                <div className="w-12 h-px bg-gradient-to-r from-coke-red to-transparent" />
+              </div>
+            </motion.div>
+            {/* Static route points */}
+            <div className="absolute top-1/2 -translate-y-1/2 left-[10%] flex flex-col items-center">
+              <MapPin size={14} weight="bold" className="text-paper-white/30" />
+            </div>
+            <div className="absolute top-1/2 -translate-y-1/2 left-[50%] flex flex-col items-center">
+              <Globe size={14} weight="bold" className="text-paper-white/20" />
+            </div>
+            <div className="absolute top-1/2 -translate-y-1/2 left-[90%] flex flex-col items-center">
+              <MapPin size={14} weight="bold" className="text-paper-white/30" />
+            </div>
+          </div>
+
+          <p className="text-paper-white/30 text-xs font-typewriter">
+            Trusted by thousands across India for international courier
+          </p>
         </div>
       </div>
 
-      {/* Right Side - Form (supports dark/light mode) */}
+      {/* ── Admin Warning Dialog ── */}
+      <Dialog open={showAdminWarning} onOpenChange={setShowAdminWarning}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <div className="mx-auto mb-3 w-14 h-14 bg-coke-red/10 rounded-full flex items-center justify-center">
+              <ShieldWarning size={32} weight="bold" className="text-coke-red" />
+            </div>
+            <DialogTitle className="text-center text-lg font-typewriter">Admin Authorization Only</DialogTitle>
+            <DialogDescription className="text-center space-y-2">
+              <span className="block">This login is restricted to authorized administrators only. It is not intended for public users.</span>
+              <span className="block text-coke-red/80 font-medium text-xs mt-2">
+                <Warning size={14} weight="bold" className="inline mr-1 -mt-0.5" />
+                Your location and system information will be tracked for security purposes.
+              </span>
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex-col gap-2 sm:flex-col">
+            <Button
+              onClick={handleAdminWarningConfirm}
+              className="w-full h-11 rounded-full bg-coke-red hover:bg-coke-red/90 text-white font-semibold font-typewriter"
+            >
+              I Understand, Continue
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => setShowAdminWarning(false)}
+              className="w-full h-11 rounded-full font-typewriter"
+            >
+              Go Back
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Right Side — Form (supports dark/light mode) ── */}
       <div className="w-full lg:w-1/2 bg-background flex flex-col min-h-screen">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-border">
@@ -799,7 +749,6 @@ const Auth = () => {
                 onClick={() => { 
                   setStep('panel-select'); 
                   setSelectedPanel(null);
-                  // Clear URL params so the useEffect doesn't re-select the panel
                   router.replace('/auth');
                 }}
                 className="text-sm text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors"
@@ -814,45 +763,40 @@ const Auth = () => {
         {/* Form Content */}
         <div className="flex-1 flex items-center justify-center p-8">
           <div className="w-full max-w-sm">
-            {/* Panel Selection */}
+            {/* ── Panel Selection — Card Grid ── */}
             {step === 'panel-select' && (
               <div className="space-y-6">
-                <div>
+                <div className="text-center">
                   <h2 className="text-2xl font-bold text-foreground font-typewriter">Welcome</h2>
                   <p className="text-muted-foreground mt-1">Select your portal to continue</p>
                 </div>
-                <div className="space-y-3">
+                <div className="grid grid-cols-2 gap-3">
                   {panelOptions.map((panel) => (
                     <div key={panel.id} className="relative group/panel">
                       <button
                         onClick={() => panel.available && handlePanelSelect(panel.id)}
                         disabled={!panel.available}
-                        className={`w-full p-4 rounded-xl border transition-all flex items-center gap-4 ${
+                        className={`w-full p-5 rounded-2xl border transition-all flex flex-col items-center text-center gap-3 aspect-square justify-center ${
                           panel.available
-                            ? 'border-border hover:border-coke-red bg-card hover:bg-coke-red/5 cursor-pointer group'
+                            ? 'border-border hover:border-coke-red bg-card hover:bg-coke-red/5 cursor-pointer group hover:shadow-lg hover:shadow-coke-red/5'
                             : 'border-border/50 bg-card/50 cursor-not-allowed opacity-60'
                         }`}
                       >
-                        <div className={`w-12 h-12 rounded-xl flex items-center justify-center transition-colors ${
+                        <div className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-colors ${
                           panel.available
                             ? 'bg-muted group-hover:bg-coke-red/10'
                             : 'bg-muted/50'
                         }`}>
-                          <panel.icon size={24} weight="bold" className={`transition-colors ${
+                          <panel.icon size={28} weight="bold" className={`transition-colors ${
                             panel.available
                               ? 'text-muted-foreground group-hover:text-coke-red'
                               : 'text-muted-foreground/50'
                           }`} />
                         </div>
-                        <div className="text-left flex-1">
-                          <p className="font-semibold text-foreground font-typewriter">{panel.title}</p>
-                          <p className="text-sm text-muted-foreground">{panel.description}</p>
+                        <div>
+                          <p className="font-semibold text-foreground font-typewriter text-sm">{panel.title}</p>
+                          <p className="text-xs text-muted-foreground mt-0.5">{panel.description}</p>
                         </div>
-                        <ArrowRight size={20} weight="bold" className={`transition-colors ${
-                          panel.available
-                            ? 'text-muted-foreground/50 group-hover:text-coke-red'
-                            : 'text-muted-foreground/30'
-                        }`} />
                       </button>
                       {!panel.available && (
                         <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-0 group-hover/panel:opacity-100 transition-opacity">
