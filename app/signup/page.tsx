@@ -8,7 +8,7 @@ export default function SignupPage() {
   const router = useRouter();
 
   useEffect(() => {
-    router.replace('/auth?panel=customer&mode=signup');
+    router.replace('/open-account');
   }, [router]);
 
   return <AppLoader />;

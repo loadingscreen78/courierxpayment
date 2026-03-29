@@ -1019,13 +1019,22 @@ const Auth = () => {
                       {(selectedPanel === 'customer' || selectedPanel === 'cxbc') && (
                         <p className="text-center text-sm text-muted-foreground">
                           {mode === 'signin' ? "Don't have an account? " : "Already have an account? "}
-                          <button
-                            type="button"
-                            onClick={() => setMode(mode === 'signin' ? 'signup' : 'signin')}
-                            className="text-coke-red hover:text-coke-red/80 font-medium transition-colors"
-                          >
-                            {mode === 'signin' ? 'Sign up' : 'Sign in'}
-                          </button>
+                          {mode === 'signin' ? (
+                            <a
+                              href="/open-account"
+                              className="text-coke-red hover:text-coke-red/80 font-medium transition-colors"
+                            >
+                              Open Account
+                            </a>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => setMode('signin')}
+                              className="text-coke-red hover:text-coke-red/80 font-medium transition-colors"
+                            >
+                              Sign in
+                            </button>
+                          )}
                         </p>
                       )}
                     </form>
