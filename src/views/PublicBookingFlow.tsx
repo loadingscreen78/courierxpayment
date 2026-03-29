@@ -104,17 +104,17 @@ const shipmentTypeOptions = {
 
 // ── Document Types for International Document Shipping ──
 const DOCUMENT_TYPE_OPTIONS = [
-  'Legal Documents',
-  'Educational Certificates',
-  'Government Documents',
-  'Medical Records',
-  'Business Contracts',
-  'Property Documents',
-  'Tax Documents',
-  'Other',
+  { label: 'Legal Documents', value: 'Legal Documents', hsn: '49070030' },
+  { label: 'Educational Certificates', value: 'Educational Certificates', hsn: '49070010' },
+  { label: 'Government Documents', value: 'Government Documents', hsn: '49070030' },
+  { label: 'Medical Records', value: 'Medical Records', hsn: '49070090' },
+  { label: 'Business Contracts', value: 'Business Contracts', hsn: '49070030' },
+  { label: 'Property Documents', value: 'Property Documents', hsn: '49070030' },
+  { label: 'Tax Documents', value: 'Tax Documents', hsn: '49070030' },
+  { label: 'Other', value: 'Other', hsn: '49070090' },
 ];
 
-// HSN code for documents/certificates (8-digit)
+// Default HSN code for documents
 const DOCUMENT_HSN_CODE = '49070030';
 
 // ── Common HSN Codes for International Shipping ──
@@ -1455,11 +1455,11 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                               <p className="text-xs font-semibold text-muted-foreground">Document</p>
                               <div>
                                 <label className="text-xs font-medium">Document Type</label>
-                                <Select value={contentItems[0]?.type || ''} onValueChange={(v) => { const arr = [...contentItems]; arr[0] = { ...arr[0], name: v, type: v, hsnCode: DOCUMENT_HSN_CODE, qty: 1, unitPrice: 1 }; setContentItems(arr); }}>
+                                <Select value={contentItems[0]?.type || ''} onValueChange={(v) => { const dt = DOCUMENT_TYPE_OPTIONS.find(d => d.value === v); const arr = [...contentItems]; arr[0] = { ...arr[0], name: v, type: v, hsnCode: dt?.hsn || DOCUMENT_HSN_CODE, qty: 1, unitPrice: 1 }; setContentItems(arr); }}>
                                   <SelectTrigger className="h-10 mt-1"><SelectValue placeholder="Select document type" /></SelectTrigger>
                                   <SelectContent>
                                     {DOCUMENT_TYPE_OPTIONS.map(dt => (
-                                      <SelectItem key={dt} value={dt}>{dt}</SelectItem>
+                                      <SelectItem key={dt.value} value={dt.value}>{dt.label}</SelectItem>
                                     ))}
                                   </SelectContent>
                                 </Select>
@@ -1468,13 +1468,13 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                                 <div>
                                   <label className="text-xs font-medium">Shipment Value</label>
                                   <div className="flex items-center h-10 mt-1 px-3 rounded-md border border-input bg-muted/50 text-sm">
-                                    $1 <span className="text-muted-foreground ml-1.5 text-xs">(fixed for documents)</span>
+                                    $1
                                   </div>
                                 </div>
                                 <div>
                                   <label className="text-xs font-medium">HSN Code</label>
                                   <div className="flex items-center h-10 mt-1 px-3 rounded-md border border-input bg-muted/50 text-sm font-mono">
-                                    {DOCUMENT_HSN_CODE} <span className="text-muted-foreground ml-1.5 text-xs font-sans">(auto-filled)</span>
+                                    {contentItems[0]?.hsnCode || DOCUMENT_HSN_CODE}
                                   </div>
                                 </div>
                               </div>
