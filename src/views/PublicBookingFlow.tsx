@@ -77,6 +77,7 @@ const senderReceiverSchema = z.object({
   receiverEmail: z.string().email('Valid email required'),
   receiverAddress: z.string().min(5, 'Required'),
   receiverCity: z.string().min(2, 'Required'),
+  receiverState: z.string().min(1, 'Required'),
   receiverZipcode: z.string().min(3, 'Required'),
   contentDescription: z.string().min(3, 'Describe contents'),
 });
@@ -139,7 +140,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
     resolver: zodResolver(senderReceiverSchema),
     defaultValues: {
       senderName: '', senderPhone: '', senderEmail: '', senderAddress: '', senderCity: '', senderState: '', senderPincode: '',
-      receiverName: '', receiverPhone: '', receiverEmail: '', receiverAddress: '', receiverCity: '', receiverZipcode: '',
+      receiverName: '', receiverPhone: '', receiverEmail: '', receiverAddress: '', receiverCity: '', receiverState: '', receiverZipcode: '',
       contentDescription: '',
     },
   });
@@ -313,21 +314,21 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
 
   // ── Validate pickup address fields before sliding to sender ──
   const handlePickupNext = async () => {
-    const pickupFields = ['senderAddress', 'senderCity', 'senderState', 'senderPincode'] as const;
+    const pickupFields = ['senderName', 'senderPhone', 'senderAddress', 'senderCity', 'senderState', 'senderPincode'] as const;
     const result = await detailsForm.trigger(pickupFields);
     if (result) setAddressSubStep('sender');
   };
 
   // ── Validate sender fields before sliding to receiver ──
   const handleSenderNext = async () => {
-    const senderFields = ['senderName', 'senderPhone', 'senderEmail'] as const;
+    const senderFields = ['senderEmail'] as const;
     const result = await detailsForm.trigger(senderFields);
     if (result) setAddressSubStep('receiver');
   };
 
   // ── Validate receiver fields before sliding to content ──
   const handleReceiverNext = async () => {
-    const receiverFields = ['receiverName', 'receiverPhone', 'receiverEmail', 'receiverAddress', 'receiverCity', 'receiverZipcode'] as const;
+    const receiverFields = ['receiverName', 'receiverPhone', 'receiverEmail', 'receiverAddress', 'receiverCity', 'receiverState', 'receiverZipcode'] as const;
     const result = await detailsForm.trigger(receiverFields);
     if (result) setAddressSubStep('content');
   };
@@ -939,7 +940,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
               {(['pickup', 'sender', 'receiver', 'content'] as const).map((s, i) => {
                 const stepOrder = ['pickup', 'sender', 'receiver', 'content'];
                 const currentIdx = stepOrder.indexOf(addressSubStep);
-                const labels = ['Pickup Address', 'Sender / KYC', 'Receiver', 'Contents'];
+                const labels = ['Pickup Details', 'Sender / KYC', 'Receiver', 'Contents'];
                 return (
                   <div key={s} className="flex items-center gap-2 flex-1">
                     <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-colors ${
@@ -977,6 +978,14 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                           </div>
                         </div>
                         <div className="space-y-4">
+                          <div className="grid grid-cols-2 gap-4">
+                            <FormField control={detailsForm.control} name="senderName" render={({ field }) => (
+                              <FormItem><FormLabel>Full Name</FormLabel><FormControl><Input {...field} placeholder="Sender name" className="h-11" /></FormControl><FormMessage /></FormItem>
+                            )} />
+                            <FormField control={detailsForm.control} name="senderPhone" render={({ field }) => (
+                              <FormItem><FormLabel>Phone</FormLabel><FormControl><Input {...field} placeholder="+91 98765 43210" className="h-11" /></FormControl><FormMessage /></FormItem>
+                            )} />
+                          </div>
                           <FormField control={detailsForm.control} name="senderAddress" render={({ field }) => (
                             <FormItem>
                               <FormLabel>Full Address (House/Flat No, Street, Locality)</FormLabel>
@@ -1056,18 +1065,6 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                           </div>
                         )}
                         <div className="space-y-4">
-                          <div className="grid grid-cols-2 gap-4">
-                            <FormField control={detailsForm.control} name="senderName" render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>{isMedicineFlow ? 'Full Name (as per Aadhaar)' : 'Full Name'}</FormLabel>
-                                <FormControl><Input {...field} placeholder={isMedicineFlow ? 'Name exactly as on Aadhaar' : 'Sender name'} className="h-11" /></FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )} />
-                            <FormField control={detailsForm.control} name="senderPhone" render={({ field }) => (
-                              <FormItem><FormLabel>Phone</FormLabel><FormControl><Input {...field} placeholder="+91 98765 43210" className="h-11" /></FormControl><FormMessage /></FormItem>
-                            )} />
-                          </div>
                           <FormField control={detailsForm.control} name="senderEmail" render={({ field }) => (
                             <FormItem><FormLabel>Email</FormLabel><FormControl><Input {...field} type="email" placeholder="sender@email.com" className="h-11" /></FormControl><FormMessage /></FormItem>
                           )} />
@@ -1176,19 +1173,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                               <FormMessage />
                             </FormItem>
                           )} />
-                          <div className="grid grid-cols-2 gap-4">
-                            <FormField control={detailsForm.control} name="receiverZipcode" render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>{isInternational ? 'Zip / Postal Code' : 'Pincode'}</FormLabel>
-                                <FormControl>
-                                  <Input {...field} placeholder={isInternational ? 'Zipcode' : '400001'} maxLength={isInternational ? 10 : 6} readOnly={!isInternational && !!domesticDeliveryPincode} className={`h-11 ${!isInternational && domesticDeliveryPincode ? 'bg-muted' : ''}`} />
-                                </FormControl>
-                                {!isInternational && receiverLookup.loading && <p className="text-xs text-muted-foreground flex items-center gap-1"><CircleNotch className="h-3 w-3 animate-spin" /> Looking up...</p>}
-                                {!isInternational && receiverLookup.state && <p className="text-xs text-candlestick-green">{receiverLookup.district}, {receiverLookup.state}</p>}
-                                {!isInternational && receiverLookup.error && <p className="text-xs text-destructive">{receiverLookup.error}</p>}
-                                <FormMessage />
-                              </FormItem>
-                            )} />
+                          <div className={`grid ${isInternational ? 'grid-cols-3' : 'grid-cols-2'} gap-4`}>
                             <FormField control={detailsForm.control} name="receiverCity" render={({ field }) => (
                               <FormItem>
                                 <FormLabel>{isInternational ? 'City' : 'City / District'}</FormLabel>
@@ -1205,8 +1190,29 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                                     </SelectContent>
                                   </Select>
                                 ) : (
-                                  <FormControl><Input {...field} placeholder="City" /></FormControl>
+                                  <FormControl><Input {...field} placeholder="City" className="h-11" /></FormControl>
                                 )}
+                                <FormMessage />
+                              </FormItem>
+                            )} />
+                            {isInternational && (
+                              <FormField control={detailsForm.control} name="receiverState" render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>State / Province</FormLabel>
+                                  <FormControl><Input {...field} placeholder="State or Province" className="h-11" /></FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )} />
+                            )}
+                            <FormField control={detailsForm.control} name="receiverZipcode" render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>{isInternational ? 'Zip / Postal Code' : 'Pincode'}</FormLabel>
+                                <FormControl>
+                                  <Input {...field} placeholder={isInternational ? 'Zipcode' : '400001'} maxLength={isInternational ? 10 : 6} readOnly={!isInternational && !!domesticDeliveryPincode} className={`h-11 ${!isInternational && domesticDeliveryPincode ? 'bg-muted' : ''}`} />
+                                </FormControl>
+                                {!isInternational && receiverLookup.loading && <p className="text-xs text-muted-foreground flex items-center gap-1"><CircleNotch className="h-3 w-3 animate-spin" /> Looking up...</p>}
+                                {!isInternational && receiverLookup.state && <p className="text-xs text-candlestick-green">{receiverLookup.district}, {receiverLookup.state}</p>}
+                                {!isInternational && receiverLookup.error && <p className="text-xs text-destructive">{receiverLookup.error}</p>}
                                 <FormMessage />
                               </FormItem>
                             )} />
