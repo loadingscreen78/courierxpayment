@@ -128,21 +128,24 @@ const teamData = [
   {
     name: 'Sangram Kesari Adhikary',
     role: 'CEO',
-    avatar: 'SK',
+    initials: 'SK',
+    linkedinUsername: 'sangram-keshari-adhikary-3418072ba',
     linkedin: 'https://www.linkedin.com/in/sangram-keshari-adhikary-3418072ba/',
     bio: 'Visionary leader driving CourierX\'s mission to revolutionize person-to-person courier services across India and beyond.',
   },
   {
     name: 'Mohit O Bhagri',
     role: 'COO',
-    avatar: 'MB',
+    initials: 'MB',
+    linkedinUsername: 'bagrimohit619',
     linkedin: 'https://www.linkedin.com/in/bagrimohit619/',
     bio: 'Operations strategist ensuring seamless logistics, carrier partnerships, and world-class delivery experiences.',
   },
   {
     name: 'Jagannath Samratha Mishra',
     role: 'CTO',
-    avatar: 'JM',
+    initials: 'JM',
+    linkedinUsername: 'jagannath-mishra-58196229b',
     linkedin: 'https://www.linkedin.com/in/jagannath-mishra-58196229b/',
     bio: 'Tech architect building the AI-powered platform that makes courier booking fast, compliant, and effortless.',
   },
@@ -1053,9 +1056,25 @@ const About = () => {
                   <div className="flex justify-center -mt-12 relative z-10">
                     <motion.div
                       whileHover={{ scale: 1.08 }}
-                      className="w-24 h-24 rounded-full bg-gradient-to-br from-coke-red to-coke-red/60 flex items-center justify-center text-white text-2xl font-bold shadow-xl border-4 border-card"
+                      className="w-24 h-24 rounded-full shadow-xl border-4 border-card overflow-hidden bg-gradient-to-br from-coke-red to-coke-red/60"
                     >
-                      {member.avatar}
+                      <img
+                        src={`https://unavatar.io/linkedin/${member.linkedinUsername}`}
+                        alt={member.name}
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          const target = e.currentTarget;
+                          target.style.display = 'none';
+                          const fallback = target.nextElementSibling as HTMLElement;
+                          if (fallback) fallback.style.display = 'flex';
+                        }}
+                      />
+                      <div
+                        className="w-full h-full items-center justify-center text-white text-2xl font-bold hidden"
+                        style={{ display: 'none' }}
+                      >
+                        {member.initials}
+                      </div>
                     </motion.div>
                   </div>
 
