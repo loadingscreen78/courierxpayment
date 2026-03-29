@@ -1387,7 +1387,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                           </div>
                           <div>
                             <h3 className="font-semibold text-base">Shipment Contents</h3>
-                            <p className="text-xs text-muted-foreground">{isInternational ? 'Add each item for customs declaration' : 'Describe what you are shipping'}</p>
+                            <p className="text-xs text-muted-foreground">{isMedicineFlow ? 'Add each medicine for customs declaration' : isInternational ? 'Add each item for customs declaration' : 'Describe what you are shipping'}</p>
                           </div>
                         </div>
 
@@ -1396,7 +1396,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                           {contentItems.map((item, idx) => (
                             <div key={idx} className="rounded-lg border border-border p-4 space-y-3 relative">
                               <div className="flex items-center justify-between">
-                                <p className="text-xs font-semibold text-muted-foreground">Item {idx + 1}</p>
+                                <p className="text-xs font-semibold text-muted-foreground">{isMedicineFlow ? `Medicine ${idx + 1}` : `Item ${idx + 1}`}</p>
                                 {contentItems.length > 1 && (
                                   <button type="button" onClick={() => setContentItems(prev => prev.filter((_, i) => i !== idx))} className="text-destructive hover:text-destructive/80 p-1">
                                     <Trash className="h-4 w-4" weight="bold" />
@@ -1405,28 +1405,47 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                               </div>
                               <div className="grid grid-cols-2 gap-3">
                                 <div>
-                                  <label className="text-xs font-medium">Item Name</label>
-                                  <Input value={item.name} onChange={(e) => { const arr = [...contentItems]; arr[idx].name = e.target.value; setContentItems(arr); }} placeholder="e.g. Cotton T-Shirt" className="h-10 mt-1" />
+                                  <label className="text-xs font-medium">{isMedicineFlow ? 'Medicine Name' : 'Item Name'}</label>
+                                  <Input value={item.name} onChange={(e) => { const arr = [...contentItems]; arr[idx].name = e.target.value; setContentItems(arr); }} placeholder={isMedicineFlow ? 'e.g. Paracetamol 500mg' : 'e.g. Cotton T-Shirt'} className="h-10 mt-1" />
                                 </div>
                                 <div>
-                                  <label className="text-xs font-medium">Type of Item</label>
-                                  <Select value={item.type} onValueChange={(v) => { const arr = [...contentItems]; arr[idx].type = v; setContentItems(arr); }}>
-                                    <SelectTrigger className="h-10 mt-1"><SelectValue placeholder="Select type" /></SelectTrigger>
-                                    <SelectContent>
-                                      <SelectItem value="clothing">Clothing & Apparel</SelectItem>
-                                      <SelectItem value="electronics">Electronics</SelectItem>
-                                      <SelectItem value="food">Food & Supplements</SelectItem>
-                                      <SelectItem value="cosmetics">Cosmetics & Personal Care</SelectItem>
-                                      <SelectItem value="medicine">Medicine / Pharma</SelectItem>
-                                      <SelectItem value="documents">Documents</SelectItem>
-                                      <SelectItem value="handicraft">Handicraft & Art</SelectItem>
-                                      <SelectItem value="books">Books & Stationery</SelectItem>
-                                      <SelectItem value="toys">Toys & Games</SelectItem>
-                                      <SelectItem value="jewelry">Imitation Jewelry</SelectItem>
-                                      <SelectItem value="household">Household Items</SelectItem>
-                                      <SelectItem value="other">Other</SelectItem>
-                                    </SelectContent>
-                                  </Select>
+                                  <label className="text-xs font-medium">{isMedicineFlow ? 'Medicine Type' : 'Type of Item'}</label>
+                                  {isMedicineFlow ? (
+                                    <Select value={item.type} onValueChange={(v) => { const arr = [...contentItems]; arr[idx].type = v; setContentItems(arr); }}>
+                                      <SelectTrigger className="h-10 mt-1"><SelectValue placeholder="Select type" /></SelectTrigger>
+                                      <SelectContent>
+                                        <SelectItem value="tablet">Tablet</SelectItem>
+                                        <SelectItem value="capsule">Capsule</SelectItem>
+                                        <SelectItem value="powder">Powder</SelectItem>
+                                        <SelectItem value="liquid">Liquid</SelectItem>
+                                        <SelectItem value="semi-liquid">Semi-Liquid / Gel</SelectItem>
+                                        <SelectItem value="cream">Cream / Ointment</SelectItem>
+                                        <SelectItem value="injection">Injection / Vial</SelectItem>
+                                        <SelectItem value="inhaler">Inhaler</SelectItem>
+                                        <SelectItem value="drops">Drops (Eye/Ear/Nasal)</SelectItem>
+                                        <SelectItem value="syrup">Syrup</SelectItem>
+                                        <SelectItem value="other">Other</SelectItem>
+                                      </SelectContent>
+                                    </Select>
+                                  ) : (
+                                    <Select value={item.type} onValueChange={(v) => { const arr = [...contentItems]; arr[idx].type = v; setContentItems(arr); }}>
+                                      <SelectTrigger className="h-10 mt-1"><SelectValue placeholder="Select type" /></SelectTrigger>
+                                      <SelectContent>
+                                        <SelectItem value="clothing">Clothing & Apparel</SelectItem>
+                                        <SelectItem value="electronics">Electronics</SelectItem>
+                                        <SelectItem value="food">Food & Supplements</SelectItem>
+                                        <SelectItem value="cosmetics">Cosmetics & Personal Care</SelectItem>
+                                        <SelectItem value="medicine">Medicine / Pharma</SelectItem>
+                                        <SelectItem value="documents">Documents</SelectItem>
+                                        <SelectItem value="handicraft">Handicraft & Art</SelectItem>
+                                        <SelectItem value="books">Books & Stationery</SelectItem>
+                                        <SelectItem value="toys">Toys & Games</SelectItem>
+                                        <SelectItem value="jewelry">Imitation Jewelry</SelectItem>
+                                        <SelectItem value="household">Household Items</SelectItem>
+                                        <SelectItem value="other">Other</SelectItem>
+                                      </SelectContent>
+                                    </Select>
+                                  )}
                                 </div>
                               </div>
                               <div className="grid grid-cols-3 gap-3">
@@ -1449,8 +1468,8 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                                   <Input type="number" min={1} value={item.qty} onChange={(e) => { const arr = [...contentItems]; arr[idx].qty = Number(e.target.value) || 1; setContentItems(arr); }} className="h-10 mt-1" />
                                 </div>
                                 <div>
-                                  <label className="text-xs font-medium">Unit Price (₹)</label>
-                                  <Input type="number" min={0} value={item.unitPrice || ''} onChange={(e) => { const arr = [...contentItems]; arr[idx].unitPrice = Number(e.target.value) || 0; setContentItems(arr); }} placeholder="500" className="h-10 mt-1" />
+                                  <label className="text-xs font-medium">{isMedicineFlow ? 'Price per Unit (₹)' : 'Unit Price (₹)'}</label>
+                                  <Input type="number" min={0} value={item.unitPrice || ''} onChange={(e) => { const arr = [...contentItems]; arr[idx].unitPrice = Number(e.target.value) || 0; setContentItems(arr); }} placeholder={isMedicineFlow ? 'MRP per unit' : '500'} className="h-10 mt-1" />
                                 </div>
                               </div>
                             </div>
@@ -1459,7 +1478,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
 
                         {/* Add item button */}
                         <Button type="button" variant="outline" onClick={() => setContentItems(prev => [...prev, { name: '', type: '', hsnCode: '', qty: 1, unitPrice: 0 }])} className="w-full gap-2 border-dashed">
-                          <Plus className="h-4 w-4" /> Add Another Item
+                          <Plus className="h-4 w-4" /> {isMedicineFlow ? 'Add Another Medicine' : 'Add Another Item'}
                         </Button>
 
                         {/* Total value display */}
