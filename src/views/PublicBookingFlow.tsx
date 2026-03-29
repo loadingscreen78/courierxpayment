@@ -169,7 +169,8 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
   const [contentItems, setContentItems] = useState<Array<{ name: string; type: string; hsnCode: string; qty: number; unitPrice: number }>>([
     { name: '', type: '', hsnCode: '', qty: 1, unitPrice: 0 },
   ]);
-  const [medicineDocuments, setMedicineDocuments] = useState<File[]>([]);
+  const [prescriptionDocs, setPrescriptionDocs] = useState<File[]>([]);
+  const [pharmacyBillDocs, setPharmacyBillDocs] = useState<File[]>([]);
   const [intlZipLookup, setIntlZipLookup] = useState<{ loading: boolean; city: string; state: string; error: string }>({ loading: false, city: '', state: '', error: '' });
   const [showWeightLimitModal, setShowWeightLimitModal] = useState(false);
 
@@ -1469,45 +1470,86 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                           </div>
                         )}
 
-                        {/* Medicine Documents Upload */}
+                        {/* Medicine Documents — Separate Sections */}
                         {isMedicineFlow && (
-                          <div className="space-y-3 pt-1">
-                            <div className="flex items-center gap-2">
-                              <Pill className="h-5 w-5 text-coke-red" weight="duotone" />
-                              <h4 className="font-semibold text-sm">Upload Bills & Prescriptions</h4>
-                            </div>
-                            <div className="rounded-lg border border-coke-red/20 bg-coke-red/5 p-3 text-xs space-y-1">
-                              <p className="font-medium text-coke-red/90">Required documents for medicine shipments:</p>
-                              <ul className="list-disc list-inside text-muted-foreground space-y-0.5">
-                                <li>Valid prescription from a registered doctor</li>
-                                <li>Purchase bill / pharmacy invoice</li>
-                                <li>Any additional medical certificates if applicable</li>
-                              </ul>
-                            </div>
-                            {/* Uploaded files list */}
-                            {medicineDocuments.length > 0 && (
-                              <div className="space-y-2">
-                                {medicineDocuments.map((file, idx) => (
-                                  <div key={idx} className="flex items-center justify-between rounded-lg border border-border bg-muted/30 px-3 py-2">
-                                    <div className="flex items-center gap-2 min-w-0">
-                                      <FileText className="h-4 w-4 text-candlestick-green shrink-0" weight="duotone" />
-                                      <span className="text-xs truncate">{file.name}</span>
-                                      <span className="text-[10px] text-muted-foreground shrink-0">({(file.size / 1024).toFixed(0)} KB)</span>
-                                    </div>
-                                    <button type="button" onClick={() => setMedicineDocuments(prev => prev.filter((_, i) => i !== idx))} className="text-destructive hover:text-destructive/80 p-1 shrink-0">
-                                      <X className="h-3.5 w-3.5" weight="bold" />
-                                    </button>
-                                  </div>
-                                ))}
+                          <div className="space-y-5 pt-1">
+                            {/* ── Section 1: Doctor Prescription ── */}
+                            <div className="space-y-3">
+                              <div className="flex items-center gap-2">
+                                <Pill className="h-5 w-5 text-blue-600" weight="duotone" />
+                                <h4 className="font-semibold text-sm">Doctor's Prescription</h4>
                               </div>
-                            )}
-                            {/* Upload button */}
-                            <label className="flex items-center justify-center gap-2 rounded-xl border-2 border-dashed border-coke-red/30 bg-coke-red/5 hover:bg-coke-red/10 p-4 cursor-pointer transition-colors">
-                              <input type="file" accept="image/*,.pdf" multiple className="hidden" onChange={(e) => { if (e.target.files) setMedicineDocuments(prev => [...prev, ...Array.from(e.target.files!)]); }} />
-                              <Upload className="h-5 w-5 text-coke-red" weight="duotone" />
-                              <span className="text-sm font-medium text-coke-red">Upload Prescriptions & Bills</span>
-                              <span className="text-xs text-muted-foreground">(PDF, JPG, PNG)</span>
-                            </label>
+                              <div className="rounded-lg border border-blue-200 dark:border-blue-800/40 bg-blue-50 dark:bg-blue-950/20 p-3 text-xs space-y-1">
+                                <p className="font-medium text-blue-900 dark:text-blue-200">What to upload:</p>
+                                <ul className="list-disc list-inside text-blue-800 dark:text-blue-300 space-y-0.5">
+                                  <li>Valid prescription issued by a registered medical practitioner</li>
+                                  <li>Must include doctor's name, registration number, and signature</li>
+                                  <li>Patient (receiver) name must be clearly mentioned</li>
+                                  <li>Medicine names, dosage, and duration should be legible</li>
+                                </ul>
+                              </div>
+                              {prescriptionDocs.length > 0 && (
+                                <div className="space-y-2">
+                                  {prescriptionDocs.map((file, idx) => (
+                                    <div key={idx} className="flex items-center justify-between rounded-lg border border-blue-200 bg-blue-50/50 px-3 py-2">
+                                      <div className="flex items-center gap-2 min-w-0">
+                                        <FileText className="h-4 w-4 text-blue-600 shrink-0" weight="duotone" />
+                                        <span className="text-xs truncate">{file.name}</span>
+                                        <span className="text-[10px] text-muted-foreground shrink-0">({(file.size / 1024).toFixed(0)} KB)</span>
+                                      </div>
+                                      <button type="button" onClick={() => setPrescriptionDocs(prev => prev.filter((_, i) => i !== idx))} className="text-destructive hover:text-destructive/80 p-1 shrink-0">
+                                        <X className="h-3.5 w-3.5" weight="bold" />
+                                      </button>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                              <label className="flex items-center justify-center gap-2 rounded-xl border-2 border-dashed border-blue-400/30 bg-blue-50/50 hover:bg-blue-100/50 p-3.5 cursor-pointer transition-colors">
+                                <input type="file" accept="image/*,.pdf" multiple className="hidden" onChange={(e) => { if (e.target.files) setPrescriptionDocs(prev => [...prev, ...Array.from(e.target.files!)]); }} />
+                                <Upload className="h-4 w-4 text-blue-600" weight="duotone" />
+                                <span className="text-sm font-medium text-blue-600">Upload Prescription</span>
+                                <span className="text-xs text-muted-foreground">(PDF, JPG, PNG)</span>
+                              </label>
+                            </div>
+
+                            {/* ── Section 2: Pharmacy Purchase Bill ── */}
+                            <div className="space-y-3">
+                              <div className="flex items-center gap-2">
+                                <FileText className="h-5 w-5 text-coke-red" weight="duotone" />
+                                <h4 className="font-semibold text-sm">Pharmacy Purchase Bill</h4>
+                              </div>
+                              <div className="rounded-lg border border-coke-red/20 bg-coke-red/5 p-3 text-xs space-y-1">
+                                <p className="font-medium text-coke-red/90">What to upload:</p>
+                                <ul className="list-disc list-inside text-muted-foreground space-y-0.5">
+                                  <li>Original purchase bill or invoice from the pharmacy</li>
+                                  <li>Must show pharmacy name, GST number, and address</li>
+                                  <li>Each medicine name, batch number, quantity, and price should be listed</li>
+                                  <li>Bill date must be recent (within 30 days of shipment)</li>
+                                </ul>
+                              </div>
+                              {pharmacyBillDocs.length > 0 && (
+                                <div className="space-y-2">
+                                  {pharmacyBillDocs.map((file, idx) => (
+                                    <div key={idx} className="flex items-center justify-between rounded-lg border border-coke-red/20 bg-coke-red/5 px-3 py-2">
+                                      <div className="flex items-center gap-2 min-w-0">
+                                        <FileText className="h-4 w-4 text-coke-red shrink-0" weight="duotone" />
+                                        <span className="text-xs truncate">{file.name}</span>
+                                        <span className="text-[10px] text-muted-foreground shrink-0">({(file.size / 1024).toFixed(0)} KB)</span>
+                                      </div>
+                                      <button type="button" onClick={() => setPharmacyBillDocs(prev => prev.filter((_, i) => i !== idx))} className="text-destructive hover:text-destructive/80 p-1 shrink-0">
+                                        <X className="h-3.5 w-3.5" weight="bold" />
+                                      </button>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                              <label className="flex items-center justify-center gap-2 rounded-xl border-2 border-dashed border-coke-red/30 bg-coke-red/5 hover:bg-coke-red/10 p-3.5 cursor-pointer transition-colors">
+                                <input type="file" accept="image/*,.pdf" multiple className="hidden" onChange={(e) => { if (e.target.files) setPharmacyBillDocs(prev => [...prev, ...Array.from(e.target.files!)]); }} />
+                                <Upload className="h-4 w-4 text-coke-red" weight="duotone" />
+                                <span className="text-sm font-medium text-coke-red">Upload Pharmacy Bill</span>
+                                <span className="text-xs text-muted-foreground">(PDF, JPG, PNG)</span>
+                              </label>
+                            </div>
                           </div>
                         )}
 
