@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { ArrowLeft, ArrowRight, CircleNotch, UserPlus, Pill, FileText, Gift, Truck, Globe, User, Envelope, Phone, MapPin, Info, AirplaneTilt, Warning, X, IdentificationCard, Upload, IdentificationBadge, House } from '@phosphor-icons/react';
+import { ArrowLeft, ArrowRight, CircleNotch, UserPlus, Pill, FileText, Gift, Truck, Globe, User, Envelope, Phone, MapPin, Info, AirplaneTilt, Warning, X, IdentificationCard, Upload, IdentificationBadge, House, Plus, Trash } from '@phosphor-icons/react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
@@ -121,6 +121,9 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
   const [aadhaarBack, setAadhaarBack] = useState<File | null>(null);
   const [passportIdentity, setPassportIdentity] = useState<File | null>(null);
   const [passportAddress, setPassportAddress] = useState<File | null>(null);
+  const [contentItems, setContentItems] = useState<Array<{ name: string; type: string; hsnCode: string; qty: number; unitPrice: number }>>([
+    { name: '', type: '', hsnCode: '', qty: 1, unitPrice: 0 },
+  ]);
   const [showWeightLimitModal, setShowWeightLimitModal] = useState(false);
 
   // ── International rate form ──
@@ -1284,7 +1287,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                       </motion.div>
                     )}
 
-                    {/* ── Content Description Slide ── */}
+                    {/* ── Content Items Slide ── */}
                     {addressSubStep === 'content' && (
                       <motion.div
                         key="content"
@@ -1300,21 +1303,95 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                           </div>
                           <div>
                             <h3 className="font-semibold text-base">Shipment Contents</h3>
-                            <p className="text-xs text-muted-foreground">{isInternational ? 'Required for customs declaration' : 'Describe what you are shipping'}</p>
+                            <p className="text-xs text-muted-foreground">{isInternational ? 'Add each item for customs declaration' : 'Describe what you are shipping'}</p>
                           </div>
                         </div>
+
+                        {/* Item list */}
+                        <div className="space-y-4">
+                          {contentItems.map((item, idx) => (
+                            <div key={idx} className="rounded-lg border border-border p-4 space-y-3 relative">
+                              <div className="flex items-center justify-between">
+                                <p className="text-xs font-semibold text-muted-foreground">Item {idx + 1}</p>
+                                {contentItems.length > 1 && (
+                                  <button type="button" onClick={() => setContentItems(prev => prev.filter((_, i) => i !== idx))} className="text-destructive hover:text-destructive/80 p-1">
+                                    <Trash className="h-4 w-4" weight="bold" />
+                                  </button>
+                                )}
+                              </div>
+                              <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                  <label className="text-xs font-medium">Item Name</label>
+                                  <Input value={item.name} onChange={(e) => { const arr = [...contentItems]; arr[idx].name = e.target.value; setContentItems(arr); }} placeholder="e.g. Cotton T-Shirt" className="h-10 mt-1" />
+                                </div>
+                                <div>
+                                  <label className="text-xs font-medium">Type of Item</label>
+                                  <Select value={item.type} onValueChange={(v) => { const arr = [...contentItems]; arr[idx].type = v; setContentItems(arr); }}>
+                                    <SelectTrigger className="h-10 mt-1"><SelectValue placeholder="Select type" /></SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="clothing">Clothing & Apparel</SelectItem>
+                                      <SelectItem value="electronics">Electronics</SelectItem>
+                                      <SelectItem value="food">Food & Supplements</SelectItem>
+                                      <SelectItem value="cosmetics">Cosmetics & Personal Care</SelectItem>
+                                      <SelectItem value="medicine">Medicine / Pharma</SelectItem>
+                                      <SelectItem value="documents">Documents</SelectItem>
+                                      <SelectItem value="handicraft">Handicraft & Art</SelectItem>
+                                      <SelectItem value="books">Books & Stationery</SelectItem>
+                                      <SelectItem value="toys">Toys & Games</SelectItem>
+                                      <SelectItem value="jewelry">Imitation Jewelry</SelectItem>
+                                      <SelectItem value="household">Household Items</SelectItem>
+                                      <SelectItem value="other">Other</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                              </div>
+                              <div className="grid grid-cols-3 gap-3">
+                                <div>
+                                  <label className="text-xs font-medium">HSN Code</label>
+                                  <Input value={item.hsnCode} onChange={(e) => { const arr = [...contentItems]; arr[idx].hsnCode = e.target.value; setContentItems(arr); }} placeholder="e.g. 6109" className="h-10 mt-1" />
+                                </div>
+                                <div>
+                                  <label className="text-xs font-medium">Quantity</label>
+                                  <Input type="number" min={1} value={item.qty} onChange={(e) => { const arr = [...contentItems]; arr[idx].qty = Number(e.target.value) || 1; setContentItems(arr); }} className="h-10 mt-1" />
+                                </div>
+                                <div>
+                                  <label className="text-xs font-medium">Unit Price (₹)</label>
+                                  <Input type="number" min={0} value={item.unitPrice || ''} onChange={(e) => { const arr = [...contentItems]; arr[idx].unitPrice = Number(e.target.value) || 0; setContentItems(arr); }} placeholder="500" className="h-10 mt-1" />
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+
+                        {/* Add item button */}
+                        <Button type="button" variant="outline" onClick={() => setContentItems(prev => [...prev, { name: '', type: '', hsnCode: '', qty: 1, unitPrice: 0 }])} className="w-full gap-2 border-dashed">
+                          <Plus className="h-4 w-4" /> Add Another Item
+                        </Button>
+
+                        {/* Total value display */}
+                        {contentItems.some(i => i.unitPrice > 0) && (
+                          <div className="flex justify-between items-center text-sm bg-muted/50 rounded-lg px-4 py-2">
+                            <span className="text-muted-foreground">Total Declared Value</span>
+                            <span className="font-semibold">₹{contentItems.reduce((sum, i) => sum + (i.qty * i.unitPrice), 0).toLocaleString('en-IN')}</span>
+                          </div>
+                        )}
+
+                        {/* Hidden field — auto-populated */}
                         <FormField control={detailsForm.control} name="contentDescription" render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Content Description</FormLabel>
-                            <FormControl><Textarea {...field} placeholder={isMedicineFlow ? 'List medicine names, quantities, and dosages for customs' : isInternational ? 'Describe contents for customs declaration' : 'Describe the contents of your shipment'} rows={3} /></FormControl>
-                            <FormMessage />
-                          </FormItem>
+                          <input type="hidden" {...field} />
                         )} />
+
                         <div className="flex gap-3">
                           <Button type="button" variant="outline" onClick={() => setAddressSubStep('receiver')} className="flex-1 gap-1.5">
                             <ArrowLeft className="h-4 w-4" /> Receiver
                           </Button>
-                          <Button type="submit" className="flex-1 bg-coke-red hover:bg-red-600 text-white gap-2">
+                          <Button type="button" onClick={() => {
+                            const hasItems = contentItems.some(i => i.name.trim());
+                            if (!hasItems) { return; }
+                            const desc = contentItems.filter(i => i.name.trim()).map(i => `${i.name} (${i.type || 'other'}) x${i.qty} @ ₹${i.unitPrice} [HSN: ${i.hsnCode || 'N/A'}]`).join('; ');
+                            detailsForm.setValue('contentDescription', desc);
+                            detailsForm.handleSubmit(handleFinalSubmit)();
+                          }} className="flex-1 bg-coke-red hover:bg-red-600 text-white gap-2">
                             Continue to Summary <ArrowRight className="h-4 w-4" />
                           </Button>
                         </div>
