@@ -313,9 +313,16 @@ const Auth = () => {
 
   const handleEmailAuth = async (values: EmailPasswordFormValues) => {
     setIsLoading(true);
+
+    // Block direct signup — redirect to account opening flow
+    if (mode === 'signup') {
+      setIsLoading(false);
+      toast({ title: 'Sign up not available here', description: 'Please open an account to get started.', variant: 'destructive' });
+      window.location.href = '/open-account';
+      return;
+    }
     
-    const authFn = mode === 'signin' ? signInWithEmail : signUpWithEmail;
-    const { error } = await authFn(values.email, values.password);
+    const { error } = await signInWithEmail(values.email, values.password);
     
     if (error) { 
       setIsLoading(false);
@@ -323,22 +330,7 @@ const Auth = () => {
       return; 
     }
     
-    toast({ title: mode === 'signup' ? 'Account Created' : 'Welcome!', description: mode === 'signup' ? 'Account created successfully!' : 'Signed in.' });
-    
-    if (mode === 'signup') {
-      const { data: { user: currentUser } } = await supabase.auth.getUser();
-      if (!currentUser) { setIsLoading(false); return; }
-
-      fetch('/api/email/send-welcome', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userEmail: values.email, userId: currentUser.id }),
-      }).catch(() => {});
-
-      setIsLoading(false);
-      window.location.href = '/onboarding';
-      return;
-    }
+    toast({ title: 'Welcome!', description: 'Signed in.' });
     
     const { data: { user: currentUser }, error: userError } = await supabase.auth.getUser();
     
@@ -461,6 +453,24 @@ const Auth = () => {
       .single();
 
     if (!profileData || !profileData.full_name) {
+      // New user auto-created by Google — they don't have an account with us
+      // Check if user was just created (within last 60 seconds)
+      const createdAt = currentUser.created_at ? new Date(currentUser.created_at).getTime() : 0;
+      const isNewUser = Date.now() - createdAt < 60000;
+
+      if (isNewUser) {
+        // Sign out and clean up the auto-created user
+        await supabase.auth.signOut();
+        setIsLoading(false);
+        toast({
+          title: 'No account found',
+          description: 'You don\'t have an account with us. Please open an account first to get started.',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      // Existing user without completed profile — send to onboarding
       toast({ 
         title: 'Welcome to CourierX!', 
         description: 'Please complete your profile to get started.' 
@@ -511,6 +521,18 @@ const Auth = () => {
     setIsLoading(false);
 
     if (!profileData || !profileData.full_name) {
+      const createdAt = currentUser.created_at ? new Date(currentUser.created_at).getTime() : 0;
+      const isNewUser = Date.now() - createdAt < 60000;
+      if (isNewUser) {
+        await supabase.auth.signOut();
+        setIsLoading(false);
+        toast({
+          title: 'No account found',
+          description: 'You don\'t have an account with us. Please open an account first to get started.',
+          variant: 'destructive',
+        });
+        return;
+      }
       window.location.href = '/onboarding';
     } else {
       const returnUrl = localStorage.getItem('authReturnUrl');
