@@ -1,13 +1,23 @@
-// Country database with 150+ countries organized by region and shipping zone
+// Country database with zone and carrier mapping from Unified Rate Card
+// Zone codes: A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q (FedEx)
+//             ME1, ME2, ME3, ME4, Qatar, Oman (Aramex)
 
 export type Region = 'americas' | 'europe' | 'middle-east' | 'asia-pacific' | 'africa';
+export type FedExZone = 'A' | 'B' | 'C' | 'D' | 'E' | 'F' | 'G' | 'H' | 'I' | 'J' | 'K' | 'L' | 'M' | 'N' | 'O' | 'P' | 'Q';
+export type AramexZone = 'ME1' | 'ME2' | 'ME3' | 'ME4' | 'Qatar' | 'Oman';
+export type RateZone = FedExZone | AramexZone;
+export type CarrierType = 'Fedex' | 'Aramex';
+
+// Keep legacy ShippingZone for backward compat (mapped from new zones)
 export type ShippingZone = 1 | 2 | 3 | 4 | 5 | 6;
 
 export interface Country {
   code: string;
   name: string;
   region: Region;
-  zone: ShippingZone;
+  zone: ShippingZone; // legacy zone for transit days etc
+  rateZone: RateZone; // actual rate lookup zone
+  carrier: CarrierType;
   currency: string;
   phoneCode: string;
   isServed: boolean;
@@ -15,196 +25,278 @@ export interface Country {
   flag: string;
 }
 
-// Zone definitions:
-// Zone 1: Middle East (AE, SA, QA, KW, OM, BH) - 3-5 days
-// Zone 2: Southeast Asia (SG, MY, TH, ID, PH, VN) - 4-6 days
-// Zone 3: Europe - 4-7 days
-// Zone 4: Americas (US, CA, MX) - 5-8 days
-// Zone 5: Oceania (AU, NZ) - 6-9 days
-// Zone 6: Rest of World - 7-12 days
+// Map rate zones to legacy shipping zones for transit day estimation
+function legacyZone(rateZone: RateZone): ShippingZone {
+  const map: Record<string, ShippingZone> = {
+    'ME1': 1, 'ME2': 1, 'ME3': 1, 'ME4': 1, 'Qatar': 1, 'Oman': 1,
+    'A': 2, 'B': 2, 'C': 2, 'D': 2,
+    'E': 2, 'H': 2,
+    'F': 3, 'I': 3,
+    'G': 4, 'L': 4, 'J': 4,
+    'K': 5,
+    'M': 6, 'N': 6, 'O': 6, 'P': 6, 'Q': 6,
+  };
+  return map[rateZone] || 6;
+}
 
-export const countries: Country[] = [
-  // MIDDLE EAST - Zone 1
-  { code: 'AE', name: 'United Arab Emirates', region: 'middle-east', zone: 1, currency: 'AED', phoneCode: '+971', isServed: true, flag: '🇦🇪' },
-  { code: 'SA', name: 'Saudi Arabia', region: 'middle-east', zone: 1, currency: 'SAR', phoneCode: '+966', isServed: true, flag: '🇸🇦' },
-  { code: 'QA', name: 'Qatar', region: 'middle-east', zone: 1, currency: 'QAR', phoneCode: '+974', isServed: true, flag: '🇶🇦' },
-  { code: 'KW', name: 'Kuwait', region: 'middle-east', zone: 1, currency: 'KWD', phoneCode: '+965', isServed: true, flag: '🇰🇼' },
-  { code: 'OM', name: 'Oman', region: 'middle-east', zone: 1, currency: 'OMR', phoneCode: '+968', isServed: true, flag: '🇴🇲' },
-  { code: 'BH', name: 'Bahrain', region: 'middle-east', zone: 1, currency: 'BHD', phoneCode: '+973', isServed: true, flag: '🇧🇭' },
-  { code: 'JO', name: 'Jordan', region: 'middle-east', zone: 1, currency: 'JOD', phoneCode: '+962', isServed: true, flag: '🇯🇴' },
-  { code: 'LB', name: 'Lebanon', region: 'middle-east', zone: 1, currency: 'LBP', phoneCode: '+961', isServed: true, flag: '🇱🇧' },
-  { code: 'IL', name: 'Israel', region: 'middle-east', zone: 1, currency: 'ILS', phoneCode: '+972', isServed: true, flag: '🇮🇱' },
-  { code: 'IQ', name: 'Iraq', region: 'middle-east', zone: 6, currency: 'IQD', phoneCode: '+964', isServed: false, notServedReason: 'Limited courier access', flag: '🇮🇶' },
-  { code: 'IR', name: 'Iran', region: 'middle-east', zone: 6, currency: 'IRR', phoneCode: '+98', isServed: false, notServedReason: 'International sanctions', flag: '🇮🇷' },
-  { code: 'SY', name: 'Syria', region: 'middle-east', zone: 6, currency: 'SYP', phoneCode: '+963', isServed: false, notServedReason: 'Limited courier access', flag: '🇸🇾' },
-  { code: 'YE', name: 'Yemen', region: 'middle-east', zone: 6, currency: 'YER', phoneCode: '+967', isServed: false, notServedReason: 'Limited courier access', flag: '🇾🇪' },
-  { code: 'TR', name: 'Turkey', region: 'middle-east', zone: 3, currency: 'TRY', phoneCode: '+90', isServed: true, flag: '🇹🇷' },
-  { code: 'EG', name: 'Egypt', region: 'middle-east', zone: 1, currency: 'EGP', phoneCode: '+20', isServed: true, flag: '🇪🇬' },
+function regionFromZone(rateZone: RateZone, name: string): Region {
+  if (['ME1','ME2','ME3','ME4','Qatar','Oman'].includes(rateZone)) return 'middle-east';
+  // Some ME4 countries are in different regions but carrier is Aramex
+  const africaCountries = ['Algeria','Angola','Botswana','Burkina Faso','Burundi','Cameroon','Cape Verde','Central African Republic','Chad','Comoros','Ivory Coast','Djibouti','Equatorial Guinea','Eritrea','Ethiopia','Gabon','Gambia','Ghana','Guinea-Bissau','Kenya','Lesotho','Liberia','Libya','Madagascar','Malawi','Mali','Mauritania','Mauritius','Morocco','Mozambique','Namibia','Niger','Nigeria','Rwanda','Réunion','Senegal','Seychelles','Sierra Leone','Somalia','South Africa','South Sudan','Sudan','Swaziland','Tanzania','Togo','Tunisia','Uganda','Zambia','Zimbabwe','the Democratic Republic of the Congo','Republic of the Congo'];
+  const americasCountries = ['Argentina','Bahamas','Barbados','Belize','Bermuda','Bolivia','Brazil','Canada','Cayman Islands','Chile','Colombia','Costa Rica','Cuba','Dominican Republic','Ecuador','El Salvador','Guatemala','Guyana','Haiti','Honduras','Jamaica','Mexico','Nicaragua','Panama','Paraguay','Peru','Puerto Rico','Suriname','Trinidad and Tobago','United States','Uruguay','Venezuela','Anguilla','Antigua and Barbuda','Aruba','Curaçao','Dominica','Falkland Islands (Malvinas)','French Guiana','Grenada','Guadeloupe','Martinique','Montserrat','Saint Kitts and Nevis','Saint Lucia','Saint Vincent and the Grenadines','Sint Maarten (Dutch part)','Turks and Caicos Islands','U.S. Virgin Islands','Virgin Islands','Saint Barthélemy','Saint Martin (French part)','Saint Pierre and Miquelon'];
+  const europeCountries = ['Albania','Andorra','Austria','Belarus','Belgium','Bosnia and Herzegovina','Bulgaria','Croatia','Czech Republic','Denmark','Estonia','Faroe Islands','Finland','France','Germany','Gibraltar','Greece','Greenland','Hungary','Iceland','Ireland','Italy','Latvia','Liechtenstein','Lithuania','Luxembourg','Macedonia','Malta','Moldova','Monaco','Montenegro','Netherlands','Norway','Poland','Portugal','Romania','Russia','San Marino','Serbia','Slovakia','Slovenia','Spain','Sweden','Switzerland','Ukraine','United Kingdom','Holy See (Vatican City State)','Aland Islands'];
+  const oceaniaCountries = ['Australia','New Zealand','Fiji','Papua New Guinea','New Caledonia','French Polynesia','Samoa','Tonga','Vanuatu','Solomon Islands','Cook Islands','Guam','Kiribati','Marshall Islands','Micronesia','Nauru','Niue','Norfolk Island','Northern Mariana Islands','Palau','Pitcairn','Tokelau','Tuvalu','Wallis and Futuna','American Samoa'];
+  if (africaCountries.includes(name)) return 'africa';
+  if (americasCountries.includes(name)) return 'americas';
+  if (europeCountries.includes(name)) return 'europe';
+  if (oceaniaCountries.includes(name)) return 'asia-pacific';
+  return 'asia-pacific';
+}
 
-  // SOUTHEAST ASIA - Zone 2
-  { code: 'SG', name: 'Singapore', region: 'asia-pacific', zone: 2, currency: 'SGD', phoneCode: '+65', isServed: true, flag: '🇸🇬' },
-  { code: 'MY', name: 'Malaysia', region: 'asia-pacific', zone: 2, currency: 'MYR', phoneCode: '+60', isServed: true, flag: '🇲🇾' },
-  { code: 'TH', name: 'Thailand', region: 'asia-pacific', zone: 2, currency: 'THB', phoneCode: '+66', isServed: true, flag: '🇹🇭' },
-  { code: 'ID', name: 'Indonesia', region: 'asia-pacific', zone: 2, currency: 'IDR', phoneCode: '+62', isServed: true, flag: '🇮🇩' },
-  { code: 'PH', name: 'Philippines', region: 'asia-pacific', zone: 2, currency: 'PHP', phoneCode: '+63', isServed: true, flag: '🇵🇭' },
-  { code: 'VN', name: 'Vietnam', region: 'asia-pacific', zone: 2, currency: 'VND', phoneCode: '+84', isServed: true, flag: '🇻🇳' },
-  { code: 'MM', name: 'Myanmar', region: 'asia-pacific', zone: 2, currency: 'MMK', phoneCode: '+95', isServed: true, flag: '🇲🇲' },
-  { code: 'KH', name: 'Cambodia', region: 'asia-pacific', zone: 2, currency: 'KHR', phoneCode: '+855', isServed: true, flag: '🇰🇭' },
-  { code: 'LA', name: 'Laos', region: 'asia-pacific', zone: 2, currency: 'LAK', phoneCode: '+856', isServed: true, flag: '🇱🇦' },
-  { code: 'BN', name: 'Brunei', region: 'asia-pacific', zone: 2, currency: 'BND', phoneCode: '+673', isServed: true, flag: '🇧🇳' },
-  { code: 'TL', name: 'Timor-Leste', region: 'asia-pacific', zone: 6, currency: 'USD', phoneCode: '+670', isServed: true, flag: '🇹🇱' },
+// Flag emoji from ISO code
+function flag(code: string): string {
+  if (!code || code.length < 2) return '🏳️';
+  return String.fromCodePoint(...[...code.toUpperCase()].map(c => 0x1F1E6 + c.charCodeAt(0) - 65));
+}
 
-  // EAST ASIA - Zone 2-3
-  { code: 'JP', name: 'Japan', region: 'asia-pacific', zone: 2, currency: 'JPY', phoneCode: '+81', isServed: true, flag: '🇯🇵' },
-  { code: 'KR', name: 'South Korea', region: 'asia-pacific', zone: 2, currency: 'KRW', phoneCode: '+82', isServed: true, flag: '🇰🇷' },
-  { code: 'CN', name: 'China', region: 'asia-pacific', zone: 2, currency: 'CNY', phoneCode: '+86', isServed: true, flag: '🇨🇳' },
-  { code: 'HK', name: 'Hong Kong', region: 'asia-pacific', zone: 2, currency: 'HKD', phoneCode: '+852', isServed: true, flag: '🇭🇰' },
-  { code: 'TW', name: 'Taiwan', region: 'asia-pacific', zone: 2, currency: 'TWD', phoneCode: '+886', isServed: true, flag: '🇹🇼' },
-  { code: 'MO', name: 'Macau', region: 'asia-pacific', zone: 2, currency: 'MOP', phoneCode: '+853', isServed: true, flag: '🇲🇴' },
-  { code: 'MN', name: 'Mongolia', region: 'asia-pacific', zone: 6, currency: 'MNT', phoneCode: '+976', isServed: true, flag: '🇲🇳' },
-  { code: 'KP', name: 'North Korea', region: 'asia-pacific', zone: 6, currency: 'KPW', phoneCode: '+850', isServed: false, notServedReason: 'International sanctions', flag: '🇰🇵' },
+// Phone codes (common ones)
+const phoneCodes: Record<string, string> = {
+  AF:'+93',AX:'+358',AL:'+355',DZ:'+213',AS:'+1',AD:'+376',AO:'+244',AI:'+1',AG:'+1',AR:'+54',AM:'+374',AW:'+297',AU:'+61',AT:'+43',AZ:'+994',BS:'+1',BH:'+973',BD:'+880',BB:'+1',BY:'+375',BE:'+32',BZ:'+501',BJ:'+229',BM:'+1',BT:'+975',BO:'+591',BA:'+387',BW:'+267',BR:'+55',BN:'+673',BG:'+359',BF:'+226',BI:'+257',KH:'+855',CM:'+237',CA:'+1',CV:'+238',KY:'+1',CF:'+236',TD:'+235',CL:'+56',CN:'+86',CO:'+57',KM:'+269',CK:'+682',CR:'+506',HR:'+385',CU:'+53',CW:'+599',CY:'+357',CZ:'+420',DK:'+45',DJ:'+253',DM:'+1',DO:'+1',EC:'+593',EG:'+20',SV:'+503',GQ:'+240',ER:'+291',EE:'+372',ET:'+251',FK:'+500',FO:'+298',FJ:'+679',FI:'+358',FR:'+33',GF:'+594',PF:'+689',GA:'+241',GM:'+220',GE:'+995',DE:'+49',GH:'+233',GI:'+350',GR:'+30',GL:'+299',GD:'+1',GP:'+590',GU:'+1',GT:'+502',GG:'+44',GW:'+245',GN:'+224',GY:'+592',HT:'+509',VA:'+39',HN:'+504',HK:'+852',HU:'+36',IS:'+354',ID:'+62',IQ:'+964',IE:'+353',IM:'+44',IL:'+972',IT:'+39',CI:'+225',JM:'+1',JP:'+81',JE:'+44',JO:'+962',KZ:'+7',KE:'+254',KI:'+686',KR:'+82',KW:'+965',KG:'+996',LA:'+856',LV:'+371',LB:'+961',LS:'+266',LR:'+231',LY:'+218',LI:'+423',LT:'+370',LU:'+352',MO:'+853',MK:'+389',MG:'+261',MW:'+265',MY:'+60',MV:'+960',ML:'+223',MT:'+356',MH:'+692',MQ:'+596',MR:'+222',MU:'+230',YT:'+262',MX:'+52',FM:'+691',MD:'+373',MC:'+377',MN:'+976',ME:'+382',MS:'+1',MA:'+212',MZ:'+258',MM:'+95',NR:'+674',NP:'+977',NL:'+31',NC:'+687',NZ:'+64',NI:'+505',NE:'+227',NG:'+234',NU:'+683',NF:'+672',MP:'+1',NO:'+47',OM:'+968',PK:'+92',PW:'+680',PS:'+970',PA:'+507',PG:'+675',PY:'+595',PE:'+51',PH:'+63',PN:'+64',PL:'+48',PT:'+351',PR:'+1',QA:'+974',RE:'+262',RO:'+40',RU:'+7',RW:'+250',BL:'+590',SH:'+290',KN:'+1',LC:'+1',MF:'+590',PM:'+508',VC:'+1',WS:'+685',SM:'+378',ST:'+239',SA:'+966',SN:'+221',RS:'+381',SC:'+248',SL:'+232',SG:'+65',SX:'+1',SK:'+421',SI:'+386',SB:'+677',SO:'+252',ZA:'+27',GS:'+500',SS:'+211',ES:'+34',LK:'+94',SD:'+249',SR:'+597',SJ:'+47',SZ:'+268',SE:'+46',CH:'+41',SY:'+963',TW:'+886',TJ:'+992',TZ:'+255',TH:'+66',TL:'+670',TG:'+228',TK:'+690',TO:'+676',TT:'+1',TN:'+216',TR:'+90',TM:'+993',TC:'+1',TV:'+688',VI:'+1',UG:'+256',UA:'+380',AE:'+971',GB:'+44',US:'+1',UY:'+598',UZ:'+998',VU:'+678',VE:'+58',VN:'+84',WF:'+681',EH:'+212',YE:'+967',ZM:'+260',ZW:'+263',CD:'+243',CG:'+242',
+};
 
-  // SOUTH ASIA - Zone 2
-  { code: 'BD', name: 'Bangladesh', region: 'asia-pacific', zone: 2, currency: 'BDT', phoneCode: '+880', isServed: true, flag: '🇧🇩' },
-  { code: 'PK', name: 'Pakistan', region: 'asia-pacific', zone: 2, currency: 'PKR', phoneCode: '+92', isServed: true, flag: '🇵🇰' },
-  { code: 'LK', name: 'Sri Lanka', region: 'asia-pacific', zone: 2, currency: 'LKR', phoneCode: '+94', isServed: true, flag: '🇱🇰' },
-  { code: 'NP', name: 'Nepal', region: 'asia-pacific', zone: 2, currency: 'NPR', phoneCode: '+977', isServed: true, flag: '🇳🇵' },
-  { code: 'BT', name: 'Bhutan', region: 'asia-pacific', zone: 2, currency: 'BTN', phoneCode: '+975', isServed: true, flag: '🇧🇹' },
-  { code: 'MV', name: 'Maldives', region: 'asia-pacific', zone: 2, currency: 'MVR', phoneCode: '+960', isServed: true, flag: '🇲🇻' },
-  { code: 'AF', name: 'Afghanistan', region: 'asia-pacific', zone: 6, currency: 'AFN', phoneCode: '+93', isServed: false, notServedReason: 'Limited courier access', flag: '🇦🇫' },
+// Currencies
+const currencies: Record<string, string> = {
+  AF:'AFN',AX:'EUR',AL:'ALL',DZ:'DZD',AS:'USD',AD:'EUR',AO:'AOA',AI:'XCD',AG:'XCD',AR:'ARS',AM:'AMD',AW:'AWG',AU:'AUD',AT:'EUR',AZ:'AZN',BS:'BSD',BH:'BHD',BD:'BDT',BB:'BBD',BY:'BYN',BE:'EUR',BZ:'BZD',BJ:'XOF',BM:'BMD',BT:'BTN',BO:'BOB',BA:'BAM',BW:'BWP',BR:'BRL',BN:'BND',BG:'BGN',BF:'XOF',BI:'BIF',KH:'KHR',CM:'XAF',CA:'CAD',CV:'CVE',KY:'KYD',CF:'XAF',TD:'XAF',CL:'CLP',CN:'CNY',CO:'COP',KM:'KMF',CK:'NZD',CR:'CRC',HR:'EUR',CU:'CUP',CW:'ANG',CY:'EUR',CZ:'CZK',DK:'DKK',DJ:'DJF',DM:'XCD',DO:'DOP',EC:'USD',EG:'EGP',SV:'USD',GQ:'XAF',ER:'ERN',EE:'EUR',ET:'ETB',FK:'FKP',FO:'DKK',FJ:'FJD',FI:'EUR',FR:'EUR',GF:'EUR',PF:'XPF',GA:'XAF',GM:'GMD',GE:'GEL',DE:'EUR',GH:'GHS',GI:'GIP',GR:'EUR',GL:'DKK',GD:'XCD',GP:'EUR',GU:'USD',GT:'GTQ',GG:'GBP',GW:'XOF',GN:'GNF',GY:'GYD',HT:'HTG',VA:'EUR',HN:'HNL',HK:'HKD',HU:'HUF',IS:'ISK',ID:'IDR',IQ:'IQD',IE:'EUR',IM:'GBP',IL:'ILS',IT:'EUR',CI:'XOF',JM:'JMD',JP:'JPY',JE:'GBP',JO:'JOD',KZ:'KZT',KE:'KES',KI:'AUD',KR:'KRW',KW:'KWD',KG:'KGS',LA:'LAK',LV:'EUR',LB:'LBP',LS:'LSL',LR:'LRD',LY:'LYD',LI:'CHF',LT:'EUR',LU:'EUR',MO:'MOP',MK:'MKD',MG:'MGA',MW:'MWK',MY:'MYR',MV:'MVR',ML:'XOF',MT:'EUR',MH:'USD',MQ:'EUR',MR:'MRU',MU:'MUR',YT:'EUR',MX:'MXN',FM:'USD',MD:'MDL',MC:'EUR',MN:'MNT',ME:'EUR',MS:'XCD',MA:'MAD',MZ:'MZN',MM:'MMK',NR:'AUD',NP:'NPR',NL:'EUR',NC:'XPF',NZ:'NZD',NI:'NIO',NE:'XOF',NG:'NGN',NU:'NZD',NF:'AUD',MP:'USD',NO:'NOK',OM:'OMR',PK:'PKR',PW:'USD',PS:'ILS',PA:'PAB',PG:'PGK',PY:'PYG',PE:'PEN',PH:'PHP',PN:'NZD',PL:'PLN',PT:'EUR',PR:'USD',QA:'QAR',RE:'EUR',RO:'RON',RU:'RUB',RW:'RWF',BL:'EUR',SH:'SHP',KN:'XCD',LC:'XCD',MF:'EUR',PM:'EUR',VC:'XCD',WS:'WST',SM:'EUR',ST:'STN',SA:'SAR',SN:'XOF',RS:'RSD',SC:'SCR',SL:'SLL',SG:'SGD',SX:'ANG',SK:'EUR',SI:'EUR',SB:'SBD',SO:'SOS',ZA:'ZAR',GS:'GBP',SS:'SSP',ES:'EUR',LK:'LKR',SD:'SDG',SR:'SRD',SJ:'NOK',SZ:'SZL',SE:'SEK',CH:'CHF',SY:'SYP',TW:'TWD',TJ:'TJS',TZ:'TZS',TH:'THB',TL:'USD',TG:'XOF',TK:'NZD',TO:'TOP',TT:'TTD',TN:'TND',TR:'TRY',TM:'TMT',TC:'USD',TV:'AUD',VI:'USD',UG:'UGX',UA:'UAH',AE:'AED',GB:'GBP',US:'USD',UY:'UYU',UZ:'UZS',VU:'VUV',VE:'VES',VN:'VND',WF:'XPF',EH:'MAD',YE:'YER',ZM:'ZMW',ZW:'ZWL',CD:'CDF',CG:'XAF',
+};
 
-  // CENTRAL ASIA - Zone 6
-  { code: 'KZ', name: 'Kazakhstan', region: 'asia-pacific', zone: 6, currency: 'KZT', phoneCode: '+7', isServed: true, flag: '🇰🇿' },
-  { code: 'UZ', name: 'Uzbekistan', region: 'asia-pacific', zone: 6, currency: 'UZS', phoneCode: '+998', isServed: true, flag: '🇺🇿' },
-  { code: 'KG', name: 'Kyrgyzstan', region: 'asia-pacific', zone: 6, currency: 'KGS', phoneCode: '+996', isServed: true, flag: '🇰🇬' },
-  { code: 'TJ', name: 'Tajikistan', region: 'asia-pacific', zone: 6, currency: 'TJS', phoneCode: '+992', isServed: true, flag: '🇹🇯' },
-  { code: 'TM', name: 'Turkmenistan', region: 'asia-pacific', zone: 6, currency: 'TMT', phoneCode: '+993', isServed: true, flag: '🇹🇲' },
-
-  // CAUCASUS - Zone 6
-  { code: 'GE', name: 'Georgia', region: 'asia-pacific', zone: 6, currency: 'GEL', phoneCode: '+995', isServed: true, flag: '🇬🇪' },
-  { code: 'AM', name: 'Armenia', region: 'asia-pacific', zone: 6, currency: 'AMD', phoneCode: '+374', isServed: true, flag: '🇦🇲' },
-  { code: 'AZ', name: 'Azerbaijan', region: 'asia-pacific', zone: 6, currency: 'AZN', phoneCode: '+994', isServed: true, flag: '🇦🇿' },
-
-  // OCEANIA - Zone 5
-  { code: 'AU', name: 'Australia', region: 'asia-pacific', zone: 5, currency: 'AUD', phoneCode: '+61', isServed: true, flag: '🇦🇺' },
-  { code: 'NZ', name: 'New Zealand', region: 'asia-pacific', zone: 5, currency: 'NZD', phoneCode: '+64', isServed: true, flag: '🇳🇿' },
-  { code: 'FJ', name: 'Fiji', region: 'asia-pacific', zone: 5, currency: 'FJD', phoneCode: '+679', isServed: true, flag: '🇫🇯' },
-  { code: 'PG', name: 'Papua New Guinea', region: 'asia-pacific', zone: 6, currency: 'PGK', phoneCode: '+675', isServed: true, flag: '🇵🇬' },
-  { code: 'NC', name: 'New Caledonia', region: 'asia-pacific', zone: 5, currency: 'XPF', phoneCode: '+687', isServed: true, flag: '🇳🇨' },
-  { code: 'PF', name: 'French Polynesia', region: 'asia-pacific', zone: 5, currency: 'XPF', phoneCode: '+689', isServed: true, flag: '🇵🇫' },
-  { code: 'WS', name: 'Samoa', region: 'asia-pacific', zone: 6, currency: 'WST', phoneCode: '+685', isServed: true, flag: '🇼🇸' },
-  { code: 'TO', name: 'Tonga', region: 'asia-pacific', zone: 6, currency: 'TOP', phoneCode: '+676', isServed: true, flag: '🇹🇴' },
-  { code: 'VU', name: 'Vanuatu', region: 'asia-pacific', zone: 6, currency: 'VUV', phoneCode: '+678', isServed: true, flag: '🇻🇺' },
-  { code: 'SB', name: 'Solomon Islands', region: 'asia-pacific', zone: 6, currency: 'SBD', phoneCode: '+677', isServed: true, flag: '🇸🇧' },
-  { code: 'GU', name: 'Guam', region: 'asia-pacific', zone: 5, currency: 'USD', phoneCode: '+1', isServed: true, flag: '🇬🇺' },
-
-  // EUROPE - Zone 3
-  { code: 'GB', name: 'United Kingdom', region: 'europe', zone: 3, currency: 'GBP', phoneCode: '+44', isServed: true, flag: '🇬🇧' },
-  { code: 'DE', name: 'Germany', region: 'europe', zone: 3, currency: 'EUR', phoneCode: '+49', isServed: true, flag: '🇩🇪' },
-  { code: 'FR', name: 'France', region: 'europe', zone: 3, currency: 'EUR', phoneCode: '+33', isServed: true, flag: '🇫🇷' },
-  { code: 'NL', name: 'Netherlands', region: 'europe', zone: 3, currency: 'EUR', phoneCode: '+31', isServed: true, flag: '🇳🇱' },
-  { code: 'BE', name: 'Belgium', region: 'europe', zone: 3, currency: 'EUR', phoneCode: '+32', isServed: true, flag: '🇧🇪' },
-  { code: 'IT', name: 'Italy', region: 'europe', zone: 3, currency: 'EUR', phoneCode: '+39', isServed: true, flag: '🇮🇹' },
-  { code: 'ES', name: 'Spain', region: 'europe', zone: 3, currency: 'EUR', phoneCode: '+34', isServed: true, flag: '🇪🇸' },
-  { code: 'PT', name: 'Portugal', region: 'europe', zone: 3, currency: 'EUR', phoneCode: '+351', isServed: true, flag: '🇵🇹' },
-  { code: 'CH', name: 'Switzerland', region: 'europe', zone: 3, currency: 'CHF', phoneCode: '+41', isServed: true, flag: '🇨🇭' },
-  { code: 'AT', name: 'Austria', region: 'europe', zone: 3, currency: 'EUR', phoneCode: '+43', isServed: true, flag: '🇦🇹' },
-  { code: 'SE', name: 'Sweden', region: 'europe', zone: 3, currency: 'SEK', phoneCode: '+46', isServed: true, flag: '🇸🇪' },
-  { code: 'NO', name: 'Norway', region: 'europe', zone: 3, currency: 'NOK', phoneCode: '+47', isServed: true, flag: '🇳🇴' },
-  { code: 'DK', name: 'Denmark', region: 'europe', zone: 3, currency: 'DKK', phoneCode: '+45', isServed: true, flag: '🇩🇰' },
-  { code: 'FI', name: 'Finland', region: 'europe', zone: 3, currency: 'EUR', phoneCode: '+358', isServed: true, flag: '🇫🇮' },
-  { code: 'IE', name: 'Ireland', region: 'europe', zone: 3, currency: 'EUR', phoneCode: '+353', isServed: true, flag: '🇮🇪' },
-  { code: 'PL', name: 'Poland', region: 'europe', zone: 3, currency: 'PLN', phoneCode: '+48', isServed: true, flag: '🇵🇱' },
-  { code: 'CZ', name: 'Czech Republic', region: 'europe', zone: 3, currency: 'CZK', phoneCode: '+420', isServed: true, flag: '🇨🇿' },
-  { code: 'GR', name: 'Greece', region: 'europe', zone: 3, currency: 'EUR', phoneCode: '+30', isServed: true, flag: '🇬🇷' },
-  { code: 'HU', name: 'Hungary', region: 'europe', zone: 3, currency: 'HUF', phoneCode: '+36', isServed: true, flag: '🇭🇺' },
-  { code: 'RO', name: 'Romania', region: 'europe', zone: 3, currency: 'RON', phoneCode: '+40', isServed: true, flag: '🇷🇴' },
-  { code: 'BG', name: 'Bulgaria', region: 'europe', zone: 3, currency: 'BGN', phoneCode: '+359', isServed: true, flag: '🇧🇬' },
-  { code: 'HR', name: 'Croatia', region: 'europe', zone: 3, currency: 'EUR', phoneCode: '+385', isServed: true, flag: '🇭🇷' },
-  { code: 'SK', name: 'Slovakia', region: 'europe', zone: 3, currency: 'EUR', phoneCode: '+421', isServed: true, flag: '🇸🇰' },
-  { code: 'SI', name: 'Slovenia', region: 'europe', zone: 3, currency: 'EUR', phoneCode: '+386', isServed: true, flag: '🇸🇮' },
-  { code: 'EE', name: 'Estonia', region: 'europe', zone: 3, currency: 'EUR', phoneCode: '+372', isServed: true, flag: '🇪🇪' },
-  { code: 'LV', name: 'Latvia', region: 'europe', zone: 3, currency: 'EUR', phoneCode: '+371', isServed: true, flag: '🇱🇻' },
-  { code: 'LT', name: 'Lithuania', region: 'europe', zone: 3, currency: 'EUR', phoneCode: '+370', isServed: true, flag: '🇱🇹' },
-  { code: 'UA', name: 'Ukraine', region: 'europe', zone: 6, currency: 'UAH', phoneCode: '+380', isServed: false, notServedReason: 'Service suspended due to conflict', flag: '🇺🇦' },
-  { code: 'RS', name: 'Serbia', region: 'europe', zone: 3, currency: 'RSD', phoneCode: '+381', isServed: true, flag: '🇷🇸' },
-  { code: 'BY', name: 'Belarus', region: 'europe', zone: 6, currency: 'BYN', phoneCode: '+375', isServed: false, notServedReason: 'International sanctions', flag: '🇧🇾' },
-  { code: 'MT', name: 'Malta', region: 'europe', zone: 3, currency: 'EUR', phoneCode: '+356', isServed: true, flag: '🇲🇹' },
-  { code: 'CY', name: 'Cyprus', region: 'europe', zone: 3, currency: 'EUR', phoneCode: '+357', isServed: true, flag: '🇨🇾' },
-  { code: 'LU', name: 'Luxembourg', region: 'europe', zone: 3, currency: 'EUR', phoneCode: '+352', isServed: true, flag: '🇱🇺' },
-  { code: 'IS', name: 'Iceland', region: 'europe', zone: 3, currency: 'ISK', phoneCode: '+354', isServed: true, flag: '🇮🇸' },
-  { code: 'MC', name: 'Monaco', region: 'europe', zone: 3, currency: 'EUR', phoneCode: '+377', isServed: true, flag: '🇲🇨' },
-  { code: 'AD', name: 'Andorra', region: 'europe', zone: 3, currency: 'EUR', phoneCode: '+376', isServed: true, flag: '🇦🇩' },
-  { code: 'SM', name: 'San Marino', region: 'europe', zone: 3, currency: 'EUR', phoneCode: '+378', isServed: true, flag: '🇸🇲' },
-  { code: 'LI', name: 'Liechtenstein', region: 'europe', zone: 3, currency: 'CHF', phoneCode: '+423', isServed: true, flag: '🇱🇮' },
-  { code: 'VA', name: 'Vatican City', region: 'europe', zone: 3, currency: 'EUR', phoneCode: '+39', isServed: true, flag: '🇻🇦' },
-  { code: 'RU', name: 'Russia', region: 'europe', zone: 6, currency: 'RUB', phoneCode: '+7', isServed: false, notServedReason: 'International sanctions', flag: '🇷🇺' },
-  { code: 'AL', name: 'Albania', region: 'europe', zone: 3, currency: 'ALL', phoneCode: '+355', isServed: true, flag: '🇦🇱' },
-  { code: 'MK', name: 'North Macedonia', region: 'europe', zone: 3, currency: 'MKD', phoneCode: '+389', isServed: true, flag: '🇲🇰' },
-  { code: 'BA', name: 'Bosnia and Herzegovina', region: 'europe', zone: 3, currency: 'BAM', phoneCode: '+387', isServed: true, flag: '🇧🇦' },
-  { code: 'ME', name: 'Montenegro', region: 'europe', zone: 3, currency: 'EUR', phoneCode: '+382', isServed: true, flag: '🇲🇪' },
-  { code: 'XK', name: 'Kosovo', region: 'europe', zone: 3, currency: 'EUR', phoneCode: '+383', isServed: true, flag: '🇽🇰' },
-  { code: 'MD', name: 'Moldova', region: 'europe', zone: 3, currency: 'MDL', phoneCode: '+373', isServed: true, flag: '🇲🇩' },
-
-  // AMERICAS - Zone 4
-  { code: 'US', name: 'United States', region: 'americas', zone: 4, currency: 'USD', phoneCode: '+1', isServed: true, flag: '🇺🇸' },
-  { code: 'CA', name: 'Canada', region: 'americas', zone: 4, currency: 'CAD', phoneCode: '+1', isServed: true, flag: '🇨🇦' },
-  { code: 'MX', name: 'Mexico', region: 'americas', zone: 4, currency: 'MXN', phoneCode: '+52', isServed: true, flag: '🇲🇽' },
-  { code: 'BR', name: 'Brazil', region: 'americas', zone: 4, currency: 'BRL', phoneCode: '+55', isServed: true, flag: '🇧🇷' },
-  { code: 'AR', name: 'Argentina', region: 'americas', zone: 4, currency: 'ARS', phoneCode: '+54', isServed: true, flag: '🇦🇷' },
-  { code: 'CL', name: 'Chile', region: 'americas', zone: 4, currency: 'CLP', phoneCode: '+56', isServed: true, flag: '🇨🇱' },
-  { code: 'CO', name: 'Colombia', region: 'americas', zone: 4, currency: 'COP', phoneCode: '+57', isServed: true, flag: '🇨🇴' },
-  { code: 'PE', name: 'Peru', region: 'americas', zone: 4, currency: 'PEN', phoneCode: '+51', isServed: true, flag: '🇵🇪' },
-  { code: 'VE', name: 'Venezuela', region: 'americas', zone: 6, currency: 'VES', phoneCode: '+58', isServed: false, notServedReason: 'Banking restrictions', flag: '🇻🇪' },
-  { code: 'EC', name: 'Ecuador', region: 'americas', zone: 4, currency: 'USD', phoneCode: '+593', isServed: true, flag: '🇪🇨' },
-  { code: 'UY', name: 'Uruguay', region: 'americas', zone: 4, currency: 'UYU', phoneCode: '+598', isServed: true, flag: '🇺🇾' },
-  { code: 'PY', name: 'Paraguay', region: 'americas', zone: 4, currency: 'PYG', phoneCode: '+595', isServed: true, flag: '🇵🇾' },
-  { code: 'BO', name: 'Bolivia', region: 'americas', zone: 4, currency: 'BOB', phoneCode: '+591', isServed: true, flag: '🇧🇴' },
-  { code: 'CR', name: 'Costa Rica', region: 'americas', zone: 4, currency: 'CRC', phoneCode: '+506', isServed: true, flag: '🇨🇷' },
-  { code: 'PA', name: 'Panama', region: 'americas', zone: 4, currency: 'PAB', phoneCode: '+507', isServed: true, flag: '🇵🇦' },
-  { code: 'GT', name: 'Guatemala', region: 'americas', zone: 4, currency: 'GTQ', phoneCode: '+502', isServed: true, flag: '🇬🇹' },
-  { code: 'CU', name: 'Cuba', region: 'americas', zone: 6, currency: 'CUP', phoneCode: '+53', isServed: false, notServedReason: 'Trade restrictions', flag: '🇨🇺' },
-  { code: 'DO', name: 'Dominican Republic', region: 'americas', zone: 4, currency: 'DOP', phoneCode: '+1', isServed: true, flag: '🇩🇴' },
-  { code: 'PR', name: 'Puerto Rico', region: 'americas', zone: 4, currency: 'USD', phoneCode: '+1', isServed: true, flag: '🇵🇷' },
-  { code: 'JM', name: 'Jamaica', region: 'americas', zone: 4, currency: 'JMD', phoneCode: '+1', isServed: true, flag: '🇯🇲' },
-  { code: 'TT', name: 'Trinidad and Tobago', region: 'americas', zone: 4, currency: 'TTD', phoneCode: '+1', isServed: true, flag: '🇹🇹' },
-  { code: 'BS', name: 'Bahamas', region: 'americas', zone: 4, currency: 'BSD', phoneCode: '+1', isServed: true, flag: '🇧🇸' },
-  { code: 'BB', name: 'Barbados', region: 'americas', zone: 4, currency: 'BBD', phoneCode: '+1', isServed: true, flag: '🇧🇧' },
-  { code: 'HT', name: 'Haiti', region: 'americas', zone: 6, currency: 'HTG', phoneCode: '+509', isServed: true, flag: '🇭🇹' },
-  { code: 'SV', name: 'El Salvador', region: 'americas', zone: 4, currency: 'USD', phoneCode: '+503', isServed: true, flag: '🇸🇻' },
-  { code: 'HN', name: 'Honduras', region: 'americas', zone: 4, currency: 'HNL', phoneCode: '+504', isServed: true, flag: '🇭🇳' },
-  { code: 'NI', name: 'Nicaragua', region: 'americas', zone: 4, currency: 'NIO', phoneCode: '+505', isServed: true, flag: '🇳🇮' },
-  { code: 'GY', name: 'Guyana', region: 'americas', zone: 4, currency: 'GYD', phoneCode: '+592', isServed: true, flag: '🇬🇾' },
-  { code: 'SR', name: 'Suriname', region: 'americas', zone: 4, currency: 'SRD', phoneCode: '+597', isServed: true, flag: '🇸🇷' },
-  { code: 'BZ', name: 'Belize', region: 'americas', zone: 4, currency: 'BZD', phoneCode: '+501', isServed: true, flag: '🇧🇿' },
-
-  // AFRICA - Zone 6
-  { code: 'ZA', name: 'South Africa', region: 'africa', zone: 6, currency: 'ZAR', phoneCode: '+27', isServed: true, flag: '🇿🇦' },
-  { code: 'NG', name: 'Nigeria', region: 'africa', zone: 6, currency: 'NGN', phoneCode: '+234', isServed: true, flag: '🇳🇬' },
-  { code: 'KE', name: 'Kenya', region: 'africa', zone: 6, currency: 'KES', phoneCode: '+254', isServed: true, flag: '🇰🇪' },
-  { code: 'GH', name: 'Ghana', region: 'africa', zone: 6, currency: 'GHS', phoneCode: '+233', isServed: true, flag: '🇬🇭' },
-  { code: 'MA', name: 'Morocco', region: 'africa', zone: 6, currency: 'MAD', phoneCode: '+212', isServed: true, flag: '🇲🇦' },
-  { code: 'TN', name: 'Tunisia', region: 'africa', zone: 6, currency: 'TND', phoneCode: '+216', isServed: true, flag: '🇹🇳' },
-  { code: 'ET', name: 'Ethiopia', region: 'africa', zone: 6, currency: 'ETB', phoneCode: '+251', isServed: true, flag: '🇪🇹' },
-  { code: 'TZ', name: 'Tanzania', region: 'africa', zone: 6, currency: 'TZS', phoneCode: '+255', isServed: true, flag: '🇹🇿' },
-  { code: 'UG', name: 'Uganda', region: 'africa', zone: 6, currency: 'UGX', phoneCode: '+256', isServed: true, flag: '🇺🇬' },
-  { code: 'RW', name: 'Rwanda', region: 'africa', zone: 6, currency: 'RWF', phoneCode: '+250', isServed: true, flag: '🇷🇼' },
-  { code: 'SN', name: 'Senegal', region: 'africa', zone: 6, currency: 'XOF', phoneCode: '+221', isServed: true, flag: '🇸🇳' },
-  { code: 'CI', name: 'Ivory Coast', region: 'africa', zone: 6, currency: 'XOF', phoneCode: '+225', isServed: true, flag: '🇨🇮' },
-  { code: 'CM', name: 'Cameroon', region: 'africa', zone: 6, currency: 'XAF', phoneCode: '+237', isServed: true, flag: '🇨🇲' },
-  { code: 'AO', name: 'Angola', region: 'africa', zone: 6, currency: 'AOA', phoneCode: '+244', isServed: true, flag: '🇦🇴' },
-  { code: 'MU', name: 'Mauritius', region: 'africa', zone: 6, currency: 'MUR', phoneCode: '+230', isServed: true, flag: '🇲🇺' },
-  { code: 'MZ', name: 'Mozambique', region: 'africa', zone: 6, currency: 'MZN', phoneCode: '+258', isServed: true, flag: '🇲🇿' },
-  { code: 'ZW', name: 'Zimbabwe', region: 'africa', zone: 6, currency: 'ZWL', phoneCode: '+263', isServed: true, flag: '🇿🇼' },
-  { code: 'BW', name: 'Botswana', region: 'africa', zone: 6, currency: 'BWP', phoneCode: '+267', isServed: true, flag: '🇧🇼' },
-  { code: 'NA', name: 'Namibia', region: 'africa', zone: 6, currency: 'NAD', phoneCode: '+264', isServed: true, flag: '🇳🇦' },
-  { code: 'ZM', name: 'Zambia', region: 'africa', zone: 6, currency: 'ZMW', phoneCode: '+260', isServed: true, flag: '🇿🇲' },
-  { code: 'DZ', name: 'Algeria', region: 'africa', zone: 6, currency: 'DZD', phoneCode: '+213', isServed: true, flag: '🇩🇿' },
-  { code: 'LY', name: 'Libya', region: 'africa', zone: 6, currency: 'LYD', phoneCode: '+218', isServed: false, notServedReason: 'Limited courier access', flag: '🇱🇾' },
-  { code: 'SD', name: 'Sudan', region: 'africa', zone: 6, currency: 'SDG', phoneCode: '+249', isServed: false, notServedReason: 'International sanctions', flag: '🇸🇩' },
-  { code: 'SS', name: 'South Sudan', region: 'africa', zone: 6, currency: 'SSP', phoneCode: '+211', isServed: false, notServedReason: 'Limited courier access', flag: '🇸🇸' },
-  { code: 'SO', name: 'Somalia', region: 'africa', zone: 6, currency: 'SOS', phoneCode: '+252', isServed: false, notServedReason: 'Limited courier access', flag: '🇸🇴' },
+// ── Master country-zone-carrier data from Unified_Rate_Card.xlsx ──
+// Each entry: [Country, ISO Code, RateZone, Carrier]
+const COUNTRY_ZONE_DATA: [string, string, RateZone, CarrierType][] = [
+  ['Afghanistan','AF','C','Fedex'],
+  ['Albania','AL','I','Fedex'],
+  ['Algeria','DZ','O','Fedex'],
+  ['American Samoa','AS','E','Fedex'],
+  ['Andorra','AD','I','Fedex'],
+  ['Angola','AO','O','Fedex'],
+  ['Anguilla','AI','J','Fedex'],
+  ['Antigua and Barbuda','AG','J','Fedex'],
+  ['Argentina','AR','J','Fedex'],
+  ['Armenia','AM','I','Fedex'],
+  ['Aruba','AW','J','Fedex'],
+  ['Australia','AU','E','Fedex'],
+  ['Austria','AT','I','Fedex'],
+  ['Azerbaijan','AZ','I','Fedex'],
+  ['Bahamas','BS','J','Fedex'],
+  ['United Arab Emirates','AE','ME1','Aramex'],
+  ['Bangladesh','BD','B','Fedex'],
+  ['Barbados','BB','J','Fedex'],
+  ['Belgium','BE','F','Fedex'],
+  ['Belize','BZ','J','Fedex'],
+  ['Benin','BJ','Q','Fedex'],
+  ['Bermuda','BM','J','Fedex'],
+  ['Bhutan','BT','B','Fedex'],
+  ['Bolivia','BO','J','Fedex'],
+  ['Bosnia and Herzegovina','BA','I','Fedex'],
+  ['Botswana','BW','P','Fedex'],
+  ['Brazil','BR','J','Fedex'],
+  ['Brunei Darussalam','BN','E','Fedex'],
+  ['Bulgaria','BG','I','Fedex'],
+  ['Burkina Faso','BF','Q','Fedex'],
+  ['Burundi','BI','Q','Fedex'],
+  ['Cambodia','KH','E','Fedex'],
+  ['Cameroon','CM','Q','Fedex'],
+  ['Canada','CA','L','Fedex'],
+  ['Cape Verde','CV','Q','Fedex'],
+  ['Cayman Islands','KY','J','Fedex'],
+  ['Central African Republic','CF','N','Fedex'],
+  ['Chad','TD','N','Fedex'],
+  ['Chile','CL','J','Fedex'],
+  ['China','CN','D','Fedex'],
+  ['Colombia','CO','J','Fedex'],
+  ['Comoros','KM','J','Fedex'],
+  ['Cook Islands','CK','E','Fedex'],
+  ['Costa Rica','CR','J','Fedex'],
+  ['Croatia','HR','I','Fedex'],
+  ['Bahrain','BH','ME2','Aramex'],
+  ['Czech Republic','CZ','I','Fedex'],
+  ['Denmark','DK','F','Fedex'],
+  ['Djibouti','DJ','N','Fedex'],
+  ['Dominica','DM','J','Fedex'],
+  ['Dominican Republic','DO','J','Fedex'],
+  ['Ecuador','EC','J','Fedex'],
+  ['Cyprus','CY','ME4','Aramex'],
+  ['El Salvador','SV','J','Fedex'],
+  ['Equatorial Guinea','GQ','Q','Fedex'],
+  ['Eritrea','ER','N','Fedex'],
+  ['Estonia','EE','I','Fedex'],
+  ['Ethiopia','ET','N','Fedex'],
+  ['Faroe Islands','FO','F','Fedex'],
+  ['Fiji','FJ','E','Fedex'],
+  ['Finland','FI','I','Fedex'],
+  ['France','FR','F','Fedex'],
+  ['French Guiana','GF','J','Fedex'],
+  ['French Polynesia','PF','E','Fedex'],
+  ['Gabon','GA','Q','Fedex'],
+  ['Gambia','GM','Q','Fedex'],
+  ['Georgia','GE','I','Fedex'],
+  ['Germany','DE','F','Fedex'],
+  ['Ghana','GH','O','Fedex'],
+  ['Gibraltar','GI','I','Fedex'],
+  ['Greece','GR','I','Fedex'],
+  ['Greenland','GL','F','Fedex'],
+  ['Grenada','GD','J','Fedex'],
+  ['Guadeloupe','GP','J','Fedex'],
+  ['Guam','GU','E','Fedex'],
+  ['Guatemala','GT','J','Fedex'],
+  ['Guinea-Bissau','GW','Q','Fedex'],
+  ['Guinea','GN','Q','Fedex'],
+  ['Guyana','GY','J','Fedex'],
+  ['Haiti','HT','J','Fedex'],
+  ['Honduras','HN','J','Fedex'],
+  ['Hong Kong','HK','D','Fedex'],
+  ['Hungary','HU','I','Fedex'],
+  ['Iceland','IS','I','Fedex'],
+  ['Indonesia','ID','E','Fedex'],
+  ['Iraq','IQ','C','Fedex'],
+  ['Ireland','IE','I','Fedex'],
+  ['Israel','IL','I','Fedex'],
+  ['Italy','IT','F','Fedex'],
+  ['Ivory Coast','CI','O','Fedex'],
+  ['Jamaica','JM','J','Fedex'],
+  ['Japan','JP','H','Fedex'],
+  ['Egypt','EG','ME4','Aramex'],
+  ['Kazakhstan','KZ','I','Fedex'],
+  ['Kenya','KE','N','Fedex'],
+  ['Jordan','JO','ME4','Aramex'],
+  ['Kyrgyzstan','KG','I','Fedex'],
+  ['Laos','LA','J','Fedex'],
+  ['Latvia','LV','I','Fedex'],
+  ['Kuwait','KW','ME2','Aramex'],
+  ['Lesotho','LS','P','Fedex'],
+  ['Liberia','LR','Q','Fedex'],
+  ['Liechtenstein','LI','F','Fedex'],
+  ['Lithuania','LT','I','Fedex'],
+  ['Luxembourg','LU','F','Fedex'],
+  ['Macau','MO','J','Fedex'],
+  ['Macedonia','MK','I','Fedex'],
+  ['Madagascar','MG','Q','Fedex'],
+  ['Malawi','MW','Q','Fedex'],
+  ['Malaysia','MY','E','Fedex'],
+  ['Maldives','MV','B','Fedex'],
+  ['Mali','ML','Q','Fedex'],
+  ['Malta','MT','I','Fedex'],
+  ['Marshall Islands','MH','E','Fedex'],
+  ['Mauritania','MR','Q','Fedex'],
+  ['Mauritius','MU','N','Fedex'],
+  ['Mexico','MX','G','Fedex'],
+  ['Micronesia','FM','E','Fedex'],
+  ['Moldova','MD','I','Fedex'],
+  ['Monaco','MC','I','Fedex'],
+  ['Mongolia','MN','E','Fedex'],
+  ['Montenegro','ME','I','Fedex'],
+  ['Morocco','MA','O','Fedex'],
+  ['Mozambique','MZ','Q','Fedex'],
+  ['Myanmar','MM','C','Fedex'],
+  ['Namibia','NA','P','Fedex'],
+  ['Nepal','NP','B','Fedex'],
+  ['Netherlands','NL','F','Fedex'],
+  ['New Caledonia','NC','E','Fedex'],
+  ['New Zealand','NZ','E','Fedex'],
+  ['Nicaragua','NI','J','Fedex'],
+  ['Niger','NE','Q','Fedex'],
+  ['Nigeria','NG','O','Fedex'],
+  ['Norway','NO','I','Fedex'],
+  ['Lebanon','LB','ME4','Aramex'],
+  ['Oman','OM','Oman','Aramex'],
+  ['Palestine','PS','C','Fedex'],
+  ['Panama','PA','J','Fedex'],
+  ['Papua New Guinea','PG','E','Fedex'],
+  ['Paraguay','PY','J','Fedex'],
+  ['Peru','PE','J','Fedex'],
+  ['Philippines','PH','E','Fedex'],
+  ['Poland','PL','I','Fedex'],
+  ['Portugal','PT','I','Fedex'],
+  ['Puerto Rico','PR','J','Fedex'],
+  ['Qatar','QA','Qatar','Aramex'],
+  ['Romania','RO','I','Fedex'],
+  ['Russia','RU','I','Fedex'],
+  ['Rwanda','RW','P','Fedex'],
+  ['Samoa','WS','E','Fedex'],
+  ['San Marino','SM','J','Fedex'],
+  ['Saudi Arabia','SA','ME3','Aramex'],
+  ['Senegal','SN','Q','Fedex'],
+  ['Serbia','RS','I','Fedex'],
+  ['Seychelles','SC','O','Fedex'],
+  ['Sierra Leone','SL','Q','Fedex'],
+  ['Singapore','SG','B','Fedex'],
+  ['Slovakia','SK','I','Fedex'],
+  ['Slovenia','SI','I','Fedex'],
+  ['Solomon Islands','SB','E','Fedex'],
+  ['South Africa','ZA','K','Fedex'],
+  ['South Korea','KR','E','Fedex'],
+  ['South Sudan','SS','N','Fedex'],
+  ['Spain','ES','F','Fedex'],
+  ['Sri Lanka','LK','B','Fedex'],
+  ['Suriname','SR','J','Fedex'],
+  ['Swaziland','SZ','P','Fedex'],
+  ['Sweden','SE','I','Fedex'],
+  ['Switzerland','CH','F','Fedex'],
+  ['Syria','SY','C','Fedex'],
+  ['Taiwan','TW','E','Fedex'],
+  ['Tajikistan','TJ','J','Fedex'],
+  ['Tanzania','TZ','N','Fedex'],
+  ['Thailand','TH','D','Fedex'],
+  ['Timor-Leste','TL','E','Fedex'],
+  ['Togo','TG','Q','Fedex'],
+  ['Tonga','TO','E','Fedex'],
+  ['Trinidad and Tobago','TT','J','Fedex'],
+  ['Tunisia','TN','Q','Fedex'],
+  ['Turkmenistan','TM','C','Fedex'],
+  ['Turkey','TR','ME4','Aramex'],
+  ['United Kingdom','GB','F','Fedex'],
+  ['United States','US','G','Fedex'],
+  ['Uruguay','UY','J','Fedex'],
+  ['Uzbekistan','UZ','I','Fedex'],
+  ['Vanuatu','VU','E','Fedex'],
+  ['Venezuela','VE','J','Fedex'],
+  ['Vietnam','VN','E','Fedex'],
+  ['Yemen','YE','ME4','Aramex'],
+  ['Zambia','ZM','P','Fedex'],
+  ['Zimbabwe','ZW','P','Fedex'],
 ];
+
+// Not-served countries (sanctions, conflict, limited access)
+const NOT_SERVED: Record<string, string> = {
+  'AF': 'Limited courier access',
+  'IQ': 'Limited courier access',
+  'SY': 'Limited courier access',
+  'YE': 'Limited courier access',
+  'SS': 'Limited courier access',
+  'SO': 'Limited courier access',
+  'CU': 'Trade restrictions',
+  'KP': 'International sanctions',
+  'IR': 'International sanctions',
+  'SD': 'International sanctions',
+  'VE': 'Banking restrictions',
+  'LY': 'Limited courier access',
+  'ER': 'Limited courier access',
+  'TM': 'Limited courier access',
+  'PS': 'Limited courier access',
+};
+
+export const countries: Country[] = COUNTRY_ZONE_DATA.map(([name, code, rateZone, carrier]) => ({
+  code,
+  name,
+  region: regionFromZone(rateZone, name),
+  zone: legacyZone(rateZone),
+  rateZone,
+  carrier,
+  currency: currencies[code] || 'USD',
+  phoneCode: phoneCodes[code] || '+1',
+  isServed: !NOT_SERVED[code],
+  ...(NOT_SERVED[code] ? { notServedReason: NOT_SERVED[code] } : {}),
+  flag: flag(code),
+}));
 
 // Helper functions
 export const getCountryByCode = (code: string): Country | undefined => {
@@ -212,7 +304,7 @@ export const getCountryByCode = (code: string): Country | undefined => {
 };
 
 export const getServedCountries = (): Country[] => {
-  return countries.filter(c => c.isServed);
+  return countries.filter(c => c.isServed).sort((a, b) => a.name.localeCompare(b.name));
 };
 
 export const getNotServedCountries = (): Country[] => {
@@ -229,8 +321,8 @@ export const getCountriesByZone = (zone: ShippingZone): Country[] => {
 
 export const searchCountries = (query: string): Country[] => {
   const lowerQuery = query.toLowerCase();
-  return countries.filter(c => 
-    c.name.toLowerCase().includes(lowerQuery) || 
+  return countries.filter(c =>
+    c.name.toLowerCase().includes(lowerQuery) ||
     c.code.toLowerCase().includes(lowerQuery)
   );
 };

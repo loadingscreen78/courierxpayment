@@ -8,6 +8,7 @@
 import { MedicineBookingData } from '@/views/MedicineBooking';
 import { DocumentBookingData } from '@/views/DocumentBooking';
 import { GiftBookingData } from '@/views/GiftBooking';
+import { calculateInternationalShippingCost } from '@/lib/shipping/rateCalculator';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -177,30 +178,11 @@ export function computeDeclaredValue(
 // Cost computation
 // ---------------------------------------------------------------------------
 
-/** Destination multipliers for medicine shipments. */
-const MEDICINE_DESTINATION_MULTIPLIER: Record<string, number> = {
-  'United States': 1.5,
-  'United Kingdom': 1.3,
-  'Canada': 1.4,
-  'Australia': 1.6,
-  'UAE': 1.2,
-  'Singapore': 1.3,
-};
-
-/** Packet-type multipliers for document shipments. */
-const DOCUMENT_PACKET_MULTIPLIER: Record<string, number> = {
-  envelope: 1.0,
-  'small-packet': 1.2,
-  'large-packet': 1.5,
-  tube: 1.3,
-};
-
 /**
- * Replicate each legacy service's pricing logic.
+ * Compute shipping costs using the real rate card (Unified_Rate_Card.xlsx).
  *
- * Medicine: base ₹1500 + ₹200/kg (ceil) × destination multiplier + 18% GST
- * Document: chargeableWeight × ₹500/kg × packet multiplier (no GST)
- * Gift:     base GCC ₹1450 / other ₹1850 + ₹100 per item over 3 (no GST)
+ * Uses FedEx/Aramex rate tables with zone-based lookup, fuel surcharge,
+ * export clearance, and 18% GST — matching the Calc_Logic sheet exactly.
  *
  * Add-on costs are NOT included here — they are handled separately by the
  * booking form after the lifecycle API call.
@@ -209,57 +191,34 @@ export function computeCosts(
   formData: MedicineBookingData | DocumentBookingData | GiftBookingData,
   type: 'medicine' | 'document' | 'gift',
 ): { shippingCost: number; gstAmount: number; totalAmount: number } {
-  switch (type) {
-    case 'medicine': {
-      const data = formData as MedicineBookingData;
-      const totalWeight = data.medicines.reduce(
-        (sum, med) => sum + med.unitCount * 0.05,
-        0,
-      );
-      let baseShippingCost = 1500;
-      baseShippingCost += Math.ceil(totalWeight) * 200;
-      const multiplier =
-        MEDICINE_DESTINATION_MULTIPLIER[data.consigneeAddress.country] || 1.0;
-      baseShippingCost *= multiplier;
+  const weightKg = computeWeightKg(formData, type);
+  const countryCode = formData.consigneeAddress.country;
 
-      const gstAmount = baseShippingCost * 0.18;
-      const totalAmount = baseShippingCost + gstAmount;
-
-      return {
-        shippingCost: Math.round(baseShippingCost),
-        gstAmount: Math.round(gstAmount),
-        totalAmount: Math.round(totalAmount),
-      };
-    }
-
-    case 'document': {
-      const data = formData as DocumentBookingData;
-      const weightInKg = data.weight / 1000;
-      const volumetricWeight =
-        (data.length * data.width * data.height) / 5000;
-      const chargeableWeight = Math.max(weightInKg, volumetricWeight);
-      const baseRatePerKg = 500;
-      const multiplier =
-        DOCUMENT_PACKET_MULTIPLIER[data.packetType] || 1.0;
-      const shippingCost = Math.ceil(
-        chargeableWeight * baseRatePerKg * multiplier,
-      );
-
-      return { shippingCost, gstAmount: 0, totalAmount: shippingCost };
-    }
-
-    case 'gift': {
-      const data = formData as GiftBookingData;
-      const country = data.consigneeAddress.country;
-      const isGCC = country === 'AE' || country === 'SA';
-      const basePrice = isGCC ? 1450 : 1850;
-      const itemCount = data.items.length;
-      const extraItemsCost = itemCount > 3 ? (itemCount - 3) * 100 : 0;
-      const shippingCost = basePrice + extraItemsCost;
-
-      return { shippingCost, gstAmount: 0, totalAmount: shippingCost };
-    }
+  // Try dimensions if available (document type has them)
+  let dimensions: { length: number; width: number; height: number } | undefined;
+  if (type === 'document') {
+    const doc = formData as DocumentBookingData;
+    dimensions = { length: doc.length, width: doc.width, height: doc.height };
   }
+
+  const result = calculateInternationalShippingCost(countryCode, weightKg, dimensions);
+
+  if (result) {
+    return {
+      shippingCost: Math.round(result.shippingCost),
+      gstAmount: Math.round(result.gstAmount),
+      totalAmount: Math.round(result.totalAmount),
+    };
+  }
+
+  // Fallback if country not found in rate card (shouldn't happen for served countries)
+  const fallbackBase = 2500 + Math.ceil(weightKg) * 300;
+  const fallbackGst = Math.round(fallbackBase * 0.18);
+  return {
+    shippingCost: fallbackBase,
+    gstAmount: fallbackGst,
+    totalAmount: fallbackBase + fallbackGst,
+  };
 }
 
 // ---------------------------------------------------------------------------
