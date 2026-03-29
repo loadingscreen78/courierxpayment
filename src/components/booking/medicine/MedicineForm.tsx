@@ -2,6 +2,8 @@ import { useState, useMemo, useCallback } from 'react';
 import { format, addMonths, isSameDay } from 'date-fns';
 import { Medicine, getDefaultExpiryDate } from './MedicineCard';
 import { ManufacturerSearch } from './ManufacturerSearch';
+import { MedicineNameSearch } from './MedicineNameSearch';
+import { getHsnCode, type MedicineSuggestion } from '@/lib/medicine/medicineData';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -215,16 +217,22 @@ export const MedicineForm = ({ medicine, onSave, onCancel, isEditing }: Medicine
         </div>
       </div>
 
-      {/* Medicine Name */}
-      <div className="space-y-2">
-        <Label className="text-sm font-semibold">Medicine Name *</Label>
-        <Input
-          placeholder="Enter medicine name (as on prescription)"
-          value={formData.medicineName}
-          onChange={(e) => updateField('medicineName', e.target.value)}
-          className="input-premium"
-        />
-      </div>
+      {/* Medicine Name — Autocomplete Search */}
+      <MedicineNameSearch
+        value={formData.medicineName}
+        onChange={(name) => updateField('medicineName', name)}
+        onSelect={(suggestion) => {
+          setFormData(prev => ({
+            ...prev,
+            medicineName: suggestion.name,
+            ...(suggestion.form && { form: suggestion.form }),
+            ...(suggestion.type && { medicineType: suggestion.type }),
+            ...(suggestion.manufacturer && { manufacturerName: suggestion.manufacturer }),
+            hsnCode: suggestion.hsnCode,
+          }));
+          setErrors([]);
+        }}
+      />
 
       {/* Inventory Data */}
       <div className="space-y-3">
