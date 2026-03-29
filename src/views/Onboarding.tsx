@@ -88,7 +88,7 @@ const Onboarding = () => {
     playSuccess();
     setStep('complete');
     
-    // MOCK MODE: Auto-redirect to dashboard instead of KYC
+    // Redirect to dashboard — KYC is now handled during account opening
     setTimeout(() => {
       router.replace('/dashboard');
     }, 2000);
