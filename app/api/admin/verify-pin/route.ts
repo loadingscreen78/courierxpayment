@@ -59,7 +59,7 @@ export async function POST(request: NextRequest) {
   });
 
   // Cleanup old attempts (fire-and-forget)
-  supabase.rpc('cleanup_old_pin_attempts').then(() => {}).catch(() => {});
+  void supabase.rpc('cleanup_old_pin_attempts');
 
   if (!isCorrect) {
     const remaining = MAX_ATTEMPTS - (failedCount + 1);
