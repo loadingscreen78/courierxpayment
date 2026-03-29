@@ -321,7 +321,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
 
   // ── Validate sender fields before sliding to receiver ──
   const handleSenderNext = async () => {
-    const senderFields = ['senderEmail'] as const;
+    const senderFields = ['senderName', 'senderPhone', 'senderEmail'] as const;
     const result = await detailsForm.trigger(senderFields);
     if (result) setAddressSubStep('receiver');
   };
@@ -1065,6 +1065,18 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                           </div>
                         )}
                         <div className="space-y-4">
+                          <div className="grid grid-cols-2 gap-4">
+                            <FormField control={detailsForm.control} name="senderName" render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>{isMedicineFlow ? 'Full Name (as per Aadhaar)' : 'Full Name'}</FormLabel>
+                                <FormControl><Input {...field} placeholder={isMedicineFlow ? 'Name exactly as on Aadhaar' : 'Sender name'} className="h-11" /></FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )} />
+                            <FormField control={detailsForm.control} name="senderPhone" render={({ field }) => (
+                              <FormItem><FormLabel>Phone</FormLabel><FormControl><Input {...field} placeholder="+91 98765 43210" className="h-11" /></FormControl><FormMessage /></FormItem>
+                            )} />
+                          </div>
                           <FormField control={detailsForm.control} name="senderEmail" render={({ field }) => (
                             <FormItem><FormLabel>Email</FormLabel><FormControl><Input {...field} type="email" placeholder="sender@email.com" className="h-11" /></FormControl><FormMessage /></FormItem>
                           )} />
