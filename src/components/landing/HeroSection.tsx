@@ -75,7 +75,7 @@ export const HeroSection = () => {
               className="inline-flex items-center gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full border border-primary/20 bg-primary/5 text-primary text-xs sm:text-sm font-medium"
             >
               <Sparkle className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-coke-red" />
-              <span>India&apos;s Only Person to Person Courier Booking</span>
+              <span>India&apos;s Only Person to Person Courier Booking Platform</span>
             </motion.div>
             
             {/* Headline */}
@@ -86,7 +86,7 @@ export const HeroSection = () => {
               className="text-[2rem] leading-[1.15] sm:text-4xl md:text-5xl lg:text-6xl font-bold font-typewriter sm:leading-tight tracking-tight"
               suppressHydrationWarning
             >
-              Ship Your{' '}
+              Send{' '}
               <span className="inline-flex items-center h-[1.2em] overflow-hidden align-bottom min-w-[180px] sm:min-w-[280px]" suppressHydrationWarning>
                 <AnimatePresence mode="wait">
                   <motion.span
@@ -105,7 +105,7 @@ export const HeroSection = () => {
                 </AnimatePresence>
               </span>
               <br />
-              <span className="text-primary">Person to Person</span>
+              <span className="text-primary">to Your Close Ones</span>
             </motion.h1>
             
             {/* Description — shorter on mobile */}
