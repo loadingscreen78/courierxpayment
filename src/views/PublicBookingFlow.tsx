@@ -341,6 +341,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
   const [emailOtpToken, setEmailOtpToken] = useState('');
   const [emailOtpError, setEmailOtpError] = useState('');
   const [emailOtpCooldown, setEmailOtpCooldown] = useState(0);
+  const [emailOtpAttempts, setEmailOtpAttempts] = useState(0);
 
   // ── International rate form ──
   const intlForm = useForm<InternationalRateValues>({
@@ -598,6 +599,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
     setEmailOtpState('sending');
     setEmailOtpError('');
     setEmailOtpCode(['', '', '', '', '', '']);
+    setEmailOtpAttempts(0);
 
     try {
       const res = await fetch('/api/auth/guest-email-otp/send', {
@@ -646,9 +648,9 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
       otpInputRefs.current[index + 1]?.focus();
     }
 
-    // Auto-verify when all 6 digits entered
-    if (value && index === 5 && newCode.every(d => d)) {
-      verifyEmailOtp(newCode.join(''));
+    // Auto-verify when all 6 digits are filled (regardless of which digit was last)
+    if (newCode.every(d => d)) {
+      setTimeout(() => verifyEmailOtpRef.current(newCode.join('')), 50);
     }
   }, [emailOtpCode]);
 
@@ -664,7 +666,9 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
     const nextEmpty = newCode.findIndex(d => !d);
     otpInputRefs.current[nextEmpty === -1 ? 5 : nextEmpty]?.focus();
     // Auto-verify if complete
-    if (pasted.length === 6) verifyEmailOtp(pasted);
+    if (pasted.length === 6) {
+      setTimeout(() => verifyEmailOtpRef.current(pasted), 50);
+    }
   }, [emailOtpCode]);
 
   // ── Handle backspace navigation ──
@@ -674,13 +678,21 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
     }
   }, [emailOtpCode]);
 
-  // ── Verify OTP ──
+  // ── Verify OTP (with 5-attempt rate limit) ──
   const verifyEmailOtp = useCallback(async (code: string) => {
     const email = detailsForm.getValues('senderEmail');
     if (!email || !emailOtpToken) return;
 
+    if (emailOtpAttempts >= 5) {
+      setEmailOtpError('Too many attempts. Please request a new code.');
+      setEmailOtpState('sent');
+      setEmailOtpCode(['', '', '', '', '', '']);
+      return;
+    }
+
     setEmailOtpState('verifying');
     setEmailOtpError('');
+    setEmailOtpAttempts(prev => prev + 1);
 
     try {
       const res = await fetch('/api/auth/guest-email-otp/verify', {
@@ -691,7 +703,8 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
       const data = await res.json();
 
       if (!res.ok || !data.verified) {
-        setEmailOtpError(data.error || 'Invalid code');
+        const remaining = 5 - (emailOtpAttempts + 1);
+        setEmailOtpError(remaining > 0 ? `Incorrect code. ${remaining} attempt${remaining === 1 ? '' : 's'} remaining.` : 'Too many attempts. Please request a new code.');
         setEmailOtpState('sent');
         setEmailOtpCode(['', '', '', '', '', '']);
         setTimeout(() => otpInputRefs.current[0]?.focus(), 100);
@@ -704,7 +717,11 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
       setEmailOtpError('Verification failed. Please try again.');
       setEmailOtpState('sent');
     }
-  }, [detailsForm, emailOtpToken, toast]);
+  }, [detailsForm, emailOtpToken, emailOtpAttempts, toast]);
+
+  // Ref to always have latest verifyEmailOtp for use in callbacks
+  const verifyEmailOtpRef = useRef(verifyEmailOtp);
+  useEffect(() => { verifyEmailOtpRef.current = verifyEmailOtp; }, [verifyEmailOtp]);
 
   // ── Validate receiver fields before sliding to content ──
   const handleReceiverNext = async () => {
@@ -1571,7 +1588,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                                       value={digit}
                                       onChange={(e) => handleOtpDigitChange(i, e.target.value)}
                                       onKeyDown={(e) => handleOtpKeyDown(i, e)}
-                                      disabled={emailOtpState === 'verifying'}
+                                      disabled={emailOtpState === 'verifying' || emailOtpAttempts >= 5}
                                       className={`w-11 h-12 text-center text-lg font-bold rounded-lg border-2 bg-background outline-none transition-all duration-200
                                         ${digit ? 'border-coke-red/50 text-foreground' : 'border-border text-muted-foreground'}
                                         ${emailOtpState === 'verifying' ? 'opacity-50' : ''}
