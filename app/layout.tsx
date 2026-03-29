@@ -71,7 +71,7 @@ export const metadata: Metadata = {
     url: 'https://courierx.in',
     siteName: 'CourierX',
     title: 'CourierX — Person to Person Courier Booking | Domestic & International Shipping India',
-    description: 'India's only person to person courier booking platform. Send medicines, documents & gifts across India and to 150+ countries. Book online, doorstep pickup, real-time tracking.',
+    description: 'India\'s only person to person courier booking platform. Send medicines, documents & gifts across India and to 150+ countries. Book online, doorstep pickup, real-time tracking.',
     images: [
       {
         url: '/lovable-uploads/19a008e8-fa55-402b-94a0-f1a05b4d70b4.png',
