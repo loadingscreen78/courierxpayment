@@ -194,7 +194,7 @@ export default function AllShipments() {
             />
           </div>
           <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-[180px] bg-[#16161a] border-white/10 text-white">
+            <SelectTrigger className="w-full sm:w-[180px] bg-[#16161a] border-white/10 text-white">
               <Funnel size={16} weight="bold" className="mr-2 text-gray-400" />
               <SelectValue placeholder="Status" />
             </SelectTrigger>
@@ -207,7 +207,7 @@ export default function AllShipments() {
             </SelectContent>
           </Select>
           <Select value={typeFilter} onValueChange={setTypeFilter}>
-            <SelectTrigger className="w-[150px] bg-[#16161a] border-white/10 text-white">
+            <SelectTrigger className="w-full sm:w-[150px] bg-[#16161a] border-white/10 text-white">
               <SelectValue placeholder="Type" />
             </SelectTrigger>
             <SelectContent className="bg-[#16161a] border-white/10">
@@ -218,7 +218,7 @@ export default function AllShipments() {
             </SelectContent>
           </Select>
           <Select value={legFilter} onValueChange={setLegFilter}>
-            <SelectTrigger className="w-[160px] bg-[#16161a] border-white/10 text-white">
+            <SelectTrigger className="w-full sm:w-[160px] bg-[#16161a] border-white/10 text-white">
               <SelectValue placeholder="Route" />
             </SelectTrigger>
             <SelectContent className="bg-[#16161a] border-white/10">
@@ -280,7 +280,7 @@ export default function AllShipments() {
             filteredShipments.map((shipment) => (
               <div
                 key={shipment.id}
-                className="bg-[#16161a] rounded-[2rem] border border-white/5 p-4 hover:bg-white/5 transition-all cursor-pointer"
+                className="bg-[#16161a] rounded-2xl sm:rounded-[2rem] border border-white/5 p-3 sm:p-4 hover:bg-white/5 transition-all cursor-pointer"
                 onClick={() => router.push(`/admin/qc/${shipment.id}`)}
               >
                 <div className="flex items-center justify-between gap-4">

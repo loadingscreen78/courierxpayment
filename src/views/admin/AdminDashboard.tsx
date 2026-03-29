@@ -195,15 +195,15 @@ function AdminDashboard() {
 
   return (
     <AdminLayout>
-      <div className="grid grid-cols-12 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-12 gap-4 sm:gap-6">
         {/* Statistics Chart Card */}
         <motion.section
           initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}
-          className="col-span-12 lg:col-span-7 bg-[#16161a] rounded-[2rem] border border-white/5 p-8 relative overflow-hidden shadow-2xl"
+          className="col-span-1 sm:col-span-12 lg:col-span-7 bg-[#16161a] rounded-2xl sm:rounded-[2rem] border border-white/5 p-4 sm:p-8 relative overflow-hidden shadow-2xl"
         >
           <div className="relative z-10">
             <h3 className="text-xl font-bold text-white mb-6">Statistics</h3>
-            <div className="flex justify-between items-start mb-8">
+            <div className="flex flex-col sm:flex-row justify-between items-start gap-4 sm:gap-0 mb-8">
               {statCards.map((stat) => (
                 <div key={stat.title} className="flex flex-col">
                   <span className="text-gray-500 text-xs font-medium uppercase tracking-wider">{stat.title}</span>
@@ -214,7 +214,7 @@ function AdminDashboard() {
               ))}
             </div>
             {/* Chart */}
-            <div className="h-64 mt-4 w-full">
+            <div className="h-48 sm:h-64 mt-4 w-full">
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={chartData}>
                   <defs>
@@ -240,10 +240,10 @@ function AdminDashboard() {
         {/* Secondary Stats */}
         <motion.section
           initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.1 }}
-          className="col-span-12 lg:col-span-5 space-y-6"
+          className="col-span-1 sm:col-span-12 lg:col-span-5 space-y-4 sm:space-y-6"
         >
           {/* Processed Today */}
-          <div className="bg-[#16161a] rounded-[2rem] border border-white/5 p-8 shadow-2xl">
+          <div className="bg-[#16161a] rounded-2xl sm:rounded-[2rem] border border-white/5 p-5 sm:p-8 shadow-2xl">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-xl font-bold text-white">Today</h3>
             </div>
@@ -264,11 +264,11 @@ function AdminDashboard() {
           </div>
 
           {/* Avg QC Time */}
-          <div className="bg-[#16161a] rounded-[2rem] border border-white/5 p-8 shadow-2xl">
+          <div className="bg-[#16161a] rounded-2xl sm:rounded-[2rem] border border-white/5 p-5 sm:p-8 shadow-2xl">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-gray-500 text-xs font-medium uppercase tracking-wider mb-1">Avg QC Time</p>
-                <p className="text-3xl font-mono text-gray-300">{stats?.avgQCTime || '--'}</p>
+                <p className="text-2xl sm:text-3xl font-mono text-gray-300">{stats?.avgQCTime || '--'}</p>
               </div>
               <div className="w-12 h-12 rounded-xl bg-blue-500/10 flex items-center justify-center">
                 <Clock size={24} weight="bold" className="text-blue-500" />
@@ -277,7 +277,7 @@ function AdminDashboard() {
           </div>
 
           {/* Total Revenue */}
-          <div className="bg-gradient-to-br from-emerald-950/60 to-[#16161a] rounded-[2rem] border border-emerald-500/20 p-8 shadow-2xl">
+          <div className="bg-gradient-to-br from-emerald-950/60 to-[#16161a] rounded-2xl sm:rounded-[2rem] border border-emerald-500/20 p-5 sm:p-8 shadow-2xl">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-gray-500 text-xs font-medium uppercase tracking-wider mb-1">Total Shipment Revenue</p>
@@ -295,11 +295,11 @@ function AdminDashboard() {
         {/* Queue Tabs */}
         <motion.section
           initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.15 }}
-          className="col-span-12 bg-[#16161a] rounded-[2rem] border border-white/5 p-8 shadow-2xl"
+          className="col-span-1 sm:col-span-12 bg-[#16161a] rounded-2xl sm:rounded-[2rem] border border-white/5 p-4 sm:p-8 shadow-2xl"
         >
-          <h3 className="text-xl font-bold text-white mb-6">Shipment Queues</h3>
+          <h3 className="text-lg sm:text-xl font-bold text-white mb-4 sm:mb-6">Shipment Queues</h3>
           <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="bg-white/5 border border-white/10">
+            <TabsList className="bg-white/5 border border-white/10 flex-wrap h-auto gap-1 p-1">
               {queueTabs.map((tab) => (
                 <TabsTrigger key={tab.key} value={tab.key} className="data-[state=active]:bg-white/10 data-[state=active]:text-white text-gray-400">
                   {tab.label}
@@ -357,7 +357,7 @@ function AdminDashboard() {
         {/* Recent Activity */}
         <motion.section
           initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.2 }}
-          className="col-span-12 lg:col-span-7 bg-[#16161a] rounded-[2rem] border border-white/5 p-8 shadow-2xl"
+          className="col-span-1 sm:col-span-12 lg:col-span-7 bg-[#16161a] rounded-2xl sm:rounded-[2rem] border border-white/5 p-4 sm:p-8 shadow-2xl"
         >
           <div className="flex justify-between items-center mb-6">
             <h3 className="text-xl font-bold text-white">Recent Activity</h3>
@@ -407,7 +407,7 @@ function AdminDashboard() {
         {/* Quick Stats Cards */}
         <motion.section
           initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.3 }}
-          className="col-span-12 lg:col-span-5 bg-gradient-to-br from-[#16161a] to-[#251515] rounded-[2rem] border border-white/5 p-8 shadow-2xl"
+          className="col-span-1 sm:col-span-12 lg:col-span-5 bg-gradient-to-br from-[#16161a] to-[#251515] rounded-2xl sm:rounded-[2rem] border border-white/5 p-4 sm:p-8 shadow-2xl"
         >
           <h3 className="text-xl font-bold text-white mb-6">Quick Stats</h3>
           <div className="space-y-4">

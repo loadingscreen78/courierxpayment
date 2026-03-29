@@ -16,7 +16,7 @@ export default function Support() {
 
   return (
     <AppLayout>
-      <div className="container max-w-4xl mx-auto px-4 py-6 space-y-6">
+      <div className="container max-w-4xl mx-auto px-3 sm:px-4 py-4 sm:py-6 space-y-4 sm:space-y-6">
         {/* Header */}
         <div className="space-y-2">
           <h1 className="text-2xl font-bold font-mono text-foreground">Help & Support</h1>

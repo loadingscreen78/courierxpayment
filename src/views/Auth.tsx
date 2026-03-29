@@ -786,7 +786,7 @@ const Auth = () => {
       {/* ── Right Side — Form (supports dark/light mode) ── */}
       <div className="w-full lg:w-1/2 bg-background flex flex-col min-h-screen">
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-border">
+        <div className="flex items-center justify-between p-4 sm:p-6 border-b border-border">
           <a href="/" className="flex items-center gap-2">
             <img src={logoMain.src} alt="CourierX" className="h-8 w-auto rounded-lg" />
           </a>
@@ -808,7 +808,7 @@ const Auth = () => {
         </div>
 
         {/* Form Content */}
-        <div className="flex-1 flex items-center justify-center p-8">
+        <div className="flex-1 flex items-center justify-center p-4 sm:p-8">
           <div className="w-full max-w-sm">
             {/* ── Panel Selection — Card Grid ── */}
             {step === 'panel-select' && (
@@ -817,19 +817,19 @@ const Auth = () => {
                   <h2 className="text-2xl font-bold text-foreground font-typewriter">Welcome</h2>
                   <p className="text-muted-foreground mt-1">Select your portal to continue</p>
                 </div>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-2 gap-2 sm:gap-3">
                   {panelOptions.map((panel) => (
                     <div key={panel.id} className="relative group/panel">
                       <button
                         onClick={() => panel.available && handlePanelSelect(panel.id)}
                         disabled={!panel.available}
-                        className={`w-full p-5 rounded-2xl border transition-all flex flex-col items-center text-center gap-3 aspect-square justify-center ${
+                        className={`w-full p-3 sm:p-5 rounded-2xl border transition-all flex flex-col items-center text-center gap-2 sm:gap-3 aspect-square justify-center ${
                           panel.available
                             ? 'border-border hover:border-coke-red bg-card hover:bg-coke-red/5 cursor-pointer group hover:shadow-lg hover:shadow-coke-red/5'
                             : 'border-border/50 bg-card/50 cursor-not-allowed opacity-60'
                         }`}
                       >
-                        <div className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-colors ${
+                        <div className={`w-10 h-10 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center transition-colors ${
                           panel.available
                             ? 'bg-muted group-hover:bg-coke-red/10'
                             : 'bg-muted/50'
@@ -1121,7 +1121,7 @@ const Auth = () => {
                                   <InputOTPSlot
                                     key={i}
                                     index={i}
-                                    className="w-12 h-14 text-xl border-border rounded-xl focus:border-coke-red bg-background"
+                                    className="w-10 h-12 sm:w-12 sm:h-14 text-lg sm:text-xl border-border rounded-xl focus:border-coke-red bg-background"
                                   />
                                 ))}
                               </InputOTPGroup>
@@ -1154,7 +1154,7 @@ const Auth = () => {
         </div>
 
         {/* Footer */}
-        <div className="p-6 border-t border-border flex items-center justify-between text-sm text-muted-foreground">
+        <div className="p-4 sm:p-6 border-t border-border flex flex-col sm:flex-row items-center justify-between gap-2 text-xs sm:text-sm text-muted-foreground">
           <span className="font-typewriter">© 2026 Indiano Ventures Private Limited</span>
           <div className="flex items-center gap-4">
             <a href="/contact" className="hover:text-coke-red transition-colors">Contact Us</a>

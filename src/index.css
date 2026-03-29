@@ -424,6 +424,31 @@
     padding-top: env(safe-area-inset-top, 0);
   }
 
+  /* Mobile touch improvements */
+  @media (max-width: 640px) {
+    .container {
+      padding-left: 1rem;
+      padding-right: 1rem;
+    }
+    
+    /* Prevent horizontal overflow on mobile */
+    body {
+      overflow-x: hidden;
+    }
+    
+    /* Better touch targets on mobile */
+    button, a, [role="button"] {
+      min-height: 44px;
+      min-width: 44px;
+    }
+    
+    /* Smaller min-height for inline/icon buttons */
+    button.inline-btn, [data-compact] {
+      min-height: auto;
+      min-width: auto;
+    }
+  }
+
   /* Prevent layout shift and flickering */
   .no-flicker {
     will-change: contents;

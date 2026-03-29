@@ -34,11 +34,11 @@ export const CTASection = () => {
   const router = useRouter();
 
   return (
-    <section className="py-24">
+    <section className="py-16 sm:py-20 md:py-24">
       <div className="container">
         <AnimatedSection>
           <div 
-            className="relative overflow-hidden rounded-3xl p-8 md:p-16 border border-border/20 metallic-light"
+            className="relative overflow-hidden rounded-2xl sm:rounded-3xl p-6 sm:p-8 md:p-16 border border-border/20 metallic-light"
           >
             {/* Metallic Shine Overlay */}
             <div 
@@ -84,14 +84,14 @@ export const CTASection = () => {
             {/* Glow Effect */}
             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-coke-red/10 rounded-full blur-[100px]" />
             
-            <div className="relative z-10 grid md:grid-cols-2 gap-12 items-center">
+            <div className="relative z-10 grid md:grid-cols-2 gap-8 sm:gap-12 items-center">
               <div className="space-y-8">
                 <motion.h2
                   initial={{ opacity: 0, y: 20 }}
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true }}
                   transition={{ duration: 0.6 }}
-                  className="text-3xl md:text-4xl lg:text-5xl font-bold font-typewriter leading-tight text-foreground"
+                  className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold font-typewriter leading-tight text-foreground"
                 >
                   Ready to Ship?
                   <br />

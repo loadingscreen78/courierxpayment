@@ -294,7 +294,7 @@ const Index = () => {
         {/* Welcome Header - Metallic Card */}
         <motion.header variants={itemVariants}>
           <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-border via-muted to-border p-[1px] shadow-xl">
-            <div className="relative rounded-3xl bg-card p-8 overflow-hidden">
+            <div className="relative rounded-3xl bg-card p-5 sm:p-8 overflow-hidden">
               {/* Subtle decorative gradient */}
               <div className="absolute top-0 right-0 w-72 h-72 bg-coke-red/5 rounded-full blur-3xl" />
               {/* Metallic shine */}
@@ -307,7 +307,7 @@ const Index = () => {
                     {format(new Date(), 'EEEE, MMMM d, yyyy')}
                   </p>
                 </div>
-                <h1 className="text-3xl lg:text-4xl font-bold text-foreground font-typewriter">
+                <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-foreground font-typewriter">
                   Welcome back, <span className="text-coke-red">{displayName}</span>
                 </h1>
                 <p className="text-muted-foreground mt-2">

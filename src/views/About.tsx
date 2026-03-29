@@ -776,7 +776,7 @@ const About = () => {
             </span>
           </motion.div>
 
-          <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold font-typewriter leading-tight">
+          <h1 className="text-3xl sm:text-4xl md:text-6xl lg:text-7xl font-bold font-typewriter leading-tight">
             <span ref={heroRef} className="text-foreground">
               {heroText}
             </span>
@@ -793,7 +793,7 @@ const About = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.5 }}
-            className="text-xl text-muted-foreground max-w-3xl mx-auto"
+            className="text-base sm:text-xl text-muted-foreground max-w-3xl mx-auto px-2"
           >
             India&apos;s most trusted international courier aggregator, making global shipping
             accessible, affordable, and compliant for everyone.

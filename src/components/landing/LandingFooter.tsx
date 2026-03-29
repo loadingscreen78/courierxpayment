@@ -53,8 +53,8 @@ export const LandingFooter = () => {
       {/* Decorative Elements */}
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-px bg-gradient-to-r from-transparent via-paper-white/20 to-transparent" />
       
-      <div className="container py-16">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12">
+      <div className="container py-10 sm:py-16">
+        <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-8 sm:gap-12">
           {/* Brand */}
           <AnimatedSection direction="up" delay={0}>
             <div className="space-y-5">
@@ -186,12 +186,12 @@ export const LandingFooter = () => {
 
       {/* Bottom Bar */}
       <div className="border-t border-paper-white/10">
-        <div className="container py-6 flex flex-col md:flex-row items-center justify-between gap-4">
+        <div className="container py-4 sm:py-6 flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4">
           <motion.p
             initial={{ opacity: 0 }}
             whileInView={{ opacity: 1 }}
             viewport={{ once: true }}
-            className="text-paper-white/40 text-sm"
+            className="text-paper-white/40 text-xs sm:text-sm"
           >
             © {currentYear} CourierX. All rights reserved.
           </motion.p>
@@ -200,7 +200,7 @@ export const LandingFooter = () => {
             whileInView={{ opacity: 1 }}
             viewport={{ once: true }}
             transition={{ delay: 0.2 }}
-            className="flex items-center gap-6 text-sm text-paper-white/40"
+            className="flex items-center gap-3 sm:gap-6 text-xs sm:text-sm text-paper-white/40 flex-wrap justify-center"
           >
             <span className="hover:text-paper-white/60 transition-colors cursor-default">CSB-IV Compliant</span>
             <span className="text-paper-white/20">•</span>

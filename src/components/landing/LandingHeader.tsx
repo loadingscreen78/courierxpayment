@@ -148,28 +148,30 @@ export const LandingHeader = () => {
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.18 }}
-                className="flex gap-2 px-4 py-4 border-t border-border/50"
+                className="px-4 py-4 border-t border-border/50 space-y-2"
               >
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    className="flex-1 rounded-xl text-sm h-11"
+                    onClick={() => { router.push('/auth'); setMobileMenuOpen(false); }}
+                  >
+                    Sign In
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="flex-1 rounded-xl gap-1.5 text-sm h-11"
+                    onClick={() => { router.push('/open-account'); setMobileMenuOpen(false); }}
+                  >
+                    <UserPlus className="h-3.5 w-3.5" />
+                    Open Account
+                  </Button>
+                </div>
                 <Button
-                  variant="outline"
-                  className="flex-1 rounded-xl"
-                  onClick={() => { router.push('/auth'); setMobileMenuOpen(false); }}
-                >
-                  Sign In
-                </Button>
-                <Button
-                  variant="outline"
-                  className="flex-1 rounded-xl gap-1.5"
-                  onClick={() => { router.push('/open-account'); setMobileMenuOpen(false); }}
-                >
-                  <UserPlus className="h-3.5 w-3.5" />
-                  Open Account
-                </Button>
-                <Button
-                  className="flex-1 bg-coke-red hover:bg-red-600 text-white rounded-xl gap-1.5"
+                  className="w-full bg-coke-red hover:bg-red-600 text-white rounded-xl gap-1.5 h-12 text-sm font-semibold"
                   onClick={() => { router.push('/public/book'); setMobileMenuOpen(false); }}
                 >
-                  <Package className="h-3.5 w-3.5" />
+                  <Package className="h-4 w-4" />
                   Ship Now
                 </Button>
               </motion.div>

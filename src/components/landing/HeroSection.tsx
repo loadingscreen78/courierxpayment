@@ -22,7 +22,7 @@ export const HeroSection = () => {
   }, []);
 
   return (
-    <section className="relative min-h-[90vh] flex items-center overflow-hidden">
+    <section className="relative min-h-[85vh] sm:min-h-[90vh] flex items-center overflow-hidden">
       {/* Animated Background */}
       <div className="absolute inset-0 bg-gradient-to-br from-background via-background to-primary/5" />
       
@@ -64,8 +64,8 @@ export const HeroSection = () => {
         backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23000000' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
       }} />
       
-      <div className="container relative z-10 py-20">
-        <div className="grid lg:grid-cols-2 gap-16 items-center">
+      <div className="container relative z-10 py-12 sm:py-16 md:py-20">
+        <div className="grid lg:grid-cols-2 gap-10 lg:gap-16 items-center">
           {/* Left Content */}
           <div className="space-y-8">
             {/* Badge */}
@@ -84,11 +84,11 @@ export const HeroSection = () => {
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.7, delay: 0.3 }}
-              className="text-4xl md:text-5xl lg:text-6xl font-bold font-typewriter leading-tight tracking-tight"
+              className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold font-typewriter leading-tight tracking-tight"
               suppressHydrationWarning
             >
               Ship Your{' '}
-              <span className="inline-flex items-center h-[1.2em] overflow-hidden align-bottom min-w-[280px]" suppressHydrationWarning>
+              <span className="inline-flex items-center h-[1.2em] overflow-hidden align-bottom min-w-[200px] sm:min-w-[280px]" suppressHydrationWarning>
                 <AnimatePresence mode="wait">
                   <motion.span
                     key={currentWordIndex}
@@ -114,7 +114,7 @@ export const HeroSection = () => {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.5 }}
-              className="text-lg md:text-xl text-muted-foreground max-w-xl leading-relaxed"
+              className="text-base sm:text-lg md:text-xl text-muted-foreground max-w-xl leading-relaxed"
             >
               India&apos;s trusted international courier aggregator for medicines, documents, and personal gifts. 
               Fast, compliant, and secure shipping worldwide.
@@ -125,7 +125,7 @@ export const HeroSection = () => {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.6 }}
-              className="flex flex-wrap gap-6 text-sm"
+              className="flex flex-wrap gap-4 sm:gap-6 text-sm"
             >
               {[
                 { icon: ShieldCheck, text: 'CSB-IV Compliant', color: 'text-candlestick-green' },
@@ -150,11 +150,11 @@ export const HeroSection = () => {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.8 }}
-              className="flex flex-wrap gap-4"
+              className="flex flex-wrap gap-3 sm:gap-4"
             >
               <Button 
                 size="lg" 
-                className="group gap-2 text-lg px-8 py-6 bg-coke-red hover:bg-coke-red/90 shadow-lg shadow-coke-red/25 transition-all duration-300 hover:shadow-xl hover:shadow-coke-red/30 hover:-translate-y-0.5"
+                className="group gap-2 text-base sm:text-lg px-6 sm:px-8 py-5 sm:py-6 bg-coke-red hover:bg-coke-red/90 shadow-lg shadow-coke-red/25 transition-all duration-300 hover:shadow-xl hover:shadow-coke-red/30 hover:-translate-y-0.5 flex-1 sm:flex-none"
                 onClick={() => router.push('/public/book')}
               >
                 Ship Now
@@ -163,7 +163,7 @@ export const HeroSection = () => {
               <Button 
                 variant="outline" 
                 size="lg" 
-                className="group gap-2 text-lg px-8 py-6 border-2 hover:bg-primary/5 transition-all duration-300 hover:-translate-y-0.5"
+                className="group gap-2 text-base sm:text-lg px-6 sm:px-8 py-5 sm:py-6 border-2 hover:bg-primary/5 transition-all duration-300 hover:-translate-y-0.5 flex-1 sm:flex-none"
                 onClick={() => router.push('/open-account')}
               >
                 <UserPlus className="h-5 w-5" />
@@ -192,7 +192,7 @@ export const HeroSection = () => {
               className="pt-8 border-t border-border/50"
             >
               <p className="text-xs text-muted-foreground mb-4 uppercase tracking-wider">Trusted Carrier Partners</p>
-              <div className="flex flex-wrap items-center gap-8">
+              <div className="flex flex-wrap items-center gap-6 sm:gap-8">
                 {['DHL', 'FedEx', 'Aramex', 'ShipGlobal'].map((carrier) => (
                   <span
                     key={carrier}

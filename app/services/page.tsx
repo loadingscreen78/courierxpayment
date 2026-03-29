@@ -74,17 +74,17 @@ export default function ServicesPage() {
           </div>
         </header>
 
-        <main className="max-w-4xl mx-auto px-4 py-12">
-          <h1 className="text-3xl md:text-4xl font-bold mb-4">
+        <main className="max-w-4xl mx-auto px-4 py-8 sm:py-12">
+          <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-4">
             Courier Services — International & Domestic Shipping from India
           </h1>
-          <p className="text-lg text-muted-foreground mb-10">
+          <p className="text-base sm:text-lg text-muted-foreground mb-8 sm:mb-10">
             CourierX is India's trusted courier aggregator. Ship medicines, documents, gifts internationally or send parcels domestically. Compare rates from DHL, FedEx, Aramex and more.
           </p>
 
-          <div className="grid md:grid-cols-2 gap-6 mb-12">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 mb-12">
             {services.map((service) => (
-              <Link key={service.href} href={service.href} className="border rounded-xl p-6 hover:shadow-md transition-shadow group">
+              <Link key={service.href} href={service.href} className="border rounded-xl p-4 sm:p-6 hover:shadow-md transition-shadow group">
                 <div className="text-3xl mb-3">{service.emoji}</div>
                 <h2 className="text-xl font-semibold mb-2 group-hover:text-primary">{service.title}</h2>
                 <p className="text-sm text-muted-foreground">{service.description}</p>

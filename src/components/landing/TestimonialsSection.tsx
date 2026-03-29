@@ -129,26 +129,26 @@ const stats = [
 
 export const TestimonialsSection = () => {
   return (
-    <section className="py-24 bg-muted/30 relative overflow-hidden">
+    <section className="py-16 sm:py-20 md:py-24 bg-muted/30 relative overflow-hidden">
       {/* Decorative Quote */}
-      <div className="absolute top-20 left-10 opacity-[0.03]">
+      <div className="absolute top-20 left-10 opacity-[0.03] hidden sm:block">
         <Quote className="w-64 h-64 text-foreground" />
       </div>
       
       <div className="container relative">
-        <AnimatedSection className="text-center mb-16">
+        <AnimatedSection className="text-center mb-10 sm:mb-16">
           <span className="inline-block px-4 py-1.5 rounded-full bg-primary/10 text-primary text-sm font-medium mb-4">
             Testimonials
           </span>
-          <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold font-typewriter mb-4">
+          <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold font-typewriter mb-4">
             What Our Customers Say
           </h2>
-          <p className="text-muted-foreground max-w-2xl mx-auto text-lg">
+          <p className="text-muted-foreground max-w-2xl mx-auto text-base sm:text-lg px-2">
             Join thousands of satisfied customers who trust CourierX for their international shipping needs.
           </p>
         </AnimatedSection>
 
-        <StaggerContainer className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-20" staggerDelay={0.12}>
+        <StaggerContainer className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-12 sm:mb-20" staggerDelay={0.12}>
           {testimonials.map((testimonial) => (
             <StaggerItem key={testimonial.name}>
               <motion.div whileHover={{ y: -8 }} transition={{ duration: 0.3 }}>
@@ -200,7 +200,7 @@ export const TestimonialsSection = () => {
 
         {/* Stats Section */}
         <AnimatedSection delay={0.3}>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center p-8 rounded-2xl bg-card border border-border">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-8 text-center p-5 sm:p-8 rounded-2xl bg-card border border-border">
             {stats.map((stat) => (
               <AnimatedStat key={stat.label} value={stat.value} label={stat.label} />
             ))}

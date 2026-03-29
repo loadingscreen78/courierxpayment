@@ -26,21 +26,21 @@ const Profile = () => {
 
   return (
     <AppLayout>
-      <div className="container max-w-4xl mx-auto py-6 px-4 space-y-6 animate-fade-in">
+      <div className="container max-w-4xl mx-auto py-4 sm:py-6 px-3 sm:px-4 space-y-4 sm:space-y-6 animate-fade-in">
         <ProfileHeader />
         
         <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-          <TabsList className="w-full grid grid-cols-4 bg-muted/50">
-            <TabsTrigger value="account" className="data-[state=active]:bg-background">
+          <TabsList className="w-full flex overflow-x-auto scrollbar-hide bg-muted/50 h-auto p-1">
+            <TabsTrigger value="account" className="data-[state=active]:bg-background flex-1 min-w-fit text-xs sm:text-sm px-2 sm:px-4">
               Account
             </TabsTrigger>
-            <TabsTrigger value="preferences" className="data-[state=active]:bg-background">
+            <TabsTrigger value="preferences" className="data-[state=active]:bg-background flex-1 min-w-fit text-xs sm:text-sm px-2 sm:px-4">
               Preferences
             </TabsTrigger>
-            <TabsTrigger value="notifications" className="data-[state=active]:bg-background">
+            <TabsTrigger value="notifications" className="data-[state=active]:bg-background flex-1 min-w-fit text-xs sm:text-sm px-2 sm:px-4">
               Notifications
             </TabsTrigger>
-            <TabsTrigger value="security" className="data-[state=active]:bg-background">
+            <TabsTrigger value="security" className="data-[state=active]:bg-background flex-1 min-w-fit text-xs sm:text-sm px-2 sm:px-4">
               Security
             </TabsTrigger>
           </TabsList>

@@ -435,50 +435,51 @@ const ShipmentsPage = () => {
         {!loading && !error && (
           <>
             {/* Stats Grid */}
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-3 gap-2 sm:gap-4">
               <Card className="card-hover">
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm text-muted-foreground">In Transit</p>
-                      <p className="font-typewriter text-2xl font-bold mt-1">
+                <CardContent className="p-3 sm:p-4">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="text-xs sm:text-sm text-muted-foreground truncate">In Transit</p>
+                      <p className="font-typewriter text-xl sm:text-2xl font-bold mt-1">
                         {inTransit.length}
                       </p>
                     </div>
-                    <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
-                      <Airplane size={24} weight="bold" className="text-primary" />
+                    <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+                      <Airplane size={20} weight="bold" className="text-primary sm:hidden" />
+                      <Airplane size={24} weight="bold" className="text-primary hidden sm:block" />
                     </div>
                   </div>
                 </CardContent>
               </Card>
 
               <Card className="card-hover">
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm text-muted-foreground">At Customs</p>
-                      <p className="font-typewriter text-2xl font-bold mt-1">
+                <CardContent className="p-3 sm:p-4">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="text-xs sm:text-sm text-muted-foreground truncate">At Customs</p>
+                      <p className="font-typewriter text-xl sm:text-2xl font-bold mt-1">
                         {atCustoms.length}
                       </p>
                     </div>
-                    <div className="w-12 h-12 rounded-xl bg-amber-500/10 flex items-center justify-center">
-                      <Globe size={24} weight="bold" className="text-amber-600" />
+                    <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-amber-500/10 flex items-center justify-center shrink-0">
+                      <Globe size={20} weight="bold" className="text-amber-600" />
                     </div>
                   </div>
                 </CardContent>
               </Card>
 
               <Card className="card-hover">
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm text-muted-foreground">Need Action</p>
-                      <p className="font-typewriter text-2xl font-bold mt-1 text-destructive">
+                <CardContent className="p-3 sm:p-4">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="text-xs sm:text-sm text-muted-foreground truncate">Need Action</p>
+                      <p className="font-typewriter text-xl sm:text-2xl font-bold mt-1 text-destructive">
                         {needsAttention.length}
                       </p>
                     </div>
-                    <div className="w-12 h-12 rounded-xl bg-destructive/10 flex items-center justify-center">
-                      <Warning size={24} weight="bold" className="text-destructive" />
+                    <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-destructive/10 flex items-center justify-center shrink-0">
+                      <Warning size={20} weight="bold" className="text-destructive" />
                     </div>
                   </div>
                 </CardContent>

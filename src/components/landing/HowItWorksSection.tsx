@@ -39,19 +39,19 @@ const steps = [
 
 export const HowItWorksSection = () => {
   return (
-    <section className="py-24 relative overflow-hidden">
+    <section className="py-16 sm:py-20 md:py-24 relative overflow-hidden">
       {/* Background Decoration */}
       <div className="absolute inset-0 bg-gradient-to-b from-transparent via-primary/[0.02] to-transparent" />
       
       <div className="container relative">
-        <AnimatedSection className="text-center mb-20">
+        <AnimatedSection className="text-center mb-12 sm:mb-20">
           <span className="inline-block px-4 py-1.5 rounded-full bg-coke-red/10 text-coke-red text-sm font-medium mb-4">
             Simple Process
           </span>
-          <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold font-typewriter mb-4">
+          <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold font-typewriter mb-4">
             How It Works
           </h2>
-          <p className="text-muted-foreground max-w-2xl mx-auto text-lg">
+          <p className="text-muted-foreground max-w-2xl mx-auto text-base sm:text-lg px-2">
             Ship your items internationally in 5 simple steps
           </p>
         </AnimatedSection>
@@ -68,7 +68,7 @@ export const HowItWorksSection = () => {
             />
           </div>
           
-          <StaggerContainer className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-8" staggerDelay={0.15}>
+          <StaggerContainer className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-5 gap-4 sm:gap-6 lg:gap-8" staggerDelay={0.15}>
             {steps.map((step, index) => (
               <StaggerItem key={step.step}>
                 <motion.div
@@ -76,7 +76,7 @@ export const HowItWorksSection = () => {
                   transition={{ duration: 0.3 }}
                   className="relative"
                 >
-                  <div className="bg-card border border-border rounded-2xl p-6 text-center relative z-10 h-full hover:shadow-xl hover:border-primary/30 transition-all duration-300">
+                  <div className="bg-card border border-border rounded-2xl p-4 sm:p-6 text-center relative z-10 h-full hover:shadow-xl hover:border-primary/30 transition-all duration-300">
                     {/* Step Number */}
                     <motion.div
                       initial={{ scale: 0 }}
@@ -97,8 +97,8 @@ export const HowItWorksSection = () => {
                       <step.icon className="h-8 w-8 text-primary" />
                     </motion.div>
                     
-                    <h3 className="font-bold mb-2 font-typewriter text-lg">{step.title}</h3>
-                    <p className="text-sm text-muted-foreground leading-relaxed">{step.description}</p>
+                    <h3 className="font-bold mb-1 sm:mb-2 font-typewriter text-sm sm:text-lg">{step.title}</h3>
+                    <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">{step.description}</p>
                   </div>
                   
                   {/* Arrow for mobile/tablet */}
