@@ -124,6 +124,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
   const [contentItems, setContentItems] = useState<Array<{ name: string; type: string; hsnCode: string; qty: number; unitPrice: number }>>([
     { name: '', type: '', hsnCode: '', qty: 1, unitPrice: 0 },
   ]);
+  const [medicineDocuments, setMedicineDocuments] = useState<File[]>([]);
   const [showWeightLimitModal, setShowWeightLimitModal] = useState(false);
 
   // ── International rate form ──
@@ -1373,6 +1374,48 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                           <div className="flex justify-between items-center text-sm bg-muted/50 rounded-lg px-4 py-2">
                             <span className="text-muted-foreground">Total Declared Value</span>
                             <span className="font-semibold">₹{contentItems.reduce((sum, i) => sum + (i.qty * i.unitPrice), 0).toLocaleString('en-IN')}</span>
+                          </div>
+                        )}
+
+                        {/* Medicine Documents Upload */}
+                        {isMedicineFlow && (
+                          <div className="space-y-3 pt-1">
+                            <div className="flex items-center gap-2">
+                              <Pill className="h-5 w-5 text-coke-red" weight="duotone" />
+                              <h4 className="font-semibold text-sm">Upload Bills & Prescriptions</h4>
+                            </div>
+                            <div className="rounded-lg border border-coke-red/20 bg-coke-red/5 p-3 text-xs space-y-1">
+                              <p className="font-medium text-coke-red/90">Required documents for medicine shipments:</p>
+                              <ul className="list-disc list-inside text-muted-foreground space-y-0.5">
+                                <li>Valid prescription from a registered doctor</li>
+                                <li>Purchase bill / pharmacy invoice</li>
+                                <li>Any additional medical certificates if applicable</li>
+                              </ul>
+                            </div>
+                            {/* Uploaded files list */}
+                            {medicineDocuments.length > 0 && (
+                              <div className="space-y-2">
+                                {medicineDocuments.map((file, idx) => (
+                                  <div key={idx} className="flex items-center justify-between rounded-lg border border-border bg-muted/30 px-3 py-2">
+                                    <div className="flex items-center gap-2 min-w-0">
+                                      <FileText className="h-4 w-4 text-candlestick-green shrink-0" weight="duotone" />
+                                      <span className="text-xs truncate">{file.name}</span>
+                                      <span className="text-[10px] text-muted-foreground shrink-0">({(file.size / 1024).toFixed(0)} KB)</span>
+                                    </div>
+                                    <button type="button" onClick={() => setMedicineDocuments(prev => prev.filter((_, i) => i !== idx))} className="text-destructive hover:text-destructive/80 p-1 shrink-0">
+                                      <X className="h-3.5 w-3.5" weight="bold" />
+                                    </button>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                            {/* Upload button */}
+                            <label className="flex items-center justify-center gap-2 rounded-xl border-2 border-dashed border-coke-red/30 bg-coke-red/5 hover:bg-coke-red/10 p-4 cursor-pointer transition-colors">
+                              <input type="file" accept="image/*,.pdf" multiple className="hidden" onChange={(e) => { if (e.target.files) setMedicineDocuments(prev => [...prev, ...Array.from(e.target.files!)]); }} />
+                              <Upload className="h-5 w-5 text-coke-red" weight="duotone" />
+                              <span className="text-sm font-medium text-coke-red">Upload Prescriptions & Bills</span>
+                              <span className="text-xs text-muted-foreground">(PDF, JPG, PNG)</span>
+                            </label>
                           </div>
                         )}
 
