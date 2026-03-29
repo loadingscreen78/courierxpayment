@@ -117,6 +117,146 @@ const DOCUMENT_TYPE_OPTIONS = [
 // Default HSN code for documents
 const DOCUMENT_HSN_CODE = '49070030';
 
+// ── Gift Item Subtypes with 8-digit HSN codes ──
+const GIFT_ITEM_SUBTYPES: Record<string, Array<{ label: string; value: string; hsn: string }>> = {
+  clothing: [
+    { label: 'T-Shirts (Knitted)', value: 'tshirt-knitted', hsn: '61091000' },
+    { label: 'Shirts (Men, Woven)', value: 'shirt-men-woven', hsn: '62052000' },
+    { label: 'Blouses (Women, Woven)', value: 'blouse-women-woven', hsn: '62064000' },
+    { label: 'Trousers / Pants (Men)', value: 'trousers-men', hsn: '62034200' },
+    { label: 'Dresses (Women)', value: 'dress-women', hsn: '62044400' },
+    { label: 'Sarees', value: 'saree', hsn: '52091100' },
+    { label: 'Kurta / Kurti', value: 'kurta', hsn: '62114300' },
+    { label: 'Jackets / Blazers', value: 'jacket', hsn: '62033200' },
+    { label: 'Sweaters / Pullovers', value: 'sweater', hsn: '61101100' },
+    { label: 'Shawls / Scarves', value: 'shawl', hsn: '62142000' },
+    { label: 'Socks / Hosiery', value: 'socks', hsn: '61159600' },
+    { label: 'Undergarments', value: 'undergarments', hsn: '61071100' },
+    { label: 'Sportswear / Activewear', value: 'sportswear', hsn: '61121100' },
+    { label: 'Baby Clothing', value: 'baby-clothing', hsn: '61119000' },
+    { label: 'Other Clothing', value: 'other-clothing', hsn: '62114990' },
+  ],
+  electronics: [
+    { label: 'Laptop / Notebook', value: 'laptop', hsn: '84713020' },
+    { label: 'Tablet / iPad', value: 'tablet', hsn: '84713010' },
+    { label: 'Mobile Phone / Smartphone', value: 'mobile', hsn: '85171200' },
+    { label: 'Headphones / Earphones', value: 'headphones', hsn: '85183000' },
+    { label: 'Smartwatch / Wearable', value: 'smartwatch', hsn: '91021200' },
+    { label: 'Power Bank', value: 'powerbank', hsn: '85076000' },
+    { label: 'Camera', value: 'camera', hsn: '85258090' },
+    { label: 'USB / Storage Device', value: 'usb-storage', hsn: '85235100' },
+    { label: 'Charger / Adapter', value: 'charger', hsn: '85044090' },
+    { label: 'Speaker / Bluetooth Speaker', value: 'speaker', hsn: '85182200' },
+    { label: 'Keyboard / Mouse', value: 'keyboard-mouse', hsn: '84716060' },
+    { label: 'Other Electronics', value: 'other-electronics', hsn: '85437099' },
+  ],
+  food: [
+    { label: 'Spices (Turmeric, Cumin, etc.)', value: 'spices', hsn: '09109100' },
+    { label: 'Pepper / Chilli', value: 'pepper-chilli', hsn: '09042110' },
+    { label: 'Tea (Packaged)', value: 'tea', hsn: '09024010' },
+    { label: 'Coffee (Packaged)', value: 'coffee', hsn: '09012110' },
+    { label: 'Chocolates', value: 'chocolates', hsn: '18069000' },
+    { label: 'Sweets / Mithai', value: 'sweets', hsn: '17049090' },
+    { label: 'Biscuits / Cookies', value: 'biscuits', hsn: '19053100' },
+    { label: 'Namkeen / Snacks', value: 'namkeen', hsn: '19059090' },
+    { label: 'Pickles / Chutneys', value: 'pickles', hsn: '20019090' },
+    { label: 'Dry Fruits / Nuts', value: 'dry-fruits', hsn: '08013100' },
+    { label: 'Instant Noodles / Ready Meals', value: 'instant-food', hsn: '19023010' },
+    { label: 'Health Supplements', value: 'supplements', hsn: '21069099' },
+    { label: 'Honey', value: 'honey', hsn: '04090000' },
+    { label: 'Papad / Fryums', value: 'papad', hsn: '19059040' },
+    { label: 'Other Packaged Food', value: 'other-food', hsn: '21069099' },
+  ],
+  cosmetics: [
+    { label: 'Skincare (Face Cream, Lotion)', value: 'skincare', hsn: '33049990' },
+    { label: 'Makeup (Foundation, Lipstick)', value: 'makeup', hsn: '33041000' },
+    { label: 'Perfume / Eau de Toilette', value: 'perfume', hsn: '33030010' },
+    { label: 'Deodorant / Body Spray', value: 'deodorant', hsn: '33072000' },
+    { label: 'Shampoo', value: 'shampoo', hsn: '33051000' },
+    { label: 'Hair Oil / Serum', value: 'hair-oil', hsn: '33059090' },
+    { label: 'Soap / Body Wash', value: 'soap', hsn: '34011190' },
+    { label: 'Sunscreen', value: 'sunscreen', hsn: '33049910' },
+    { label: 'Nail Polish / Nail Care', value: 'nail-polish', hsn: '33043000' },
+    { label: 'Kajal / Eyeliner', value: 'kajal', hsn: '33042000' },
+    { label: 'Toothpaste / Oral Care', value: 'toothpaste', hsn: '33061000' },
+    { label: 'Other Personal Care', value: 'other-cosmetics', hsn: '33079090' },
+  ],
+  handicraft: [
+    { label: 'Wooden Carving / Sculpture', value: 'wood-carving', hsn: '44201000' },
+    { label: 'Brass / Metal Artwork', value: 'brass-art', hsn: '74181090' },
+    { label: 'Painting (Handmade)', value: 'painting', hsn: '97011000' },
+    { label: 'Marble / Stone Craft', value: 'marble-craft', hsn: '68029990' },
+    { label: 'Pottery / Terracotta', value: 'pottery', hsn: '69139000' },
+    { label: 'Textile Handicraft (Embroidery)', value: 'textile-craft', hsn: '58109200' },
+    { label: 'Bamboo / Cane Craft', value: 'bamboo-craft', hsn: '46021900' },
+    { label: 'Papier-Mâché', value: 'papier-mache', hsn: '48239090' },
+    { label: 'Lacquerware', value: 'lacquerware', hsn: '44209090' },
+    { label: 'Other Handicraft', value: 'other-handicraft', hsn: '97019000' },
+  ],
+  books: [
+    { label: 'Printed Books (Fiction / Non-Fiction)', value: 'printed-books', hsn: '49011010' },
+    { label: 'Educational / Textbooks', value: 'textbooks', hsn: '49011020' },
+    { label: 'Religious / Spiritual Books', value: 'religious-books', hsn: '49019900' },
+    { label: 'Notebooks / Diaries', value: 'notebooks', hsn: '48201010' },
+    { label: 'Pens (Ballpoint / Fountain)', value: 'pens', hsn: '96081000' },
+    { label: 'Pencils / Crayons', value: 'pencils', hsn: '96091010' },
+    { label: 'Art Supplies (Paints, Brushes)', value: 'art-supplies', hsn: '96032100' },
+    { label: 'Greeting Cards', value: 'greeting-cards', hsn: '49090010' },
+    { label: 'Calendars / Posters', value: 'calendars', hsn: '49100010' },
+    { label: 'Other Stationery', value: 'other-stationery', hsn: '48209090' },
+  ],
+  toys: [
+    { label: 'Soft Toys / Stuffed Animals', value: 'soft-toys', hsn: '95030030' },
+    { label: 'Action Figures / Dolls', value: 'dolls', hsn: '95030020' },
+    { label: 'Building Blocks / LEGO', value: 'building-blocks', hsn: '95030090' },
+    { label: 'Board Games / Puzzles', value: 'board-games', hsn: '95049090' },
+    { label: 'Remote Control Toys', value: 'rc-toys', hsn: '95030010' },
+    { label: 'Educational Toys', value: 'educational-toys', hsn: '95030090' },
+    { label: 'Video Game Console', value: 'game-console', hsn: '95041000' },
+    { label: 'Video Game Cartridge / Disc', value: 'game-disc', hsn: '95049010' },
+    { label: 'Outdoor Play Equipment', value: 'outdoor-toys', hsn: '95030010' },
+    { label: 'Other Toys / Games', value: 'other-toys', hsn: '95030090' },
+  ],
+  jewelry: [
+    { label: 'Necklace / Chain', value: 'necklace', hsn: '71171990' },
+    { label: 'Earrings', value: 'earrings', hsn: '71171990' },
+    { label: 'Bangles / Bracelets', value: 'bangles', hsn: '71171910' },
+    { label: 'Rings', value: 'rings', hsn: '71171990' },
+    { label: 'Anklets', value: 'anklets', hsn: '71179090' },
+    { label: 'Brooch / Pin', value: 'brooch', hsn: '71179090' },
+    { label: 'Hair Accessories', value: 'hair-accessories', hsn: '71179090' },
+    { label: 'Jewelry Set', value: 'jewelry-set', hsn: '71171990' },
+    { label: 'Other Imitation Jewelry', value: 'other-jewelry', hsn: '71179090' },
+  ],
+  household: [
+    { label: 'Stainless Steel Utensils', value: 'ss-utensils', hsn: '73239390' },
+    { label: 'Copper / Brass Utensils', value: 'copper-utensils', hsn: '74181020' },
+    { label: 'Ceramic Tableware', value: 'ceramic-tableware', hsn: '69120010' },
+    { label: 'Porcelain Tableware', value: 'porcelain-tableware', hsn: '69111010' },
+    { label: 'Glassware', value: 'glassware', hsn: '70134990' },
+    { label: 'Bed Linen / Bedsheets', value: 'bed-linen', hsn: '63021010' },
+    { label: 'Towels', value: 'towels', hsn: '63026000' },
+    { label: 'Curtains', value: 'curtains', hsn: '63039200' },
+    { label: 'Carpet / Rug', value: 'carpet', hsn: '57021090' },
+    { label: 'Candles / Decorative Items', value: 'candles', hsn: '34060010' },
+    { label: 'Photo Frames', value: 'photo-frames', hsn: '44140000' },
+    { label: 'Other Household Items', value: 'other-household', hsn: '73239990' },
+  ],
+  other: [
+    { label: 'Bags / Handbags (Leather)', value: 'bags-leather', hsn: '42022100' },
+    { label: 'Bags / Handbags (Textile)', value: 'bags-textile', hsn: '42022290' },
+    { label: 'Wallets / Purses', value: 'wallets', hsn: '42023100' },
+    { label: 'Belts (Leather)', value: 'belts', hsn: '42031000' },
+    { label: 'Shoes / Footwear (Leather)', value: 'shoes-leather', hsn: '64035190' },
+    { label: 'Shoes / Footwear (Rubber/Plastic)', value: 'shoes-rubber', hsn: '64029990' },
+    { label: 'Sandals / Chappals', value: 'sandals', hsn: '64041900' },
+    { label: 'Sunglasses', value: 'sunglasses', hsn: '90041000' },
+    { label: 'Watches', value: 'watches', hsn: '91019090' },
+    { label: 'Umbrella', value: 'umbrella', hsn: '66019100' },
+    { label: 'Other Items', value: 'other-misc', hsn: '99080000' },
+  ],
+};
+
 // ── Common HSN Codes for International Shipping ──
 const COMMON_HSN_CODES = [
   { code: '3004', desc: 'Medicaments (mixed or unmixed)' },
@@ -1532,15 +1672,13 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                                       </SelectContent>
                                     </Select>
                                   ) : (
-                                    <Select value={item.type} onValueChange={(v) => { const arr = [...contentItems]; arr[idx].type = v; setContentItems(arr); }}>
+                                    <Select value={item.type} onValueChange={(v) => { const arr = [...contentItems]; arr[idx].type = v; arr[idx].hsnCode = ''; setContentItems(arr); }}>
                                       <SelectTrigger className="h-10 mt-1"><SelectValue placeholder="Select type" /></SelectTrigger>
                                       <SelectContent>
                                         <SelectItem value="clothing">Clothing & Apparel</SelectItem>
                                         <SelectItem value="electronics">Electronics</SelectItem>
-                                        <SelectItem value="food">Food & Supplements</SelectItem>
+                                        <SelectItem value="food">Branded Packaged Food</SelectItem>
                                         <SelectItem value="cosmetics">Cosmetics & Personal Care</SelectItem>
-                                        <SelectItem value="medicine">Medicine / Pharma</SelectItem>
-                                        <SelectItem value="documents">Documents</SelectItem>
                                         <SelectItem value="handicraft">Handicraft & Art</SelectItem>
                                         <SelectItem value="books">Books & Stationery</SelectItem>
                                         <SelectItem value="toys">Toys & Games</SelectItem>
@@ -1552,6 +1690,20 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                                   )}
                                 </div>
                               </div>
+                              {/* Conditional Subtype dropdown — appears when a type is selected */}
+                              {!isMedicineFlow && item.type && GIFT_ITEM_SUBTYPES[item.type] && (
+                                <div>
+                                  <label className="text-xs font-medium">Sub Type</label>
+                                  <Select value={GIFT_ITEM_SUBTYPES[item.type]?.find(s => s.hsn === item.hsnCode)?.value || ''} onValueChange={(v) => { const sub = GIFT_ITEM_SUBTYPES[item.type]?.find(s => s.value === v); if (sub) { const arr = [...contentItems]; arr[idx].hsnCode = sub.hsn; setContentItems(arr); } }}>
+                                    <SelectTrigger className="h-10 mt-1"><SelectValue placeholder="Select sub type" /></SelectTrigger>
+                                    <SelectContent>
+                                      {GIFT_ITEM_SUBTYPES[item.type].map(sub => (
+                                        <SelectItem key={sub.value} value={sub.value}>{sub.label}</SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                              )}
                               <div className="grid grid-cols-3 gap-3">
                                 <div>
                                   <label className="text-xs font-medium">HSN Code</label>
