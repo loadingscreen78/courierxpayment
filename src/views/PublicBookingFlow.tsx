@@ -98,6 +98,51 @@ const shipmentTypeOptions = {
   ],
 };
 
+// ── Common HSN Codes for International Shipping ──
+const COMMON_HSN_CODES = [
+  { code: '3004', desc: 'Medicaments (mixed or unmixed)' },
+  { code: '3003', desc: 'Medicaments (unmixed, for retail)' },
+  { code: '3006', desc: 'Pharmaceutical preparations' },
+  { code: '4901', desc: 'Printed books, brochures' },
+  { code: '4907', desc: 'Stamps, cheque forms, certificates' },
+  { code: '4911', desc: 'Printed matter (catalogues, posters)' },
+  { code: '6109', desc: 'T-shirts, singlets, tank tops (knitted)' },
+  { code: '6110', desc: 'Jerseys, pullovers, cardigans (knitted)' },
+  { code: '6104', desc: 'Women suits, dresses, skirts (knitted)' },
+  { code: '6103', desc: 'Men suits, jackets, trousers (knitted)' },
+  { code: '6204', desc: 'Women suits, dresses (not knitted)' },
+  { code: '6203', desc: 'Men suits, jackets (not knitted)' },
+  { code: '6205', desc: 'Men shirts (not knitted)' },
+  { code: '6206', desc: 'Women blouses, shirts (not knitted)' },
+  { code: '6402', desc: 'Footwear (rubber/plastic outer sole)' },
+  { code: '6403', desc: 'Footwear (leather outer sole)' },
+  { code: '6911', desc: 'Tableware, kitchenware (porcelain)' },
+  { code: '7113', desc: 'Jewelry (precious metal)' },
+  { code: '7117', desc: 'Imitation jewelry' },
+  { code: '8471', desc: 'Computers, laptops, tablets' },
+  { code: '8517', desc: 'Telephones, smartphones' },
+  { code: '8528', desc: 'Monitors, TVs, projectors' },
+  { code: '8523', desc: 'Storage media (USB, SD cards)' },
+  { code: '9503', desc: 'Toys, puzzles, models' },
+  { code: '9504', desc: 'Video game consoles, accessories' },
+  { code: '3304', desc: 'Beauty/makeup preparations' },
+  { code: '3305', desc: 'Hair care preparations' },
+  { code: '3307', desc: 'Perfumes, deodorants' },
+  { code: '1704', desc: 'Sugar confectionery (sweets)' },
+  { code: '1806', desc: 'Chocolate preparations' },
+  { code: '1905', desc: 'Bread, pastry, biscuits' },
+  { code: '0910', desc: 'Spices (ginger, turmeric, curry)' },
+  { code: '0904', desc: 'Pepper, chillies' },
+  { code: '2106', desc: 'Food preparations (supplements)' },
+  { code: '4202', desc: 'Bags, suitcases, wallets' },
+  { code: '4203', desc: 'Leather articles (belts, gloves)' },
+  { code: '6302', desc: 'Bed linen, table linen' },
+  { code: '5702', desc: 'Carpets, rugs (woven)' },
+  { code: '9701', desc: 'Paintings, drawings (handmade)' },
+  { code: '4420', desc: 'Wood marquetry, caskets, statuettes' },
+  { code: '6912', desc: 'Ceramic tableware (non-porcelain)' },
+];
+
 // ── Component ────────────────────────────────────────────────────────────────
 
 export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
@@ -1349,7 +1394,17 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                               <div className="grid grid-cols-3 gap-3">
                                 <div>
                                   <label className="text-xs font-medium">HSN Code</label>
-                                  <Input value={item.hsnCode} onChange={(e) => { const arr = [...contentItems]; arr[idx].hsnCode = e.target.value; setContentItems(arr); }} placeholder="e.g. 6109" className="h-10 mt-1" />
+                                  <div className="relative">
+                                    <Input list={`hsn-list-${idx}`} value={item.hsnCode} onChange={(e) => { const arr = [...contentItems]; arr[idx].hsnCode = e.target.value; setContentItems(arr); }} placeholder="Search or type HSN" className="h-10 mt-1" />
+                                    <datalist id={`hsn-list-${idx}`}>
+                                      {COMMON_HSN_CODES.map(h => (
+                                        <option key={h.code} value={h.code}>{h.code} - {h.desc}</option>
+                                      ))}
+                                    </datalist>
+                                  </div>
+                                  {item.hsnCode && COMMON_HSN_CODES.find(h => h.code === item.hsnCode) && (
+                                    <p className="text-[10px] text-muted-foreground mt-0.5">{COMMON_HSN_CODES.find(h => h.code === item.hsnCode)?.desc}</p>
+                                  )}
                                 </div>
                                 <div>
                                   <label className="text-xs font-medium">Quantity</label>
