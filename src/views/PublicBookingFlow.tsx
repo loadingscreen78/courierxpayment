@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
@@ -13,8 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { getCourierOptions, calculateRate, type CourierOption } from '@/lib/shipping/rateCalculator';
-import { getServedCountries } from '@/lib/shipping/countries';
-import { getCountryByCode } from '@/lib/shipping/countries';
+import { getServedCountries, getCountryByCode } from '@/lib/shipping/countries';
 import GuestSummaryStep from '@/components/guest-booking/GuestSummaryStep';
 import { usePincodeLookup } from '@/hooks/usePincodeLookup';
 import { INDIAN_STATES } from '@/lib/pincode-lookup';
@@ -27,7 +26,7 @@ interface PublicBookingFlowProps {
   mode: FlowMode;
 }
 
-// â”€â”€ Schemas â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Schemas ──────────────────────────────────────────────────────────────────
 
 const internationalRateSchema = z.object({
   shipmentType: z.enum(['medicine', 'document', 'gift'], { required_error: 'Select shipment type' }),
@@ -36,11 +35,11 @@ const internationalRateSchema = z.object({
   lengthCm: z.coerce.number().min(1, 'Required').max(150),
   widthCm: z.coerce.number().min(1, 'Required').max(150),
   heightCm: z.coerce.number().min(1, 'Required').max(150),
-  declaredValue: z.coerce.number().min(1, 'Required').max(50000, 'Max â‚¹50,000'),
+  declaredValue: z.coerce.number().min(1, 'Required').max(50000, 'Max ₹50,000'),
 }).superRefine((data, ctx) => {
   if (data.shipmentType === 'document') {
     if (data.weightGrams > 1000) ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Documents max 1 kg', path: ['weightGrams'] });
-    if (data.declaredValue > 100) ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Documents max â‚¹100 declared value', path: ['declaredValue'] });
+    if (data.declaredValue > 100) ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Documents max ₹100 declared value', path: ['declaredValue'] });
   }
 });
 
@@ -52,15 +51,15 @@ const domesticRateSchema = z.object({
   lengthCm: z.coerce.number().min(1, 'Required').max(150),
   widthCm: z.coerce.number().min(1, 'Required').max(150),
   heightCm: z.coerce.number().min(1, 'Required').max(150),
-  declaredValue: z.coerce.number().min(0).max(49000, 'Max â‚¹49,000'),
+  declaredValue: z.coerce.number().min(0).max(49000, 'Max ₹49,000'),
 }).superRefine((data, ctx) => {
   if (data.shipmentType === 'document') {
     if (data.weightKg > 1) ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Documents max 1 kg', path: ['weightKg'] });
-    if (data.declaredValue > 100) ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Documents max â‚¹100 declared value', path: ['declaredValue'] });
+    if (data.declaredValue > 100) ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Documents max ₹100 declared value', path: ['declaredValue'] });
   }
   if (data.shipmentType === 'gift') {
     if (data.weightKg > 30) ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Gift/Parcel max 30 kg', path: ['weightKg'] });
-    if (data.declaredValue > 49000) ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Max declared value â‚¹49,000', path: ['declaredValue'] });
+    if (data.declaredValue > 49000) ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Max declared value ₹49,000', path: ['declaredValue'] });
   }
 });
 
@@ -97,7 +96,7 @@ const shipmentTypeOptions = {
   ],
 };
 
-// â”€â”€ Component â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Component ────────────────────────────────────────────────────────────────
 
 export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
   const router = useRouter();
@@ -116,25 +115,25 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [senderReceiverData, setSenderReceiverData] = useState<any>(null);
   const [addressSubStep, setAddressSubStep] = useState<'pickup' | 'sender' | 'receiver' | 'content'>('pickup');
-  const [showWeightLimitModal, setShowWeightLimitModal] = useState(false);
   const [aadhaarFront, setAadhaarFront] = useState<File | null>(null);
   const [aadhaarBack, setAadhaarBack] = useState<File | null>(null);
   const [passportIdentity, setPassportIdentity] = useState<File | null>(null);
   const [passportAddress, setPassportAddress] = useState<File | null>(null);
+  const [showWeightLimitModal, setShowWeightLimitModal] = useState(false);
 
-  // â”€â”€ International rate form â”€â”€
+  // ── International rate form ──
   const intlForm = useForm<InternationalRateValues>({
     resolver: zodResolver(internationalRateSchema),
     defaultValues: { shipmentType: undefined, destinationCountry: '', weightGrams: 500, lengthCm: 20, widthCm: 15, heightCm: 10, declaredValue: 1000 },
   });
 
-  // â”€â”€ Domestic rate form â”€â”€
+  // ── Domestic rate form ──
   const domForm = useForm<DomesticRateValues>({
     resolver: zodResolver(domesticRateSchema),
     defaultValues: { shipmentType: undefined, pickupPincode: '', deliveryPincode: '', weightKg: undefined as any, lengthCm: undefined as any, widthCm: undefined as any, heightCm: undefined as any, declaredValue: undefined as any },
   });
 
-  // â”€â”€ Sender/Receiver form â”€â”€
+  // ── Sender/Receiver form ──
   const detailsForm = useForm<SenderReceiverValues>({
     resolver: zodResolver(senderReceiverSchema),
     defaultValues: {
@@ -155,7 +154,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
   const watchedDomType = domForm.watch('shipmentType');
   const isDocumentDom = watchedDomType === 'document';
 
-  // â”€â”€ Pre-fill from rate calculator localStorage data â”€â”€
+  // ── Pre-fill from rate calculator localStorage data ──
   useEffect(() => {
     try {
       const raw = localStorage.getItem('publicRateCalcData');
@@ -178,13 +177,13 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
     } catch { /* ignore parse errors */ }
   }, [isInternational, domForm]);
 
-  // â”€â”€ Pincode lookups for domestic rate form (step 1) â”€â”€
+  // ── Pincode lookups for domestic rate form (step 1) ──
   const ratePickupPin = domForm.watch('pickupPincode');
   const rateDeliveryPin = domForm.watch('deliveryPincode');
   const pickupLookup = usePincodeLookup(!isInternational ? ratePickupPin : '');
   const deliveryLookup = usePincodeLookup(!isInternational ? rateDeliveryPin : '');
 
-  // â”€â”€ Volumetric weight calculation (NimbusPost formula: LÃ—WÃ—H / 5000) â”€â”€
+  // ── Volumetric weight calculation (NimbusPost formula: L×W×H / 5000) ──
   const watchedLength = domForm.watch('lengthCm');
   const watchedWidth = domForm.watch('widthCm');
   const watchedHeight = domForm.watch('heightCm');
@@ -194,7 +193,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
     : 0;
   const chargeableWeight = Math.max(Number(watchedWeight) || 0, volumetricWeight);
 
-  // â”€â”€ Pincode auto-fill for domestic â”€â”€
+  // ── Pincode auto-fill for domestic ──
   // For domestic: pre-fill sender pincode from pickupPincode, receiver from deliveryPincode
   const domesticPickupPincode = !isInternational ? (rateFormData as DomesticRateValues)?.pickupPincode || '' : '';
   const domesticDeliveryPincode = !isInternational ? (rateFormData as DomesticRateValues)?.deliveryPincode || '' : '';
@@ -241,7 +240,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
     }
   }, [receiverLookup.district, isInternational, detailsForm]);
 
-  // â”€â”€ Handle international rate calculation â”€â”€
+  // ── Handle international rate calculation ──
   const handleIntlRateSubmit = (values: InternationalRateValues) => {
     const guest = getCourierOptions({
       destinationCountryCode: values.destinationCountry,
@@ -265,7 +264,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
     setStep(2);
   };
 
-  // â”€â”€ Handle domestic rate calculation â”€â”€
+  // ── Handle domestic rate calculation ──
   const handleDomRateSubmit = async (values: DomesticRateValues) => {
     setIsDomesticLoading(true);
     setRateFormData(values);
@@ -299,40 +298,40 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
     }
   };
 
-  // â”€â”€ Select a courier and go to details â”€â”€
+  // ── Select a courier and go to details ──
   const handleSelectCourier = (courier: any) => {
     setSelectedCourier(courier);
     setStep(3);
   };
 
-  // â”€â”€ Submit sender/receiver and go to summary â”€â”€
+  // ── Submit sender/receiver and go to summary ──
   const handleFinalSubmit = (values: SenderReceiverValues) => {
     setSenderReceiverData(values);
     setStep(4);
   };
 
-  // â”€â”€ Validate pickup address fields before sliding to sender â”€â”€
+  // ── Validate pickup address fields before sliding to sender ──
   const handlePickupNext = async () => {
     const pickupFields = ['senderAddress', 'senderCity', 'senderState', 'senderPincode'] as const;
     const result = await detailsForm.trigger(pickupFields);
     if (result) setAddressSubStep('sender');
   };
 
-  // â”€â”€ Validate sender fields before sliding to receiver â”€â”€
+  // ── Validate sender fields before sliding to receiver ──
   const handleSenderNext = async () => {
     const senderFields = ['senderName', 'senderPhone', 'senderEmail'] as const;
     const result = await detailsForm.trigger(senderFields);
     if (result) setAddressSubStep('receiver');
   };
 
-  // â”€â”€ Validate receiver fields before sliding to content â”€â”€
+  // ── Validate receiver fields before sliding to content ──
   const handleReceiverNext = async () => {
     const receiverFields = ['receiverName', 'receiverPhone', 'receiverEmail', 'receiverAddress', 'receiverCity', 'receiverZipcode'] as const;
     const result = await detailsForm.trigger(receiverFields);
     if (result) setAddressSubStep('content');
   };
 
-  // â”€â”€ Region-specific address format guidance â”€â”€
+  // ── Region-specific address format guidance ──
   const getAddressGuidance = () => {
     if (!destinationCountryInfo) return 'Street address, building, apartment/unit number';
     switch (destinationCountryInfo.region) {
@@ -364,7 +363,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
             <Button variant="ghost" size="sm" onClick={() => router.push('/auth')} className="rounded-xl text-sm">Sign In</Button>
             <Button variant="outline" size="sm" onClick={() => router.push('/open-account')} className="rounded-xl text-sm gap-1.5">
               <UserPlus className="h-3.5 w-3.5" />
-              Open Account â€” Save 52%
+              Open Account — Save 52%
             </Button>
           </div>
         </div>
@@ -381,7 +380,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
               {isInternational ? <Globe className="h-6 w-6 text-blue-600" weight="duotone" /> : <Truck className="h-6 w-6 text-green-600" weight="duotone" />}
               {isInternational ? 'International Shipping' : 'Domestic Shipping'}
             </h1>
-            <p className="text-muted-foreground text-sm">Guest booking â€” standard rates apply</p>
+            <p className="text-muted-foreground text-sm">Guest booking — standard rates apply</p>
           </div>
         </div>
 
@@ -395,7 +394,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
           ))}
         </div>
 
-        {/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• STEP 1: Rate Calculator Form â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
+        {/* ═══════════════ STEP 1: Rate Calculator Form ═══════════════ */}
         {step === 1 && (
           <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-5">
             <div className="bg-card rounded-xl border border-border p-6 space-y-5">
@@ -446,7 +445,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                       </FormItem>
                     )} />
 
-                    {/* Weight + Value â€” document-specific */}
+                    {/* Weight + Value — document-specific */}
                     <div className="grid grid-cols-2 gap-4">
                       <FormField control={intlForm.control} name="weightGrams" render={({ field }) => (
                         <FormItem>
@@ -496,7 +495,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                                 <SelectItem value="9000">Up to 9 kg</SelectItem>
                                 <SelectItem value="9500">Up to 9.5 kg</SelectItem>
                                 <SelectItem value="10000">Up to 10 kg</SelectItem>
-                                <SelectItem value="over10" className="text-coke-red font-medium">More than 10 kg â†’</SelectItem>
+                                <SelectItem value="over10" className="text-coke-red font-medium">More than 10 kg →</SelectItem>
                               </SelectContent>
                             </Select>
                           )}
@@ -505,11 +504,11 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                       )} />
                       <FormField control={intlForm.control} name="declaredValue" render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Declared Value (â‚¹)</FormLabel>
+                          <FormLabel>Declared Value (₹)</FormLabel>
                           <FormControl>
-                            <Input {...field} type="number" placeholder={isDocumentIntl ? 'Max â‚¹100' : '1000'} max={isDocumentIntl ? 100 : 50000} />
+                            <Input {...field} type="number" placeholder={isDocumentIntl ? 'Max ₹100' : '1000'} max={isDocumentIntl ? 100 : 50000} />
                           </FormControl>
-                          {isDocumentIntl && <p className="text-xs text-muted-foreground">Documents cannot exceed â‚¹100 declared value</p>}
+                          {isDocumentIntl && <p className="text-xs text-muted-foreground">Documents cannot exceed ₹100 declared value</p>}
                           <FormMessage />
                         </FormItem>
                       )} />
@@ -546,7 +545,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                   </form>
                 </Form>
               ) : (
-                /* â”€â”€ Domestic form â”€â”€ */
+                /* ── Domestic form ── */
                 <Form {...domForm}>
                   <form onSubmit={domForm.handleSubmit(handleDomRateSubmit)} className="space-y-4">
                     {/* Shipment Type */}
@@ -582,7 +581,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                           <FormLabel>Pickup Pincode</FormLabel>
                           <FormControl><Input {...field} placeholder="110001" maxLength={6} /></FormControl>
                           {pickupLookup.loading && <p className="text-xs text-muted-foreground flex items-center gap-1"><CircleNotch className="h-3 w-3 animate-spin" /> Looking up...</p>}
-                          {pickupLookup.state && <p className="text-xs text-candlestick-green">ðŸ“ {pickupLookup.district}, {pickupLookup.state}</p>}
+                          {pickupLookup.state && <p className="text-xs text-candlestick-green">📍 {pickupLookup.district}, {pickupLookup.state}</p>}
                           {pickupLookup.error && <p className="text-xs text-destructive">{pickupLookup.error}</p>}
                           <FormMessage />
                         </FormItem>
@@ -592,7 +591,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                           <FormLabel>Delivery Pincode</FormLabel>
                           <FormControl><Input {...field} placeholder="400001" maxLength={6} /></FormControl>
                           {deliveryLookup.loading && <p className="text-xs text-muted-foreground flex items-center gap-1"><CircleNotch className="h-3 w-3 animate-spin" /> Looking up...</p>}
-                          {deliveryLookup.state && <p className="text-xs text-candlestick-green">ðŸ“ {deliveryLookup.district}, {deliveryLookup.state}</p>}
+                          {deliveryLookup.state && <p className="text-xs text-candlestick-green">📍 {deliveryLookup.district}, {deliveryLookup.state}</p>}
                           {deliveryLookup.error && <p className="text-xs text-destructive">{deliveryLookup.error}</p>}
                           <FormMessage />
                         </FormItem>
@@ -637,12 +636,12 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                       )} />
                       <FormField control={domForm.control} name="declaredValue" render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Declared Value (â‚¹)</FormLabel>
+                          <FormLabel>Declared Value (₹)</FormLabel>
                           <FormControl>
-                            <Input {...field} type="number" placeholder={isDocumentDom ? 'Max â‚¹100' : 'Max â‚¹49,000'} max={isDocumentDom ? 100 : 49000} />
+                            <Input {...field} type="number" placeholder={isDocumentDom ? 'Max ₹100' : 'Max ₹49,000'} max={isDocumentDom ? 100 : 49000} />
                           </FormControl>
-                          {isDocumentDom && <p className="text-xs text-muted-foreground">Documents cannot exceed â‚¹100 declared value</p>}
-                          {!isDocumentDom && <p className="text-xs text-muted-foreground">Maximum â‚¹49,000 for gift/parcel shipments</p>}
+                          {isDocumentDom && <p className="text-xs text-muted-foreground">Documents cannot exceed ₹100 declared value</p>}
+                          {!isDocumentDom && <p className="text-xs text-muted-foreground">Maximum ₹49,000 for gift/parcel shipments</p>}
                           <FormMessage />
                         </FormItem>
                       )} />
@@ -654,7 +653,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                       <div className="rounded-lg bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900/50 p-3 mb-3">
                         <p className="text-xs text-blue-800 dark:text-blue-300 flex items-start gap-1.5">
                           <Info className="h-3.5 w-3.5 shrink-0 mt-0.5" weight="fill" />
-                          <span>Measure the outer dimensions of your packed box using a measuring tape. Enter the longest side as Length, the next as Width, and the shortest as Height. Courier charges are based on the higher of actual weight or volumetric weight (LÃ—WÃ—H Ã· 5000).</span>
+                          <span>Measure the outer dimensions of your packed box using a measuring tape. Enter the longest side as Length, the next as Width, and the shortest as Height. Courier charges are based on the higher of actual weight or volumetric weight (L×W×H ÷ 5000).</span>
                         </p>
                       </div>
                       <div className="grid grid-cols-3 gap-3">
@@ -670,11 +669,11 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                       </div>
                       {volumetricWeight > 0 && (
                         <div className="mt-2 text-xs text-muted-foreground space-y-0.5">
-                          <p>Volumetric weight: <span className="font-medium">{volumetricWeight} kg</span> ({watchedLength}Ã—{watchedWidth}Ã—{watchedHeight} Ã· 5000)</p>
+                          <p>Volumetric weight: <span className="font-medium">{volumetricWeight} kg</span> ({watchedLength}×{watchedWidth}×{watchedHeight} ÷ 5000)</p>
                           {chargeableWeight > (Number(watchedWeight) || 0) && (
                             <p className="text-amber-600 dark:text-amber-400 flex items-center gap-1">
                               <Warning className="h-3 w-3" weight="fill" />
-                              Volumetric weight exceeds actual weight â€” courier will charge for <span className="font-semibold">{chargeableWeight} kg</span>
+                              Volumetric weight exceeds actual weight — courier will charge for <span className="font-semibold">{chargeableWeight} kg</span>
                             </p>
                           )}
                         </div>
@@ -691,14 +690,14 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
           </motion.div>
         )}
 
-        {/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• STEP 2: Rate Results â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
+        {/* ═══════════════ STEP 2: Rate Results ═══════════════ */}
         {step === 2 && (
           <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-4">
             {/* Account savings banner */}
             <div className="rounded-xl border border-candlestick-green/30 bg-candlestick-green/5 p-4">
               <p className="text-sm">
-                ðŸ’¡ <span className="font-medium">Account holders pay up to 52% less</span> on these same routes.{' '}
-                <button onClick={() => router.push('/open-account')} className="text-coke-red hover:underline font-semibold">Open a free account â†’</button>
+                💡 <span className="font-medium">Account holders pay up to 52% less</span> on these same routes.{' '}
+                <button onClick={() => router.push('/open-account')} className="text-coke-red hover:underline font-semibold">Open a free account →</button>
               </p>
             </div>
 
@@ -707,7 +706,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
 
             {isInternational ? (
               guestCouriers.length === 0 ? (
-                /* â”€â”€ Animated no-service for international â”€â”€ */
+                /* ── Animated no-service for international ── */
                 <motion.div
                   initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
@@ -765,7 +764,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                                   <span className="text-xs px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950/40 text-amber-600 font-medium">Available Soon</span>
                                 )}
                               </div>
-                              <p className="text-sm text-muted-foreground mt-1">{option.transitDays.min}â€“{option.transitDays.max} days delivery</p>
+                              <p className="text-sm text-muted-foreground mt-1">{option.transitDays.min}–{option.transitDays.max} days delivery</p>
                               <div className="flex flex-wrap gap-1.5 mt-2">
                                 {option.features.slice(0, 3).map(f => (
                                   <span key={f} className="text-xs px-2 py-0.5 rounded bg-muted/50 text-muted-foreground">{f}</span>
@@ -773,10 +772,10 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                               </div>
                             </div>
                             <div className="text-right shrink-0 ml-4">
-                              <p className="text-2xl font-bold">â‚¹{option.price.toLocaleString('en-IN')}</p>
+                              <p className="text-2xl font-bold">₹{option.price.toLocaleString('en-IN')}</p>
                               {savings > 0 && !isComingSoon && (
                                 <p className="text-xs text-candlestick-green mt-0.5">
-                                  With account: <span className="font-semibold">â‚¹{accountPrice.toLocaleString('en-IN')}</span>
+                                  With account: <span className="font-semibold">₹{accountPrice.toLocaleString('en-IN')}</span>
                                 </p>
                               )}
                               {isComingSoon ? (
@@ -799,13 +798,13 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                               {rateBreakdown.breakdown.map(item => (
                                 <div key={item.label} className="flex justify-between text-xs">
                                   <span className="text-muted-foreground">{item.label}</span>
-                                  <span className="font-medium">â‚¹{item.amount.toLocaleString('en-IN')}</span>
+                                  <span className="font-medium">₹{item.amount.toLocaleString('en-IN')}</span>
                                 </div>
                               ))}
                             </div>
                             <div className="flex justify-between text-sm font-semibold mt-2 pt-2 border-t border-border">
                               <span>Total</span>
-                              <span>â‚¹{rateBreakdown.total.toLocaleString('en-IN')}</span>
+                              <span>₹{rateBreakdown.total.toLocaleString('en-IN')}</span>
                             </div>
                           </div>
                         )}
@@ -815,7 +814,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                 </div>
               )
             ) : (
-              /* â”€â”€ Domestic rate results â”€â”€ */
+              /* ── Domestic rate results ── */
               (() => {
                 // For documents: show only air services, fallback to Delhivery Surface
                 const isDocType = rateFormData && 'shipmentType' in rateFormData && rateFormData.shipmentType === 'document';
@@ -834,7 +833,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                 }
 
                 return filteredDomestic.length === 0 ? (
-                  /* â”€â”€ Animated no-service component â”€â”€ */
+                  /* ── Animated no-service component ── */
                   <motion.div
                     initial={{ opacity: 0, scale: 0.9 }}
                     animate={{ opacity: 1, scale: 1 }}
@@ -896,9 +895,9 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                           <p className="text-sm text-muted-foreground mt-1">{c.estimated_delivery_days} days delivery</p>
                         </div>
                         <div className="text-right shrink-0 ml-4">
-                          <p className="text-2xl font-bold">â‚¹{c.customer_price?.toLocaleString('en-IN')}</p>
+                          <p className="text-2xl font-bold">₹{c.customer_price?.toLocaleString('en-IN')}</p>
                           <div className="text-xs text-muted-foreground mt-0.5">
-                            Base: â‚¹{c.shipping_charge?.toLocaleString('en-IN')} + GST: â‚¹{c.gst_amount?.toLocaleString('en-IN')}
+                            Base: ₹{c.shipping_charge?.toLocaleString('en-IN')} + GST: ₹{c.gst_amount?.toLocaleString('en-IN')}
                           </div>
                           <Button size="sm" className="mt-2 bg-coke-red hover:bg-red-600 text-white" onClick={() => handleSelectCourier(c)}>
                             Book Now
@@ -914,7 +913,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
           </motion.div>
         )}
 
-        {/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• STEP 3: Sender & Receiver Details (4-Step Slider) â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
+        {/* ═══════════════ STEP 3: Sender & Receiver Details (4-Step Slider) ═══════════════ */}
         {step === 3 && (
           <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-5">
             {/* Selected courier summary */}
@@ -924,11 +923,11 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                   <p className="text-sm text-muted-foreground">Selected Courier</p>
                   <p className="font-semibold">{(selectedCourier as any).carrier || (selectedCourier as any).courier_name}</p>
                 </div>
-                <p className="text-xl font-bold">â‚¹{((selectedCourier as any).price || (selectedCourier as any).customer_price)?.toLocaleString('en-IN')}</p>
+                <p className="text-xl font-bold">₹{((selectedCourier as any).price || (selectedCourier as any).customer_price)?.toLocaleString('en-IN')}</p>
               </div>
             )}
 
-            {/* Sub-step indicator â€” 4 steps */}
+            {/* Sub-step indicator — 4 steps */}
             <div className="flex items-center gap-2">
               {(['pickup', 'sender', 'receiver', 'content'] as const).map((s, i) => {
                 const stepOrder = ['pickup', 'sender', 'receiver', 'content'];
@@ -941,7 +940,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                       currentIdx > i ? 'bg-candlestick-green text-white' :
                       'bg-muted text-muted-foreground'
                     }`}>
-                      {currentIdx > i ? 'âœ“' : i + 1}
+                      {currentIdx > i ? '✓' : i + 1}
                     </div>
                     <span className={`text-xs hidden sm:inline ${s === addressSubStep ? 'font-medium text-foreground' : 'text-muted-foreground'}`}>
                       {labels[i]}
@@ -954,19 +953,13 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
 
             <Form {...detailsForm}>
               <form onSubmit={detailsForm.handleSubmit(handleFinalSubmit)}>
+                {/* Slider container */}
                 <div className="overflow-hidden">
                   <AnimatePresence mode="wait">
-
-                    {/* â”€â”€ Step 1: Pickup Address â”€â”€ */}
+                    {/* ── Step 1: Pickup Address ── */}
                     {addressSubStep === 'pickup' && (
-                      <motion.div
-                        key="pickup"
-                        initial={{ x: 300, opacity: 0 }}
-                        animate={{ x: 0, opacity: 1 }}
-                        exit={{ x: -300, opacity: 0 }}
-                        transition={{ duration: 0.3, ease: 'easeInOut' }}
-                        className="bg-card rounded-2xl border border-border p-8 lg:p-10 space-y-5"
-                      >
+                      <motion.div key="pickup" initial={{ x: 300, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: -300, opacity: 0 }} transition={{ duration: 0.3, ease: 'easeInOut' }}
+                        className="bg-card rounded-2xl border border-border p-8 lg:p-10 space-y-5">
                         <div className="flex items-center gap-3 mb-1">
                           <div className="w-10 h-10 rounded-full bg-orange-100 dark:bg-orange-950/40 flex items-center justify-center">
                             <House className="h-5 w-5 text-orange-600" weight="duotone" />
@@ -993,9 +986,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                           <FormField control={detailsForm.control} name="senderPincode" render={({ field }) => (
                             <FormItem>
                               <FormLabel>Pincode</FormLabel>
-                              <FormControl>
-                                <Input {...field} placeholder="110001" maxLength={6} readOnly={!isInternational && !!domesticPickupPincode} className={`h-11 ${!isInternational && domesticPickupPincode ? 'bg-muted' : ''}`} />
-                              </FormControl>
+                              <FormControl><Input {...field} placeholder="110001" maxLength={6} readOnly={!isInternational && !!domesticPickupPincode} className={`h-11 ${!isInternational && domesticPickupPincode ? 'bg-muted' : ''}`} /></FormControl>
                               {senderLookup.loading && <p className="text-xs text-muted-foreground flex items-center gap-1"><CircleNotch className="h-3 w-3 animate-spin" /> Looking up...</p>}
                               {senderLookup.error && <p className="text-xs text-destructive">{senderLookup.error}</p>}
                               <FormMessage />
@@ -1007,14 +998,10 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                                 <FormLabel>City / District</FormLabel>
                                 {senderLookup.areas.length > 0 ? (
                                   <Select onValueChange={field.onChange} value={field.value}>
-                                    <FormControl>
-                                      <SelectTrigger className="h-11"><SelectValue placeholder="Select city" /></SelectTrigger>
-                                    </FormControl>
+                                    <FormControl><SelectTrigger className="h-11"><SelectValue placeholder="Select city" /></SelectTrigger></FormControl>
                                     <SelectContent>
                                       {senderLookup.district && <SelectItem value={senderLookup.district}>{senderLookup.district} (District)</SelectItem>}
-                                      {senderLookup.areas.filter(a => a !== senderLookup.district).map(a => (
-                                        <SelectItem key={a} value={a}>{a}</SelectItem>
-                                      ))}
+                                      {senderLookup.areas.filter(a => a !== senderLookup.district).map(a => <SelectItem key={a} value={a}>{a}</SelectItem>)}
                                     </SelectContent>
                                   </Select>
                                 ) : (
@@ -1027,17 +1014,11 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                               <FormItem>
                                 <FormLabel>State</FormLabel>
                                 {senderLookup.state ? (
-                                  <div className="h-11 flex items-center px-3 rounded-md border border-border bg-muted text-sm font-medium">
-                                    {senderLookup.state}
-                                  </div>
+                                  <div className="h-11 flex items-center px-3 rounded-md border border-border bg-muted text-sm font-medium">{senderLookup.state}</div>
                                 ) : (
                                   <Select onValueChange={field.onChange} value={field.value}>
-                                    <FormControl>
-                                      <SelectTrigger className="h-11"><SelectValue placeholder="Select state" /></SelectTrigger>
-                                    </FormControl>
-                                    <SelectContent>
-                                      {INDIAN_STATES.map(st => <SelectItem key={st} value={st}>{st}</SelectItem>)}
-                                    </SelectContent>
+                                    <FormControl><SelectTrigger className="h-11"><SelectValue placeholder="Select state" /></SelectTrigger></FormControl>
+                                    <SelectContent>{INDIAN_STATES.map(st => <SelectItem key={st} value={st}>{st}</SelectItem>)}</SelectContent>
                                   </Select>
                                 )}
                                 <FormMessage />
@@ -1045,7 +1026,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                             )} />
                           </div>
                           {senderLookup.state && senderLookup.district && (
-                            <p className="text-xs text-candlestick-green flex items-center gap-1">ðŸ“ {senderLookup.district}, {senderLookup.state}</p>
+                            <p className="text-xs text-candlestick-green flex items-center gap-1">📍 {senderLookup.district}, {senderLookup.state}</p>
                           )}
                         </div>
                         <Button type="button" onClick={handlePickupNext} className="w-full bg-coke-red hover:bg-red-600 text-white gap-2 py-5">
@@ -1054,16 +1035,10 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                       </motion.div>
                     )}
 
-                    {/* â”€â”€ Step 2: Sender Details + Aadhaar (for medicine) â”€â”€ */}
+                    {/* ── Step 2: Sender Details + Aadhaar (for medicine) ── */}
                     {addressSubStep === 'sender' && (
-                      <motion.div
-                        key="sender"
-                        initial={{ x: 300, opacity: 0 }}
-                        animate={{ x: 0, opacity: 1 }}
-                        exit={{ x: -300, opacity: 0 }}
-                        transition={{ duration: 0.3, ease: 'easeInOut' }}
-                        className="bg-card rounded-2xl border border-border p-8 lg:p-10 space-y-5"
-                      >
+                      <motion.div key="sender" initial={{ x: 300, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: -300, opacity: 0 }} transition={{ duration: 0.3, ease: 'easeInOut' }}
+                        className="bg-card rounded-2xl border border-border p-8 lg:p-10 space-y-5">
                         <div className="flex items-center gap-3 mb-1">
                           <div className="w-10 h-10 rounded-full bg-coke-red/10 flex items-center justify-center">
                             <User className="h-5 w-5 text-coke-red" weight="duotone" />
@@ -1095,8 +1070,6 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                           <FormField control={detailsForm.control} name="senderEmail" render={({ field }) => (
                             <FormItem><FormLabel>Email</FormLabel><FormControl><Input {...field} type="email" placeholder="sender@email.com" className="h-11" /></FormControl><FormMessage /></FormItem>
                           )} />
-
-                          {/* Aadhaar Upload â€” Medicine only */}
                           {isMedicineFlow && (
                             <div className="space-y-4 pt-2">
                               <div className="flex items-center gap-2">
@@ -1118,17 +1091,9 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                                   <label className="flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-[#FF6B00]/40 bg-[#FF6B00]/5 hover:bg-[#FF6B00]/10 p-4 cursor-pointer transition-colors">
                                     <input type="file" accept="image/*,.pdf" className="hidden" onChange={(e) => { if (e.target.files?.[0]) setAadhaarFront(e.target.files[0]); }} />
                                     {aadhaarFront ? (
-                                      <div className="text-center">
-                                        <IdentificationCard className="h-8 w-8 text-candlestick-green mx-auto" weight="duotone" />
-                                        <p className="text-xs font-medium text-candlestick-green mt-1">Uploaded</p>
-                                        <p className="text-xs text-muted-foreground truncate max-w-[120px]">{aadhaarFront.name}</p>
-                                      </div>
+                                      <div className="text-center"><IdentificationCard className="h-8 w-8 text-candlestick-green mx-auto" weight="duotone" /><p className="text-xs font-medium text-candlestick-green mt-1">Uploaded</p><p className="text-xs text-muted-foreground truncate max-w-[120px]">{aadhaarFront.name}</p></div>
                                     ) : (
-                                      <div className="text-center">
-                                        <Upload className="h-6 w-6 text-[#FF6B00] mx-auto" weight="duotone" />
-                                        <p className="text-xs font-medium text-[#FF6B00]">Upload Front</p>
-                                        <p className="text-[10px] text-muted-foreground">JPG, PNG or PDF</p>
-                                      </div>
+                                      <div className="text-center"><Upload className="h-6 w-6 text-[#FF6B00] mx-auto" weight="duotone" /><p className="text-xs font-medium text-[#FF6B00]">Upload Front</p><p className="text-[10px] text-muted-foreground">JPG, PNG or PDF</p></div>
                                     )}
                                   </label>
                                 </div>
@@ -1137,17 +1102,9 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                                   <label className="flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-[#FF6B00]/40 bg-[#FF6B00]/5 hover:bg-[#FF6B00]/10 p-4 cursor-pointer transition-colors">
                                     <input type="file" accept="image/*,.pdf" className="hidden" onChange={(e) => { if (e.target.files?.[0]) setAadhaarBack(e.target.files[0]); }} />
                                     {aadhaarBack ? (
-                                      <div className="text-center">
-                                        <IdentificationCard className="h-8 w-8 text-candlestick-green mx-auto" weight="duotone" />
-                                        <p className="text-xs font-medium text-candlestick-green mt-1">Uploaded</p>
-                                        <p className="text-xs text-muted-foreground truncate max-w-[120px]">{aadhaarBack.name}</p>
-                                      </div>
+                                      <div className="text-center"><IdentificationCard className="h-8 w-8 text-candlestick-green mx-auto" weight="duotone" /><p className="text-xs font-medium text-candlestick-green mt-1">Uploaded</p><p className="text-xs text-muted-foreground truncate max-w-[120px]">{aadhaarBack.name}</p></div>
                                     ) : (
-                                      <div className="text-center">
-                                        <Upload className="h-6 w-6 text-[#FF6B00] mx-auto" weight="duotone" />
-                                        <p className="text-xs font-medium text-[#FF6B00]">Upload Back</p>
-                                        <p className="text-[10px] text-muted-foreground">JPG, PNG or PDF</p>
-                                      </div>
+                                      <div className="text-center"><Upload className="h-6 w-6 text-[#FF6B00] mx-auto" weight="duotone" /><p className="text-xs font-medium text-[#FF6B00]">Upload Back</p><p className="text-[10px] text-muted-foreground">JPG, PNG or PDF</p></div>
                                     )}
                                   </label>
                                 </div>
@@ -1166,16 +1123,10 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                       </motion.div>
                     )}
 
-                    {/* â”€â”€ Step 3: Receiver Details + Passport (for medicine) â”€â”€ */}
+                    {/* ── Step 3: Receiver Details + Passport (for medicine) ── */}
                     {addressSubStep === 'receiver' && (
-                      <motion.div
-                        key="receiver"
-                        initial={{ x: 300, opacity: 0 }}
-                        animate={{ x: 0, opacity: 1 }}
-                        exit={{ x: -300, opacity: 0 }}
-                        transition={{ duration: 0.3, ease: 'easeInOut' }}
-                        className="bg-card rounded-2xl border border-border p-8 lg:p-10 space-y-5"
-                      >
+                      <motion.div key="receiver" initial={{ x: 300, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: -300, opacity: 0 }} transition={{ duration: 0.3, ease: 'easeInOut' }}
+                        className="bg-card rounded-2xl border border-border p-8 lg:p-10 space-y-5">
                         <div className="flex items-center gap-3 mb-1">
                           <div className="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-950/40 flex items-center justify-center">
                             <Globe className="h-5 w-5 text-blue-600" weight="duotone" />
@@ -1243,7 +1194,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                                 {!isInternational && receiverLookup.areas.length > 0 ? (
                                   <Select onValueChange={field.onChange} value={field.value}>
                                     <FormControl>
-                                      <SelectTrigger className="h-11"><SelectValue placeholder="Select city" /></SelectTrigger>
+                                      <SelectTrigger><SelectValue placeholder="Select city" /></SelectTrigger>
                                     </FormControl>
                                     <SelectContent>
                                       {receiverLookup.district && <SelectItem value={receiverLookup.district}>{receiverLookup.district} (District)</SelectItem>}
@@ -1253,14 +1204,14 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                                     </SelectContent>
                                   </Select>
                                 ) : (
-                                  <FormControl><Input {...field} placeholder="City" className="h-11" /></FormControl>
+                                  <FormControl><Input {...field} placeholder="City" /></FormControl>
                                 )}
                                 <FormMessage />
                               </FormItem>
                             )} />
                           </div>
 
-                          {/* Passport Upload â€” Medicine only */}
+                          {/* Passport Upload - Medicine only */}
                           {isMedicineFlow && (
                             <div className="space-y-4 pt-2">
                               <div className="flex items-center gap-2">
@@ -1282,17 +1233,9 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                                   <label className="flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-blue-400/40 bg-blue-50/50 dark:bg-blue-950/20 hover:bg-blue-100/50 p-4 cursor-pointer transition-colors">
                                     <input type="file" accept="image/*,.pdf" className="hidden" onChange={(e) => { if (e.target.files?.[0]) setPassportIdentity(e.target.files[0]); }} />
                                     {passportIdentity ? (
-                                      <div className="text-center">
-                                        <IdentificationBadge className="h-8 w-8 text-candlestick-green mx-auto" weight="duotone" />
-                                        <p className="text-xs font-medium text-candlestick-green mt-1">Uploaded</p>
-                                        <p className="text-xs text-muted-foreground truncate max-w-[120px]">{passportIdentity.name}</p>
-                                      </div>
+                                      <div className="text-center"><IdentificationBadge className="h-8 w-8 text-candlestick-green mx-auto" weight="duotone" /><p className="text-xs font-medium text-candlestick-green mt-1">Uploaded</p><p className="text-xs text-muted-foreground truncate max-w-[120px]">{passportIdentity.name}</p></div>
                                     ) : (
-                                      <div className="text-center">
-                                        <Upload className="h-6 w-6 text-blue-500 mx-auto" weight="duotone" />
-                                        <p className="text-xs font-medium text-blue-600">Upload Identity</p>
-                                        <p className="text-[10px] text-muted-foreground">JPG, PNG or PDF</p>
-                                      </div>
+                                      <div className="text-center"><Upload className="h-6 w-6 text-blue-500 mx-auto" weight="duotone" /><p className="text-xs font-medium text-blue-600">Upload Identity</p><p className="text-[10px] text-muted-foreground">JPG, PNG or PDF</p></div>
                                     )}
                                   </label>
                                 </div>
@@ -1301,17 +1244,9 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                                   <label className="flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-blue-400/40 bg-blue-50/50 dark:bg-blue-950/20 hover:bg-blue-100/50 p-4 cursor-pointer transition-colors">
                                     <input type="file" accept="image/*,.pdf" className="hidden" onChange={(e) => { if (e.target.files?.[0]) setPassportAddress(e.target.files[0]); }} />
                                     {passportAddress ? (
-                                      <div className="text-center">
-                                        <IdentificationBadge className="h-8 w-8 text-candlestick-green mx-auto" weight="duotone" />
-                                        <p className="text-xs font-medium text-candlestick-green mt-1">Uploaded</p>
-                                        <p className="text-xs text-muted-foreground truncate max-w-[120px]">{passportAddress.name}</p>
-                                      </div>
+                                      <div className="text-center"><IdentificationBadge className="h-8 w-8 text-candlestick-green mx-auto" weight="duotone" /><p className="text-xs font-medium text-candlestick-green mt-1">Uploaded</p><p className="text-xs text-muted-foreground truncate max-w-[120px]">{passportAddress.name}</p></div>
                                     ) : (
-                                      <div className="text-center">
-                                        <Upload className="h-6 w-6 text-blue-500 mx-auto" weight="duotone" />
-                                        <p className="text-xs font-medium text-blue-600">Upload Address</p>
-                                        <p className="text-[10px] text-muted-foreground">JPG, PNG or PDF</p>
-                                      </div>
+                                      <div className="text-center"><Upload className="h-6 w-6 text-blue-500 mx-auto" weight="duotone" /><p className="text-xs font-medium text-blue-600">Upload Address</p><p className="text-[10px] text-muted-foreground">JPG, PNG or PDF</p></div>
                                     )}
                                   </label>
                                 </div>
@@ -1330,7 +1265,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                       </motion.div>
                     )}
 
-                    {/* â”€â”€ Step 4: Content Description â”€â”€ */}
+                    {/* ── Content Description Slide ── */}
                     {addressSubStep === 'content' && (
                       <motion.div
                         key="content"
@@ -1373,7 +1308,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
           </motion.div>
         )}
 
-        {/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• STEP 4: Summary & Pay â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
+        {/* ═══════════════ STEP 4: Summary & Pay ═══════════════ */}
         {step === 4 && senderReceiverData && (
           <GuestSummaryStep
             mode={mode}
@@ -1385,7 +1320,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
         )}
       </main>
 
-      {/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• Weight Limit Modal â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
+      {/* ═══════════════ Weight Limit Modal ═══════════════ */}
       <AnimatePresence>
         {showWeightLimitModal && (
           <motion.div
