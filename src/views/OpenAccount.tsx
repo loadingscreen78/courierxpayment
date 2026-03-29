@@ -36,13 +36,18 @@ const signUpSchema = z.object({
 const personalSchema = z.object({
   fullName: z.string().min(2, 'Name must be at least 2 characters'),
   phone: z.string().regex(/^[6-9]\d{9}$/, 'Enter a valid 10-digit Indian mobile number'),
-  age: z.string().min(1, 'Age is required').refine(v => {
-    const n = Number(v);
-    return n >= 18 && n <= 100;
-  }, 'Must be between 18 and 100'),
+  dateOfBirth: z.string().min(1, 'Date of birth is required').refine(v => {
+    const d = new Date(v);
+    if (isNaN(d.getTime())) return false;
+    const age = (Date.now() - d.getTime()) / (365.25 * 24 * 60 * 60 * 1000);
+    return age >= 18 && age <= 100;
+  }, 'You must be at least 18 years old'),
   sex: z.enum(['male', 'female', 'other'], { required_error: 'Please select' }),
-  state: z.string().min(2, 'State is required'),
+  addressLine1: z.string().min(3, 'Address is required'),
+  addressLine2: z.string().optional(),
+  landmark: z.string().optional(),
   city: z.string().min(2, 'City is required'),
+  state: z.string().min(2, 'State is required'),
   pincode: z.string().regex(/^\d{6}$/, 'Enter a valid 6-digit pincode'),
 });
 
@@ -202,7 +207,7 @@ export default function OpenAccount() {
 
   const personalForm = useForm<PersonalFormValues>({
     resolver: zodResolver(personalSchema),
-    defaultValues: { fullName: '', phone: '', age: '', sex: undefined, state: '', city: '', pincode: '' },
+    defaultValues: { fullName: '', phone: '', dateOfBirth: '', sex: undefined, addressLine1: '', addressLine2: '', landmark: '', city: '', state: '', pincode: '' },
   });
 
   const docsForm = useForm<DocsFormValues>({
@@ -359,10 +364,13 @@ export default function OpenAccount() {
       const { error } = await supabase.from('profiles').update({
         full_name: personalData!.fullName,
         phone_number: `+91${personalData!.phone}`,
-        age: parseInt(personalData!.age),
+        date_of_birth: personalData!.dateOfBirth,
         sex: personalData!.sex,
-        state: personalData!.state,
+        address_line1: personalData!.addressLine1,
+        address_line2: personalData!.addressLine2 || null,
+        landmark: personalData!.landmark || null,
         city: personalData!.city,
+        state: personalData!.state,
         pincode: personalData!.pincode,
         aadhaar_number: values.aadhaarNumber,
         pan_number: values.panNumber,
@@ -519,13 +527,22 @@ export default function OpenAccount() {
                       <FormItem><FormLabel>Mobile Number</FormLabel><FormControl><div className="relative"><span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">+91</span><Input {...field} placeholder="9876543210" className="pl-12" maxLength={10} /></div></FormControl><FormMessage /></FormItem>
                     )} />
                     <div className="grid grid-cols-2 gap-3">
-                      <FormField control={personalForm.control} name="age" render={({ field }) => (
-                        <FormItem><FormLabel>Age</FormLabel><FormControl><Input {...field} type="number" placeholder="25" min={18} max={100} /></FormControl><FormMessage /></FormItem>
+                      <FormField control={personalForm.control} name="dateOfBirth" render={({ field }) => (
+                        <FormItem><FormLabel>Date of Birth</FormLabel><FormControl><Input {...field} type="date" max={new Date(new Date().setFullYear(new Date().getFullYear() - 18)).toISOString().split('T')[0]} /></FormControl><FormMessage /></FormItem>
                       )} />
                       <FormField control={personalForm.control} name="sex" render={({ field }) => (
                         <FormItem><FormLabel>Sex</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger></FormControl><SelectContent><SelectItem value="male">Male</SelectItem><SelectItem value="female">Female</SelectItem><SelectItem value="other">Other</SelectItem></SelectContent></Select><FormMessage /></FormItem>
                       )} />
                     </div>
+                    <FormField control={personalForm.control} name="addressLine1" render={({ field }) => (
+                      <FormItem><FormLabel>Address Line 1</FormLabel><FormControl><Input {...field} placeholder="House/Flat No., Building, Street" /></FormControl><FormMessage /></FormItem>
+                    )} />
+                    <FormField control={personalForm.control} name="addressLine2" render={({ field }) => (
+                      <FormItem><FormLabel>Address Line 2 <span className="text-muted-foreground font-normal">(optional)</span></FormLabel><FormControl><Input {...field} placeholder="Area, Colony, Locality" /></FormControl><FormMessage /></FormItem>
+                    )} />
+                    <FormField control={personalForm.control} name="landmark" render={({ field }) => (
+                      <FormItem><FormLabel>Landmark <span className="text-muted-foreground font-normal">(optional)</span></FormLabel><FormControl><Input {...field} placeholder="Near..." /></FormControl><FormMessage /></FormItem>
+                    )} />
                     <FormField control={personalForm.control} name="state" render={({ field }) => (
                       <FormItem><FormLabel>State</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select state" /></SelectTrigger></FormControl><SelectContent>{indianStates.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>
                     )} />
