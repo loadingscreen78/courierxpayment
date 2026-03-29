@@ -1522,6 +1522,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                                 <p className="font-medium text-coke-red/90">What to upload:</p>
                                 <ul className="list-disc list-inside text-muted-foreground space-y-0.5">
                                   <li>Original purchase bill or invoice from the pharmacy</li>
+                                  <li>Patient (buyer) name must be on the bill</li>
                                   <li>Must show pharmacy name, GST number, and address</li>
                                   <li>Each medicine name, batch number, quantity, and price should be listed</li>
                                   <li>Bill date must be recent (within 30 days of shipment)</li>
