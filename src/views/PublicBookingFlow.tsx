@@ -1,11 +1,11 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { ArrowLeft, ArrowRight, CircleNotch, UserPlus, Pill, FileText, Gift, Truck, Globe, User, Envelope, Phone, MapPin, Info, AirplaneTilt, Warning, X } from '@phosphor-icons/react';
+import { ArrowLeft, ArrowRight, CircleNotch, UserPlus, Pill, FileText, Gift, Truck, Globe, User, Envelope, Phone, MapPin, Info, AirplaneTilt, Warning, X, IdentificationCard, Upload, Passport, House } from '@phosphor-icons/react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
@@ -14,6 +14,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { getCourierOptions, calculateRate, type CourierOption } from '@/lib/shipping/rateCalculator';
 import { getServedCountries } from '@/lib/shipping/countries';
+import { getCountryByCode } from '@/lib/shipping/countries';
 import GuestSummaryStep from '@/components/guest-booking/GuestSummaryStep';
 import { usePincodeLookup } from '@/hooks/usePincodeLookup';
 import { INDIAN_STATES } from '@/lib/pincode-lookup';
@@ -26,7 +27,7 @@ interface PublicBookingFlowProps {
   mode: FlowMode;
 }
 
-// ── Schemas ──────────────────────────────────────────────────────────────────
+// â”€â”€ Schemas â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 const internationalRateSchema = z.object({
   shipmentType: z.enum(['medicine', 'document', 'gift'], { required_error: 'Select shipment type' }),
@@ -35,11 +36,11 @@ const internationalRateSchema = z.object({
   lengthCm: z.coerce.number().min(1, 'Required').max(150),
   widthCm: z.coerce.number().min(1, 'Required').max(150),
   heightCm: z.coerce.number().min(1, 'Required').max(150),
-  declaredValue: z.coerce.number().min(1, 'Required').max(50000, 'Max ₹50,000'),
+  declaredValue: z.coerce.number().min(1, 'Required').max(50000, 'Max â‚¹50,000'),
 }).superRefine((data, ctx) => {
   if (data.shipmentType === 'document') {
     if (data.weightGrams > 1000) ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Documents max 1 kg', path: ['weightGrams'] });
-    if (data.declaredValue > 100) ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Documents max ₹100 declared value', path: ['declaredValue'] });
+    if (data.declaredValue > 100) ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Documents max â‚¹100 declared value', path: ['declaredValue'] });
   }
 });
 
@@ -51,15 +52,15 @@ const domesticRateSchema = z.object({
   lengthCm: z.coerce.number().min(1, 'Required').max(150),
   widthCm: z.coerce.number().min(1, 'Required').max(150),
   heightCm: z.coerce.number().min(1, 'Required').max(150),
-  declaredValue: z.coerce.number().min(0).max(49000, 'Max ₹49,000'),
+  declaredValue: z.coerce.number().min(0).max(49000, 'Max â‚¹49,000'),
 }).superRefine((data, ctx) => {
   if (data.shipmentType === 'document') {
     if (data.weightKg > 1) ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Documents max 1 kg', path: ['weightKg'] });
-    if (data.declaredValue > 100) ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Documents max ₹100 declared value', path: ['declaredValue'] });
+    if (data.declaredValue > 100) ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Documents max â‚¹100 declared value', path: ['declaredValue'] });
   }
   if (data.shipmentType === 'gift') {
     if (data.weightKg > 30) ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Gift/Parcel max 30 kg', path: ['weightKg'] });
-    if (data.declaredValue > 49000) ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Max declared value ₹49,000', path: ['declaredValue'] });
+    if (data.declaredValue > 49000) ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Max declared value â‚¹49,000', path: ['declaredValue'] });
   }
 });
 
@@ -69,6 +70,7 @@ const senderReceiverSchema = z.object({
   senderEmail: z.string().email('Valid email required'),
   senderAddress: z.string().min(5, 'Required'),
   senderCity: z.string().min(2, 'Required'),
+  senderState: z.string().min(2, 'Required'),
   senderPincode: z.string().regex(/^\d{6}$/, 'Valid 6-digit pincode'),
   receiverName: z.string().min(2, 'Required'),
   receiverPhone: z.string().min(5, 'Required'),
@@ -95,7 +97,7 @@ const shipmentTypeOptions = {
   ],
 };
 
-// ── Component ────────────────────────────────────────────────────────────────
+// â”€â”€ Component â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
   const router = useRouter();
@@ -113,26 +115,30 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
   const [isDomesticLoading, setIsDomesticLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [senderReceiverData, setSenderReceiverData] = useState<any>(null);
-  const [addressSubStep, setAddressSubStep] = useState<'sender' | 'receiver' | 'content'>('sender');
+  const [addressSubStep, setAddressSubStep] = useState<'pickup' | 'sender' | 'receiver' | 'content'>('pickup');
   const [showWeightLimitModal, setShowWeightLimitModal] = useState(false);
+  const [aadhaarFront, setAadhaarFront] = useState<File | null>(null);
+  const [aadhaarBack, setAadhaarBack] = useState<File | null>(null);
+  const [passportIdentity, setPassportIdentity] = useState<File | null>(null);
+  const [passportAddress, setPassportAddress] = useState<File | null>(null);
 
-  // ── International rate form ──
+  // â”€â”€ International rate form â”€â”€
   const intlForm = useForm<InternationalRateValues>({
     resolver: zodResolver(internationalRateSchema),
     defaultValues: { shipmentType: undefined, destinationCountry: '', weightGrams: 500, lengthCm: 20, widthCm: 15, heightCm: 10, declaredValue: 1000 },
   });
 
-  // ── Domestic rate form ──
+  // â”€â”€ Domestic rate form â”€â”€
   const domForm = useForm<DomesticRateValues>({
     resolver: zodResolver(domesticRateSchema),
     defaultValues: { shipmentType: undefined, pickupPincode: '', deliveryPincode: '', weightKg: undefined as any, lengthCm: undefined as any, widthCm: undefined as any, heightCm: undefined as any, declaredValue: undefined as any },
   });
 
-  // ── Sender/Receiver form ──
+  // â”€â”€ Sender/Receiver form â”€â”€
   const detailsForm = useForm<SenderReceiverValues>({
     resolver: zodResolver(senderReceiverSchema),
     defaultValues: {
-      senderName: '', senderPhone: '', senderEmail: '', senderAddress: '', senderCity: '', senderPincode: '',
+      senderName: '', senderPhone: '', senderEmail: '', senderAddress: '', senderCity: '', senderState: '', senderPincode: '',
       receiverName: '', receiverPhone: '', receiverEmail: '', receiverAddress: '', receiverCity: '', receiverZipcode: '',
       contentDescription: '',
     },
@@ -141,12 +147,15 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
   // Watch shipment type to conditionally render document-specific fields
   const watchedIntlType = intlForm.watch('shipmentType');
   const isDocumentIntl = watchedIntlType === 'document';
+  const isMedicineFlow = isInternational && rateFormData && 'shipmentType' in rateFormData && rateFormData.shipmentType === 'medicine';
+  const destinationCountryInfo = isInternational && rateFormData && 'destinationCountry' in rateFormData
+    ? getCountryByCode((rateFormData as InternationalRateValues).destinationCountry) : null;
 
   // Watch domestic shipment type
   const watchedDomType = domForm.watch('shipmentType');
   const isDocumentDom = watchedDomType === 'document';
 
-  // ── Pre-fill from rate calculator localStorage data ──
+  // â”€â”€ Pre-fill from rate calculator localStorage data â”€â”€
   useEffect(() => {
     try {
       const raw = localStorage.getItem('publicRateCalcData');
@@ -169,13 +178,13 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
     } catch { /* ignore parse errors */ }
   }, [isInternational, domForm]);
 
-  // ── Pincode lookups for domestic rate form (step 1) ──
+  // â”€â”€ Pincode lookups for domestic rate form (step 1) â”€â”€
   const ratePickupPin = domForm.watch('pickupPincode');
   const rateDeliveryPin = domForm.watch('deliveryPincode');
   const pickupLookup = usePincodeLookup(!isInternational ? ratePickupPin : '');
   const deliveryLookup = usePincodeLookup(!isInternational ? rateDeliveryPin : '');
 
-  // ── Volumetric weight calculation (NimbusPost formula: L×W×H / 5000) ──
+  // â”€â”€ Volumetric weight calculation (NimbusPost formula: LÃ—WÃ—H / 5000) â”€â”€
   const watchedLength = domForm.watch('lengthCm');
   const watchedWidth = domForm.watch('widthCm');
   const watchedHeight = domForm.watch('heightCm');
@@ -185,7 +194,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
     : 0;
   const chargeableWeight = Math.max(Number(watchedWeight) || 0, volumetricWeight);
 
-  // ── Pincode auto-fill for domestic ──
+  // â”€â”€ Pincode auto-fill for domestic â”€â”€
   // For domestic: pre-fill sender pincode from pickupPincode, receiver from deliveryPincode
   const domesticPickupPincode = !isInternational ? (rateFormData as DomesticRateValues)?.pickupPincode || '' : '';
   const domesticDeliveryPincode = !isInternational ? (rateFormData as DomesticRateValues)?.deliveryPincode || '' : '';
@@ -220,7 +229,10 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
       const currentCity = detailsForm.getValues('senderCity');
       if (!currentCity) detailsForm.setValue('senderCity', senderLookup.district);
     }
-  }, [senderLookup.district, isInternational, detailsForm]);
+    if (senderLookup.state) {
+      detailsForm.setValue('senderState', senderLookup.state);
+    }
+  }, [senderLookup.district, senderLookup.state, isInternational, detailsForm]);
 
   useEffect(() => {
     if (receiverLookup.district && !isInternational) {
@@ -229,7 +241,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
     }
   }, [receiverLookup.district, isInternational, detailsForm]);
 
-  // ── Handle international rate calculation ──
+  // â”€â”€ Handle international rate calculation â”€â”€
   const handleIntlRateSubmit = (values: InternationalRateValues) => {
     const guest = getCourierOptions({
       destinationCountryCode: values.destinationCountry,
@@ -253,7 +265,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
     setStep(2);
   };
 
-  // ── Handle domestic rate calculation ──
+  // â”€â”€ Handle domestic rate calculation â”€â”€
   const handleDomRateSubmit = async (values: DomesticRateValues) => {
     setIsDomesticLoading(true);
     setRateFormData(values);
@@ -287,30 +299,50 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
     }
   };
 
-  // ── Select a courier and go to details ──
+  // â”€â”€ Select a courier and go to details â”€â”€
   const handleSelectCourier = (courier: any) => {
     setSelectedCourier(courier);
     setStep(3);
   };
 
-  // ── Submit sender/receiver and go to summary ──
+  // â”€â”€ Submit sender/receiver and go to summary â”€â”€
   const handleFinalSubmit = (values: SenderReceiverValues) => {
     setSenderReceiverData(values);
     setStep(4);
   };
 
-  // ── Validate sender fields before sliding to receiver ──
+  // â”€â”€ Validate pickup address fields before sliding to sender â”€â”€
+  const handlePickupNext = async () => {
+    const pickupFields = ['senderAddress', 'senderCity', 'senderState', 'senderPincode'] as const;
+    const result = await detailsForm.trigger(pickupFields);
+    if (result) setAddressSubStep('sender');
+  };
+
+  // â”€â”€ Validate sender fields before sliding to receiver â”€â”€
   const handleSenderNext = async () => {
-    const senderFields = ['senderName', 'senderPhone', 'senderEmail', 'senderAddress', 'senderCity', 'senderPincode'] as const;
+    const senderFields = ['senderName', 'senderPhone', 'senderEmail'] as const;
     const result = await detailsForm.trigger(senderFields);
     if (result) setAddressSubStep('receiver');
   };
 
-  // ── Validate receiver fields before sliding to content ──
+  // â”€â”€ Validate receiver fields before sliding to content â”€â”€
   const handleReceiverNext = async () => {
     const receiverFields = ['receiverName', 'receiverPhone', 'receiverEmail', 'receiverAddress', 'receiverCity', 'receiverZipcode'] as const;
     const result = await detailsForm.trigger(receiverFields);
     if (result) setAddressSubStep('content');
+  };
+
+  // â”€â”€ Region-specific address format guidance â”€â”€
+  const getAddressGuidance = () => {
+    if (!destinationCountryInfo) return 'Street address, building, apartment/unit number';
+    switch (destinationCountryInfo.region) {
+      case 'middle-east': return 'Building name/number, Street, Area/District, City. Include P.O. Box if available.';
+      case 'americas': return 'Street number + Street name, Apt/Suite, City, State/Province, ZIP code';
+      case 'europe': return 'Street name + number, Postal code, City, Country. Include apartment/floor if applicable.';
+      case 'asia-pacific': return 'Block/Building, Street, District/Ward, City/Province, Postal code';
+      case 'africa': return 'Street address, Suburb/Area, City, Postal code. Include landmarks if possible.';
+      default: return 'Full street address with building, city, and postal code';
+    }
   };
 
   const handleBack = () => {
@@ -332,7 +364,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
             <Button variant="ghost" size="sm" onClick={() => router.push('/auth')} className="rounded-xl text-sm">Sign In</Button>
             <Button variant="outline" size="sm" onClick={() => router.push('/open-account')} className="rounded-xl text-sm gap-1.5">
               <UserPlus className="h-3.5 w-3.5" />
-              Open Account — Save 52%
+              Open Account â€” Save 52%
             </Button>
           </div>
         </div>
@@ -349,7 +381,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
               {isInternational ? <Globe className="h-6 w-6 text-blue-600" weight="duotone" /> : <Truck className="h-6 w-6 text-green-600" weight="duotone" />}
               {isInternational ? 'International Shipping' : 'Domestic Shipping'}
             </h1>
-            <p className="text-muted-foreground text-sm">Guest booking — standard rates apply</p>
+            <p className="text-muted-foreground text-sm">Guest booking â€” standard rates apply</p>
           </div>
         </div>
 
@@ -363,7 +395,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
           ))}
         </div>
 
-        {/* ═══════════════ STEP 1: Rate Calculator Form ═══════════════ */}
+        {/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• STEP 1: Rate Calculator Form â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
         {step === 1 && (
           <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-5">
             <div className="bg-card rounded-xl border border-border p-6 space-y-5">
@@ -414,7 +446,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                       </FormItem>
                     )} />
 
-                    {/* Weight + Value — document-specific */}
+                    {/* Weight + Value â€” document-specific */}
                     <div className="grid grid-cols-2 gap-4">
                       <FormField control={intlForm.control} name="weightGrams" render={({ field }) => (
                         <FormItem>
@@ -464,7 +496,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                                 <SelectItem value="9000">Up to 9 kg</SelectItem>
                                 <SelectItem value="9500">Up to 9.5 kg</SelectItem>
                                 <SelectItem value="10000">Up to 10 kg</SelectItem>
-                                <SelectItem value="over10" className="text-coke-red font-medium">More than 10 kg →</SelectItem>
+                                <SelectItem value="over10" className="text-coke-red font-medium">More than 10 kg â†’</SelectItem>
                               </SelectContent>
                             </Select>
                           )}
@@ -473,11 +505,11 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                       )} />
                       <FormField control={intlForm.control} name="declaredValue" render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Declared Value (₹)</FormLabel>
+                          <FormLabel>Declared Value (â‚¹)</FormLabel>
                           <FormControl>
-                            <Input {...field} type="number" placeholder={isDocumentIntl ? 'Max ₹100' : '1000'} max={isDocumentIntl ? 100 : 50000} />
+                            <Input {...field} type="number" placeholder={isDocumentIntl ? 'Max â‚¹100' : '1000'} max={isDocumentIntl ? 100 : 50000} />
                           </FormControl>
-                          {isDocumentIntl && <p className="text-xs text-muted-foreground">Documents cannot exceed ₹100 declared value</p>}
+                          {isDocumentIntl && <p className="text-xs text-muted-foreground">Documents cannot exceed â‚¹100 declared value</p>}
                           <FormMessage />
                         </FormItem>
                       )} />
@@ -514,7 +546,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                   </form>
                 </Form>
               ) : (
-                /* ── Domestic form ── */
+                /* â”€â”€ Domestic form â”€â”€ */
                 <Form {...domForm}>
                   <form onSubmit={domForm.handleSubmit(handleDomRateSubmit)} className="space-y-4">
                     {/* Shipment Type */}
@@ -550,7 +582,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                           <FormLabel>Pickup Pincode</FormLabel>
                           <FormControl><Input {...field} placeholder="110001" maxLength={6} /></FormControl>
                           {pickupLookup.loading && <p className="text-xs text-muted-foreground flex items-center gap-1"><CircleNotch className="h-3 w-3 animate-spin" /> Looking up...</p>}
-                          {pickupLookup.state && <p className="text-xs text-candlestick-green">📍 {pickupLookup.district}, {pickupLookup.state}</p>}
+                          {pickupLookup.state && <p className="text-xs text-candlestick-green">ðŸ“ {pickupLookup.district}, {pickupLookup.state}</p>}
                           {pickupLookup.error && <p className="text-xs text-destructive">{pickupLookup.error}</p>}
                           <FormMessage />
                         </FormItem>
@@ -560,7 +592,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                           <FormLabel>Delivery Pincode</FormLabel>
                           <FormControl><Input {...field} placeholder="400001" maxLength={6} /></FormControl>
                           {deliveryLookup.loading && <p className="text-xs text-muted-foreground flex items-center gap-1"><CircleNotch className="h-3 w-3 animate-spin" /> Looking up...</p>}
-                          {deliveryLookup.state && <p className="text-xs text-candlestick-green">📍 {deliveryLookup.district}, {deliveryLookup.state}</p>}
+                          {deliveryLookup.state && <p className="text-xs text-candlestick-green">ðŸ“ {deliveryLookup.district}, {deliveryLookup.state}</p>}
                           {deliveryLookup.error && <p className="text-xs text-destructive">{deliveryLookup.error}</p>}
                           <FormMessage />
                         </FormItem>
@@ -605,12 +637,12 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                       )} />
                       <FormField control={domForm.control} name="declaredValue" render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Declared Value (₹)</FormLabel>
+                          <FormLabel>Declared Value (â‚¹)</FormLabel>
                           <FormControl>
-                            <Input {...field} type="number" placeholder={isDocumentDom ? 'Max ₹100' : 'Max ₹49,000'} max={isDocumentDom ? 100 : 49000} />
+                            <Input {...field} type="number" placeholder={isDocumentDom ? 'Max â‚¹100' : 'Max â‚¹49,000'} max={isDocumentDom ? 100 : 49000} />
                           </FormControl>
-                          {isDocumentDom && <p className="text-xs text-muted-foreground">Documents cannot exceed ₹100 declared value</p>}
-                          {!isDocumentDom && <p className="text-xs text-muted-foreground">Maximum ₹49,000 for gift/parcel shipments</p>}
+                          {isDocumentDom && <p className="text-xs text-muted-foreground">Documents cannot exceed â‚¹100 declared value</p>}
+                          {!isDocumentDom && <p className="text-xs text-muted-foreground">Maximum â‚¹49,000 for gift/parcel shipments</p>}
                           <FormMessage />
                         </FormItem>
                       )} />
@@ -622,7 +654,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                       <div className="rounded-lg bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900/50 p-3 mb-3">
                         <p className="text-xs text-blue-800 dark:text-blue-300 flex items-start gap-1.5">
                           <Info className="h-3.5 w-3.5 shrink-0 mt-0.5" weight="fill" />
-                          <span>Measure the outer dimensions of your packed box using a measuring tape. Enter the longest side as Length, the next as Width, and the shortest as Height. Courier charges are based on the higher of actual weight or volumetric weight (L×W×H ÷ 5000).</span>
+                          <span>Measure the outer dimensions of your packed box using a measuring tape. Enter the longest side as Length, the next as Width, and the shortest as Height. Courier charges are based on the higher of actual weight or volumetric weight (LÃ—WÃ—H Ã· 5000).</span>
                         </p>
                       </div>
                       <div className="grid grid-cols-3 gap-3">
@@ -638,11 +670,11 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                       </div>
                       {volumetricWeight > 0 && (
                         <div className="mt-2 text-xs text-muted-foreground space-y-0.5">
-                          <p>Volumetric weight: <span className="font-medium">{volumetricWeight} kg</span> ({watchedLength}×{watchedWidth}×{watchedHeight} ÷ 5000)</p>
+                          <p>Volumetric weight: <span className="font-medium">{volumetricWeight} kg</span> ({watchedLength}Ã—{watchedWidth}Ã—{watchedHeight} Ã· 5000)</p>
                           {chargeableWeight > (Number(watchedWeight) || 0) && (
                             <p className="text-amber-600 dark:text-amber-400 flex items-center gap-1">
                               <Warning className="h-3 w-3" weight="fill" />
-                              Volumetric weight exceeds actual weight — courier will charge for <span className="font-semibold">{chargeableWeight} kg</span>
+                              Volumetric weight exceeds actual weight â€” courier will charge for <span className="font-semibold">{chargeableWeight} kg</span>
                             </p>
                           )}
                         </div>
@@ -659,14 +691,14 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
           </motion.div>
         )}
 
-        {/* ═══════════════ STEP 2: Rate Results ═══════════════ */}
+        {/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• STEP 2: Rate Results â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
         {step === 2 && (
           <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-4">
             {/* Account savings banner */}
             <div className="rounded-xl border border-candlestick-green/30 bg-candlestick-green/5 p-4">
               <p className="text-sm">
-                💡 <span className="font-medium">Account holders pay up to 52% less</span> on these same routes.{' '}
-                <button onClick={() => router.push('/open-account')} className="text-coke-red hover:underline font-semibold">Open a free account →</button>
+                ðŸ’¡ <span className="font-medium">Account holders pay up to 52% less</span> on these same routes.{' '}
+                <button onClick={() => router.push('/open-account')} className="text-coke-red hover:underline font-semibold">Open a free account â†’</button>
               </p>
             </div>
 
@@ -675,7 +707,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
 
             {isInternational ? (
               guestCouriers.length === 0 ? (
-                /* ── Animated no-service for international ── */
+                /* â”€â”€ Animated no-service for international â”€â”€ */
                 <motion.div
                   initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
@@ -733,7 +765,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                                   <span className="text-xs px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950/40 text-amber-600 font-medium">Available Soon</span>
                                 )}
                               </div>
-                              <p className="text-sm text-muted-foreground mt-1">{option.transitDays.min}–{option.transitDays.max} days delivery</p>
+                              <p className="text-sm text-muted-foreground mt-1">{option.transitDays.min}â€“{option.transitDays.max} days delivery</p>
                               <div className="flex flex-wrap gap-1.5 mt-2">
                                 {option.features.slice(0, 3).map(f => (
                                   <span key={f} className="text-xs px-2 py-0.5 rounded bg-muted/50 text-muted-foreground">{f}</span>
@@ -741,10 +773,10 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                               </div>
                             </div>
                             <div className="text-right shrink-0 ml-4">
-                              <p className="text-2xl font-bold">₹{option.price.toLocaleString('en-IN')}</p>
+                              <p className="text-2xl font-bold">â‚¹{option.price.toLocaleString('en-IN')}</p>
                               {savings > 0 && !isComingSoon && (
                                 <p className="text-xs text-candlestick-green mt-0.5">
-                                  With account: <span className="font-semibold">₹{accountPrice.toLocaleString('en-IN')}</span>
+                                  With account: <span className="font-semibold">â‚¹{accountPrice.toLocaleString('en-IN')}</span>
                                 </p>
                               )}
                               {isComingSoon ? (
@@ -767,13 +799,13 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                               {rateBreakdown.breakdown.map(item => (
                                 <div key={item.label} className="flex justify-between text-xs">
                                   <span className="text-muted-foreground">{item.label}</span>
-                                  <span className="font-medium">₹{item.amount.toLocaleString('en-IN')}</span>
+                                  <span className="font-medium">â‚¹{item.amount.toLocaleString('en-IN')}</span>
                                 </div>
                               ))}
                             </div>
                             <div className="flex justify-between text-sm font-semibold mt-2 pt-2 border-t border-border">
                               <span>Total</span>
-                              <span>₹{rateBreakdown.total.toLocaleString('en-IN')}</span>
+                              <span>â‚¹{rateBreakdown.total.toLocaleString('en-IN')}</span>
                             </div>
                           </div>
                         )}
@@ -783,7 +815,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                 </div>
               )
             ) : (
-              /* ── Domestic rate results ── */
+              /* â”€â”€ Domestic rate results â”€â”€ */
               (() => {
                 // For documents: show only air services, fallback to Delhivery Surface
                 const isDocType = rateFormData && 'shipmentType' in rateFormData && rateFormData.shipmentType === 'document';
@@ -802,7 +834,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                 }
 
                 return filteredDomestic.length === 0 ? (
-                  /* ── Animated no-service component ── */
+                  /* â”€â”€ Animated no-service component â”€â”€ */
                   <motion.div
                     initial={{ opacity: 0, scale: 0.9 }}
                     animate={{ opacity: 1, scale: 1 }}
@@ -864,9 +896,9 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                           <p className="text-sm text-muted-foreground mt-1">{c.estimated_delivery_days} days delivery</p>
                         </div>
                         <div className="text-right shrink-0 ml-4">
-                          <p className="text-2xl font-bold">₹{c.customer_price?.toLocaleString('en-IN')}</p>
+                          <p className="text-2xl font-bold">â‚¹{c.customer_price?.toLocaleString('en-IN')}</p>
                           <div className="text-xs text-muted-foreground mt-0.5">
-                            Base: ₹{c.shipping_charge?.toLocaleString('en-IN')} + GST: ₹{c.gst_amount?.toLocaleString('en-IN')}
+                            Base: â‚¹{c.shipping_charge?.toLocaleString('en-IN')} + GST: â‚¹{c.gst_amount?.toLocaleString('en-IN')}
                           </div>
                           <Button size="sm" className="mt-2 bg-coke-red hover:bg-red-600 text-white" onClick={() => handleSelectCourier(c)}>
                             Book Now
@@ -882,7 +914,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
           </motion.div>
         )}
 
-        {/* ═══════════════ STEP 3: Sender & Receiver Details (Slider) ═══════════════ */}
+        {/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• STEP 3: Sender & Receiver Details (4-Step Slider) â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
         {step === 3 && (
           <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-5">
             {/* Selected courier summary */}
@@ -892,35 +924,137 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                   <p className="text-sm text-muted-foreground">Selected Courier</p>
                   <p className="font-semibold">{(selectedCourier as any).carrier || (selectedCourier as any).courier_name}</p>
                 </div>
-                <p className="text-xl font-bold">₹{((selectedCourier as any).price || (selectedCourier as any).customer_price)?.toLocaleString('en-IN')}</p>
+                <p className="text-xl font-bold">â‚¹{((selectedCourier as any).price || (selectedCourier as any).customer_price)?.toLocaleString('en-IN')}</p>
               </div>
             )}
 
-            {/* Sub-step indicator */}
+            {/* Sub-step indicator â€” 4 steps */}
             <div className="flex items-center gap-2">
-              {(['sender', 'receiver', 'content'] as const).map((s, i) => (
-                <div key={s} className="flex items-center gap-2 flex-1">
-                  <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-colors ${
-                    s === addressSubStep ? 'bg-coke-red text-white' :
-                    (['sender', 'receiver', 'content'].indexOf(addressSubStep) > i) ? 'bg-candlestick-green text-white' :
-                    'bg-muted text-muted-foreground'
-                  }`}>
-                    {(['sender', 'receiver', 'content'].indexOf(addressSubStep) > i) ? '✓' : i + 1}
+              {(['pickup', 'sender', 'receiver', 'content'] as const).map((s, i) => {
+                const stepOrder = ['pickup', 'sender', 'receiver', 'content'];
+                const currentIdx = stepOrder.indexOf(addressSubStep);
+                const labels = ['Pickup Address', 'Sender / KYC', 'Receiver', 'Contents'];
+                return (
+                  <div key={s} className="flex items-center gap-2 flex-1">
+                    <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-colors ${
+                      s === addressSubStep ? 'bg-coke-red text-white' :
+                      currentIdx > i ? 'bg-candlestick-green text-white' :
+                      'bg-muted text-muted-foreground'
+                    }`}>
+                      {currentIdx > i ? 'âœ“' : i + 1}
+                    </div>
+                    <span className={`text-xs hidden sm:inline ${s === addressSubStep ? 'font-medium text-foreground' : 'text-muted-foreground'}`}>
+                      {labels[i]}
+                    </span>
+                    {i < 3 && <div className="flex-1 h-px bg-border" />}
                   </div>
-                  <span className={`text-xs hidden sm:inline ${s === addressSubStep ? 'font-medium text-foreground' : 'text-muted-foreground'}`}>
-                    {s === 'sender' ? 'Sender' : s === 'receiver' ? 'Receiver' : 'Contents'}
-                  </span>
-                  {i < 2 && <div className="flex-1 h-px bg-border" />}
-                </div>
-              ))}
+                );
+              })}
             </div>
 
             <Form {...detailsForm}>
               <form onSubmit={detailsForm.handleSubmit(handleFinalSubmit)}>
-                {/* Slider container */}
                 <div className="overflow-hidden">
                   <AnimatePresence mode="wait">
-                    {/* ── Sender Slide ── */}
+
+                    {/* â”€â”€ Step 1: Pickup Address â”€â”€ */}
+                    {addressSubStep === 'pickup' && (
+                      <motion.div
+                        key="pickup"
+                        initial={{ x: 300, opacity: 0 }}
+                        animate={{ x: 0, opacity: 1 }}
+                        exit={{ x: -300, opacity: 0 }}
+                        transition={{ duration: 0.3, ease: 'easeInOut' }}
+                        className="bg-card rounded-2xl border border-border p-8 lg:p-10 space-y-5"
+                      >
+                        <div className="flex items-center gap-3 mb-1">
+                          <div className="w-10 h-10 rounded-full bg-orange-100 dark:bg-orange-950/40 flex items-center justify-center">
+                            <House className="h-5 w-5 text-orange-600" weight="duotone" />
+                          </div>
+                          <div>
+                            <h3 className="font-semibold text-base">Indian Pickup Address</h3>
+                            <p className="text-xs text-muted-foreground">Where should we collect the shipment from?</p>
+                          </div>
+                        </div>
+                        {isMedicineFlow && (
+                          <div className="rounded-lg border border-orange-200 dark:border-orange-800/40 bg-orange-50 dark:bg-orange-950/20 p-3 text-xs text-orange-800 dark:text-orange-300 flex items-start gap-2">
+                            <Info className="h-4 w-4 shrink-0 mt-0.5" weight="fill" />
+                            <span>For medicine shipments, the pickup address must match your Aadhaar card address exactly.</span>
+                          </div>
+                        )}
+                        <div className="space-y-4">
+                          <FormField control={detailsForm.control} name="senderAddress" render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Full Address (House/Flat No, Street, Locality)</FormLabel>
+                              <FormControl><Input {...field} placeholder="e.g. 42, MG Road, Lajpat Nagar" className="h-11" /></FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )} />
+                          <FormField control={detailsForm.control} name="senderPincode" render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Pincode</FormLabel>
+                              <FormControl>
+                                <Input {...field} placeholder="110001" maxLength={6} readOnly={!isInternational && !!domesticPickupPincode} className={`h-11 ${!isInternational && domesticPickupPincode ? 'bg-muted' : ''}`} />
+                              </FormControl>
+                              {senderLookup.loading && <p className="text-xs text-muted-foreground flex items-center gap-1"><CircleNotch className="h-3 w-3 animate-spin" /> Looking up...</p>}
+                              {senderLookup.error && <p className="text-xs text-destructive">{senderLookup.error}</p>}
+                              <FormMessage />
+                            </FormItem>
+                          )} />
+                          <div className="grid grid-cols-2 gap-4">
+                            <FormField control={detailsForm.control} name="senderCity" render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>City / District</FormLabel>
+                                {senderLookup.areas.length > 0 ? (
+                                  <Select onValueChange={field.onChange} value={field.value}>
+                                    <FormControl>
+                                      <SelectTrigger className="h-11"><SelectValue placeholder="Select city" /></SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                      {senderLookup.district && <SelectItem value={senderLookup.district}>{senderLookup.district} (District)</SelectItem>}
+                                      {senderLookup.areas.filter(a => a !== senderLookup.district).map(a => (
+                                        <SelectItem key={a} value={a}>{a}</SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                ) : (
+                                  <FormControl><Input {...field} placeholder="City" className="h-11" /></FormControl>
+                                )}
+                                <FormMessage />
+                              </FormItem>
+                            )} />
+                            <FormField control={detailsForm.control} name="senderState" render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>State</FormLabel>
+                                {senderLookup.state ? (
+                                  <div className="h-11 flex items-center px-3 rounded-md border border-border bg-muted text-sm font-medium">
+                                    {senderLookup.state}
+                                  </div>
+                                ) : (
+                                  <Select onValueChange={field.onChange} value={field.value}>
+                                    <FormControl>
+                                      <SelectTrigger className="h-11"><SelectValue placeholder="Select state" /></SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                      {INDIAN_STATES.map(st => <SelectItem key={st} value={st}>{st}</SelectItem>)}
+                                    </SelectContent>
+                                  </Select>
+                                )}
+                                <FormMessage />
+                              </FormItem>
+                            )} />
+                          </div>
+                          {senderLookup.state && senderLookup.district && (
+                            <p className="text-xs text-candlestick-green flex items-center gap-1">ðŸ“ {senderLookup.district}, {senderLookup.state}</p>
+                          )}
+                        </div>
+                        <Button type="button" onClick={handlePickupNext} className="w-full bg-coke-red hover:bg-red-600 text-white gap-2 py-5">
+                          Next: Sender Details <ArrowRight className="h-4 w-4" />
+                        </Button>
+                      </motion.div>
+                    )}
+
+                    {/* â”€â”€ Step 2: Sender Details + Aadhaar (for medicine) â”€â”€ */}
                     {addressSubStep === 'sender' && (
                       <motion.div
                         key="sender"
@@ -932,17 +1066,27 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                       >
                         <div className="flex items-center gap-3 mb-1">
                           <div className="w-10 h-10 rounded-full bg-coke-red/10 flex items-center justify-center">
-                            <MapPin className="h-5 w-5 text-coke-red" weight="duotone" />
+                            <User className="h-5 w-5 text-coke-red" weight="duotone" />
                           </div>
                           <div>
                             <h3 className="font-semibold text-base">Sender Details</h3>
-                            <p className="text-xs text-muted-foreground">Pickup address in India</p>
+                            <p className="text-xs text-muted-foreground">{isMedicineFlow ? 'Name and details as per Aadhaar card' : 'Your contact information'}</p>
                           </div>
                         </div>
+                        {isMedicineFlow && (
+                          <div className="rounded-lg border border-orange-200 dark:border-orange-800/40 bg-orange-50 dark:bg-orange-950/20 p-3 text-xs text-orange-800 dark:text-orange-300 flex items-start gap-2">
+                            <IdentificationCard className="h-4 w-4 shrink-0 mt-0.5" weight="fill" />
+                            <span>Sender name must match your Aadhaar card exactly. This is required for medicine customs clearance under CSB-IV.</span>
+                          </div>
+                        )}
                         <div className="space-y-4">
                           <div className="grid grid-cols-2 gap-4">
                             <FormField control={detailsForm.control} name="senderName" render={({ field }) => (
-                              <FormItem><FormLabel>Full Name</FormLabel><FormControl><Input {...field} placeholder="Sender name" className="h-11" /></FormControl><FormMessage /></FormItem>
+                              <FormItem>
+                                <FormLabel>{isMedicineFlow ? 'Full Name (as per Aadhaar)' : 'Full Name'}</FormLabel>
+                                <FormControl><Input {...field} placeholder={isMedicineFlow ? 'Name exactly as on Aadhaar' : 'Sender name'} className="h-11" /></FormControl>
+                                <FormMessage />
+                              </FormItem>
                             )} />
                             <FormField control={detailsForm.control} name="senderPhone" render={({ field }) => (
                               <FormItem><FormLabel>Phone</FormLabel><FormControl><Input {...field} placeholder="+91 98765 43210" className="h-11" /></FormControl><FormMessage /></FormItem>
@@ -951,52 +1095,78 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                           <FormField control={detailsForm.control} name="senderEmail" render={({ field }) => (
                             <FormItem><FormLabel>Email</FormLabel><FormControl><Input {...field} type="email" placeholder="sender@email.com" className="h-11" /></FormControl><FormMessage /></FormItem>
                           )} />
-                          <FormField control={detailsForm.control} name="senderAddress" render={({ field }) => (
-                            <FormItem><FormLabel>Address</FormLabel><FormControl><Input {...field} placeholder="Full address" className="h-11" /></FormControl><FormMessage /></FormItem>
-                          )} />
-                          <div className="grid grid-cols-2 gap-4">
-                            <FormField control={detailsForm.control} name="senderPincode" render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Pincode</FormLabel>
-                                <FormControl>
-                                  <Input {...field} placeholder="110001" maxLength={6} readOnly={!isInternational && !!domesticPickupPincode} className={!isInternational && domesticPickupPincode ? 'bg-muted' : ''} />
-                                </FormControl>
-                                {senderLookup.loading && <p className="text-xs text-muted-foreground flex items-center gap-1"><CircleNotch className="h-3 w-3 animate-spin" /> Looking up...</p>}
-                                {senderLookup.state && <p className="text-xs text-candlestick-green">{senderLookup.district}, {senderLookup.state}</p>}
-                                {senderLookup.error && <p className="text-xs text-destructive">{senderLookup.error}</p>}
-                                <FormMessage />
-                              </FormItem>
-                            )} />
-                            <FormField control={detailsForm.control} name="senderCity" render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>City / District</FormLabel>
-                                {!isInternational && senderLookup.areas.length > 0 ? (
-                                  <Select onValueChange={field.onChange} value={field.value}>
-                                    <FormControl>
-                                      <SelectTrigger><SelectValue placeholder="Select city" /></SelectTrigger>
-                                    </FormControl>
-                                    <SelectContent>
-                                      {senderLookup.district && <SelectItem value={senderLookup.district}>{senderLookup.district} (District)</SelectItem>}
-                                      {senderLookup.areas.filter(a => a !== senderLookup.district).map(a => (
-                                        <SelectItem key={a} value={a}>{a}</SelectItem>
-                                      ))}
-                                    </SelectContent>
-                                  </Select>
-                                ) : (
-                                  <FormControl><Input {...field} placeholder="City" /></FormControl>
-                                )}
-                                <FormMessage />
-                              </FormItem>
-                            )} />
-                          </div>
+
+                          {/* Aadhaar Upload â€” Medicine only */}
+                          {isMedicineFlow && (
+                            <div className="space-y-4 pt-2">
+                              <div className="flex items-center gap-2">
+                                <IdentificationCard className="h-5 w-5 text-[#FF6B00]" weight="duotone" />
+                                <h4 className="font-semibold text-sm">Aadhaar Card Upload</h4>
+                              </div>
+                              <div className="rounded-lg border border-amber-200 dark:border-amber-800/40 bg-amber-50 dark:bg-amber-950/20 p-3 text-xs space-y-1">
+                                <p className="font-medium text-amber-900 dark:text-amber-200">How to capture a clear Aadhaar photo:</p>
+                                <ul className="list-disc list-inside text-amber-800 dark:text-amber-300 space-y-0.5">
+                                  <li>Place Aadhaar on a flat, well-lit surface</li>
+                                  <li>Avoid glare, shadows, or blurry edges</li>
+                                  <li>All 4 corners of the card must be visible</li>
+                                  <li>Name, address, and Aadhaar number must be readable</li>
+                                </ul>
+                              </div>
+                              <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                  <label className="text-sm font-medium">Front Side</label>
+                                  <label className="flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-[#FF6B00]/40 bg-[#FF6B00]/5 hover:bg-[#FF6B00]/10 p-4 cursor-pointer transition-colors">
+                                    <input type="file" accept="image/*,.pdf" className="hidden" onChange={(e) => { if (e.target.files?.[0]) setAadhaarFront(e.target.files[0]); }} />
+                                    {aadhaarFront ? (
+                                      <div className="text-center">
+                                        <IdentificationCard className="h-8 w-8 text-candlestick-green mx-auto" weight="duotone" />
+                                        <p className="text-xs font-medium text-candlestick-green mt-1">Uploaded</p>
+                                        <p className="text-xs text-muted-foreground truncate max-w-[120px]">{aadhaarFront.name}</p>
+                                      </div>
+                                    ) : (
+                                      <div className="text-center">
+                                        <Upload className="h-6 w-6 text-[#FF6B00] mx-auto" weight="duotone" />
+                                        <p className="text-xs font-medium text-[#FF6B00]">Upload Front</p>
+                                        <p className="text-[10px] text-muted-foreground">JPG, PNG or PDF</p>
+                                      </div>
+                                    )}
+                                  </label>
+                                </div>
+                                <div className="space-y-2">
+                                  <label className="text-sm font-medium">Back Side</label>
+                                  <label className="flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-[#FF6B00]/40 bg-[#FF6B00]/5 hover:bg-[#FF6B00]/10 p-4 cursor-pointer transition-colors">
+                                    <input type="file" accept="image/*,.pdf" className="hidden" onChange={(e) => { if (e.target.files?.[0]) setAadhaarBack(e.target.files[0]); }} />
+                                    {aadhaarBack ? (
+                                      <div className="text-center">
+                                        <IdentificationCard className="h-8 w-8 text-candlestick-green mx-auto" weight="duotone" />
+                                        <p className="text-xs font-medium text-candlestick-green mt-1">Uploaded</p>
+                                        <p className="text-xs text-muted-foreground truncate max-w-[120px]">{aadhaarBack.name}</p>
+                                      </div>
+                                    ) : (
+                                      <div className="text-center">
+                                        <Upload className="h-6 w-6 text-[#FF6B00] mx-auto" weight="duotone" />
+                                        <p className="text-xs font-medium text-[#FF6B00]">Upload Back</p>
+                                        <p className="text-[10px] text-muted-foreground">JPG, PNG or PDF</p>
+                                      </div>
+                                    )}
+                                  </label>
+                                </div>
+                              </div>
+                            </div>
+                          )}
                         </div>
-                        <Button type="button" onClick={handleSenderNext} className="w-full bg-coke-red hover:bg-red-600 text-white gap-2 py-5">
-                          Next: Receiver Details <ArrowRight className="h-4 w-4" />
-                        </Button>
+                        <div className="flex gap-3">
+                          <Button type="button" variant="outline" onClick={() => setAddressSubStep('pickup')} className="flex-1 gap-1.5">
+                            <ArrowLeft className="h-4 w-4" /> Pickup
+                          </Button>
+                          <Button type="button" onClick={handleSenderNext} className="flex-1 bg-coke-red hover:bg-red-600 text-white gap-2">
+                            Next: Receiver <ArrowRight className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </motion.div>
                     )}
 
-                    {/* ── Receiver Slide ── */}
+                    {/* â”€â”€ Step 3: Receiver Details + Passport (for medicine) â”€â”€ */}
                     {addressSubStep === 'receiver' && (
                       <motion.div
                         key="receiver"
@@ -1008,27 +1178,51 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                       >
                         <div className="flex items-center gap-3 mb-1">
                           <div className="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-950/40 flex items-center justify-center">
-                            <MapPin className="h-5 w-5 text-blue-600" weight="duotone" />
+                            <Globe className="h-5 w-5 text-blue-600" weight="duotone" />
                           </div>
                           <div>
                             <h3 className="font-semibold text-base">Receiver Details</h3>
                             <p className="text-xs text-muted-foreground">{isInternational ? 'Delivery address abroad' : 'Delivery address in India'}</p>
                           </div>
                         </div>
+                        {isMedicineFlow && (
+                          <div className="rounded-lg border border-blue-200 dark:border-blue-800/40 bg-blue-50 dark:bg-blue-950/20 p-3 text-xs text-blue-800 dark:text-blue-300 flex items-start gap-2">
+                            <Passport className="h-4 w-4 shrink-0 mt-0.5" weight="fill" />
+                            <span>Receiver name must match their passport exactly. Address should follow the destination country format.</span>
+                          </div>
+                        )}
+                        {isInternational && destinationCountryInfo && (
+                          <div className="rounded-lg bg-muted/50 p-3 text-xs text-muted-foreground flex items-start gap-2">
+                            <Info className="h-4 w-4 shrink-0 mt-0.5" weight="fill" />
+                            <span>Address format for {destinationCountryInfo.name}: {getAddressGuidance()}</span>
+                          </div>
+                        )}
                         <div className="space-y-4">
                           <div className="grid grid-cols-2 gap-4">
                             <FormField control={detailsForm.control} name="receiverName" render={({ field }) => (
-                              <FormItem><FormLabel>Full Name</FormLabel><FormControl><Input {...field} placeholder="Receiver name" className="h-11" /></FormControl><FormMessage /></FormItem>
+                              <FormItem>
+                                <FormLabel>{isMedicineFlow ? 'Full Name (as per Passport)' : 'Full Name'}</FormLabel>
+                                <FormControl><Input {...field} placeholder={isMedicineFlow ? 'Name exactly as on passport' : 'Receiver name'} className="h-11" /></FormControl>
+                                <FormMessage />
+                              </FormItem>
                             )} />
                             <FormField control={detailsForm.control} name="receiverPhone" render={({ field }) => (
-                              <FormItem><FormLabel>Phone</FormLabel><FormControl><Input {...field} placeholder="Phone number" className="h-11" /></FormControl><FormMessage /></FormItem>
+                              <FormItem>
+                                <FormLabel>Phone (with country code)</FormLabel>
+                                <FormControl><Input {...field} placeholder={destinationCountryInfo?.phoneCode ? `${destinationCountryInfo.phoneCode} ...` : 'Phone number'} className="h-11" /></FormControl>
+                                <FormMessage />
+                              </FormItem>
                             )} />
                           </div>
                           <FormField control={detailsForm.control} name="receiverEmail" render={({ field }) => (
                             <FormItem><FormLabel>Email</FormLabel><FormControl><Input {...field} type="email" placeholder="receiver@email.com" className="h-11" /></FormControl><FormMessage /></FormItem>
                           )} />
                           <FormField control={detailsForm.control} name="receiverAddress" render={({ field }) => (
-                            <FormItem><FormLabel>Address</FormLabel><FormControl><Input {...field} placeholder="Full address" className="h-11" /></FormControl><FormMessage /></FormItem>
+                            <FormItem>
+                              <FormLabel>Full Address</FormLabel>
+                              <FormControl><Textarea {...field} placeholder={getAddressGuidance()} rows={2} className="resize-none" /></FormControl>
+                              <FormMessage />
+                            </FormItem>
                           )} />
                           <div className="grid grid-cols-2 gap-4">
                             <FormField control={detailsForm.control} name="receiverZipcode" render={({ field }) => (
@@ -1049,7 +1243,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                                 {!isInternational && receiverLookup.areas.length > 0 ? (
                                   <Select onValueChange={field.onChange} value={field.value}>
                                     <FormControl>
-                                      <SelectTrigger><SelectValue placeholder="Select city" /></SelectTrigger>
+                                      <SelectTrigger className="h-11"><SelectValue placeholder="Select city" /></SelectTrigger>
                                     </FormControl>
                                     <SelectContent>
                                       {receiverLookup.district && <SelectItem value={receiverLookup.district}>{receiverLookup.district} (District)</SelectItem>}
@@ -1059,12 +1253,71 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                                     </SelectContent>
                                   </Select>
                                 ) : (
-                                  <FormControl><Input {...field} placeholder="City" /></FormControl>
+                                  <FormControl><Input {...field} placeholder="City" className="h-11" /></FormControl>
                                 )}
                                 <FormMessage />
                               </FormItem>
                             )} />
                           </div>
+
+                          {/* Passport Upload â€” Medicine only */}
+                          {isMedicineFlow && (
+                            <div className="space-y-4 pt-2">
+                              <div className="flex items-center gap-2">
+                                <Passport className="h-5 w-5 text-blue-600" weight="duotone" />
+                                <h4 className="font-semibold text-sm">Receiver Passport Upload</h4>
+                              </div>
+                              <div className="rounded-lg border border-blue-200 dark:border-blue-800/40 bg-blue-50 dark:bg-blue-950/20 p-3 text-xs space-y-1">
+                                <p className="font-medium text-blue-900 dark:text-blue-200">How to capture a clear passport photo:</p>
+                                <ul className="list-disc list-inside text-blue-800 dark:text-blue-300 space-y-0.5">
+                                  <li>Open passport flat on a well-lit surface</li>
+                                  <li>Capture the full page without cutting edges</li>
+                                  <li>Name, photo, and passport number must be clearly readable</li>
+                                  <li>Address page: capture the page with the current address</li>
+                                </ul>
+                              </div>
+                              <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                  <label className="text-sm font-medium">Identity Page (Photo side)</label>
+                                  <label className="flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-blue-400/40 bg-blue-50/50 dark:bg-blue-950/20 hover:bg-blue-100/50 p-4 cursor-pointer transition-colors">
+                                    <input type="file" accept="image/*,.pdf" className="hidden" onChange={(e) => { if (e.target.files?.[0]) setPassportIdentity(e.target.files[0]); }} />
+                                    {passportIdentity ? (
+                                      <div className="text-center">
+                                        <Passport className="h-8 w-8 text-candlestick-green mx-auto" weight="duotone" />
+                                        <p className="text-xs font-medium text-candlestick-green mt-1">Uploaded</p>
+                                        <p className="text-xs text-muted-foreground truncate max-w-[120px]">{passportIdentity.name}</p>
+                                      </div>
+                                    ) : (
+                                      <div className="text-center">
+                                        <Upload className="h-6 w-6 text-blue-500 mx-auto" weight="duotone" />
+                                        <p className="text-xs font-medium text-blue-600">Upload Identity</p>
+                                        <p className="text-[10px] text-muted-foreground">JPG, PNG or PDF</p>
+                                      </div>
+                                    )}
+                                  </label>
+                                </div>
+                                <div className="space-y-2">
+                                  <label className="text-sm font-medium">Address Page</label>
+                                  <label className="flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-blue-400/40 bg-blue-50/50 dark:bg-blue-950/20 hover:bg-blue-100/50 p-4 cursor-pointer transition-colors">
+                                    <input type="file" accept="image/*,.pdf" className="hidden" onChange={(e) => { if (e.target.files?.[0]) setPassportAddress(e.target.files[0]); }} />
+                                    {passportAddress ? (
+                                      <div className="text-center">
+                                        <Passport className="h-8 w-8 text-candlestick-green mx-auto" weight="duotone" />
+                                        <p className="text-xs font-medium text-candlestick-green mt-1">Uploaded</p>
+                                        <p className="text-xs text-muted-foreground truncate max-w-[120px]">{passportAddress.name}</p>
+                                      </div>
+                                    ) : (
+                                      <div className="text-center">
+                                        <Upload className="h-6 w-6 text-blue-500 mx-auto" weight="duotone" />
+                                        <p className="text-xs font-medium text-blue-600">Upload Address</p>
+                                        <p className="text-[10px] text-muted-foreground">JPG, PNG or PDF</p>
+                                      </div>
+                                    )}
+                                  </label>
+                                </div>
+                              </div>
+                            </div>
+                          )}
                         </div>
                         <div className="flex gap-3">
                           <Button type="button" variant="outline" onClick={() => setAddressSubStep('sender')} className="flex-1 gap-1.5">
@@ -1077,7 +1330,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                       </motion.div>
                     )}
 
-                    {/* ── Content Description Slide ── */}
+                    {/* â”€â”€ Step 4: Content Description â”€â”€ */}
                     {addressSubStep === 'content' && (
                       <motion.div
                         key="content"
@@ -1099,7 +1352,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                         <FormField control={detailsForm.control} name="contentDescription" render={({ field }) => (
                           <FormItem>
                             <FormLabel>Content Description</FormLabel>
-                            <FormControl><Textarea {...field} placeholder={isInternational ? 'Describe contents for customs declaration' : 'Describe the contents of your shipment'} rows={3} /></FormControl>
+                            <FormControl><Textarea {...field} placeholder={isMedicineFlow ? 'List medicine names, quantities, and dosages for customs' : isInternational ? 'Describe contents for customs declaration' : 'Describe the contents of your shipment'} rows={3} /></FormControl>
                             <FormMessage />
                           </FormItem>
                         )} />
@@ -1120,7 +1373,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
           </motion.div>
         )}
 
-        {/* ═══════════════ STEP 4: Summary & Pay ═══════════════ */}
+        {/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• STEP 4: Summary & Pay â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
         {step === 4 && senderReceiverData && (
           <GuestSummaryStep
             mode={mode}
@@ -1132,7 +1385,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
         )}
       </main>
 
-      {/* ═══════════════ Weight Limit Modal ═══════════════ */}
+      {/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• Weight Limit Modal â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
       <AnimatePresence>
         {showWeightLimitModal && (
           <motion.div
