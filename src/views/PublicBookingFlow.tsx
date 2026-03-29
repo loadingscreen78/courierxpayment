@@ -11,6 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
 import { getCourierOptions, calculateRate, type CourierOption } from '@/lib/shipping/rateCalculator';
 import { getServedCountries, getCountryByCode } from '@/lib/shipping/countries';
@@ -35,11 +36,11 @@ const internationalRateSchema = z.object({
   lengthCm: z.coerce.number().min(1, 'Required').max(150),
   widthCm: z.coerce.number().min(1, 'Required').max(150),
   heightCm: z.coerce.number().min(1, 'Required').max(150),
-  declaredValue: z.coerce.number().min(1, 'Required').max(50000, 'Max ₹50,000'),
+  declaredValue: z.coerce.number().optional().default(1000),
+  prohibitedItemsConfirmed: z.boolean().refine(val => val === true, { message: 'You must confirm your package does not contain prohibited items' }),
 }).superRefine((data, ctx) => {
   if (data.shipmentType === 'document') {
     if (data.weightGrams > 1000) ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Documents max 1 kg', path: ['weightGrams'] });
-    if (data.declaredValue > 100) ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Documents max ₹100 declared value', path: ['declaredValue'] });
   }
 });
 
@@ -124,7 +125,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
   // ── International rate form ──
   const intlForm = useForm<InternationalRateValues>({
     resolver: zodResolver(internationalRateSchema),
-    defaultValues: { shipmentType: undefined, destinationCountry: '', weightGrams: 500, lengthCm: 20, widthCm: 15, heightCm: 10, declaredValue: 1000 },
+    defaultValues: { shipmentType: undefined, destinationCountry: '', weightGrams: 500, lengthCm: 20, widthCm: 15, heightCm: 10, declaredValue: 1000, prohibitedItemsConfirmed: false },
   });
 
   // ── Domestic rate form ──
@@ -445,9 +446,8 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                       </FormItem>
                     )} />
 
-                    {/* Weight + Value — document-specific */}
-                    <div className="grid grid-cols-2 gap-4">
-                      <FormField control={intlForm.control} name="weightGrams" render={({ field }) => (
+                    {/* Weight */}
+                    <FormField control={intlForm.control} name="weightGrams" render={({ field }) => (
                         <FormItem>
                           <FormLabel>Weight</FormLabel>
                           {isDocumentIntl ? (
@@ -502,17 +502,6 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                           <FormMessage />
                         </FormItem>
                       )} />
-                      <FormField control={intlForm.control} name="declaredValue" render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Declared Value (₹)</FormLabel>
-                          <FormControl>
-                            <Input {...field} type="number" placeholder={isDocumentIntl ? 'Max ₹100' : '1000'} max={isDocumentIntl ? 100 : 50000} />
-                          </FormControl>
-                          {isDocumentIntl && <p className="text-xs text-muted-foreground">Documents cannot exceed ₹100 declared value</p>}
-                          <FormMessage />
-                        </FormItem>
-                      )} />
-                    </div>
 
                     {/* Dimensions */}
                     <div>
@@ -538,6 +527,24 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                         )} />
                       </div>
                     </div>
+
+                    {/* Prohibited Items Confirmation */}
+                    <FormField control={intlForm.control} name="prohibitedItemsConfirmed" render={({ field }) => (
+                      <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-lg border border-border p-4 bg-muted/30">
+                        <FormControl>
+                          <Checkbox checked={field.value} onCheckedChange={field.onChange} />
+                        </FormControl>
+                        <div className="space-y-1 leading-none">
+                          <FormLabel className="text-sm font-medium cursor-pointer">
+                            I confirm this package does not contain prohibited items
+                          </FormLabel>
+                          <p className="text-xs text-muted-foreground">
+                            Gold, silver, precious metals, chemicals, narcotics, batteries, currency, physical cash, credit/debit cards, or any restricted substances.
+                          </p>
+                          <FormMessage />
+                        </div>
+                      </FormItem>
+                    )} />
 
                     <Button type="submit" className="w-full bg-coke-red hover:bg-red-600 text-white gap-2 py-5">
                       Calculate Rates <ArrowRight className="h-4 w-4" />
@@ -969,12 +976,6 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                             <p className="text-xs text-muted-foreground">Where should we collect the shipment from?</p>
                           </div>
                         </div>
-                        {isMedicineFlow && (
-                          <div className="rounded-lg border border-orange-200 dark:border-orange-800/40 bg-orange-50 dark:bg-orange-950/20 p-3 text-xs text-orange-800 dark:text-orange-300 flex items-start gap-2">
-                            <Info className="h-4 w-4 shrink-0 mt-0.5" weight="fill" />
-                            <span>For medicine shipments, the pickup address must match your Aadhaar card address exactly.</span>
-                          </div>
-                        )}
                         <div className="space-y-4">
                           <FormField control={detailsForm.control} name="senderAddress" render={({ field }) => (
                             <FormItem>
