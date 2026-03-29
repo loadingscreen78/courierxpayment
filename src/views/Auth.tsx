@@ -42,7 +42,7 @@ type AuthMode = 'signin' | 'signup';
 type PanelType = 'customer' | 'admin' | 'cxbc';
 
 const panelOptions = [
-  { id: 'customer' as PanelType, title: 'Account Login', description: 'Ship internationally', icon: User, available: true },
+  { id: 'customer' as PanelType, title: 'Account Login', description: 'Your gateway to global & local delivery', icon: User, available: true },
   { id: 'admin' as PanelType, title: 'Admin Login', description: 'Manage operations', icon: Gear, available: true },
   { id: 'cxbc' as PanelType, title: 'CXBC Panel', description: 'Partner portal', icon: Briefcase, available: false },
 ];
@@ -129,8 +129,13 @@ const Auth = () => {
   const [forgotStep, setForgotStep] = useState<'idle' | 'form' | 'sent'>('idle');
   const [forgotEmail, setForgotEmail] = useState('');
   const [forgotLoading, setForgotLoading] = useState(false);
-  const [showAdminWarning, setShowAdminWarning] = useState(false);
   const [routeIndex, setRouteIndex] = useState(0);
+  const [adminPinStep, setAdminPinStep] = useState<'warning' | 'pin' | null>(null);
+  const [adminPin, setAdminPin] = useState(['', '', '', '']);
+  const [adminPinError, setAdminPinError] = useState('');
+  const [adminPinLoading, setAdminPinLoading] = useState(false);
+  const [adminPinRemaining, setAdminPinRemaining] = useState(5);
+  const pinInputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
   useSeo({
     title: 'Sign In | CourierX',
@@ -238,7 +243,7 @@ const Auth = () => {
 
   const handlePanelSelect = (panel: PanelType) => {
     if (panel === 'admin') {
-      setShowAdminWarning(true);
+      setAdminPinStep('warning');
       return;
     }
     setSelectedPanel(panel);
@@ -246,10 +251,64 @@ const Auth = () => {
   };
 
   const handleAdminWarningConfirm = () => {
-    setShowAdminWarning(false);
-    setSelectedPanel('admin');
-    setMode('signin');
-    setStep('method');
+    setAdminPinStep('pin');
+    setAdminPin(['', '', '', '']);
+    setAdminPinError('');
+    setTimeout(() => pinInputRefs.current[0]?.focus(), 100);
+  };
+
+  const handleAdminPinInput = (index: number, value: string) => {
+    if (!/^\d*$/.test(value)) return;
+    const newPin = [...adminPin];
+    newPin[index] = value.slice(-1);
+    setAdminPin(newPin);
+    setAdminPinError('');
+
+    if (value && index < 3) {
+      pinInputRefs.current[index + 1]?.focus();
+    }
+
+    // Auto-submit when all 4 digits entered
+    if (value && index === 3 && newPin.every(d => d !== '')) {
+      handleAdminPinSubmit(newPin.join(''));
+    }
+  };
+
+  const handleAdminPinKeyDown = (index: number, e: React.KeyboardEvent) => {
+    if (e.key === 'Backspace' && !adminPin[index] && index > 0) {
+      pinInputRefs.current[index - 1]?.focus();
+    }
+  };
+
+  const handleAdminPinSubmit = async (pin: string) => {
+    setAdminPinLoading(true);
+    setAdminPinError('');
+    try {
+      const res = await fetch('/api/admin/verify-pin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pin }),
+      });
+      const data = await res.json();
+
+      if (res.ok && data.success) {
+        setAdminPinStep(null);
+        setSelectedPanel('admin');
+        setMode('signin');
+        setStep('method');
+      } else if (data.locked) {
+        toast({ title: 'Access Locked', description: 'Too many failed attempts. Redirecting...', variant: 'destructive' });
+        setTimeout(() => { window.location.href = '/'; }, 1500);
+      } else {
+        setAdminPinRemaining(data.remainingAttempts ?? 0);
+        setAdminPinError(`Incorrect PIN. ${data.remainingAttempts ?? 0} attempt${(data.remainingAttempts ?? 0) === 1 ? '' : 's'} remaining.`);
+        setAdminPin(['', '', '', '']);
+        setTimeout(() => pinInputRefs.current[0]?.focus(), 100);
+      }
+    } catch {
+      setAdminPinError('Connection error. Please try again.');
+    }
+    setAdminPinLoading(false);
   };
 
   const handleEmailAuth = async (values: EmailPasswordFormValues) => {
@@ -531,205 +590,203 @@ const Auth = () => {
         </motion.div>
       </div>
 
-      {/* ── Left Side — Redesigned Professional Panel (Desktop only) ── */}
-      <div className="hidden lg:flex lg:w-1/2 bg-charcoal relative overflow-hidden flex-col justify-between p-0">
-        {/* Background layers */}
+      {/* ── Left Side — Clean Professional Panel (Desktop only) ── */}
+      <div className="hidden lg:flex lg:w-1/2 bg-charcoal relative overflow-hidden flex-col justify-between">
+        {/* Background */}
         <div className="absolute inset-0">
-          {/* Subtle dot grid */}
-          <div className="absolute inset-0 opacity-[0.03]" style={{
-            backgroundImage: `radial-gradient(circle at 1px 1px, #F9F9F9 0.5px, transparent 0)`,
-            backgroundSize: '32px 32px'
-          }} />
-          {/* Gradient overlay */}
-          <div className="absolute inset-0 bg-gradient-to-br from-charcoal via-charcoal to-[#1a1a1a]" />
-          {/* Accent glow */}
-          <div className="absolute -top-40 -right-40 w-[500px] h-[500px] bg-coke-red/5 rounded-full blur-[120px]" />
-          <div className="absolute -bottom-40 -left-40 w-[400px] h-[400px] bg-coke-red/3 rounded-full blur-[100px]" />
+          <div className="absolute inset-0 bg-gradient-to-b from-[#1e1e1e] via-charcoal to-[#1a1a1a]" />
+          <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-coke-red/[0.03] rounded-full blur-[150px] -translate-y-1/2 translate-x-1/4" />
         </div>
 
-        {/* Top section — Branding */}
+        {/* Logo only — top left */}
         <div className="relative z-10 p-10 pb-0">
           <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-            className="flex items-center gap-3 mb-2"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.5 }}
           >
-            <img src={logoMain.src} alt="CourierX" className="h-9 w-auto rounded-lg" />
-            <span className="font-bold text-xl text-paper-white font-typewriter tracking-wide">
-              Courier<span className="text-coke-red">X</span>
-            </span>
+            <img src={logoMain.src} alt="CourierX" className="h-10 w-auto rounded-lg" />
           </motion.div>
         </div>
 
-        {/* Center section — Hero content */}
+        {/* Center — Hero */}
         <div className="relative z-10 flex-1 flex flex-col justify-center px-10">
-          <motion.p
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.2 }}
-            className="text-paper-white/50 text-sm font-typewriter tracking-widest uppercase mb-4"
-          >
-            International Shipping Made Simple
-          </motion.p>
-          
-          <motion.h1
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.3 }}
-            className="text-5xl font-bold text-paper-white leading-tight font-typewriter mb-6"
-          >
-            Ship Your<br />
-            <span className="text-coke-red">Essentials</span>
-            <br />
-            <span className="text-paper-white/40 text-3xl">Worldwide</span>
-          </motion.h1>
-
-          {/* Animated route card */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.5 }}
-            className="mt-4 max-w-xs"
+            transition={{ duration: 0.7, delay: 0.1 }}
+          >
+            <p className="text-coke-red/80 text-xs font-typewriter tracking-[0.3em] uppercase mb-6">
+              Courier Solutions
+            </p>
+            
+            <h1 className="text-[3.2rem] leading-[1.1] font-bold text-paper-white font-typewriter mb-5">
+              Ship Your<br />
+              <span className="text-coke-red">Essentials</span>
+            </h1>
+
+            <p className="text-paper-white/40 text-base font-typewriter leading-relaxed max-w-sm">
+              Domestic & international shipping from India — fast, reliable, and affordable.
+            </p>
+          </motion.div>
+
+          {/* Minimal animated route card */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.7, delay: 0.4 }}
+            className="mt-10 max-w-[280px]"
           >
             <AnimatePresence mode="wait">
               <motion.div
                 key={routeIndex}
-                initial={{ opacity: 0, x: 30 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -30 }}
-                transition={{ duration: 0.4 }}
-                className="bg-paper-white/[0.06] backdrop-blur-sm rounded-2xl p-5 border border-paper-white/10"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.3 }}
+                className="bg-paper-white/[0.04] rounded-xl p-4 border border-paper-white/[0.06]"
               >
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="w-10 h-10 bg-coke-red/15 rounded-xl flex items-center justify-center">
-                    <Package size={20} weight="bold" className="text-coke-red" />
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 bg-coke-red/10 rounded-lg flex items-center justify-center">
+                      <Package size={16} weight="bold" className="text-coke-red" />
+                    </div>
+                    <div>
+                      <p className="text-paper-white text-sm font-typewriter font-medium">{currentRoute.type}</p>
+                      <p className="text-paper-white/30 text-[11px]">{currentRoute.from} → {currentRoute.to}</p>
+                    </div>
                   </div>
-                  <div className="flex-1">
-                    <p className="text-paper-white font-semibold font-typewriter text-sm">{currentRoute.type} Shipment</p>
-                    <p className="text-paper-white/40 text-xs">{currentRoute.from} → {currentRoute.to}</p>
-                  </div>
-                  <Airplane size={18} weight="bold" className="text-coke-red/60" />
+                  <span className="text-coke-red font-typewriter font-bold text-sm">{currentRoute.price}</span>
                 </div>
-                
-                <div className="space-y-2 mb-4">
-                  <div className="flex justify-between text-xs">
-                    <span className="text-paper-white/40">Progress</span>
-                    <span className="text-paper-white/70">75%</span>
-                  </div>
-                  <div className="h-1 bg-paper-white/10 rounded-full overflow-hidden">
-                    <motion.div
-                      className="h-full bg-coke-red rounded-full"
-                      initial={{ width: 0 }}
-                      animate={{ width: "75%" }}
-                      transition={{ duration: 1.2, delay: 0.2 }}
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-2">
-                  <div className="bg-paper-white/[0.04] rounded-lg p-2.5 text-center">
-                    <p className="text-lg font-bold text-paper-white font-typewriter">{currentRoute.days}</p>
-                    <p className="text-paper-white/40 text-[10px] uppercase tracking-wider">Days</p>
-                  </div>
-                  <div className="bg-paper-white/[0.04] rounded-lg p-2.5 text-center">
-                    <p className="text-lg font-bold text-coke-red font-typewriter">{currentRoute.price}</p>
-                    <p className="text-paper-white/40 text-[10px] uppercase tracking-wider">Starting</p>
-                  </div>
+                <div className="h-px bg-paper-white/[0.06] mb-3" />
+                <div className="flex items-center justify-between text-[11px]">
+                  <span className="text-paper-white/30">Delivery</span>
+                  <span className="text-paper-white/60 font-typewriter">{currentRoute.days} business days</span>
                 </div>
               </motion.div>
             </AnimatePresence>
 
-            {/* Route indicator dots */}
-            <div className="flex justify-center gap-1.5 mt-4">
+            <div className="flex justify-center gap-1 mt-3">
               {shippingRoutes.map((_, i) => (
-                <motion.div
+                <div
                   key={i}
-                  className={`h-1 rounded-full transition-all duration-300 ${i === routeIndex ? 'w-6 bg-coke-red' : 'w-1.5 bg-paper-white/20'}`}
+                  className={`h-1 rounded-full transition-all duration-300 ${i === routeIndex ? 'w-5 bg-coke-red' : 'w-1 bg-paper-white/15'}`}
                 />
               ))}
             </div>
           </motion.div>
         </div>
 
-        {/* Bottom section — Stats + trust bar */}
-        <div className="relative z-10 p-10 pt-0">
+        {/* Bottom — Stats */}
+        <div className="relative z-10 px-10 pb-10">
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.7 }}
-            className="flex items-center gap-6 mb-6"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.7, delay: 0.6 }}
+            className="flex items-center gap-8"
           >
             {stats.map((stat, i) => (
-              <div key={i} className="flex items-center gap-2">
-                <span className="text-xl font-bold text-paper-white font-typewriter">{stat.value}</span>
-                <span className="text-paper-white/40 text-xs">{stat.label}</span>
+              <div key={i}>
+                <span className="text-lg font-bold text-paper-white font-typewriter">{stat.value}</span>
+                <span className="text-paper-white/30 text-xs ml-1.5">{stat.label}</span>
               </div>
             ))}
           </motion.div>
-
-          {/* Animated route line */}
-          <div className="relative h-8 mb-4">
-            <div className="absolute top-1/2 left-0 right-0 h-px bg-paper-white/10" />
-            <motion.div
-              className="absolute top-1/2 -translate-y-1/2"
-              animate={{ x: ['0%', '100%'] }}
-              transition={{ duration: 6, repeat: Infinity, ease: "linear" }}
-            >
-              <div className="flex items-center gap-1">
-                <div className="w-2 h-2 bg-coke-red rounded-full" />
-                <div className="w-12 h-px bg-gradient-to-r from-coke-red to-transparent" />
-              </div>
-            </motion.div>
-            {/* Static route points */}
-            <div className="absolute top-1/2 -translate-y-1/2 left-[10%] flex flex-col items-center">
-              <MapPin size={14} weight="bold" className="text-paper-white/30" />
-            </div>
-            <div className="absolute top-1/2 -translate-y-1/2 left-[50%] flex flex-col items-center">
-              <Globe size={14} weight="bold" className="text-paper-white/20" />
-            </div>
-            <div className="absolute top-1/2 -translate-y-1/2 left-[90%] flex flex-col items-center">
-              <MapPin size={14} weight="bold" className="text-paper-white/30" />
-            </div>
-          </div>
-
-          <p className="text-paper-white/30 text-xs font-typewriter">
-            Trusted by thousands across India for international courier
-          </p>
         </div>
       </div>
 
-      {/* ── Admin Warning Dialog ── */}
-      <Dialog open={showAdminWarning} onOpenChange={setShowAdminWarning}>
+      {/* ── Admin Access Dialog (Warning + PIN) ── */}
+      <Dialog open={adminPinStep !== null} onOpenChange={(open) => { if (!open) setAdminPinStep(null); }}>
         <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <div className="mx-auto mb-3 w-14 h-14 bg-coke-red/10 rounded-full flex items-center justify-center">
-              <ShieldWarning size={32} weight="bold" className="text-coke-red" />
-            </div>
-            <DialogTitle className="text-center text-lg font-typewriter">Admin Authorization Only</DialogTitle>
-            <DialogDescription className="text-center space-y-2">
-              <span className="block">This login is restricted to authorized administrators only. It is not intended for public users.</span>
-              <span className="block text-coke-red/80 font-medium text-xs mt-2">
-                <Warning size={14} weight="bold" className="inline mr-1 -mt-0.5" />
-                Your location and system information will be tracked for security purposes.
-              </span>
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="flex-col gap-2 sm:flex-col">
-            <Button
-              onClick={handleAdminWarningConfirm}
-              className="w-full h-11 rounded-full bg-coke-red hover:bg-coke-red/90 text-white font-semibold font-typewriter"
-            >
-              I Understand, Continue
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => setShowAdminWarning(false)}
-              className="w-full h-11 rounded-full font-typewriter"
-            >
-              Go Back
-            </Button>
-          </DialogFooter>
+          {adminPinStep === 'warning' && (
+            <>
+              <DialogHeader>
+                <div className="mx-auto mb-3 w-14 h-14 bg-coke-red/10 rounded-full flex items-center justify-center">
+                  <ShieldWarning size={32} weight="bold" className="text-coke-red" />
+                </div>
+                <DialogTitle className="text-center text-lg font-typewriter">Admin Authorization Only</DialogTitle>
+                <DialogDescription className="text-center space-y-2">
+                  <span className="block">This login is restricted to authorized administrators only. It is not intended for public users.</span>
+                  <span className="block text-coke-red/80 font-medium text-xs mt-2">
+                    <Warning size={14} weight="bold" className="inline mr-1 -mt-0.5" />
+                    Your location and system information will be tracked for security purposes.
+                  </span>
+                </DialogDescription>
+              </DialogHeader>
+              <DialogFooter className="flex-col gap-2 sm:flex-col">
+                <Button
+                  onClick={handleAdminWarningConfirm}
+                  className="w-full h-11 rounded-full bg-coke-red hover:bg-coke-red/90 text-white font-semibold font-typewriter"
+                >
+                  I Understand, Continue
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => setAdminPinStep(null)}
+                  className="w-full h-11 rounded-full font-typewriter"
+                >
+                  Go Back
+                </Button>
+              </DialogFooter>
+            </>
+          )}
+
+          {adminPinStep === 'pin' && (
+            <>
+              <DialogHeader>
+                <div className="mx-auto mb-3 w-12 h-12 bg-coke-red/10 rounded-full flex items-center justify-center">
+                  <ShieldWarning size={24} weight="bold" className="text-coke-red" />
+                </div>
+                <DialogTitle className="text-center text-lg font-typewriter">Enter Access PIN</DialogTitle>
+                <DialogDescription className="text-center">
+                  Enter the 4-digit admin access code to proceed.
+                </DialogDescription>
+              </DialogHeader>
+
+              <div className="flex justify-center gap-3 my-4">
+                {[0, 1, 2, 3].map((i) => (
+                  <input
+                    key={i}
+                    ref={(el) => { pinInputRefs.current[i] = el; }}
+                    type="password"
+                    inputMode="numeric"
+                    maxLength={1}
+                    value={adminPin[i]}
+                    onChange={(e) => handleAdminPinInput(i, e.target.value)}
+                    onKeyDown={(e) => handleAdminPinKeyDown(i, e)}
+                    disabled={adminPinLoading}
+                    className={`w-14 h-16 text-center text-2xl font-typewriter font-bold rounded-xl border-2 bg-background outline-none transition-all ${
+                      adminPinError
+                        ? 'border-coke-red/50 text-coke-red'
+                        : 'border-border focus:border-coke-red'
+                    } disabled:opacity-50`}
+                    aria-label={`PIN digit ${i + 1}`}
+                  />
+                ))}
+              </div>
+
+              {adminPinError && (
+                <p className="text-center text-sm text-coke-red font-medium">{adminPinError}</p>
+              )}
+
+              {adminPinLoading && (
+                <div className="flex justify-center">
+                  <CircleNotch size={24} weight="bold" className="animate-spin text-coke-red" />
+                </div>
+              )}
+
+              <DialogFooter className="flex-col gap-2 sm:flex-col mt-2">
+                <Button
+                  variant="outline"
+                  onClick={() => setAdminPinStep('warning')}
+                  className="w-full h-10 rounded-full font-typewriter text-sm"
+                >
+                  <ArrowLeft size={14} weight="bold" className="mr-1.5" />
+                  Back
+                </Button>
+              </DialogFooter>
+            </>
+          )}
         </DialogContent>
       </Dialog>
 
@@ -739,9 +796,6 @@ const Auth = () => {
         <div className="flex items-center justify-between p-6 border-b border-border">
           <a href="/" className="flex items-center gap-2">
             <img src={logoMain.src} alt="CourierX" className="h-8 w-auto rounded-lg" />
-            <span className="font-bold text-xl text-foreground font-typewriter">
-              Courier<span className="text-coke-red">X</span>
-            </span>
           </a>
           <div className="flex items-center gap-3">
             {step !== 'panel-select' && (
