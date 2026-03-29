@@ -709,6 +709,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                   {guestCouriers.map((option, idx) => {
                     const accountPrice = accountCouriers[idx]?.price ?? option.price;
                     const savings = option.price - accountPrice;
+                    const isComingSoon = option.carrier === 'ShipGlobal' || option.carrier === 'Aramex';
                     const rateBreakdown = rateFormData ? calculateRate({
                       destinationCountryCode: (rateFormData as InternationalRateValues).destinationCountry,
                       shipmentType: (rateFormData as InternationalRateValues).shipmentType,
@@ -718,15 +719,18 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                     }, true) : null;
 
                     return (
-                      <div key={option.carrier} className="bg-card rounded-xl border border-border overflow-hidden hover:border-coke-red/30 transition-colors">
+                      <div key={option.carrier} className={`bg-card rounded-xl border border-border overflow-hidden transition-colors ${isComingSoon ? 'opacity-60' : 'hover:border-coke-red/30'}`}>
                         <div className="p-4">
                           <div className="flex items-center justify-between">
                             <div>
                               <div className="flex items-center gap-2">
                                 <h3 className="font-semibold text-base">{option.carrier}</h3>
                                 <span className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground">{option.serviceName}</span>
-                                {option.isRecommended && (
+                                {option.isRecommended && !isComingSoon && (
                                   <span className="text-xs px-2 py-0.5 rounded-full bg-candlestick-green/10 text-candlestick-green font-medium">Best Value</span>
+                                )}
+                                {isComingSoon && (
+                                  <span className="text-xs px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950/40 text-amber-600 font-medium">Available Soon</span>
                                 )}
                               </div>
                               <p className="text-sm text-muted-foreground mt-1">{option.transitDays.min}–{option.transitDays.max} days delivery</p>
@@ -738,14 +742,20 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                             </div>
                             <div className="text-right shrink-0 ml-4">
                               <p className="text-2xl font-bold">₹{option.price.toLocaleString('en-IN')}</p>
-                              {savings > 0 && (
+                              {savings > 0 && !isComingSoon && (
                                 <p className="text-xs text-candlestick-green mt-0.5">
                                   With account: <span className="font-semibold">₹{accountPrice.toLocaleString('en-IN')}</span>
                                 </p>
                               )}
-                              <Button size="sm" className="mt-2 bg-coke-red hover:bg-red-600 text-white" onClick={() => handleSelectCourier(option)}>
-                                Book Now
-                              </Button>
+                              {isComingSoon ? (
+                                <Button size="sm" variant="outline" className="mt-2 opacity-50" disabled>
+                                  Available Soon
+                                </Button>
+                              ) : (
+                                <Button size="sm" className="mt-2 bg-coke-red hover:bg-red-600 text-white" onClick={() => handleSelectCourier(option)}>
+                                  Book Now
+                                </Button>
+                              )}
                             </div>
                           </div>
                         </div>

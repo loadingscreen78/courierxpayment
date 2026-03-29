@@ -27,12 +27,14 @@ interface ReviewStepProps {
 }
 
 // Mock courier options based on destination
+const COMING_SOON_COURIERS = ['Aramex', 'ShipGlobal Economy'];
+
 const getCourierOptions = (country: string) => {
   const options = [
     { name: 'DHL Express', price: 2450, days: '3-5', recommended: country.startsWith('DE') || country.startsWith('GB') || country.startsWith('FR') || country.startsWith('NL') },
     { name: 'FedEx International', price: 2200, days: '4-6', recommended: country.startsWith('US') || country.startsWith('CA') },
-    { name: 'Aramex', price: 1850, days: '5-7', recommended: country.startsWith('AE') || country.startsWith('SA') || country.startsWith('QA') || country.startsWith('KW') || country.startsWith('OM') || country.startsWith('BH') },
-    { name: 'ShipGlobal Economy', price: 1450, days: '7-10', recommended: false },
+    { name: 'Aramex', price: 1850, days: '5-7', recommended: false, comingSoon: true },
+    { name: 'ShipGlobal Economy', price: 1450, days: '7-10', recommended: false, comingSoon: true },
   ];
   return options;
 };
@@ -59,7 +61,7 @@ const SPECIAL_PACKAGING_PRICE = 200;
 
 export const ReviewStep = ({ data, aggregatedSupplyDays, aggregatedTotalValue, onConfirmBooking }: ReviewStepProps) => {
   const courierOptions = getCourierOptions(data.consigneeAddress.country);
-  const recommendedCourier = courierOptions.find(c => c.recommended) || courierOptions[0];
+  const recommendedCourier = courierOptions.find(c => c.recommended && !c.comingSoon) || courierOptions.find(c => !c.comingSoon) || courierOptions[0];
 
   const addonsTotal = (data.insurance ? INSURANCE_PRICE : 0) + (data.specialPackaging ? SPECIAL_PACKAGING_PRICE : 0);
   const shippingCost = recommendedCourier.price;

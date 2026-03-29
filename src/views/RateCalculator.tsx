@@ -34,6 +34,8 @@ const carrierFeatures = [
   { id: 'weekend', label: 'Weekend delivery', dhl: true, fedex: false, aramex: false, shipglobal: false },
 ];
 
+const COMING_SOON_CARRIERS: string[] = ['ShipGlobal', 'Aramex'];
+
 const RateCalculator = () => {
   const router = useRouter();
   const { getCountry } = useCountries();
@@ -78,7 +80,7 @@ const RateCalculator = () => {
   }, [destinationCountry, selectedCarrier, isCountryServed]);
 
   const selectedOption = useMemo(() => {
-    if (!selectedCarrier) return courierOptions.find(o => o.isRecommended) || courierOptions[0];
+    if (!selectedCarrier) return courierOptions.find(o => o.isRecommended && !COMING_SOON_CARRIERS.includes(o.carrier)) || courierOptions.find(o => !COMING_SOON_CARRIERS.includes(o.carrier));
     return courierOptions.find(o => o.carrier === selectedCarrier) || courierOptions[0];
   }, [courierOptions, selectedCarrier]);
 
@@ -487,14 +489,21 @@ const RateCalculator = () => {
                       <TableCell className="font-semibold text-white">Select Carrier</TableCell>
                       {courierOptions.map((option) => {
                         const isSelected = selectedCarrier === option.carrier;
+                        const isComingSoon = COMING_SOON_CARRIERS.includes(option.carrier);
                         return (
                           <TableCell 
                             key={option.carrier} 
                             className={cn(
                               "text-center border-l border-gray-800 py-4",
-                              isSelected && "bg-gradient-to-b from-coke-red/20 to-coke-red/10 border-l-coke-red/50"
+                              isComingSoon && "opacity-60",
+                              isSelected && !isComingSoon && "bg-gradient-to-b from-coke-red/20 to-coke-red/10 border-l-coke-red/50"
                             )}
                           >
+                            {isComingSoon ? (
+                              <Badge className="bg-charcoal text-white border-gray-700 px-3 py-1.5 text-xs">
+                                Available Soon
+                              </Badge>
+                            ) : (
                             <Button
                               variant={isSelected ? "default" : "outline"}
                               size="sm"
@@ -515,6 +524,7 @@ const RateCalculator = () => {
                                 'Select'
                               )}
                             </Button>
+                            )}
                           </TableCell>
                         );
                       })}

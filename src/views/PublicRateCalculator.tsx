@@ -31,7 +31,7 @@ import type { CourierOption } from '@/lib/domestic/types';
 type ShippingMode = 'international' | 'domestic';
 type DomesticShipmentType = 'document' | 'gift';
 type DomesticFilterTab = 'all' | 'air' | 'surface';
-const COMING_SOON_CARRIERS = ['DHL', 'ShipGlobal'];
+const COMING_SOON_CARRIERS = ['ShipGlobal', 'Aramex'];
 
 const carrierFeatures = [
   { id: 'tracking', label: 'Real-time tracking', dhl: true, fedex: true, aramex: true, shipglobal: false },
