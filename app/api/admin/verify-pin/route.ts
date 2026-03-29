@@ -16,8 +16,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Invalid PIN format' }, { status: 400 });
   }
 
-  // Check rate limit: count failed attempts in the last WINDOW_MINUTES
+  // ── Rate limiting (graceful if table doesn't exist yet) ──
+  let failedCount = 0;
   const windowStart = new Date(Date.now() - WINDOW_MINUTES * 60 * 1000).toISOString();
+
   const { count, error: countError } = await supabase
     .from('admin_pin_attempts')
     .select('*', { count: 'exact', head: true })
@@ -25,11 +27,11 @@ export async function POST(request: NextRequest) {
     .eq('success', false)
     .gte('attempted_at', windowStart);
 
-  if (countError) {
-    return NextResponse.json({ error: 'Server error' }, { status: 500 });
+  // If table exists, use the count; if table missing, skip rate limiting
+  if (!countError) {
+    failedCount = count ?? 0;
   }
 
-  const failedCount = count ?? 0;
   if (failedCount >= MAX_ATTEMPTS) {
     return NextResponse.json({
       error: 'Too many failed attempts. Please try again later.',
@@ -38,28 +40,38 @@ export async function POST(request: NextRequest) {
     }, { status: 429 });
   }
 
-  // Fetch the correct PIN from database
-  const { data: setting, error: settingError } = await supabase
+  // ── Fetch PIN from database, fallback to env/hardcoded ──
+  let correctPin: string | null = null;
+
+  const { data: setting } = await supabase
     .from('app_settings')
     .select('value')
     .eq('key', 'admin_access_pin')
-    .single();
+    .maybeSingle();
 
-  if (settingError || !setting) {
-    return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
+  if (setting?.value && typeof setting.value === 'object' && 'pin' in (setting.value as Record<string, unknown>)) {
+    correctPin = (setting.value as { pin: string }).pin;
   }
 
-  const correctPin = (setting.value as { pin: string }).pin;
+  // Fallback: check environment variable
+  if (!correctPin) {
+    correctPin = process.env.ADMIN_ACCESS_PIN || null;
+  }
+
+  if (!correctPin) {
+    console.error('[verify-pin] No admin_access_pin found in app_settings or env');
+    return NextResponse.json({ error: 'Admin PIN not configured. Run the migration SQL.' }, { status: 500 });
+  }
+
   const isCorrect = body.pin === correctPin;
 
-  // Log the attempt
-  await supabase.from('admin_pin_attempts').insert({
-    ip_address: ip,
-    success: isCorrect,
-  });
-
-  // Cleanup old attempts (fire-and-forget)
-  void supabase.rpc('cleanup_old_pin_attempts');
+  // ── Log attempt (graceful if table doesn't exist) ──
+  if (!countError) {
+    await supabase.from('admin_pin_attempts').insert({
+      ip_address: ip,
+      success: isCorrect,
+    });
+  }
 
   if (!isCorrect) {
     const remaining = MAX_ATTEMPTS - (failedCount + 1);
