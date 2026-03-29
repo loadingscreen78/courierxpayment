@@ -204,8 +204,8 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
   const senderPincodeValue = detailsForm.watch('senderPincode');
   const receiverPincodeValue = detailsForm.watch('receiverZipcode');
 
-  // India Post lookups
-  const senderLookup = usePincodeLookup(!isInternational ? senderPincodeValue : '');
+  // India Post lookups — sender is always Indian pickup address
+  const senderLookup = usePincodeLookup(senderPincodeValue);
   const receiverLookup = usePincodeLookup(!isInternational ? receiverPincodeValue : '');
 
   // Auto-fill pincodes when entering step 3 for domestic
@@ -226,14 +226,14 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
 
   // Auto-fill city/state from lookup results
   useEffect(() => {
-    if (senderLookup.district && !isInternational) {
+    if (senderLookup.district) {
       const currentCity = detailsForm.getValues('senderCity');
       if (!currentCity) detailsForm.setValue('senderCity', senderLookup.district);
     }
     if (senderLookup.state) {
       detailsForm.setValue('senderState', senderLookup.state);
     }
-  }, [senderLookup.district, senderLookup.state, isInternational, detailsForm]);
+  }, [senderLookup.district, senderLookup.state, detailsForm]);
 
   useEffect(() => {
     if (receiverLookup.district && !isInternational) {
