@@ -129,7 +129,7 @@ const teamData = [
     name: 'Sangram Kesari Adhikary',
     role: 'CEO',
     initials: 'SK',
-    linkedinUsername: 'sangram-keshari-adhikary-3418072ba',
+    photo: 'https://unavatar.io/linkedin/sangram-keshari-adhikary-3418072ba',
     linkedin: 'https://www.linkedin.com/in/sangram-keshari-adhikary-3418072ba/',
     bio: 'Visionary leader driving CourierX\'s mission to revolutionize person-to-person courier services across India and beyond.',
   },
@@ -137,7 +137,7 @@ const teamData = [
     name: 'Mohit O Bhagri',
     role: 'COO',
     initials: 'MB',
-    linkedinUsername: 'bagrimohit619',
+    photo: null as string | null,
     linkedin: 'https://www.linkedin.com/in/bagrimohit619/',
     bio: 'Operations strategist ensuring seamless logistics, carrier partnerships, and world-class delivery experiences.',
   },
@@ -145,7 +145,7 @@ const teamData = [
     name: 'Jagannath Samratha Mishra',
     role: 'CTO',
     initials: 'JM',
-    linkedinUsername: 'jagannath-mishra-58196229b',
+    photo: null as string | null,
     linkedin: 'https://www.linkedin.com/in/jagannath-mishra-58196229b/',
     bio: 'Tech architect building the AI-powered platform that makes courier booking fast, compliant, and effortless.',
   },
@@ -1058,20 +1058,23 @@ const About = () => {
                       whileHover={{ scale: 1.08 }}
                       className="w-24 h-24 rounded-full shadow-xl border-4 border-card overflow-hidden bg-gradient-to-br from-coke-red to-coke-red/60"
                     >
-                      <img
-                        src={`https://unavatar.io/linkedin/${member.linkedinUsername}`}
-                        alt={member.name}
-                        className="w-full h-full object-cover"
-                        onError={(e) => {
-                          const target = e.currentTarget;
-                          target.style.display = 'none';
-                          const fallback = target.nextElementSibling as HTMLElement;
-                          if (fallback) fallback.style.display = 'flex';
-                        }}
-                      />
+                      {member.photo ? (
+                        <img
+                          src={member.photo}
+                          alt={member.name}
+                          className="w-full h-full object-cover"
+                          referrerPolicy="no-referrer"
+                          onError={(e) => {
+                            const target = e.currentTarget;
+                            target.style.display = 'none';
+                            const fallback = target.nextElementSibling as HTMLElement;
+                            if (fallback) fallback.style.display = 'flex';
+                          }}
+                        />
+                      ) : null}
                       <div
-                        className="w-full h-full items-center justify-center text-white text-2xl font-bold hidden"
-                        style={{ display: 'none' }}
+                        className="w-full h-full items-center justify-center text-white text-2xl font-bold"
+                        style={{ display: member.photo ? 'none' : 'flex' }}
                       >
                         {member.initials}
                       </div>
