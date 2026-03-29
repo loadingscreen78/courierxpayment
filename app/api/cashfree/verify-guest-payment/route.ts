@@ -3,6 +3,8 @@ import { getServiceRoleClient } from '@/lib/shipment-lifecycle/supabaseAdmin';
 import { CASHFREE_API_BASE, CASHFREE_API_VERSION } from '@/lib/wallet/cashfreeConfig';
 import { createDomesticShipment } from '@/lib/domestic/nimbusPostDomestic';
 import { lookupPincode } from '@/lib/pincode-lookup';
+import { sendEmail } from '@/lib/email/resend';
+import { renderSenderConfirmationEmail, renderReceiverNotificationEmail, type GuestBookingEmailData } from '@/lib/email/templates/guestBookingConfirmation';
 
 /**
  * Verify a guest booking payment with Cashfree.
@@ -278,6 +280,62 @@ export async function POST(request: NextRequest) {
         label_url: labelUrl,
       })
       .eq('order_id', orderId);
+
+    // ── Send confirmation emails to sender & receiver (fire-and-forget) ──
+    const emailData: GuestBookingEmailData = {
+      trackingNumber: booking.tracking_number || '',
+      awb,
+      labelUrl,
+      senderName: senderReceiver.senderName || 'Sender',
+      senderEmail: senderReceiver.senderEmail || '',
+      senderPhone: senderReceiver.senderPhone || '',
+      senderAddress: senderReceiver.senderAddress || '',
+      senderCity: senderReceiver.senderCity || '',
+      senderPincode: senderReceiver.senderPincode || '',
+      receiverName: senderReceiver.receiverName || 'Receiver',
+      receiverEmail: senderReceiver.receiverEmail || '',
+      receiverPhone: senderReceiver.receiverPhone || '',
+      receiverAddress: senderReceiver.receiverAddress || '',
+      receiverCity: senderReceiver.receiverCity || '',
+      receiverZipcode: senderReceiver.receiverZipcode || '',
+      shipmentType: rateFormData?.shipmentType || 'parcel',
+      contentDescription: senderReceiver.contentDescription || '',
+      amount: Number(booking.amount) || 0,
+      courierName: selectedCourier?.name || selectedCourier?.courier_name || 'CourierX Partner',
+      destinationCountry: rateFormData?.destinationCountry || '',
+    };
+
+    // Send both emails in parallel, don't block the response
+    const emailPromises: Promise<any>[] = [];
+
+    if (emailData.senderEmail) {
+      emailPromises.push(
+        sendEmail({
+          to: emailData.senderEmail,
+          subject: `Shipment Confirmed — ${emailData.trackingNumber} | CourierX`,
+          html: renderSenderConfirmationEmail(emailData),
+        }).then(r => {
+          if (r.success) console.log(`[verify-guest-payment] Sender confirmation sent to ${emailData.senderEmail}`);
+          else console.error(`[verify-guest-payment] Sender email failed:`, r.error);
+        }).catch(e => console.error('[verify-guest-payment] Sender email error:', e))
+      );
+    }
+
+    if (emailData.receiverEmail) {
+      emailPromises.push(
+        sendEmail({
+          to: emailData.receiverEmail,
+          subject: `A Shipment Is On Its Way — ${emailData.trackingNumber} | CourierX`,
+          html: renderReceiverNotificationEmail(emailData),
+        }).then(r => {
+          if (r.success) console.log(`[verify-guest-payment] Receiver notification sent to ${emailData.receiverEmail}`);
+          else console.error(`[verify-guest-payment] Receiver email failed:`, r.error);
+        }).catch(e => console.error('[verify-guest-payment] Receiver email error:', e))
+      );
+    }
+
+    // Wait for emails but don't fail the response if they error
+    await Promise.allSettled(emailPromises);
 
     return NextResponse.json({
       success: true,
