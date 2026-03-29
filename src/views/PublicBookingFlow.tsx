@@ -102,6 +102,21 @@ const shipmentTypeOptions = {
   ],
 };
 
+// ── Document Types for International Document Shipping ──
+const DOCUMENT_TYPE_OPTIONS = [
+  'Legal Documents',
+  'Educational Certificates',
+  'Government Documents',
+  'Medical Records',
+  'Business Contracts',
+  'Property Documents',
+  'Tax Documents',
+  'Other',
+];
+
+// HSN code for documents/certificates (8-digit)
+const DOCUMENT_HSN_CODE = '49070030';
+
 // ── Common HSN Codes for International Shipping ──
 const COMMON_HSN_CODES = [
   { code: '3004', desc: 'Medicaments (mixed or unmixed)' },
@@ -205,6 +220,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
   const watchedIntlType = intlForm.watch('shipmentType');
   const isDocumentIntl = watchedIntlType === 'document';
   const isMedicineFlow = isInternational && rateFormData && 'shipmentType' in rateFormData && rateFormData.shipmentType === 'medicine';
+  const isDocumentFlow = isInternational && rateFormData && 'shipmentType' in rateFormData && rateFormData.shipmentType === 'document';
   const destinationCountryInfo = isInternational && rateFormData && 'destinationCountry' in rateFormData
     ? getCountryByCode((rateFormData as InternationalRateValues).destinationCountry) : null;
 
@@ -1427,13 +1443,45 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                           </div>
                           <div>
                             <h3 className="font-semibold text-base">Shipment Contents</h3>
-                            <p className="text-xs text-muted-foreground">{isMedicineFlow ? 'Add each medicine for customs declaration' : isInternational ? 'Add each item for customs declaration' : 'Describe what you are shipping'}</p>
+                            <p className="text-xs text-muted-foreground">{isMedicineFlow ? 'Add each medicine for customs declaration' : isDocumentFlow ? 'Document details for customs declaration' : isInternational ? 'Add each item for customs declaration' : 'Describe what you are shipping'}</p>
                           </div>
                         </div>
 
                         {/* Item list */}
                         <div className="space-y-4">
-                          {contentItems.map((item, idx) => (
+                          {isDocumentFlow ? (
+                            /* ── Document Flow: simplified single-item view ── */
+                            <div className="rounded-lg border border-border p-4 space-y-3">
+                              <p className="text-xs font-semibold text-muted-foreground">Document</p>
+                              <div>
+                                <label className="text-xs font-medium">Document Type</label>
+                                <Select value={contentItems[0]?.type || ''} onValueChange={(v) => { const arr = [...contentItems]; arr[0] = { ...arr[0], name: v, type: v, hsnCode: DOCUMENT_HSN_CODE, qty: 1, unitPrice: 1 }; setContentItems(arr); }}>
+                                  <SelectTrigger className="h-10 mt-1"><SelectValue placeholder="Select document type" /></SelectTrigger>
+                                  <SelectContent>
+                                    {DOCUMENT_TYPE_OPTIONS.map(dt => (
+                                      <SelectItem key={dt} value={dt}>{dt}</SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                              <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                  <label className="text-xs font-medium">Shipment Value</label>
+                                  <div className="flex items-center h-10 mt-1 px-3 rounded-md border border-input bg-muted/50 text-sm">
+                                    $1 <span className="text-muted-foreground ml-1.5 text-xs">(fixed for documents)</span>
+                                  </div>
+                                </div>
+                                <div>
+                                  <label className="text-xs font-medium">HSN Code</label>
+                                  <div className="flex items-center h-10 mt-1 px-3 rounded-md border border-input bg-muted/50 text-sm font-mono">
+                                    {DOCUMENT_HSN_CODE} <span className="text-muted-foreground ml-1.5 text-xs font-sans">(auto-filled)</span>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          ) : (
+                          /* ── Medicine / Gift flow: multi-item view ── */
+                          contentItems.map((item, idx) => (
                             <div key={idx} className="rounded-lg border border-border p-4 space-y-3 relative">
                               <div className="flex items-center justify-between">
                                 <p className="text-xs font-semibold text-muted-foreground">{isMedicineFlow ? `Medicine ${idx + 1}` : `Item ${idx + 1}`}</p>
@@ -1529,16 +1577,19 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                                 </div>
                               </div>
                             </div>
-                          ))}
+                          ))
+                          )}
                         </div>
 
-                        {/* Add item button */}
+                        {/* Add item button — hidden for document flow */}
+                        {!isDocumentFlow && (
                         <Button type="button" variant="outline" onClick={() => setContentItems(prev => [...prev, { name: '', type: '', hsnCode: '', qty: 1, unitPrice: 0 }])} className="w-full gap-2 border-dashed">
                           <Plus className="h-4 w-4" /> {isMedicineFlow ? 'Add Another Medicine' : 'Add Another Item'}
                         </Button>
+                        )}
 
-                        {/* Total value display */}
-                        {contentItems.some(i => i.unitPrice > 0) && (
+                        {/* Total value display — hidden for document flow */}
+                        {!isDocumentFlow && contentItems.some(i => i.unitPrice > 0) && (
                           <div className="flex justify-between items-center text-sm bg-muted/50 rounded-lg px-4 py-2">
                             <span className="text-muted-foreground">Total Declared Value</span>
                             <span className="font-semibold">₹{contentItems.reduce((sum, i) => sum + (i.qty * i.unitPrice), 0).toLocaleString('en-IN')}</span>
@@ -1639,6 +1690,14 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                             <ArrowLeft className="h-4 w-4" /> Receiver
                           </Button>
                           <Button type="button" onClick={() => {
+                            if (isDocumentFlow) {
+                              const docType = contentItems[0]?.type;
+                              if (!docType) { return; }
+                              const desc = `${docType} (documents) x1 @ $1 [HSN: ${DOCUMENT_HSN_CODE}]`;
+                              detailsForm.setValue('contentDescription', desc);
+                              detailsForm.handleSubmit(handleFinalSubmit)();
+                              return;
+                            }
                             const hasItems = contentItems.some(i => i.name.trim());
                             if (!hasItems) { return; }
                             const desc = contentItems.filter(i => i.name.trim()).map(i => `${i.name} (${i.type || 'other'}) x${i.qty} @ ₹${i.unitPrice} [HSN: ${i.hsnCode || 'N/A'}]`).join('; ');
