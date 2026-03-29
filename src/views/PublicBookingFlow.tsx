@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { ArrowLeft, ArrowRight, CircleNotch, UserPlus, Pill, FileText, Gift, Truck, Globe, User, Envelope, Phone, MapPin, Info, AirplaneTilt, Warning } from '@phosphor-icons/react';
+import { ArrowLeft, ArrowRight, CircleNotch, UserPlus, Pill, FileText, Gift, Truck, Globe, User, Envelope, Phone, MapPin, Info, AirplaneTilt, Warning, X } from '@phosphor-icons/react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
@@ -31,7 +31,7 @@ interface PublicBookingFlowProps {
 const internationalRateSchema = z.object({
   shipmentType: z.enum(['medicine', 'document', 'gift'], { required_error: 'Select shipment type' }),
   destinationCountry: z.string().min(2, 'Select destination country'),
-  weightGrams: z.coerce.number().min(100, 'Min 100g').max(30000, 'Max 30kg'),
+  weightGrams: z.coerce.number().min(100, 'Min 100g').max(10000, 'Max 10 kg for guest booking'),
   lengthCm: z.coerce.number().min(1, 'Required').max(150),
   widthCm: z.coerce.number().min(1, 'Required').max(150),
   heightCm: z.coerce.number().min(1, 'Required').max(150),
@@ -114,6 +114,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [senderReceiverData, setSenderReceiverData] = useState<any>(null);
   const [addressSubStep, setAddressSubStep] = useState<'sender' | 'receiver' | 'content'>('sender');
+  const [showWeightLimitModal, setShowWeightLimitModal] = useState(false);
 
   // ── International rate form ──
   const intlForm = useForm<InternationalRateValues>({
@@ -429,7 +430,43 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                               </SelectContent>
                             </Select>
                           ) : (
-                            <FormControl><Input {...field} type="number" placeholder="Weight in grams" /></FormControl>
+                            <Select
+                              onValueChange={(v) => {
+                                if (v === 'over10') {
+                                  setShowWeightLimitModal(true);
+                                } else {
+                                  field.onChange(Number(v));
+                                }
+                              }}
+                              value={String(field.value)}
+                            >
+                              <FormControl>
+                                <SelectTrigger><SelectValue placeholder="Select weight" /></SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="500">Up to 500g</SelectItem>
+                                <SelectItem value="1000">Up to 1 kg</SelectItem>
+                                <SelectItem value="1500">Up to 1.5 kg</SelectItem>
+                                <SelectItem value="2000">Up to 2 kg</SelectItem>
+                                <SelectItem value="2500">Up to 2.5 kg</SelectItem>
+                                <SelectItem value="3000">Up to 3 kg</SelectItem>
+                                <SelectItem value="3500">Up to 3.5 kg</SelectItem>
+                                <SelectItem value="4000">Up to 4 kg</SelectItem>
+                                <SelectItem value="4500">Up to 4.5 kg</SelectItem>
+                                <SelectItem value="5000">Up to 5 kg</SelectItem>
+                                <SelectItem value="5500">Up to 5.5 kg</SelectItem>
+                                <SelectItem value="6000">Up to 6 kg</SelectItem>
+                                <SelectItem value="6500">Up to 6.5 kg</SelectItem>
+                                <SelectItem value="7000">Up to 7 kg</SelectItem>
+                                <SelectItem value="7500">Up to 7.5 kg</SelectItem>
+                                <SelectItem value="8000">Up to 8 kg</SelectItem>
+                                <SelectItem value="8500">Up to 8.5 kg</SelectItem>
+                                <SelectItem value="9000">Up to 9 kg</SelectItem>
+                                <SelectItem value="9500">Up to 9.5 kg</SelectItem>
+                                <SelectItem value="10000">Up to 10 kg</SelectItem>
+                                <SelectItem value="over10" className="text-coke-red font-medium">More than 10 kg →</SelectItem>
+                              </SelectContent>
+                            </Select>
                           )}
                           <FormMessage />
                         </FormItem>
@@ -1084,6 +1121,50 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
           />
         )}
       </main>
+
+      {/* ═══════════════ Weight Limit Modal ═══════════════ */}
+      <AnimatePresence>
+        {showWeightLimitModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
+            onClick={() => setShowWeightLimitModal(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-card rounded-2xl border border-border shadow-xl max-w-md w-full p-6 space-y-4"
+            >
+              <div className="flex items-start justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-amber-100 dark:bg-amber-950/40 flex items-center justify-center">
+                    <Warning className="h-5 w-5 text-amber-600" weight="duotone" />
+                  </div>
+                  <h3 className="font-semibold text-lg">Weight Limit Reached</h3>
+                </div>
+                <button onClick={() => setShowWeightLimitModal(false)} className="text-muted-foreground hover:text-foreground">
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                Guest bookings are limited to 10 kg. To ship heavier packages, open a free account and enjoy up to 52% lower rates.
+              </p>
+              <div className="flex gap-3 pt-2">
+                <Button variant="outline" onClick={() => setShowWeightLimitModal(false)} className="flex-1">
+                  Go Back
+                </Button>
+                <Button onClick={() => router.push('/open-account')} className="flex-1 bg-coke-red hover:bg-red-600 text-white gap-1.5">
+                  <UserPlus className="h-4 w-4" /> Open Account
+                </Button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
