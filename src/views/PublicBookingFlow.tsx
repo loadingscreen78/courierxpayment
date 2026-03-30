@@ -83,7 +83,7 @@ const senderReceiverSchema = z.object({
   receiverEmail: z.string().email('Valid email required'),
   receiverAddress: z.string().min(5, 'Required'),
   receiverCity: z.string().min(2, 'Required'),
-  receiverState: z.string().min(1, 'Required'),
+  receiverState: z.string().min(1, 'Required').or(z.literal('')),
   receiverZipcode: z.string().min(3, 'Required'),
   contentDescription: z.string().min(3, 'Describe contents'),
 });
@@ -776,9 +776,17 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
 
   // ── Validate receiver fields before sliding to content ──
   const handleReceiverNext = async () => {
-    const receiverFields = ['receiverName', 'receiverPhone', 'receiverEmail', 'receiverAddress', 'receiverCity', 'receiverState', 'receiverZipcode'] as const;
+    // For domestic, receiverState is auto-filled from pincode lookup — skip validating it
+    const receiverFields = isInternational
+      ? ['receiverName', 'receiverPhone', 'receiverEmail', 'receiverAddress', 'receiverCity', 'receiverState', 'receiverZipcode'] as const
+      : ['receiverName', 'receiverPhone', 'receiverEmail', 'receiverAddress', 'receiverCity', 'receiverZipcode'] as const;
     const result = await detailsForm.trigger(receiverFields);
-    if (result) setAddressSubStep('content');
+    if (!result) return;
+    // For domestic, auto-set receiverState from pincode lookup if available
+    if (!isInternational && receiverLookup.state) {
+      detailsForm.setValue('receiverState', receiverLookup.state);
+    }
+    setAddressSubStep('content');
   };
 
   // ── Region-specific address format guidance ──
