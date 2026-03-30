@@ -9,6 +9,7 @@ import {
   ArrowRight, CircleNotch, ShieldCheck, Package, MapPin, Airplane,
   CurrencyInr, Tag, CheckCircle, Warning, DownloadSimple, Copy,
   Clock, Scissors, SealCheck, Drop, ArrowLeft, Cube, Info,
+  Ruler, IdentificationCard, House,
 } from '@phosphor-icons/react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -16,6 +17,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
 import { loadCashfreeScript } from '@/lib/wallet/cashfreeLoader';
+import { calculateRate } from '@/lib/shipping/rateCalculator';
 import { motion, AnimatePresence } from 'framer-motion';
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -34,8 +36,9 @@ interface GuestSummaryStepProps {
   selectedCourier: any;
   senderReceiver: SenderReceiver;
   onBack: () => void;
-  /** Pre-extracted Aadhaar number from OCR (auto-fills the verification field) */
   extractedAadhaarNumber?: string;
+  aadhaarFront?: File | null;
+  aadhaarBack?: File | null;
 }
 
 type SummaryPhase = 'review' | 'aadhaar' | 'payment' | 'success';
@@ -104,7 +107,7 @@ const packingSteps = [
 
 // ── Component ────────────────────────────────────────────────────────────────
 
-export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, senderReceiver, onBack, extractedAadhaarNumber }: GuestSummaryStepProps) {
+export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, senderReceiver, onBack, extractedAadhaarNumber, aadhaarFront, aadhaarBack }: GuestSummaryStepProps) {
   const router = useRouter();
   const { toast } = useToast();
 
@@ -426,6 +429,28 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
     );
   }
 
+  // ── Rate breakdown for international ──
+  const rateBreakdown = useMemo(() => {
+    if (mode !== 'international' || !rateFormData?.destinationCountry) return null;
+    try {
+      return calculateRate({
+        destinationCountryCode: rateFormData.destinationCountry,
+        shipmentType: rateFormData.shipmentType,
+        weightGrams: rateFormData.weightGrams,
+        dimensions: { length: rateFormData.lengthCm, width: rateFormData.widthCm, height: rateFormData.heightCm },
+        declaredValue: rateFormData.declaredValue,
+      }, true);
+    } catch { return null; }
+  }, [mode, rateFormData]);
+
+  // Aadhaar thumbnail URLs
+  const frontThumb = useMemo(() => aadhaarFront ? URL.createObjectURL(aadhaarFront) : null, [aadhaarFront]);
+  const backThumb = useMemo(() => aadhaarBack ? URL.createObjectURL(aadhaarBack) : null, [aadhaarBack]);
+
+  // Dimensions
+  const dims = rateFormData ? { l: rateFormData.lengthCm, w: rateFormData.widthCm, h: rateFormData.heightCm } : null;
+  const weight = rateFormData?.weightGrams ? `${rateFormData.weightGrams}g` : rateFormData?.weightKg ? `${rateFormData.weightKg} kg` : '';
+
   // ═══════════════════════════════════════════════════════════════════════════
   // REVIEW PHASE (default)
   // ═══════════════════════════════════════════════════════════════════════════
@@ -455,35 +480,78 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
 
           <div className="h-px bg-border" />
 
-          {/* Sender */}
-          <div className="grid sm:grid-cols-2 gap-4">
+          {/* 3-column: Pickup | Sender | Receiver */}
+          <div className="grid grid-cols-3 gap-4">
             <div>
               <p className="text-xs text-muted-foreground mb-1 flex items-center gap-1">
-                <MapPin className="h-3 w-3" /> Sender
+                <House className="h-3 w-3" /> Pickup Address
               </p>
               <p className="text-sm font-medium">{senderReceiver.senderName}</p>
-              <p className="text-xs text-muted-foreground">{senderReceiver.senderAddress}, {senderReceiver.senderCity} - {senderReceiver.senderPincode}</p>
-              <p className="text-xs text-muted-foreground">{senderReceiver.senderPhone} · {senderReceiver.senderEmail}</p>
+              <p className="text-xs text-muted-foreground">{senderReceiver.senderAddress}</p>
+              <p className="text-xs text-muted-foreground">{senderReceiver.senderCity} - {senderReceiver.senderPincode}</p>
+              <p className="text-xs text-muted-foreground">{senderReceiver.senderPhone}</p>
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground mb-1 flex items-center gap-1">
+                <MapPin className="h-3 w-3" /> Sender (KYC)
+              </p>
+              <p className="text-sm font-medium">{senderReceiver.senderName}</p>
+              <p className="text-xs text-muted-foreground">{senderReceiver.senderAddress}</p>
+              <p className="text-xs text-muted-foreground">{senderReceiver.senderCity} - {senderReceiver.senderPincode}</p>
+              <p className="text-xs text-muted-foreground">{senderReceiver.senderEmail}</p>
             </div>
             <div>
               <p className="text-xs text-muted-foreground mb-1 flex items-center gap-1">
                 <Airplane className="h-3 w-3" /> Receiver
               </p>
               <p className="text-sm font-medium">{senderReceiver.receiverName}</p>
-              <p className="text-xs text-muted-foreground">{senderReceiver.receiverAddress}, {senderReceiver.receiverCity} - {senderReceiver.receiverZipcode}</p>
+              <p className="text-xs text-muted-foreground">{senderReceiver.receiverAddress}</p>
+              <p className="text-xs text-muted-foreground">{senderReceiver.receiverCity} - {senderReceiver.receiverZipcode}</p>
               <p className="text-xs text-muted-foreground">{senderReceiver.receiverPhone} · {senderReceiver.receiverEmail}</p>
             </div>
           </div>
 
           <div className="h-px bg-border" />
 
-          {/* Package details */}
-          <div>
-            <p className="text-xs text-muted-foreground mb-1">Package</p>
-            <p className="text-sm">{senderReceiver.contentDescription}</p>
-            {rateFormData?.weightGrams && <p className="text-xs text-muted-foreground mt-0.5">Weight: {rateFormData.weightGrams}g</p>}
-            {rateFormData?.weightKg && <p className="text-xs text-muted-foreground mt-0.5">Weight: {rateFormData.weightKg} kg</p>}
+          {/* Package + Dimensions */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <p className="text-xs text-muted-foreground mb-1 flex items-center gap-1"><Package className="h-3 w-3" /> Package</p>
+              <p className="text-sm">{senderReceiver.contentDescription}</p>
+              {weight && <p className="text-xs text-muted-foreground mt-0.5">Weight: {weight}</p>}
+            </div>
+            {dims && (
+              <div>
+                <p className="text-xs text-muted-foreground mb-1 flex items-center gap-1"><Ruler className="h-3 w-3" /> Dimensions</p>
+                <p className="text-sm">{dims.l} × {dims.w} × {dims.h} cm</p>
+                {rateFormData?.weightGrams && dims.l && dims.w && dims.h && (
+                  <p className="text-xs text-muted-foreground mt-0.5">Vol. weight: {((dims.l * dims.w * dims.h) / 5000).toFixed(1)} kg</p>
+                )}
+              </div>
+            )}
           </div>
+
+          {/* Aadhaar thumbnails */}
+          {(frontThumb || backThumb) && (
+            <>
+              <div className="h-px bg-border" />
+              <div>
+                <p className="text-xs text-muted-foreground mb-2 flex items-center gap-1"><IdentificationCard className="h-3 w-3" /> Aadhaar Documents</p>
+                <div className="flex gap-3">
+                  {frontThumb && (
+                    <div className="w-24 h-16 rounded-lg overflow-hidden border border-border bg-muted">
+                      <img src={frontThumb} alt="Aadhaar Front" className="w-full h-full object-cover" />
+                    </div>
+                  )}
+                  {backThumb && (
+                    <div className="w-24 h-16 rounded-lg overflow-hidden border border-border bg-muted">
+                      <img src={backThumb} alt="Aadhaar Back" className="w-full h-full object-cover" />
+                    </div>
+                  )}
+                </div>
+              </div>
+            </>
+          )}
         </div>
       </div>
 
@@ -568,12 +636,46 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
         )}
       </div>
 
-      {/* ── Price Summary ── */}
+      {/* ── Price Breakdown ── */}
       <div className="bg-card rounded-xl border border-border p-5 space-y-2">
-        <div className="flex justify-between text-sm">
-          <span className="text-muted-foreground">Shipping ({courierName})</span>
-          <span>₹{basePrice.toLocaleString('en-IN')}</span>
-        </div>
+        {rateBreakdown?.breakdown ? (
+          <>
+            {rateBreakdown.breakdown.filter(b => b.amount > 0 || b.label.includes('save')).map((item, i) => (
+              <div key={i} className="flex justify-between text-sm">
+                <span className="text-muted-foreground">{item.label}</span>
+                <span className={item.amount < 0 ? 'text-candlestick-green' : ''}>
+                  {item.amount < 0 ? '-' : ''}₹{Math.abs(item.amount).toLocaleString('en-IN')}
+                </span>
+              </div>
+            ))}
+          </>
+        ) : (
+          <>
+            <div className="flex justify-between text-sm">
+              <span className="text-muted-foreground">Shipping ({courierName})</span>
+              <span>₹{basePrice.toLocaleString('en-IN')}</span>
+            </div>
+          </>
+        )}
+        {/* Domestic breakdown from courier data */}
+        {mode === 'domestic' && selectedCourier?.shipping_charge && (
+          <>
+            <div className="flex justify-between text-sm">
+              <span className="text-muted-foreground">Base shipping</span>
+              <span>₹{selectedCourier.shipping_charge?.toLocaleString('en-IN')}</span>
+            </div>
+            {selectedCourier.cod_charges > 0 && (
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">COD charges</span>
+                <span>₹{selectedCourier.cod_charges?.toLocaleString('en-IN')}</span>
+              </div>
+            )}
+            <div className="flex justify-between text-sm">
+              <span className="text-muted-foreground">GST (18%)</span>
+              <span>₹{selectedCourier.gst_amount?.toLocaleString('en-IN')}</span>
+            </div>
+          </>
+        )}
         {couponDiscount > 0 && (
           <div className="flex justify-between text-sm text-candlestick-green">
             <span>Coupon Discount</span>

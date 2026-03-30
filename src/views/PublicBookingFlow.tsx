@@ -2295,6 +2295,8 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
             senderReceiver={senderReceiverData}
             onBack={() => setStep(3)}
             extractedAadhaarNumber={extractedAadhaarNumber}
+            aadhaarFront={aadhaarFront}
+            aadhaarBack={aadhaarBack}
           />
         )}
       </main>
