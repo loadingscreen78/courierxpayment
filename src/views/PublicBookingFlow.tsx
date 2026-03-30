@@ -1623,7 +1623,8 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                               </div>
                               <FormMessage />
                             </FormItem>
-                          )} />
+                            );
+                          }} />
 
                           {/* ── Email OTP Input Section ── */}
                           {isInternational && (emailOtpState === 'sent' || emailOtpState === 'verifying') && (
