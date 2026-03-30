@@ -516,8 +516,8 @@ export function CustomerCRM() {
         {activeTab === 'guests' && <GuestUsersManagement />}
 
         {/* Registered Customers Tab */}
-        {activeTab === 'customers' && (<>
-
+        {activeTab === 'customers' && (
+        <div className="space-y-6">
 
         {/* KPI Cards */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
@@ -925,7 +925,7 @@ export function CustomerCRM() {
           )}
         </div>
       </div>
-      </>)}
+      )}
       </div>
 
       {/* Customer Detail Sheet */}
