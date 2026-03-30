@@ -129,7 +129,7 @@ const teamData = [
     name: 'Sangram Kesari Adhikary',
     role: 'Co-Founder',
     initials: 'SK',
-    photo: 'https://unavatar.io/linkedin/sangram-keshari-adhikary-3418072ba',
+    photo: '/team-sangram.jpg',
     linkedin: 'https://www.linkedin.com/in/sangram-keshari-adhikary-3418072ba/',
     bio: 'Visionary leader driving CourierX\'s mission to revolutionize person-to-person courier services across India and beyond.',
   },
