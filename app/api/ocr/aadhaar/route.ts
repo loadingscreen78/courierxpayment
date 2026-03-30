@@ -130,9 +130,9 @@ async function runOcrBoth(
   const worker = await createWorker('eng');
 
   try {
-    // Set page segmentation mode to auto (best for card-like documents)
+    // Set page segmentation mode for card-like documents
     await worker.setParameters({
-      tessedit_pageseg_mode: '6', // Assume uniform block of text
+      tessedit_pageseg_mode: '6' as any, // PSM 6: Assume uniform block of text
     });
 
     const frontResult = await worker.recognize(frontImg);
