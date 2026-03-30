@@ -595,25 +595,10 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
       setExtractedAadhaarNumber(result.aadhaarNumber);
     }
 
-    // Auto-fill sender form fields from OCR — always overwrite with extracted data
+    // Auto-fill sender name and phone from Aadhaar (NOT address — that's pickup)
     if (result.name) detailsForm.setValue('senderName', result.name);
-    if (result.address) detailsForm.setValue('senderAddress', result.address);
-    if (result.city) detailsForm.setValue('senderCity', result.city);
-    if (result.state) detailsForm.setValue('senderState', result.state);
-    if (result.pincode) detailsForm.setValue('senderPincode', result.pincode);
     if (result.phone) detailsForm.setValue('senderPhone', result.phone);
   }, [aadhaarFront, aadhaarBack, processAadhaar, detailsForm, isInternational]);
-
-  // ── One-click rectify: overwrite sender fields with OCR data ──
-  const handleRectifyFromAadhaar = useCallback(() => {
-    if (!ocrResult) return;
-    if (ocrResult.name) detailsForm.setValue('senderName', ocrResult.name);
-    if (ocrResult.address) detailsForm.setValue('senderAddress', ocrResult.address);
-    if (ocrResult.city) detailsForm.setValue('senderCity', ocrResult.city);
-    if (ocrResult.state) detailsForm.setValue('senderState', ocrResult.state);
-    if (ocrResult.pincode) detailsForm.setValue('senderPincode', ocrResult.pincode);
-    if (ocrResult.phone) detailsForm.setValue('senderPhone', ocrResult.phone);
-  }, [ocrResult, detailsForm]);
 
   // ── Validate pickup address fields before sliding to sender ──
   const handlePickupNext = async () => {
@@ -1530,7 +1515,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                       </motion.div>
                     )}
 
-                    {/* ── Step 2: Sender Details + Aadhaar (for medicine) ── */}
+                    {/* ── Step 2: Sender Details + Aadhaar ── */}
                     {addressSubStep === 'sender' && (
                       <motion.div key="sender" initial={{ x: 300, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: -300, opacity: 0 }} transition={{ duration: 0.3, ease: 'easeInOut' }}
                         className="bg-card rounded-2xl border border-border p-8 lg:p-10 space-y-5">
@@ -1543,6 +1528,22 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                             <p className="text-xs text-muted-foreground">{requiresAadhaarKyc ? 'Verify your identity for customs compliance' : 'Your contact information'}</p>
                           </div>
                         </div>
+
+                        {/* Aadhaar Verification — at the TOP for international flows */}
+                        {requiresAadhaarKyc && (
+                          <AadhaarKycUpload
+                            aadhaarFront={aadhaarFront}
+                            aadhaarBack={aadhaarBack}
+                            onFrontChange={setAadhaarFront}
+                            onBackChange={setAadhaarBack}
+                            ocrResult={ocrResult}
+                            isProcessing={ocrProcessing}
+                            ocrError={ocrError}
+                            onProcess={handleAadhaarProcess}
+                            isUnderAge={isUnderAge}
+                          />
+                        )}
+
                         {isMedicineFlow && (
                           <div className="rounded-lg border border-orange-200 dark:border-orange-800/40 bg-orange-50 dark:bg-orange-950/20 p-3 text-xs text-orange-800 dark:text-orange-300 flex items-start gap-2">
                             <IdentificationCard className="h-4 w-4 shrink-0 mt-0.5" weight="fill" />
@@ -1694,71 +1695,6 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                                 <span className="text-sm font-medium text-candlestick-green">Email verified successfully</span>
                               </div>
                             </motion.div>
-                          )}
-
-                          {/* Aadhaar KYC Upload — for all international flows */}
-                          {requiresAadhaarKyc && (
-                            <AadhaarKycUpload
-                              aadhaarFront={aadhaarFront}
-                              aadhaarBack={aadhaarBack}
-                              onFrontChange={setAadhaarFront}
-                              onBackChange={setAadhaarBack}
-                              ocrResult={ocrResult}
-                              isProcessing={ocrProcessing}
-                              ocrError={ocrError}
-                              onProcess={handleAadhaarProcess}
-                              isUnderAge={isUnderAge}
-                            />
-                          )}
-
-                          {/* Aadhaar-extracted sender address fields */}
-                          {requiresAadhaarKyc && (
-                            <div className="space-y-3 pt-1">
-                              <p className="text-xs font-medium text-muted-foreground">Sender Address</p>
-                              <FormField control={detailsForm.control} name="senderAddress" render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel>Full Address</FormLabel>
-                                  <FormControl><Input {...field} placeholder="Auto-filled from Aadhaar or enter manually" className="h-11" /></FormControl>
-                                  <FormMessage />
-                                </FormItem>
-                              )} />
-                              <div className="grid grid-cols-3 gap-3">
-                                <FormField control={detailsForm.control} name="senderCity" render={({ field }) => (
-                                  <FormItem>
-                                    <FormLabel>City</FormLabel>
-                                    <FormControl><Input {...field} placeholder="City" className="h-11" /></FormControl>
-                                    <FormMessage />
-                                  </FormItem>
-                                )} />
-                                <FormField control={detailsForm.control} name="senderState" render={({ field }) => (
-                                  <FormItem>
-                                    <FormLabel>State</FormLabel>
-                                    <Select onValueChange={field.onChange} value={field.value}>
-                                      <FormControl><SelectTrigger className="h-11"><SelectValue placeholder="State" /></SelectTrigger></FormControl>
-                                      <SelectContent>{INDIAN_STATES.map(st => <SelectItem key={st} value={st}>{st}</SelectItem>)}</SelectContent>
-                                    </Select>
-                                    <FormMessage />
-                                  </FormItem>
-                                )} />
-                                <FormField control={detailsForm.control} name="senderPincode" render={({ field }) => (
-                                  <FormItem>
-                                    <FormLabel>Pincode</FormLabel>
-                                    <FormControl><Input {...field} placeholder="110001" maxLength={6} className="h-11" /></FormControl>
-                                    <FormMessage />
-                                  </FormItem>
-                                )} />
-                              </div>
-                            </div>
-                          )}
-
-                          {/* One-click rectify: sync sender fields with Aadhaar data */}
-                          {requiresAadhaarKyc && ocrResult && !isUnderAge && (
-                            <div className="flex justify-end">
-                              <Button type="button" variant="outline" size="sm" onClick={handleRectifyFromAadhaar} className="gap-1.5 text-xs">
-                                <IdentificationCard className="h-3.5 w-3.5" weight="duotone" />
-                                Auto-fill from Aadhaar
-                              </Button>
-                            </div>
                           )}
                         </div>
                         <div className="flex gap-3">
