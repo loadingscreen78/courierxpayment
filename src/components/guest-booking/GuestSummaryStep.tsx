@@ -19,6 +19,7 @@ import { useToast } from '@/hooks/use-toast';
 import { loadCashfreeScript } from '@/lib/wallet/cashfreeLoader';
 import { calculateRate } from '@/lib/shipping/rateCalculator';
 import { motion, AnimatePresence } from 'framer-motion';
+import { feedbackPresets } from '@/lib/haptics';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -128,8 +129,7 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
 
   // ── Domestic KYC document upload state ──
   const [kycDocType, setKycDocType] = useState<string>('');
-  const [kycDocFile, setKycDocFile] = useState<File | null>(null);
-  const [kycDocPreviewUrl, setKycDocPreviewUrl] = useState<string>('');
+  const [kycDocs, setKycDocs] = useState<Record<string, { file: File; previewUrl: string }>>({});
   const [showDocPreview, setShowDocPreview] = useState(false);
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -139,26 +139,34 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
   // ── KYC doc helpers ──
   const kycDocLabel = kycDocType === 'aadhaar' ? 'Aadhaar Card' : kycDocType === 'driving_license' ? 'Driving License' : kycDocType === 'passport' ? 'Passport' : kycDocType === 'voter_id' ? 'Voter ID Card' : '';
 
+  // Current doc for selected type
+  const currentKycDoc = kycDocType ? kycDocs[kycDocType] : undefined;
+  const kycDocFile = currentKycDoc?.file || null;
+  const kycDocPreviewUrl = currentKycDoc?.previewUrl || '';
+
   const handleKycFile = useCallback((file: File) => {
     if (file.size > 5 * 1024 * 1024) {
       toast({ title: 'File too large', description: 'Maximum file size is 5 MB.', variant: 'destructive' });
       return;
     }
-    // Revoke old preview URL
-    if (kycDocPreviewUrl) URL.revokeObjectURL(kycDocPreviewUrl);
-    setKycDocFile(file);
-    if (file.type.startsWith('image/')) {
-      setKycDocPreviewUrl(URL.createObjectURL(file));
-    } else {
-      setKycDocPreviewUrl('');
-    }
-  }, [kycDocPreviewUrl, toast]);
+    if (!kycDocType) return;
+    // Revoke old preview URL for this type
+    const old = kycDocs[kycDocType];
+    if (old?.previewUrl) URL.revokeObjectURL(old.previewUrl);
+    const previewUrl = file.type.startsWith('image/') ? URL.createObjectURL(file) : '';
+    setKycDocs(prev => ({ ...prev, [kycDocType]: { file, previewUrl } }));
+  }, [kycDocType, kycDocs, toast]);
 
   const clearKycDoc = useCallback(() => {
-    if (kycDocPreviewUrl) URL.revokeObjectURL(kycDocPreviewUrl);
-    setKycDocFile(null);
-    setKycDocPreviewUrl('');
-  }, [kycDocPreviewUrl]);
+    if (!kycDocType) return;
+    const old = kycDocs[kycDocType];
+    if (old?.previewUrl) URL.revokeObjectURL(old.previewUrl);
+    setKycDocs(prev => {
+      const next = { ...prev };
+      delete next[kycDocType];
+      return next;
+    });
+  }, [kycDocType, kycDocs]);
 
   const courierName = selectedCourier?.carrier || selectedCourier?.courier_name || 'Courier';
   const basePrice = selectedCourier?.price || selectedCourier?.customer_price || 0;
@@ -375,8 +383,8 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
           className="bg-card rounded-xl border border-border p-5"
         >
           <p className="text-xs text-muted-foreground mb-1">Tracking Number</p>
-          <div className="flex items-center gap-3">
-            <p className="text-lg font-mono font-bold flex-1">{trackingNumber}</p>
+          <div className="flex items-center gap-2 sm:gap-3">
+            <p className="text-sm sm:text-lg font-mono font-bold flex-1 break-all">{trackingNumber}</p>
             <Button variant="outline" size="sm" onClick={handleCopyTracking} className="gap-1.5 shrink-0">
               <Copy className="h-3.5 w-3.5" /> Copy
             </Button>
@@ -503,30 +511,30 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
     <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-5">
       {/* ── Booking Summary ── */}
       <div className="bg-card rounded-xl border border-border overflow-hidden">
-        <div className="bg-muted/50 px-5 py-3 border-b border-border">
-          <h2 className="font-semibold text-base flex items-center gap-2">
+        <div className="bg-muted/50 px-4 sm:px-5 py-3 border-b border-border">
+          <h2 className="font-semibold text-sm sm:text-base flex items-center gap-2">
             <Package className="h-4.5 w-4.5 text-coke-red" weight="duotone" />
             Booking Summary
           </h2>
         </div>
-        <div className="p-5 space-y-4">
+        <div className="p-4 sm:p-5 space-y-4">
           {/* Courier + Price */}
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="font-semibold text-lg">{courierName}</p>
-              <p className="text-sm text-muted-foreground capitalize">{mode} · {shipmentType}</p>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div className="min-w-0">
+              <p className="font-semibold text-base sm:text-lg truncate">{courierName}</p>
+              <p className="text-xs sm:text-sm text-muted-foreground capitalize">{mode} · {shipmentType}</p>
             </div>
-            <div className="text-right">
-              <p className="text-2xl font-bold">₹{basePrice.toLocaleString('en-IN')}</p>
+            <div className="sm:text-right shrink-0">
+              <p className="text-xl sm:text-2xl font-bold">₹{basePrice.toLocaleString('en-IN')}</p>
               <p className="text-xs text-muted-foreground">incl. GST</p>
             </div>
           </div>
 
           <div className="h-px bg-border" />
 
-          {/* Address columns: 2-col for domestic (Pickup + Receiver), 3-col for international */}
+          {/* Address columns: stack on mobile, 2-col for domestic, 3-col for international on desktop */}
           {isDomestic ? (
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <p className="text-xs text-muted-foreground mb-1 flex items-center gap-1">
                   <House className="h-3 w-3" /> Pickup Address
@@ -547,7 +555,7 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
               </div>
             </div>
           ) : (
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div>
                 <p className="text-xs text-muted-foreground mb-1 flex items-center gap-1">
                   <House className="h-3 w-3" /> Pickup Address
@@ -581,7 +589,7 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
           <div className="h-px bg-border" />
 
           {/* Package + Dimensions */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <p className="text-xs text-muted-foreground mb-1 flex items-center gap-1"><Package className="h-3 w-3" /> Package</p>
               <p className="text-sm">{senderReceiver.contentDescription}</p>
@@ -659,7 +667,7 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
                   <button
                     key={doc.value}
                     type="button"
-                    onClick={() => { setKycDocType(doc.value); clearKycDoc(); }}
+                    onClick={() => { setKycDocType(doc.value); }}
                     className={`rounded-lg border-2 px-3 py-2.5 text-xs font-medium text-center transition-all ${
                       kycDocType === doc.value
                         ? 'border-coke-red bg-coke-red/5 text-coke-red'
@@ -841,7 +849,7 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
                     onChange={handleAadhaarChange}
                   />
                   <Button
-                    onClick={handleVerifyAadhaar}
+                    onClick={() => { feedbackPresets.tap(); handleVerifyAadhaar(); }}
                     disabled={aadhaarLoading || aadhaarInput.length !== 12}
                     className="bg-blue-600 hover:bg-blue-700 text-white shrink-0"
                   >
@@ -880,7 +888,7 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
               onChange={e => setCouponCode(e.target.value.toUpperCase())}
               className="flex-1 uppercase"
             />
-            <Button variant="outline" onClick={handleApplyCoupon} disabled={couponLoading || !couponCode.trim()}>
+            <Button variant="outline" onClick={() => { feedbackPresets.tap(); handleApplyCoupon(); }} disabled={couponLoading || !couponCode.trim()}>
               {couponLoading ? <CircleNotch className="h-4 w-4 animate-spin" /> : 'Apply'}
             </Button>
           </div>
@@ -958,9 +966,9 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
 
       {/* ── Pay Button ── */}
       <Button
-        onClick={handlePayNow}
+        onClick={() => { feedbackPresets.tap(); handlePayNow(); }}
         disabled={paymentLoading || (isDomestic ? !kycDocFile : !aadhaarVerified) || !termsAccepted}
-        className="w-full bg-coke-red hover:bg-red-600 text-white gap-2 py-6 text-base shadow-lg shadow-coke-red/20"
+        className="w-full bg-coke-red hover:bg-red-600 text-white gap-2 py-5 sm:py-6 text-sm sm:text-base shadow-lg shadow-coke-red/20"
       >
         {paymentLoading ? (
           <><CircleNotch className="h-5 w-5 animate-spin" /> Processing Payment...</>
