@@ -595,31 +595,13 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
       setExtractedAadhaarNumber(result.aadhaarNumber);
     }
 
-    // Auto-fill sender form fields from OCR (only if currently empty or user hasn't typed)
-    if (result.name) {
-      const current = detailsForm.getValues('senderName');
-      if (!current) detailsForm.setValue('senderName', result.name);
-    }
-    if (result.address) {
-      const current = detailsForm.getValues('senderAddress');
-      if (!current) detailsForm.setValue('senderAddress', result.address);
-    }
-    if (result.city) {
-      const current = detailsForm.getValues('senderCity');
-      if (!current) detailsForm.setValue('senderCity', result.city);
-    }
-    if (result.state) {
-      detailsForm.setValue('senderState', result.state);
-    }
-    if (result.pincode) {
-      const current = detailsForm.getValues('senderPincode');
-      // For international flows, pincode isn't locked from rate form
-      if (!current || isInternational) detailsForm.setValue('senderPincode', result.pincode);
-    }
-    if (result.phone) {
-      const current = detailsForm.getValues('senderPhone');
-      if (!current) detailsForm.setValue('senderPhone', result.phone);
-    }
+    // Auto-fill sender form fields from OCR — always overwrite with extracted data
+    if (result.name) detailsForm.setValue('senderName', result.name);
+    if (result.address) detailsForm.setValue('senderAddress', result.address);
+    if (result.city) detailsForm.setValue('senderCity', result.city);
+    if (result.state) detailsForm.setValue('senderState', result.state);
+    if (result.pincode) detailsForm.setValue('senderPincode', result.pincode);
+    if (result.phone) detailsForm.setValue('senderPhone', result.phone);
   }, [aadhaarFront, aadhaarBack, processAadhaar, detailsForm, isInternational]);
 
   // ── One-click rectify: overwrite sender fields with OCR data ──
