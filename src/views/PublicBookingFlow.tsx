@@ -73,7 +73,7 @@ const domesticRateSchema = z.object({
 const senderReceiverSchema = z.object({
   senderName: z.string().min(2, 'Required'),
   senderPhone: z.string().regex(/^(\+91[\s-]?)?[6-9]\d{9}$/, 'Valid Indian phone required'),
-  senderEmail: z.string().email('Valid email required'),
+  senderEmail: z.string().email('Valid email required').or(z.literal('')),
   senderAddress: z.string().min(5, 'Required'),
   senderCity: z.string().min(2, 'Required'),
   senderState: z.string().min(2, 'Required'),
@@ -607,11 +607,17 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
     if (result.pincode && (fc.pincode ?? 80) >= 50) detailsForm.setValue('senderPincode', result.pincode);
   }, [aadhaarFront, aadhaarBack, processAadhaar, detailsForm, isInternational]);
 
-  // ── Validate pickup address fields before sliding to sender ──
+  // ── Validate pickup address fields before sliding to next step ──
   const handlePickupNext = async () => {
     const pickupFields = ['senderName', 'senderPhone', 'senderAddress', 'senderCity', 'senderState', 'senderPincode'] as const;
     const result = await detailsForm.trigger(pickupFields);
-    if (result) setAddressSubStep('sender');
+    if (!result) return;
+    // For domestic flows, skip sender step — go directly to receiver
+    if (!isInternational) {
+      setAddressSubStep('receiver');
+    } else {
+      setAddressSubStep('sender');
+    }
   };
 
   // ── Validate sender fields before sliding to receiver ──
@@ -1412,12 +1418,15 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
               </div>
             )}
 
-            {/* Sub-step indicator — 4 steps */}
+            {/* Sub-step indicator — 3 steps for domestic, 4 for international */}
             <div className="flex items-center gap-2">
-              {(['pickup', 'sender', 'receiver', 'content'] as const).map((s, i) => {
-                const stepOrder = ['pickup', 'sender', 'receiver', 'content'];
+              {(isInternational
+                ? (['pickup', 'sender', 'receiver', 'content'] as const)
+                : (['pickup', 'receiver', 'content'] as const)
+              ).map((s, i, arr) => {
+                const stepOrder = isInternational ? ['pickup', 'sender', 'receiver', 'content'] : ['pickup', 'receiver', 'content'];
                 const currentIdx = stepOrder.indexOf(addressSubStep);
-                const labels = ['Pickup Details', 'Sender / KYC', 'Receiver', 'Contents'];
+                const labels = isInternational ? ['Pickup Details', 'Sender / KYC', 'Receiver', 'Contents'] : ['Pickup Address', 'Recipient Address', 'Contents'];
                 return (
                   <div key={s} className="flex items-center gap-2 flex-1">
                     <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-colors ${
@@ -1430,7 +1439,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                     <span className={`text-xs hidden sm:inline ${s === addressSubStep ? 'font-medium text-foreground' : 'text-muted-foreground'}`}>
                       {labels[i]}
                     </span>
-                    {i < 3 && <div className="flex-1 h-px bg-border" />}
+                    {i < arr.length - 1 && <div className="flex-1 h-px bg-border" />}
                   </div>
                 );
               })}
@@ -1517,13 +1526,13 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                           )}
                         </div>
                         <Button type="button" onClick={handlePickupNext} className="w-full bg-coke-red hover:bg-red-600 text-white gap-2 py-5">
-                          Next: Sender Details <ArrowRight className="h-4 w-4" />
+                          {isInternational ? 'Next: Sender Details' : 'Next: Recipient Details'} <ArrowRight className="h-4 w-4" />
                         </Button>
                       </motion.div>
                     )}
 
-                    {/* ── Step 2: Sender Details + Aadhaar ── */}
-                    {addressSubStep === 'sender' && (
+                    {/* ── Step 2: Sender Details + Aadhaar (International only) ── */}
+                    {isInternational && addressSubStep === 'sender' && (
                       <motion.div key="sender" initial={{ x: 300, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: -300, opacity: 0 }} transition={{ duration: 0.3, ease: 'easeInOut' }}
                         className="bg-card rounded-2xl border border-border p-8 lg:p-10 space-y-5">
                         <div className="flex items-center gap-3 mb-1">
@@ -1929,8 +1938,8 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                           )}
                         </div>
                         <div className="flex gap-3">
-                          <Button type="button" variant="outline" onClick={() => setAddressSubStep('sender')} className="flex-1 gap-1.5">
-                            <ArrowLeft className="h-4 w-4" /> Sender
+                          <Button type="button" variant="outline" onClick={() => setAddressSubStep(isInternational ? 'sender' : 'pickup')} className="flex-1 gap-1.5">
+                            <ArrowLeft className="h-4 w-4" /> {isInternational ? 'Sender' : 'Pickup'}
                           </Button>
                           <Button type="button" onClick={handleReceiverNext} className="flex-1 bg-coke-red hover:bg-red-600 text-white gap-2">
                             Next: Contents <ArrowRight className="h-4 w-4" />

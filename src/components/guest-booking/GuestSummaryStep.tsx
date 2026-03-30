@@ -9,7 +9,7 @@ import {
   ArrowRight, CircleNotch, ShieldCheck, Package, MapPin, Airplane,
   CurrencyInr, Tag, CheckCircle, Warning, DownloadSimple, Copy,
   Clock, Scissors, SealCheck, Drop, ArrowLeft, Cube, Info,
-  Ruler, IdentificationCard, House,
+  Ruler, IdentificationCard, House, Upload, FileText,
 } from '@phosphor-icons/react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -126,6 +126,12 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
   const [trackingNumber, setTrackingNumber] = useState('');
   const [awbUrl, setAwbUrl] = useState('');
 
+  // ── Domestic KYC document upload state ──
+  const [kycDocType, setKycDocType] = useState<string>('');
+  const [kycDocFile, setKycDocFile] = useState<File | null>(null);
+
+  const isDomestic = mode === 'domestic';
+
   const courierName = selectedCourier?.carrier || selectedCourier?.courier_name || 'Courier';
   const basePrice = selectedCourier?.price || selectedCourier?.customer_price || 0;
   const finalPrice = Math.max(0, basePrice - couponDiscount);
@@ -196,7 +202,12 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
   // ── Payment handler ──
 
   const handlePayNow = async () => {
-    if (!aadhaarVerified) {
+    if (isDomestic) {
+      if (!kycDocFile) {
+        toast({ title: 'ID Document Required', description: 'Please upload a valid government-issued ID to proceed.', variant: 'destructive' });
+        return;
+      }
+    } else if (!aadhaarVerified) {
       toast({ title: 'Aadhaar Required', description: 'Please verify your Aadhaar number first.', variant: 'destructive' });
       return;
     }
@@ -208,17 +219,22 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
     setPaymentLoading(true);
     try {
       // Step 1: Create guest payment order
+      const formData = new FormData();
+      formData.append('amount', String(finalPrice));
+      formData.append('senderReceiver', JSON.stringify(senderReceiver));
+      formData.append('rateFormData', JSON.stringify(rateFormData));
+      formData.append('selectedCourier', JSON.stringify(selectedCourier));
+      formData.append('couponCode', couponApplied ? couponCode : '');
+      if (isDomestic && kycDocFile) {
+        formData.append('kycDocument', kycDocFile);
+        formData.append('kycDocType', kycDocType);
+      } else {
+        formData.append('aadhaarNumber', aadhaarInput);
+      }
+
       const res = await fetch('/api/cashfree/create-guest-order', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          amount: finalPrice,
-          senderReceiver,
-          rateFormData,
-          selectedCourier,
-          aadhaarNumber: aadhaarInput,
-          couponCode: couponApplied ? couponCode : null,
-        }),
+        body: formData,
       });
       const data = await res.json();
 
@@ -480,36 +496,59 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
 
           <div className="h-px bg-border" />
 
-          {/* 3-column: Pickup | Sender | Receiver */}
-          <div className="grid grid-cols-3 gap-4">
-            <div>
-              <p className="text-xs text-muted-foreground mb-1 flex items-center gap-1">
-                <House className="h-3 w-3" /> Pickup Address
-              </p>
-              <p className="text-sm font-medium">{senderReceiver.senderName}</p>
-              <p className="text-xs text-muted-foreground">{senderReceiver.senderAddress}</p>
-              <p className="text-xs text-muted-foreground">{senderReceiver.senderCity} - {senderReceiver.senderPincode}</p>
-              <p className="text-xs text-muted-foreground">{senderReceiver.senderPhone}</p>
+          {/* Address columns: 2-col for domestic (Pickup + Receiver), 3-col for international */}
+          {isDomestic ? (
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <p className="text-xs text-muted-foreground mb-1 flex items-center gap-1">
+                  <House className="h-3 w-3" /> Pickup Address
+                </p>
+                <p className="text-sm font-medium">{senderReceiver.senderName}</p>
+                <p className="text-xs text-muted-foreground">{senderReceiver.senderAddress}</p>
+                <p className="text-xs text-muted-foreground">{senderReceiver.senderCity} - {senderReceiver.senderPincode}</p>
+                <p className="text-xs text-muted-foreground">{senderReceiver.senderPhone}</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground mb-1 flex items-center gap-1">
+                  <MapPin className="h-3 w-3" /> Recipient Address
+                </p>
+                <p className="text-sm font-medium">{senderReceiver.receiverName}</p>
+                <p className="text-xs text-muted-foreground">{senderReceiver.receiverAddress}</p>
+                <p className="text-xs text-muted-foreground">{senderReceiver.receiverCity} - {senderReceiver.receiverZipcode}</p>
+                <p className="text-xs text-muted-foreground">{senderReceiver.receiverPhone} · {senderReceiver.receiverEmail}</p>
+              </div>
             </div>
-            <div>
-              <p className="text-xs text-muted-foreground mb-1 flex items-center gap-1">
-                <MapPin className="h-3 w-3" /> Sender (KYC)
-              </p>
-              <p className="text-sm font-medium">{senderReceiver.senderName}</p>
-              <p className="text-xs text-muted-foreground">{senderReceiver.senderAddress}</p>
-              <p className="text-xs text-muted-foreground">{senderReceiver.senderCity} - {senderReceiver.senderPincode}</p>
-              <p className="text-xs text-muted-foreground">{senderReceiver.senderEmail}</p>
+          ) : (
+            <div className="grid grid-cols-3 gap-4">
+              <div>
+                <p className="text-xs text-muted-foreground mb-1 flex items-center gap-1">
+                  <House className="h-3 w-3" /> Pickup Address
+                </p>
+                <p className="text-sm font-medium">{senderReceiver.senderName}</p>
+                <p className="text-xs text-muted-foreground">{senderReceiver.senderAddress}</p>
+                <p className="text-xs text-muted-foreground">{senderReceiver.senderCity} - {senderReceiver.senderPincode}</p>
+                <p className="text-xs text-muted-foreground">{senderReceiver.senderPhone}</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground mb-1 flex items-center gap-1">
+                  <MapPin className="h-3 w-3" /> Sender (KYC)
+                </p>
+                <p className="text-sm font-medium">{senderReceiver.senderName}</p>
+                <p className="text-xs text-muted-foreground">{senderReceiver.senderAddress}</p>
+                <p className="text-xs text-muted-foreground">{senderReceiver.senderCity} - {senderReceiver.senderPincode}</p>
+                <p className="text-xs text-muted-foreground">{senderReceiver.senderEmail}</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground mb-1 flex items-center gap-1">
+                  <Airplane className="h-3 w-3" /> Receiver
+                </p>
+                <p className="text-sm font-medium">{senderReceiver.receiverName}</p>
+                <p className="text-xs text-muted-foreground">{senderReceiver.receiverAddress}</p>
+                <p className="text-xs text-muted-foreground">{senderReceiver.receiverCity} - {senderReceiver.receiverZipcode}</p>
+                <p className="text-xs text-muted-foreground">{senderReceiver.receiverPhone} · {senderReceiver.receiverEmail}</p>
+              </div>
             </div>
-            <div>
-              <p className="text-xs text-muted-foreground mb-1 flex items-center gap-1">
-                <Airplane className="h-3 w-3" /> Receiver
-              </p>
-              <p className="text-sm font-medium">{senderReceiver.receiverName}</p>
-              <p className="text-xs text-muted-foreground">{senderReceiver.receiverAddress}</p>
-              <p className="text-xs text-muted-foreground">{senderReceiver.receiverCity} - {senderReceiver.receiverZipcode}</p>
-              <p className="text-xs text-muted-foreground">{senderReceiver.receiverPhone} · {senderReceiver.receiverEmail}</p>
-            </div>
-          </div>
+          )}
 
           <div className="h-px bg-border" />
 
@@ -555,59 +594,163 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
         </div>
       </div>
 
-      {/* ── Aadhaar Verification ── */}
-      <div className="bg-card rounded-xl border border-border overflow-hidden">
-        <div className="bg-muted/50 px-5 py-3 border-b border-border">
-          <h2 className="font-semibold text-base flex items-center gap-2">
-            <ShieldCheck className="h-4.5 w-4.5 text-blue-600" weight="duotone" />
-            Aadhaar Verification
-          </h2>
-        </div>
-        <div className="p-5 space-y-3">
-          {aadhaarVerified ? (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex items-center gap-3 p-3 rounded-lg bg-candlestick-green/5 border border-candlestick-green/20">
-              <CheckCircle className="h-5 w-5 text-candlestick-green" weight="fill" />
-              <div>
-                <p className="text-sm font-medium text-candlestick-green">Aadhaar Verified</p>
-                <p className="text-xs text-muted-foreground font-mono">XXXX XXXX {aadhaarInput.slice(-4)}</p>
-              </div>
-            </motion.div>
-          ) : (
-            <>
-              <p className="text-sm text-muted-foreground">
-                {extractedAadhaarNumber
-                  ? 'Aadhaar number auto-filled from your uploaded document. Click Verify to confirm.'
-                  : `Enter your 12-digit Aadhaar number for identity verification${mode === 'international' ? ' (required for customs clearance).' : ' (mandatory under Indian courier regulations).'}`
-                }
+      {/* ── Identity Verification ── */}
+      {isDomestic ? (
+        /* ── Domestic: Government ID Upload ── */
+        <div className="bg-card rounded-xl border border-border overflow-hidden">
+          <div className="bg-muted/50 px-5 py-3 border-b border-border">
+            <h2 className="font-semibold text-base flex items-center gap-2">
+              <IdentificationCard className="h-4.5 w-4.5 text-blue-600" weight="duotone" />
+              Sender Identity Verification
+            </h2>
+          </div>
+          <div className="p-5 space-y-4">
+            {/* Legal explanation */}
+            <div className="rounded-lg border border-amber-200 dark:border-amber-800/40 bg-amber-50 dark:bg-amber-950/20 p-3.5 text-xs space-y-2">
+              <p className="font-semibold text-amber-900 dark:text-amber-200 flex items-center gap-1.5">
+                <Info className="h-4 w-4 shrink-0" weight="fill" /> Why is this required?
               </p>
-              <div className="flex gap-2">
-                <Input
-                  type="text"
-                  inputMode="numeric"
-                  maxLength={14}
-                  placeholder="XXXX XXXX XXXX"
-                  className="font-mono tracking-widest text-center flex-1"
-                  value={formattedAadhaar}
-                  onChange={handleAadhaarChange}
-                />
-                <Button
-                  onClick={handleVerifyAadhaar}
-                  disabled={aadhaarLoading || aadhaarInput.length !== 12}
-                  className="bg-blue-600 hover:bg-blue-700 text-white shrink-0"
-                >
-                  {aadhaarLoading ? <CircleNotch className="h-4 w-4 animate-spin" /> : 'Verify'}
-                </Button>
+              <p className="text-amber-800 dark:text-amber-300 leading-relaxed">
+                As per the <span className="font-medium">Indian Post Office Act, 1898 (Section 9)</span> and <span className="font-medium">Information Technology Act, 2000</span>, all courier and logistics service providers are required to verify the identity of the sender (consignor) for every shipment. This is mandated under KYC (Know Your Customer) norms issued by the <span className="font-medium">Department of Posts &amp; Ministry of Communications</span>.
+              </p>
+              <p className="text-amber-800 dark:text-amber-300 leading-relaxed">
+                Your ID is collected as proof of sender identity and will only be used in case of investigation into illegal, prohibited, or inaccurate shipment contents. It is stored securely and never shared with third parties.
+              </p>
+            </div>
+
+            {/* Document type selector */}
+            <div>
+              <label className="text-sm font-medium mb-1.5 block">Select ID Type</label>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                {[
+                  { value: 'aadhaar', label: 'Aadhaar Card' },
+                  { value: 'driving_license', label: 'Driving License' },
+                  { value: 'passport', label: 'Passport' },
+                  { value: 'voter_id', label: 'Voter ID Card' },
+                ].map((doc) => (
+                  <button
+                    key={doc.value}
+                    type="button"
+                    onClick={() => { setKycDocType(doc.value); setKycDocFile(null); }}
+                    className={`rounded-lg border-2 px-3 py-2.5 text-xs font-medium text-center transition-all ${
+                      kycDocType === doc.value
+                        ? 'border-coke-red bg-coke-red/5 text-coke-red'
+                        : 'border-border hover:border-muted-foreground/30 text-muted-foreground'
+                    }`}
+                  >
+                    {doc.label}
+                  </button>
+                ))}
               </div>
-              {aadhaarError && (
-                <p className="text-xs text-destructive flex items-center gap-1">
-                  <Warning className="h-3 w-3" weight="fill" /> {aadhaarError}
-                </p>
-              )}
-              <p className="text-xs text-muted-foreground">Verified via UIDAI. We never store your full Aadhaar number.</p>
-            </>
-          )}
+            </div>
+
+            {/* Upload area */}
+            {kycDocType && (
+              <div className="space-y-3">
+                {kycDocFile ? (
+                  <div className="flex items-center justify-between rounded-lg border border-candlestick-green/30 bg-candlestick-green/5 px-4 py-3">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <CheckCircle className="h-5 w-5 text-candlestick-green shrink-0" weight="fill" />
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-candlestick-green">Document Uploaded</p>
+                        <p className="text-xs text-muted-foreground truncate">{kycDocFile.name} ({(kycDocFile.size / 1024).toFixed(0)} KB)</p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setKycDocFile(null)}
+                      className="text-xs text-muted-foreground hover:text-foreground shrink-0"
+                    >
+                      Change
+                    </button>
+                  </div>
+                ) : (
+                  <label className="flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-blue-400/30 bg-blue-50/50 dark:bg-blue-950/20 hover:bg-blue-100/50 dark:hover:bg-blue-950/30 p-6 cursor-pointer transition-colors">
+                    <input
+                      type="file"
+                      accept="image/*,.pdf"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          if (file.size > 5 * 1024 * 1024) {
+                            toast({ title: 'File too large', description: 'Maximum file size is 5 MB.', variant: 'destructive' });
+                            return;
+                          }
+                          setKycDocFile(file);
+                        }
+                      }}
+                    />
+                    <Upload className="h-6 w-6 text-blue-600" weight="duotone" />
+                    <span className="text-sm font-medium text-blue-600">
+                      Upload {kycDocType === 'aadhaar' ? 'Aadhaar Card' : kycDocType === 'driving_license' ? 'Driving License' : kycDocType === 'passport' ? 'Passport' : 'Voter ID Card'}
+                    </span>
+                    <span className="text-xs text-muted-foreground">JPG, PNG or PDF — max 5 MB</span>
+                  </label>
+                )}
+              </div>
+            )}
+
+            {!kycDocType && (
+              <p className="text-xs text-muted-foreground text-center py-2">Please select an ID type above to upload your document.</p>
+            )}
+          </div>
         </div>
-      </div>
+      ) : (
+        /* ── International: Aadhaar Verification ── */
+        <div className="bg-card rounded-xl border border-border overflow-hidden">
+          <div className="bg-muted/50 px-5 py-3 border-b border-border">
+            <h2 className="font-semibold text-base flex items-center gap-2">
+              <ShieldCheck className="h-4.5 w-4.5 text-blue-600" weight="duotone" />
+              Aadhaar Verification
+            </h2>
+          </div>
+          <div className="p-5 space-y-3">
+            {aadhaarVerified ? (
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex items-center gap-3 p-3 rounded-lg bg-candlestick-green/5 border border-candlestick-green/20">
+                <CheckCircle className="h-5 w-5 text-candlestick-green" weight="fill" />
+                <div>
+                  <p className="text-sm font-medium text-candlestick-green">Aadhaar Verified</p>
+                  <p className="text-xs text-muted-foreground font-mono">XXXX XXXX {aadhaarInput.slice(-4)}</p>
+                </div>
+              </motion.div>
+            ) : (
+              <>
+                <p className="text-sm text-muted-foreground">
+                  {extractedAadhaarNumber
+                    ? 'Aadhaar number auto-filled from your uploaded document. Click Verify to confirm.'
+                    : 'Enter your 12-digit Aadhaar number for identity verification (required for customs clearance).'
+                  }
+                </p>
+                <div className="flex gap-2">
+                  <Input
+                    type="text"
+                    inputMode="numeric"
+                    maxLength={14}
+                    placeholder="XXXX XXXX XXXX"
+                    className="font-mono tracking-widest text-center flex-1"
+                    value={formattedAadhaar}
+                    onChange={handleAadhaarChange}
+                  />
+                  <Button
+                    onClick={handleVerifyAadhaar}
+                    disabled={aadhaarLoading || aadhaarInput.length !== 12}
+                    className="bg-blue-600 hover:bg-blue-700 text-white shrink-0"
+                  >
+                    {aadhaarLoading ? <CircleNotch className="h-4 w-4 animate-spin" /> : 'Verify'}
+                  </Button>
+                </div>
+                {aadhaarError && (
+                  <p className="text-xs text-destructive flex items-center gap-1">
+                    <Warning className="h-3 w-3" weight="fill" /> {aadhaarError}
+                  </p>
+                )}
+                <p className="text-xs text-muted-foreground">Verified via UIDAI. We never store your full Aadhaar number.</p>
+              </>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* ── Coupon Code ── */}
       <div className="bg-card rounded-xl border border-border p-5 space-y-3">
@@ -708,7 +851,7 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
       {/* ── Pay Button ── */}
       <Button
         onClick={handlePayNow}
-        disabled={paymentLoading || !aadhaarVerified || !termsAccepted}
+        disabled={paymentLoading || (isDomestic ? !kycDocFile : !aadhaarVerified) || !termsAccepted}
         className="w-full bg-coke-red hover:bg-red-600 text-white gap-2 py-6 text-base shadow-lg shadow-coke-red/20"
       >
         {paymentLoading ? (
@@ -721,7 +864,10 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
         )}
       </Button>
 
-      {!aadhaarVerified && (
+      {isDomestic && !kycDocFile && (
+        <p className="text-xs text-center text-muted-foreground">Please upload a valid government-issued ID to proceed with payment.</p>
+      )}
+      {!isDomestic && !aadhaarVerified && (
         <p className="text-xs text-center text-muted-foreground">Please verify your Aadhaar number to proceed with payment.</p>
       )}
     </motion.div>
