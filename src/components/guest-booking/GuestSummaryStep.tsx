@@ -848,7 +848,7 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
                     onChange={handleAadhaarChange}
                   />
                   <Button
-                    onClick={() => { feedbackPresets.tap(); handleVerifyAadhaar(); }}
+                    onClick={() => { handleVerifyAadhaar(); }}
                     disabled={aadhaarLoading || aadhaarInput.length !== 12}
                     className="bg-blue-600 hover:bg-blue-700 text-white shrink-0"
                   >
@@ -887,7 +887,7 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
               onChange={e => setCouponCode(e.target.value.toUpperCase())}
               className="flex-1 uppercase"
             />
-            <Button variant="outline" onClick={() => { feedbackPresets.tap(); handleApplyCoupon(); }} disabled={couponLoading || !couponCode.trim()}>
+            <Button variant="outline" onClick={handleApplyCoupon} disabled={couponLoading || !couponCode.trim()}>
               {couponLoading ? <CircleNotch className="h-4 w-4 animate-spin" /> : 'Apply'}
             </Button>
           </div>
@@ -965,7 +965,7 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
 
       {/* ── Pay Button ── */}
       <Button
-        onClick={() => { feedbackPresets.tap(); handlePayNow(); }}
+        onClick={handlePayNow}
         disabled={paymentLoading || (isDomestic ? !kycDocFile : !aadhaarVerified) || !termsAccepted}
         className="w-full bg-coke-red hover:bg-red-600 text-white gap-2 py-5 sm:py-6 text-sm sm:text-base shadow-lg shadow-coke-red/20"
       >
