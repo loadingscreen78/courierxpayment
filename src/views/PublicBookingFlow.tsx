@@ -1401,6 +1401,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                             <div className="text-[10px] sm:text-xs text-muted-foreground mt-0.5">
                               Base: ₹{c.shipping_charge?.toLocaleString('en-IN')} + GST: ₹{c.gst_amount?.toLocaleString('en-IN')}
                             </div>
+                          </div>
                           <Button size="sm" className="mt-2 bg-coke-red hover:bg-red-600 text-white" onClick={() => { feedbackPresets.select(); handleSelectCourier(c); }}>
                             Book Now
                           </Button>
