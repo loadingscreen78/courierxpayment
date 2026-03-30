@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
@@ -9,7 +9,7 @@ import {
   ArrowRight, CircleNotch, ShieldCheck, Package, MapPin, Airplane,
   CurrencyInr, Tag, CheckCircle, Warning, DownloadSimple, Copy,
   Clock, Scissors, SealCheck, Drop, ArrowLeft, Cube, Info,
-  Ruler, IdentificationCard, House, Upload, FileText,
+  Ruler, IdentificationCard, House, Upload, FileText, Camera, X, Eye,
 } from '@phosphor-icons/react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -129,8 +129,36 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
   // ── Domestic KYC document upload state ──
   const [kycDocType, setKycDocType] = useState<string>('');
   const [kycDocFile, setKycDocFile] = useState<File | null>(null);
+  const [kycDocPreviewUrl, setKycDocPreviewUrl] = useState<string>('');
+  const [showDocPreview, setShowDocPreview] = useState(false);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const isDomestic = mode === 'domestic';
+
+  // ── KYC doc helpers ──
+  const kycDocLabel = kycDocType === 'aadhaar' ? 'Aadhaar Card' : kycDocType === 'driving_license' ? 'Driving License' : kycDocType === 'passport' ? 'Passport' : kycDocType === 'voter_id' ? 'Voter ID Card' : '';
+
+  const handleKycFile = useCallback((file: File) => {
+    if (file.size > 5 * 1024 * 1024) {
+      toast({ title: 'File too large', description: 'Maximum file size is 5 MB.', variant: 'destructive' });
+      return;
+    }
+    // Revoke old preview URL
+    if (kycDocPreviewUrl) URL.revokeObjectURL(kycDocPreviewUrl);
+    setKycDocFile(file);
+    if (file.type.startsWith('image/')) {
+      setKycDocPreviewUrl(URL.createObjectURL(file));
+    } else {
+      setKycDocPreviewUrl('');
+    }
+  }, [kycDocPreviewUrl, toast]);
+
+  const clearKycDoc = useCallback(() => {
+    if (kycDocPreviewUrl) URL.revokeObjectURL(kycDocPreviewUrl);
+    setKycDocFile(null);
+    setKycDocPreviewUrl('');
+  }, [kycDocPreviewUrl]);
 
   const courierName = selectedCourier?.carrier || selectedCourier?.courier_name || 'Courier';
   const basePrice = selectedCourier?.price || selectedCourier?.customer_price || 0;
@@ -631,7 +659,7 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
                   <button
                     key={doc.value}
                     type="button"
-                    onClick={() => { setKycDocType(doc.value); setKycDocFile(null); }}
+                    onClick={() => { setKycDocType(doc.value); clearKycDoc(); }}
                     className={`rounded-lg border-2 px-3 py-2.5 text-xs font-medium text-center transition-all ${
                       kycDocType === doc.value
                         ? 'border-coke-red bg-coke-red/5 text-coke-red'
@@ -648,45 +676,125 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
             {kycDocType && (
               <div className="space-y-3">
                 {kycDocFile ? (
-                  <div className="flex items-center justify-between rounded-lg border border-candlestick-green/30 bg-candlestick-green/5 px-4 py-3">
-                    <div className="flex items-center gap-3 min-w-0">
-                      <CheckCircle className="h-5 w-5 text-candlestick-green shrink-0" weight="fill" />
-                      <div className="min-w-0">
-                        <p className="text-sm font-medium text-candlestick-green">Document Uploaded</p>
-                        <p className="text-xs text-muted-foreground truncate">{kycDocFile.name} ({(kycDocFile.size / 1024).toFixed(0)} KB)</p>
+                  /* ── Uploaded: Thumbnail + actions ── */
+                  <div className="space-y-3">
+                    <div className="rounded-xl border border-candlestick-green/30 bg-candlestick-green/5 p-4 space-y-3">
+                      <div className="flex items-center gap-2">
+                        <CheckCircle className="h-4 w-4 text-candlestick-green" weight="fill" />
+                        <p className="text-sm font-medium text-candlestick-green">{kycDocLabel} Uploaded</p>
+                      </div>
+                      {/* Thumbnail */}
+                      {kycDocPreviewUrl ? (
+                        <button
+                          type="button"
+                          onClick={() => setShowDocPreview(true)}
+                          className="relative group w-full rounded-lg overflow-hidden border border-border bg-muted aspect-[16/10]"
+                        >
+                          <img
+                            src={kycDocPreviewUrl}
+                            alt={kycDocLabel}
+                            className="w-full h-full object-contain bg-white"
+                          />
+                          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 group-active:bg-black/30 transition-colors flex items-center justify-center">
+                            <div className="opacity-0 group-hover:opacity-100 group-active:opacity-100 transition-opacity bg-white/90 rounded-full p-2.5 shadow-lg">
+                              <Eye className="h-5 w-5 text-foreground" weight="bold" />
+                            </div>
+                          </div>
+                        </button>
+                      ) : (
+                        <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50 border border-border">
+                          <FileText className="h-8 w-8 text-coke-red shrink-0" weight="duotone" />
+                          <div className="min-w-0">
+                            <p className="text-sm font-medium truncate">{kycDocFile.name}</p>
+                            <p className="text-xs text-muted-foreground">PDF Document · {(kycDocFile.size / 1024).toFixed(0)} KB</p>
+                          </div>
+                        </div>
+                      )}
+                      {/* Actions */}
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={() => { clearKycDoc(); if (cameraInputRef.current) cameraInputRef.current.value = ''; }}
+                          className="flex-1 text-xs font-medium text-coke-red hover:text-red-700 py-2 rounded-lg border border-coke-red/20 hover:bg-coke-red/5 transition-colors text-center"
+                        >
+                          Retake / Change
+                        </button>
                       </div>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => setKycDocFile(null)}
-                      className="text-xs text-muted-foreground hover:text-foreground shrink-0"
-                    >
-                      Change
-                    </button>
                   </div>
                 ) : (
-                  <label className="flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-blue-400/30 bg-blue-50/50 dark:bg-blue-950/20 hover:bg-blue-100/50 dark:hover:bg-blue-950/30 p-6 cursor-pointer transition-colors">
+                  /* ── Not uploaded: Camera + Gallery options ── */
+                  <div className="space-y-3">
+                    {/* Capture tips */}
+                    <div className="rounded-lg border border-blue-200 dark:border-blue-800/40 bg-blue-50 dark:bg-blue-950/20 p-3 text-xs space-y-1.5">
+                      <p className="font-semibold text-blue-900 dark:text-blue-200 flex items-center gap-1.5">
+                        <Camera className="h-3.5 w-3.5 shrink-0" weight="fill" /> Tips for a clear capture
+                      </p>
+                      <ul className="list-disc list-inside text-blue-800 dark:text-blue-300 space-y-0.5">
+                        <li>Place the document on a dark, flat surface</li>
+                        <li>Ensure all four corners are visible in the frame</li>
+                        <li>Avoid glare — tilt slightly if you see reflections</li>
+                        <li>Use natural light, avoid flash for zero reflection</li>
+                        <li>Name, photo, and ID number must be clearly readable</li>
+                      </ul>
+                    </div>
+
+                    {/* Camera capture button (primary on mobile) */}
+                    <button
+                      type="button"
+                      onClick={() => cameraInputRef.current?.click()}
+                      className="w-full flex items-center justify-center gap-2.5 rounded-xl border-2 border-coke-red bg-coke-red/5 hover:bg-coke-red/10 active:bg-coke-red/15 p-4 transition-colors"
+                    >
+                      <div className="w-10 h-10 rounded-full bg-coke-red/10 flex items-center justify-center">
+                        <Camera className="h-5 w-5 text-coke-red" weight="fill" />
+                      </div>
+                      <div className="text-left">
+                        <p className="text-sm font-semibold text-coke-red">Capture with Camera</p>
+                        <p className="text-[11px] text-muted-foreground">Take a photo of your {kycDocLabel}</p>
+                      </div>
+                    </button>
                     <input
+                      ref={cameraInputRef}
+                      type="file"
+                      accept="image/*"
+                      capture="environment"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) handleKycFile(file);
+                      }}
+                    />
+
+                    {/* Divider */}
+                    <div className="flex items-center gap-3">
+                      <div className="flex-1 h-px bg-border" />
+                      <span className="text-xs text-muted-foreground">or</span>
+                      <div className="flex-1 h-px bg-border" />
+                    </div>
+
+                    {/* Upload from gallery/files */}
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="w-full flex items-center justify-center gap-2.5 rounded-xl border-2 border-dashed border-border hover:border-muted-foreground/40 bg-muted/30 hover:bg-muted/50 active:bg-muted/70 p-4 transition-colors"
+                    >
+                      <Upload className="h-5 w-5 text-muted-foreground" weight="duotone" />
+                      <div className="text-left">
+                        <p className="text-sm font-medium text-foreground">Upload from Gallery / Files</p>
+                        <p className="text-[11px] text-muted-foreground">JPG, PNG or PDF — max 5 MB</p>
+                      </div>
+                    </button>
+                    <input
+                      ref={fileInputRef}
                       type="file"
                       accept="image/*,.pdf"
                       className="hidden"
                       onChange={(e) => {
                         const file = e.target.files?.[0];
-                        if (file) {
-                          if (file.size > 5 * 1024 * 1024) {
-                            toast({ title: 'File too large', description: 'Maximum file size is 5 MB.', variant: 'destructive' });
-                            return;
-                          }
-                          setKycDocFile(file);
-                        }
+                        if (file) handleKycFile(file);
                       }}
                     />
-                    <Upload className="h-6 w-6 text-blue-600" weight="duotone" />
-                    <span className="text-sm font-medium text-blue-600">
-                      Upload {kycDocType === 'aadhaar' ? 'Aadhaar Card' : kycDocType === 'driving_license' ? 'Driving License' : kycDocType === 'passport' ? 'Passport' : 'Voter ID Card'}
-                    </span>
-                    <span className="text-xs text-muted-foreground">JPG, PNG or PDF — max 5 MB</span>
-                  </label>
+                  </div>
                 )}
               </div>
             )}
@@ -870,6 +978,43 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
       {!isDomestic && !aadhaarVerified && (
         <p className="text-xs text-center text-muted-foreground">Please verify your Aadhaar number to proceed with payment.</p>
       )}
+
+      {/* ── Full-screen Document Preview Modal ── */}
+      <AnimatePresence>
+        {showDocPreview && kycDocPreviewUrl && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] bg-black/90 flex items-center justify-center p-4"
+            onClick={() => setShowDocPreview(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="relative max-w-lg w-full max-h-[85vh]"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <button
+                type="button"
+                onClick={() => setShowDocPreview(false)}
+                className="absolute -top-12 right-0 text-white/80 hover:text-white p-2 rounded-full bg-white/10 hover:bg-white/20 transition-colors"
+              >
+                <X className="h-6 w-6" weight="bold" />
+              </button>
+              <div className="rounded-xl overflow-hidden bg-white shadow-2xl">
+                <img
+                  src={kycDocPreviewUrl}
+                  alt={kycDocLabel}
+                  className="w-full h-auto max-h-[80vh] object-contain"
+                />
+              </div>
+              <p className="text-center text-white/60 text-xs mt-3">{kycDocLabel} · Tap outside to close</p>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 }
