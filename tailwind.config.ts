@@ -17,6 +17,9 @@ export default {
       },
     },
     extend: {
+      screens: {
+        'xs': '475px',
+      },
       fontFamily: {
         typewriter: ['"Courier Prime"', 'Courier New', 'monospace'],
         sans: ['Inter', 'system-ui', 'sans-serif'],

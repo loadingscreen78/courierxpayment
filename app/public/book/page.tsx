@@ -38,34 +38,35 @@ export default function PublicBookPage() {
     <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="sticky top-0 z-50 bg-background/90 backdrop-blur-xl border-b border-border/50">
-        <div className="container flex items-center justify-between h-16">
-          <Link href="/" className="flex items-center gap-2.5">
+        <div className="container flex items-center justify-between h-14 sm:h-16 px-3 sm:px-4">
+          <Link href="/" className="flex items-center gap-2.5 shrink-0">
             <img
               alt="CourierX"
               src="/logo.svg"
-              className="h-9 w-auto object-contain"
+              className="h-7 sm:h-9 w-auto object-contain"
             />
           </Link>
-          <div className="flex items-center gap-2">
-            <Button variant="ghost" size="sm" onClick={() => router.push('/auth')} className="rounded-xl text-sm">
+          <div className="flex items-center gap-1.5 sm:gap-2">
+            <Button variant="ghost" size="sm" onClick={() => router.push('/auth')} className="rounded-xl text-xs sm:text-sm px-2 sm:px-3">
               Sign In
             </Button>
-            <Button variant="outline" size="sm" onClick={() => router.push('/open-account')} className="rounded-xl text-sm gap-1.5">
-              <UserPlus className="h-3.5 w-3.5" />
-              Open Account — Save 52%
+            <Button variant="outline" size="sm" onClick={() => router.push('/open-account')} className="rounded-xl text-xs sm:text-sm gap-1 sm:gap-1.5 px-2 sm:px-3">
+              <UserPlus className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+              <span className="hidden sm:inline">Open Account — Save 52%</span>
+              <span className="sm:hidden">Save 52%</span>
             </Button>
           </div>
         </div>
       </header>
 
-      <main className="container max-w-2xl py-12 space-y-8">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => router.push('/')} className="shrink-0">
-            <ArrowLeft className="h-5 w-5" />
+      <main className="container max-w-2xl py-6 sm:py-12 px-3 sm:px-4 space-y-5 sm:space-y-8">
+        <div className="flex items-center gap-3 sm:gap-4">
+          <Button variant="ghost" size="icon" onClick={() => router.push('/')} className="shrink-0 h-9 w-9 sm:h-10 sm:w-10">
+            <ArrowLeft className="h-4 w-4 sm:h-5 sm:w-5" />
           </Button>
-          <div>
-            <h1 className="text-2xl font-bold">Ship Now</h1>
-            <p className="text-muted-foreground text-sm">No account needed. Get an instant rate and book your shipment.</p>
+          <div className="min-w-0">
+            <h1 className="text-xl sm:text-2xl font-bold">Ship Now</h1>
+            <p className="text-muted-foreground text-xs sm:text-sm">No account needed. Get an instant rate and book your shipment.</p>
           </div>
         </div>
 
@@ -92,15 +93,15 @@ export default function PublicBookPage() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.4, delay: i * 0.12 }}
               onClick={() => router.push(mode.href)}
-              className={`text-left p-6 rounded-xl border border-border ${mode.borderColor} transition-all duration-200 hover:shadow-lg group`}
+              className={`text-left p-4 sm:p-6 rounded-xl border border-border ${mode.borderColor} transition-all duration-200 hover:shadow-lg group`}
             >
-              <div className="flex items-start gap-5">
-                <div className={`w-14 h-14 rounded-xl ${mode.bgColor} flex items-center justify-center shrink-0`}>
-                  <mode.icon className={`h-7 w-7 ${mode.color}`} weight="duotone" />
+              <div className="flex items-start gap-3 sm:gap-5">
+                <div className={`w-11 h-11 sm:w-14 sm:h-14 rounded-xl ${mode.bgColor} flex items-center justify-center shrink-0`}>
+                  <mode.icon className={`h-5 w-5 sm:h-7 sm:w-7 ${mode.color}`} weight="duotone" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <h3 className="font-semibold text-lg mb-1 group-hover:text-coke-red transition-colors">{mode.title}</h3>
-                  <p className="text-sm text-muted-foreground mb-3">{mode.description}</p>
+                  <h3 className="font-semibold text-base sm:text-lg mb-1 group-hover:text-coke-red transition-colors">{mode.title}</h3>
+                  <p className="text-xs sm:text-sm text-muted-foreground mb-2 sm:mb-3">{mode.description}</p>
                   <div className="flex flex-wrap gap-1.5">
                     {mode.tags.map(tag => (
                       <span key={tag} className="text-xs px-2.5 py-1 rounded-full bg-muted text-muted-foreground">{tag}</span>

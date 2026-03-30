@@ -117,17 +117,17 @@ function ConfirmContent() {
             </Link>
           </div>
         </header>
-        <main className="container max-w-lg py-12">
+        <main className="container max-w-lg py-8 sm:py-12 px-3 sm:px-4">
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="bg-card rounded-xl border border-border p-8 text-center space-y-6"
+            className="bg-card rounded-xl border border-border p-5 sm:p-8 text-center space-y-5 sm:space-y-6"
           >
-            <div className="w-16 h-16 rounded-full bg-destructive/10 flex items-center justify-center mx-auto">
-              <Warning className="h-8 w-8 text-destructive" weight="fill" />
+            <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-destructive/10 flex items-center justify-center mx-auto">
+              <Warning className="h-7 w-7 sm:h-8 sm:w-8 text-destructive" weight="fill" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold">Payment Issue</h1>
+              <h1 className="text-xl sm:text-2xl font-bold">Payment Issue</h1>
               <p className="text-muted-foreground mt-2">{errorMsg}</p>
               {orderId && (
                 <p className="text-xs text-muted-foreground mt-3">
@@ -165,18 +165,18 @@ function ConfirmContent() {
         </div>
       </header>
 
-      <main className="container max-w-lg py-12 space-y-6">
+      <main className="container max-w-lg py-8 sm:py-12 px-3 sm:px-4 space-y-6">
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
-          className="bg-card rounded-xl border border-border p-8 text-center space-y-6"
+          className="bg-card rounded-xl border border-border p-5 sm:p-8 text-center space-y-5 sm:space-y-6"
         >
-          <div className="w-16 h-16 rounded-full bg-candlestick-green/10 flex items-center justify-center mx-auto">
-            <CheckCircle className="h-8 w-8 text-candlestick-green" weight="fill" />
+          <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-candlestick-green/10 flex items-center justify-center mx-auto">
+            <CheckCircle className="h-7 w-7 sm:h-8 sm:w-8 text-candlestick-green" weight="fill" />
           </div>
 
           <div>
-            <h1 className="text-2xl font-bold">Shipment Booked!</h1>
+            <h1 className="text-xl sm:text-2xl font-bold">Shipment Booked!</h1>
             <p className="text-muted-foreground mt-2">
               Your shipment has been confirmed and is being processed.
             </p>
@@ -186,8 +186,8 @@ function ConfirmContent() {
           {trackingNumber && (
             <div className="bg-muted/50 rounded-lg p-4 text-left">
               <p className="text-xs text-muted-foreground mb-1">Tracking Number</p>
-              <div className="flex items-center gap-3">
-                <p className="text-lg font-mono font-bold flex-1">{trackingNumber}</p>
+              <div className="flex items-center gap-2 sm:gap-3">
+                <p className="text-sm sm:text-lg font-mono font-bold flex-1 break-all">{trackingNumber}</p>
                 <Button variant="outline" size="sm" onClick={handleCopyTracking} className="gap-1.5 shrink-0">
                   <Copy className="h-3.5 w-3.5" /> Copy
                 </Button>

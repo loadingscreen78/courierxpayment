@@ -26,6 +26,7 @@ import { useAadhaarOcr } from '@/hooks/useAadhaarOcr';
 import { INDIAN_STATES } from '@/lib/pincode-lookup';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
+import { feedbackPresets } from '@/lib/haptics';
 
 type FlowMode = 'international' | 'domestic';
 
@@ -813,37 +814,38 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
     <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="sticky top-0 z-50 bg-background/90 backdrop-blur-xl border-b border-border/50">
-        <div className="container flex items-center justify-between h-16">
-          <Link href="/" className="flex items-center gap-2.5">
-            <img alt="CourierX" src="/logo.svg" className="h-9 w-auto object-contain" />
+        <div className="container flex items-center justify-between h-14 sm:h-16 px-3 sm:px-4">
+          <Link href="/" className="flex items-center gap-2.5 shrink-0">
+            <img alt="CourierX" src="/logo.svg" className="h-7 sm:h-9 w-auto object-contain" />
           </Link>
-          <div className="flex items-center gap-2">
-            <Button variant="ghost" size="sm" onClick={() => router.push('/auth')} className="rounded-xl text-sm">Sign In</Button>
-            <Button variant="outline" size="sm" onClick={() => router.push('/open-account')} className="rounded-xl text-sm gap-1.5">
-              <UserPlus className="h-3.5 w-3.5" />
-              Open Account — Save 52%
+          <div className="flex items-center gap-1.5 sm:gap-2">
+            <Button variant="ghost" size="sm" onClick={() => router.push('/auth')} className="rounded-xl text-xs sm:text-sm px-2 sm:px-3">Sign In</Button>
+            <Button variant="outline" size="sm" onClick={() => router.push('/open-account')} className="rounded-xl text-xs sm:text-sm gap-1 sm:gap-1.5 px-2 sm:px-3 hidden xs:flex">
+              <UserPlus className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+              <span className="hidden sm:inline">Open Account — Save 52%</span>
+              <span className="sm:hidden">Save 52%</span>
             </Button>
           </div>
         </div>
       </header>
 
-      <main className="container max-w-3xl py-8 space-y-6">
+      <main className="container max-w-3xl py-4 sm:py-8 px-3 sm:px-4 space-y-4 sm:space-y-6 pb-28 md:pb-8">
         {/* Back + Title */}
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={handleBack}>
-            <ArrowLeft className="h-5 w-5" />
+        <div className="flex items-center gap-3 sm:gap-4">
+          <Button variant="ghost" size="icon" onClick={() => { feedbackPresets.tap(); handleBack(); }} className="shrink-0 h-9 w-9 sm:h-10 sm:w-10">
+            <ArrowLeft className="h-4 w-4 sm:h-5 sm:w-5" />
           </Button>
-          <div>
-            <h1 className="text-2xl font-bold flex items-center gap-2">
-              {isInternational ? <Globe className="h-6 w-6 text-blue-600" weight="duotone" /> : <Truck className="h-6 w-6 text-green-600" weight="duotone" />}
+          <div className="min-w-0">
+            <h1 className="text-lg sm:text-2xl font-bold flex items-center gap-2 truncate">
+              {isInternational ? <Globe className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600 shrink-0" weight="duotone" /> : <Truck className="h-5 w-5 sm:h-6 sm:w-6 text-green-600 shrink-0" weight="duotone" />}
               {isInternational ? 'International Shipping' : 'Domestic Shipping'}
             </h1>
-            <p className="text-muted-foreground text-sm">Guest booking — standard rates apply</p>
+            <p className="text-muted-foreground text-xs sm:text-sm">Guest booking — standard rates apply</p>
           </div>
         </div>
 
-        {/* Progress */}
-        <div className="flex gap-1">
+        {/* Progress — desktop only (mobile version is fixed at bottom) */}
+        <div className="hidden md:flex gap-1">
           {stepLabels.map((label, i) => (
             <div key={label} className="flex-1">
               <div className={`h-1.5 rounded-full transition-colors mb-1 ${i + 1 <= step ? 'bg-coke-red' : 'bg-muted'}`} />
@@ -855,8 +857,8 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
         {/* ═══════════════ STEP 1: Rate Calculator Form ═══════════════ */}
         {step === 1 && (
           <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-5">
-            <div className="bg-card rounded-xl border border-border p-6 space-y-5">
-              <h2 className="font-semibold text-lg">Enter shipment details to get rates</h2>
+            <div className="bg-card rounded-xl border border-border p-4 sm:p-6 space-y-4 sm:space-y-5">
+              <h2 className="font-semibold text-base sm:text-lg">Enter shipment details to get rates</h2>
 
               {isInternational ? (
                 <Form {...intlForm}>
@@ -865,12 +867,12 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                     <FormField control={intlForm.control} name="shipmentType" render={({ field }) => (
                       <FormItem>
                         <FormLabel>What are you shipping?</FormLabel>
-                        <div className="grid grid-cols-3 gap-2">
+                        <div className="grid grid-cols-1 xs:grid-cols-3 gap-2">
                           {shipmentTypeOptions.international.map(opt => (
                             <button
                               key={opt.value}
                               type="button"
-                              onClick={() => field.onChange(opt.value)}
+                              onClick={() => { feedbackPresets.select(); field.onChange(opt.value); }}
                               className={`p-3 rounded-lg border text-left transition-all ${
                                 field.value === opt.value
                                   ? 'border-coke-red bg-coke-red/5 ring-1 ring-coke-red/20'
@@ -879,7 +881,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                             >
                               <opt.icon className={`h-5 w-5 mb-1 ${field.value === opt.value ? 'text-coke-red' : 'text-muted-foreground'}`} weight="duotone" />
                               <p className="text-sm font-medium">{opt.label}</p>
-                              <p className="text-xs text-muted-foreground">{opt.desc}</p>
+                              <p className="text-[11px] sm:text-xs text-muted-foreground leading-tight">{opt.desc}</p>
                             </button>
                           ))}
                         </div>
@@ -1038,7 +1040,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                       </FormItem>
                     )} />
 
-                    <Button type="submit" className="w-full bg-coke-red hover:bg-red-600 text-white gap-2 py-5">
+                    <Button type="submit" className="w-full bg-coke-red hover:bg-red-600 text-white gap-2 py-5" onClick={() => feedbackPresets.tap()}>
                       Calculate Rates <ArrowRight className="h-4 w-4" />
                     </Button>
                   </form>
@@ -1056,7 +1058,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                             <button
                               key={opt.value}
                               type="button"
-                              onClick={() => field.onChange(opt.value)}
+                              onClick={() => { feedbackPresets.select(); field.onChange(opt.value); }}
                               className={`p-3 rounded-lg border text-left transition-all ${
                                 field.value === opt.value
                                   ? 'border-coke-red bg-coke-red/5 ring-1 ring-coke-red/20'
@@ -1065,7 +1067,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                             >
                               <opt.icon className={`h-5 w-5 mb-1 ${field.value === opt.value ? 'text-coke-red' : 'text-muted-foreground'}`} weight="duotone" />
                               <p className="text-sm font-medium">{opt.label}</p>
-                              <p className="text-xs text-muted-foreground">{opt.desc}</p>
+                              <p className="text-[11px] sm:text-xs text-muted-foreground leading-tight">{opt.desc}</p>
                             </button>
                           ))}
                         </div>
@@ -1074,7 +1076,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                     )} />
 
                     {/* Pincodes with city/state display */}
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 xs:grid-cols-2 gap-4">
                       <FormField control={domForm.control} name="pickupPincode" render={({ field }) => (
                         <FormItem>
                           <FormLabel>Pickup Pincode</FormLabel>
@@ -1098,7 +1100,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                     </div>
 
                     {/* Weight + Value */}
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 xs:grid-cols-2 gap-4">
                       <FormField control={domForm.control} name="weightKg" render={({ field }) => (
                         <FormItem>
                           <FormLabel>Weight</FormLabel>
@@ -1179,7 +1181,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                       )}
                     </div>
 
-                    <Button type="submit" className="w-full bg-coke-red hover:bg-red-600 text-white gap-2 py-5" disabled={isDomesticLoading}>
+                    <Button type="submit" className="w-full bg-coke-red hover:bg-red-600 text-white gap-2 py-5" disabled={isDomesticLoading} onClick={() => feedbackPresets.tap()}>
                       {isDomesticLoading ? <><CircleNotch className="h-4 w-4 animate-spin" /> Fetching Rates...</> : <>Calculate Rates <ArrowRight className="h-4 w-4" /></>}
                     </Button>
                   </form>
@@ -1250,30 +1252,30 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
 
                     return (
                       <div key={option.carrier} className={`bg-card rounded-xl border border-border overflow-hidden transition-colors ${isComingSoon ? 'opacity-60' : 'hover:border-coke-red/30'}`}>
-                        <div className="p-4">
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <div className="flex items-center gap-2">
-                                <h3 className="font-semibold text-base">{option.carrier}</h3>
-                                <span className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground">{option.serviceName}</span>
+                        <div className="p-3 sm:p-4">
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <h3 className="font-semibold text-sm sm:text-base truncate">{option.carrier}</h3>
+                                <span className="text-[10px] sm:text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground shrink-0">{option.serviceName}</span>
                                 {option.isRecommended && !isComingSoon && (
-                                  <span className="text-xs px-2 py-0.5 rounded-full bg-candlestick-green/10 text-candlestick-green font-medium">Best Value</span>
+                                  <span className="text-[10px] sm:text-xs px-2 py-0.5 rounded-full bg-candlestick-green/10 text-candlestick-green font-medium shrink-0">Best Value</span>
                                 )}
                                 {isComingSoon && (
-                                  <span className="text-xs px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950/40 text-amber-600 font-medium">Available Soon</span>
+                                  <span className="text-[10px] sm:text-xs px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950/40 text-amber-600 font-medium shrink-0">Available Soon</span>
                                 )}
                               </div>
-                              <p className="text-sm text-muted-foreground mt-1">{option.transitDays.min}–{option.transitDays.max} days delivery</p>
-                              <div className="flex flex-wrap gap-1.5 mt-2">
+                              <p className="text-xs sm:text-sm text-muted-foreground mt-1">{option.transitDays.min}–{option.transitDays.max} days delivery</p>
+                              <div className="flex flex-wrap gap-1 sm:gap-1.5 mt-2">
                                 {option.features.slice(0, 3).map(f => (
-                                  <span key={f} className="text-xs px-2 py-0.5 rounded bg-muted/50 text-muted-foreground">{f}</span>
+                                  <span key={f} className="text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 rounded bg-muted/50 text-muted-foreground">{f}</span>
                                 ))}
                               </div>
                             </div>
-                            <div className="text-right shrink-0 ml-4">
-                              <p className="text-2xl font-bold">₹{option.price.toLocaleString('en-IN')}</p>
+                            <div className="flex items-center justify-between sm:block sm:text-right shrink-0">
+                              <p className="text-xl sm:text-2xl font-bold">₹{option.price.toLocaleString('en-IN')}</p>
                               {savings > 0 && !isComingSoon && (
-                                <p className="text-xs text-candlestick-green mt-0.5">
+                                <p className="text-[10px] sm:text-xs text-candlestick-green mt-0.5">
                                   With account: <span className="font-semibold">₹{accountPrice.toLocaleString('en-IN')}</span>
                                 </p>
                               )}
@@ -1282,7 +1284,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                                   Available Soon
                                 </Button>
                               ) : (
-                                <Button size="sm" className="mt-2 bg-coke-red hover:bg-red-600 text-white" onClick={() => handleSelectCourier(option)}>
+                                <Button size="sm" className="mt-2 bg-coke-red hover:bg-red-600 text-white" onClick={() => { feedbackPresets.select(); handleSelectCourier(option); }}>
                                   Book Now
                                 </Button>
                               )}
@@ -1381,24 +1383,25 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                       </div>
                     )}
                     {filteredDomestic.map((c: any) => (
-                    <div key={c.courier_company_id} className="bg-card rounded-xl border border-border p-4 hover:border-coke-red/30 transition-colors">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <h3 className="font-semibold">{c.courier_name}</h3>
-                            <span className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground capitalize">{c.mode}</span>
+                    <div key={c.courier_company_id} className="bg-card rounded-xl border border-border p-3 sm:p-4 hover:border-coke-red/30 transition-colors">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <h3 className="font-semibold text-sm sm:text-base truncate">{c.courier_name}</h3>
+                            <span className="text-[10px] sm:text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground capitalize shrink-0">{c.mode}</span>
                             {c.is_recommended && (
-                              <span className="text-xs px-2 py-0.5 rounded-full bg-candlestick-green/10 text-candlestick-green font-medium">Cheapest</span>
+                              <span className="text-[10px] sm:text-xs px-2 py-0.5 rounded-full bg-candlestick-green/10 text-candlestick-green font-medium shrink-0">Cheapest</span>
                             )}
                           </div>
-                          <p className="text-sm text-muted-foreground mt-1">{c.estimated_delivery_days} days delivery</p>
+                          <p className="text-xs sm:text-sm text-muted-foreground mt-1">{c.estimated_delivery_days} days delivery</p>
                         </div>
-                        <div className="text-right shrink-0 ml-4">
-                          <p className="text-2xl font-bold">₹{c.customer_price?.toLocaleString('en-IN')}</p>
-                          <div className="text-xs text-muted-foreground mt-0.5">
-                            Base: ₹{c.shipping_charge?.toLocaleString('en-IN')} + GST: ₹{c.gst_amount?.toLocaleString('en-IN')}
-                          </div>
-                          <Button size="sm" className="mt-2 bg-coke-red hover:bg-red-600 text-white" onClick={() => handleSelectCourier(c)}>
+                        <div className="flex items-center justify-between sm:block sm:text-right shrink-0">
+                          <div>
+                            <p className="text-xl sm:text-2xl font-bold">₹{c.customer_price?.toLocaleString('en-IN')}</p>
+                            <div className="text-[10px] sm:text-xs text-muted-foreground mt-0.5">
+                              Base: ₹{c.shipping_charge?.toLocaleString('en-IN')} + GST: ₹{c.gst_amount?.toLocaleString('en-IN')}
+                            </div>
+                          <Button size="sm" className="mt-2 bg-coke-red hover:bg-red-600 text-white" onClick={() => { feedbackPresets.select(); handleSelectCourier(c); }}>
                             Book Now
                           </Button>
                         </div>
@@ -1427,7 +1430,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
             )}
 
             {/* Sub-step indicator — 3 steps for domestic, 4 for international */}
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto">
               {(isInternational
                 ? (['pickup', 'sender', 'receiver', 'content'] as const)
                 : (['pickup', 'receiver', 'content'] as const)
@@ -1436,18 +1439,18 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                 const currentIdx = stepOrder.indexOf(addressSubStep);
                 const labels = isInternational ? ['Pickup Details', 'Sender / KYC', 'Receiver', 'Contents'] : ['Pickup Address', 'Recipient Address', 'Contents'];
                 return (
-                  <div key={s} className="flex items-center gap-2 flex-1">
-                    <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-colors ${
+                  <div key={s} className="flex items-center gap-1.5 sm:gap-2 flex-1 min-w-0">
+                    <div className={`w-6 h-6 sm:w-7 sm:h-7 rounded-full flex items-center justify-center text-[10px] sm:text-xs font-bold transition-colors shrink-0 ${
                       s === addressSubStep ? 'bg-coke-red text-white' :
                       currentIdx > i ? 'bg-candlestick-green text-white' :
                       'bg-muted text-muted-foreground'
                     }`}>
                       {currentIdx > i ? '✓' : i + 1}
                     </div>
-                    <span className={`text-xs hidden sm:inline ${s === addressSubStep ? 'font-medium text-foreground' : 'text-muted-foreground'}`}>
+                    <span className={`text-[10px] sm:text-xs hidden sm:inline truncate ${s === addressSubStep ? 'font-medium text-foreground' : 'text-muted-foreground'}`}>
                       {labels[i]}
                     </span>
-                    {i < arr.length - 1 && <div className="flex-1 h-px bg-border" />}
+                    {i < arr.length - 1 && <div className="flex-1 h-px bg-border min-w-2" />}
                   </div>
                 );
               })}
@@ -1461,18 +1464,18 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                     {/* ── Step 1: Pickup Address ── */}
                     {addressSubStep === 'pickup' && (
                       <motion.div key="pickup" initial={{ x: 300, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: -300, opacity: 0 }} transition={{ duration: 0.3, ease: 'easeInOut' }}
-                        className="bg-card rounded-2xl border border-border p-8 lg:p-10 space-y-5">
+                        className="bg-card rounded-xl sm:rounded-2xl border border-border p-4 sm:p-8 lg:p-10 space-y-4 sm:space-y-5">
                         <div className="flex items-center gap-3 mb-1">
-                          <div className="w-10 h-10 rounded-full bg-orange-100 dark:bg-orange-950/40 flex items-center justify-center">
-                            <House className="h-5 w-5 text-orange-600" weight="duotone" />
+                          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-orange-100 dark:bg-orange-950/40 flex items-center justify-center shrink-0">
+                            <House className="h-4 w-4 sm:h-5 sm:w-5 text-orange-600" weight="duotone" />
                           </div>
-                          <div>
-                            <h3 className="font-semibold text-base">Indian Pickup Address</h3>
-                            <p className="text-xs text-muted-foreground">Where should we collect the shipment from?</p>
+                          <div className="min-w-0">
+                            <h3 className="font-semibold text-sm sm:text-base">Indian Pickup Address</h3>
+                            <p className="text-[11px] sm:text-xs text-muted-foreground">Where should we collect the shipment from?</p>
                           </div>
                         </div>
-                        <div className="space-y-4">
-                          <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-3 sm:space-y-4">
+                          <div className="grid grid-cols-1 xs:grid-cols-2 gap-3 sm:gap-4">
                             <FormField control={detailsForm.control} name="senderName" render={({ field }) => (
                               <FormItem><FormLabel>Full Name</FormLabel><FormControl><Input {...field} placeholder="Sender name" className="h-11" /></FormControl><FormMessage /></FormItem>
                             )} />
@@ -1496,7 +1499,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                               <FormMessage />
                             </FormItem>
                           )} />
-                          <div className="grid grid-cols-2 gap-4">
+                          <div className="grid grid-cols-1 xs:grid-cols-2 gap-3 sm:gap-4">
                             <FormField control={detailsForm.control} name="senderCity" render={({ field }) => (
                               <FormItem>
                                 <FormLabel>City / District</FormLabel>
@@ -1533,7 +1536,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                             <p className="text-xs text-candlestick-green flex items-center gap-1">📍 {senderLookup.district}, {senderLookup.state}</p>
                           )}
                         </div>
-                        <Button type="button" onClick={handlePickupNext} className="w-full bg-coke-red hover:bg-red-600 text-white gap-2 py-5">
+                        <Button type="button" onClick={() => { feedbackPresets.stepChange(); handlePickupNext(); }} className="w-full bg-coke-red hover:bg-red-600 text-white gap-2 py-5">
                           {isInternational ? 'Next: Sender Details' : 'Next: Recipient Details'} <ArrowRight className="h-4 w-4" />
                         </Button>
                       </motion.div>
@@ -1542,14 +1545,14 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                     {/* ── Step 2: Sender Details + Aadhaar (International only) ── */}
                     {isInternational && addressSubStep === 'sender' && (
                       <motion.div key="sender" initial={{ x: 300, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: -300, opacity: 0 }} transition={{ duration: 0.3, ease: 'easeInOut' }}
-                        className="bg-card rounded-2xl border border-border p-8 lg:p-10 space-y-5">
+                        className="bg-card rounded-xl sm:rounded-2xl border border-border p-4 sm:p-8 lg:p-10 space-y-4 sm:space-y-5">
                         <div className="flex items-center gap-3 mb-1">
-                          <div className="w-10 h-10 rounded-full bg-coke-red/10 flex items-center justify-center">
-                            <User className="h-5 w-5 text-coke-red" weight="duotone" />
+                          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-coke-red/10 flex items-center justify-center shrink-0">
+                            <User className="h-4 w-4 sm:h-5 sm:w-5 text-coke-red" weight="duotone" />
                           </div>
-                          <div>
-                            <h3 className="font-semibold text-base">Sender Details</h3>
-                            <p className="text-xs text-muted-foreground">{requiresAadhaarKyc ? 'Verify your identity for customs compliance' : 'Your contact information'}</p>
+                          <div className="min-w-0">
+                            <h3 className="font-semibold text-sm sm:text-base">Sender Details</h3>
+                            <p className="text-[11px] sm:text-xs text-muted-foreground">{requiresAadhaarKyc ? 'Verify your identity for customs compliance' : 'Your contact information'}</p>
                           </div>
                         </div>
 
@@ -1574,7 +1577,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                             <span>Sender name must match your Aadhaar card exactly. This is required for medicine customs clearance under CSB-IV.</span>
                           </div>
                         )}
-                        <div className="space-y-4">
+                        <div className="space-y-3 sm:space-y-4">
                           {/* Low confidence warning */}
                           {requiresAadhaarKyc && ocrResult?.fieldConfidence && Object.entries(ocrResult.fieldConfidence).some(([,v]) => v > 0 && v < 60) && (
                             <div className="rounded-lg border border-amber-200 dark:border-amber-800/40 bg-amber-50 dark:bg-amber-950/20 p-2.5 text-xs text-amber-800 dark:text-amber-300 flex items-start gap-2">
@@ -1582,7 +1585,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                               <span>Some fields may be inaccurate (highlighted in amber). Please verify and correct them.</span>
                             </div>
                           )}
-                          <div className="grid grid-cols-2 gap-4">
+                          <div className="grid grid-cols-1 xs:grid-cols-2 gap-3 sm:gap-4">
                             <FormField control={detailsForm.control} name="senderName" render={({ field }) => {
                               const isLocked = !!(requiresAadhaarKyc && !ocrResult);
                               const fc = ocrResult?.fieldConfidence?.name ?? 100;
@@ -1754,7 +1757,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                             </FormItem>
                             );
                           }} />
-                          <div className="grid grid-cols-3 gap-3">
+                          <div className="grid grid-cols-1 xs:grid-cols-3 gap-3">
                             <FormField control={detailsForm.control} name="senderCity" render={({ field }) => {
                               const isLocked = !!(requiresAadhaarKyc && !ocrResult);
                               const fc = ocrResult?.fieldConfidence?.city ?? 100;
@@ -1793,10 +1796,10 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                           </div>
                         </div>
                         <div className="flex gap-3">
-                          <Button type="button" variant="outline" onClick={() => setAddressSubStep('pickup')} className="flex-1 gap-1.5">
+                          <Button type="button" variant="outline" onClick={() => { feedbackPresets.tap(); setAddressSubStep('pickup'); }} className="flex-1 gap-1.5">
                             <ArrowLeft className="h-4 w-4" /> Pickup
                           </Button>
-                          <Button type="button" onClick={handleSenderNext} disabled={isUnderAge} className="flex-1 bg-coke-red hover:bg-red-600 text-white gap-2">
+                          <Button type="button" onClick={() => { feedbackPresets.stepChange(); handleSenderNext(); }} disabled={isUnderAge} className="flex-1 bg-coke-red hover:bg-red-600 text-white gap-2">
                             Next: Receiver <ArrowRight className="h-4 w-4" />
                           </Button>
                         </div>
@@ -1806,14 +1809,14 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                     {/* ── Step 3: Receiver Details + Passport (for medicine) ── */}
                     {addressSubStep === 'receiver' && (
                       <motion.div key="receiver" initial={{ x: 300, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: -300, opacity: 0 }} transition={{ duration: 0.3, ease: 'easeInOut' }}
-                        className="bg-card rounded-2xl border border-border p-8 lg:p-10 space-y-5">
+                        className="bg-card rounded-xl sm:rounded-2xl border border-border p-4 sm:p-8 lg:p-10 space-y-4 sm:space-y-5">
                         <div className="flex items-center gap-3 mb-1">
-                          <div className="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-950/40 flex items-center justify-center">
-                            <Globe className="h-5 w-5 text-blue-600" weight="duotone" />
+                          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-blue-100 dark:bg-blue-950/40 flex items-center justify-center shrink-0">
+                            <Globe className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600" weight="duotone" />
                           </div>
-                          <div>
-                            <h3 className="font-semibold text-base">Receiver Details</h3>
-                            <p className="text-xs text-muted-foreground">{isInternational ? 'Delivery address abroad' : 'Delivery address in India'}</p>
+                          <div className="min-w-0">
+                            <h3 className="font-semibold text-sm sm:text-base">Receiver Details</h3>
+                            <p className="text-[11px] sm:text-xs text-muted-foreground">{isInternational ? 'Delivery address abroad' : 'Delivery address in India'}</p>
                           </div>
                         </div>
                         {isMedicineFlow && (
@@ -1828,11 +1831,11 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                             <span>Address format for {destinationCountryInfo.name}: {getAddressGuidance()}</span>
                           </div>
                         )}
-                        <div className="space-y-4">
-                          <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-3 sm:space-y-4">
+                          <div className="grid grid-cols-1 xs:grid-cols-2 gap-3 sm:gap-4">
                             <FormField control={detailsForm.control} name="receiverName" render={({ field }) => (
                               <FormItem>
-                                <FormLabel>{isMedicineFlow ? 'Full Name (as per Passport)' : 'Full Name'}</FormLabel>
+                                <FormLabel className="text-xs sm:text-sm">{isMedicineFlow ? 'Full Name (as per Passport)' : 'Full Name'}</FormLabel>
                                 <FormControl><Input {...field} placeholder={isMedicineFlow ? 'Name exactly as on passport' : 'Receiver name'} className="h-11" /></FormControl>
                                 <FormMessage />
                               </FormItem>
@@ -1855,7 +1858,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                               <FormMessage />
                             </FormItem>
                           )} />
-                          <div className={`grid ${isInternational ? 'grid-cols-3' : 'grid-cols-2'} gap-4`}>
+                          <div className={`grid ${isInternational ? 'grid-cols-1 xs:grid-cols-3' : 'grid-cols-1 xs:grid-cols-2'} gap-3 sm:gap-4`}>
                             <FormField control={detailsForm.control} name="receiverCity" render={({ field }) => (
                               <FormItem>
                                 <FormLabel>{isInternational ? 'City' : 'City / District'}</FormLabel>
@@ -1918,7 +1921,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                                   <li>Address page: capture the page with the current address</li>
                                 </ul>
                               </div>
-                              <div className="grid grid-cols-2 gap-4">
+                              <div className="grid grid-cols-1 xs:grid-cols-2 gap-4">
                                 <div className="space-y-2">
                                   <label className="text-sm font-medium">Identity Page (Photo side)</label>
                                   <label className="flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-blue-400/40 bg-blue-50/50 dark:bg-blue-950/20 hover:bg-blue-100/50 p-4 cursor-pointer transition-colors">
@@ -1946,10 +1949,10 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                           )}
                         </div>
                         <div className="flex gap-3">
-                          <Button type="button" variant="outline" onClick={() => setAddressSubStep(isInternational ? 'sender' : 'pickup')} className="flex-1 gap-1.5">
+                          <Button type="button" variant="outline" onClick={() => { feedbackPresets.tap(); setAddressSubStep(isInternational ? 'sender' : 'pickup'); }} className="flex-1 gap-1.5">
                             <ArrowLeft className="h-4 w-4" /> {isInternational ? 'Sender' : 'Pickup'}
                           </Button>
-                          <Button type="button" onClick={handleReceiverNext} className="flex-1 bg-coke-red hover:bg-red-600 text-white gap-2">
+                          <Button type="button" onClick={() => { feedbackPresets.stepChange(); handleReceiverNext(); }} className="flex-1 bg-coke-red hover:bg-red-600 text-white gap-2">
                             Next: Contents <ArrowRight className="h-4 w-4" />
                           </Button>
                         </div>
@@ -1964,15 +1967,15 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                         animate={{ x: 0, opacity: 1 }}
                         exit={{ x: -300, opacity: 0 }}
                         transition={{ duration: 0.3, ease: 'easeInOut' }}
-                        className="bg-card rounded-2xl border border-border p-8 lg:p-10 space-y-5"
+                        className="bg-card rounded-xl sm:rounded-2xl border border-border p-4 sm:p-8 lg:p-10 space-y-4 sm:space-y-5"
                       >
                         <div className="flex items-center gap-3 mb-1">
-                          <div className="w-10 h-10 rounded-full bg-purple-100 dark:bg-purple-950/40 flex items-center justify-center">
-                            <FileText className="h-5 w-5 text-purple-600" weight="duotone" />
+                          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-purple-100 dark:bg-purple-950/40 flex items-center justify-center shrink-0">
+                            <FileText className="h-4 w-4 sm:h-5 sm:w-5 text-purple-600" weight="duotone" />
                           </div>
-                          <div>
-                            <h3 className="font-semibold text-base">Shipment Contents</h3>
-                            <p className="text-xs text-muted-foreground">{isMedicineFlow ? 'Add each medicine for customs declaration' : isDocumentFlow ? 'Document details for customs declaration' : isInternational ? 'Add each item for customs declaration' : 'Describe what you are shipping'}</p>
+                          <div className="min-w-0">
+                            <h3 className="font-semibold text-sm sm:text-base">Shipment Contents</h3>
+                            <p className="text-[11px] sm:text-xs text-muted-foreground">{isMedicineFlow ? 'Add each medicine for customs declaration' : isDocumentFlow ? 'Document details for customs declaration' : isInternational ? 'Add each item for customs declaration' : 'Describe what you are shipping'}</p>
                           </div>
                         </div>
 
@@ -2055,7 +2058,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                                   </button>
                                 )}
                               </div>
-                              <div className="grid grid-cols-2 gap-3">
+                              <div className="grid grid-cols-1 xs:grid-cols-2 gap-3">
                                 <div>
                                   <label className="text-xs font-medium">{isMedicineFlow ? 'Medicine Name' : 'Item Name'}</label>
                                   {isMedicineFlow ? (
@@ -2128,9 +2131,9 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                                   </Select>
                                 </div>
                               )}
-                              <div className="grid grid-cols-3 gap-3">
+                              <div className="grid grid-cols-3 gap-2 sm:gap-3">
                                 <div>
-                                  <label className="text-xs font-medium">HSN Code</label>
+                                  <label className="text-[11px] sm:text-xs font-medium">HSN Code</label>
                                   <div className="relative">
                                     <Input list={`hsn-list-${idx}`} value={item.hsnCode} onChange={(e) => { const arr = [...contentItems]; arr[idx].hsnCode = e.target.value; setContentItems(arr); }} placeholder="Search or type HSN" className="h-10 mt-1" />
                                     <datalist id={`hsn-list-${idx}`}>
@@ -2284,10 +2287,11 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                         )} />
 
                         <div className="flex gap-3">
-                          <Button type="button" variant="outline" onClick={() => setAddressSubStep('receiver')} className="flex-1 gap-1.5">
+                          <Button type="button" variant="outline" onClick={() => { feedbackPresets.tap(); setAddressSubStep('receiver'); }} className="flex-1 gap-1.5">
                             <ArrowLeft className="h-4 w-4" /> Receiver
                           </Button>
                           <Button type="button" onClick={() => {
+                            feedbackPresets.stepChange();
                             if (isDocumentFlow) {
                               const docType = contentItems[0]?.type;
                               if (!docType) { return; }
@@ -2377,6 +2381,21 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* ═══════════════ Mobile/Tablet Fixed Bottom Progress Bar ═══════════════ */}
+      <div className="fixed bottom-0 left-0 right-0 z-50 md:hidden bg-background/95 backdrop-blur-xl border-t border-border/50 px-4 py-3 safe-area-pb">
+        <div className="flex items-center gap-2 max-w-3xl mx-auto">
+          {stepLabels.map((label, i) => (
+            <div key={label} className="flex-1">
+              <div className={`h-1.5 rounded-full transition-all duration-500 ${i + 1 <= step ? 'bg-coke-red' : 'bg-muted'}`} />
+            </div>
+          ))}
+        </div>
+        <div className="flex items-center justify-between mt-1.5 max-w-3xl mx-auto">
+          <p className="text-[11px] font-medium text-foreground">Step {step} of {stepLabels.length}</p>
+          <p className="text-[11px] text-muted-foreground">{stepLabels[step - 1]}</p>
+        </div>
+      </div>
     </div>
   );
 }

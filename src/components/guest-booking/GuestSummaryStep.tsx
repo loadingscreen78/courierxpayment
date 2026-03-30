@@ -19,6 +19,7 @@ import { useToast } from '@/hooks/use-toast';
 import { loadCashfreeScript } from '@/lib/wallet/cashfreeLoader';
 import { calculateRate } from '@/lib/shipping/rateCalculator';
 import { motion, AnimatePresence } from 'framer-motion';
+import { feedbackPresets } from '@/lib/haptics';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -666,7 +667,7 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
                   <button
                     key={doc.value}
                     type="button"
-                    onClick={() => { setKycDocType(doc.value); }}
+                    onClick={() => { feedbackPresets.select(); setKycDocType(doc.value); }}
                     className={`rounded-lg border-2 px-3 py-2.5 text-xs font-medium text-center transition-all ${
                       kycDocType === doc.value
                         ? 'border-coke-red bg-coke-red/5 text-coke-red'
@@ -848,7 +849,7 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
                     onChange={handleAadhaarChange}
                   />
                   <Button
-                    onClick={() => { handleVerifyAadhaar(); }}
+                    onClick={() => { feedbackPresets.tap(); handleVerifyAadhaar(); }}
                     disabled={aadhaarLoading || aadhaarInput.length !== 12}
                     className="bg-blue-600 hover:bg-blue-700 text-white shrink-0"
                   >
@@ -887,7 +888,7 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
               onChange={e => setCouponCode(e.target.value.toUpperCase())}
               className="flex-1 uppercase"
             />
-            <Button variant="outline" onClick={handleApplyCoupon} disabled={couponLoading || !couponCode.trim()}>
+            <Button variant="outline" onClick={() => { feedbackPresets.tap(); handleApplyCoupon(); }} disabled={couponLoading || !couponCode.trim()}>
               {couponLoading ? <CircleNotch className="h-4 w-4 animate-spin" /> : 'Apply'}
             </Button>
           </div>
@@ -965,7 +966,7 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
 
       {/* ── Pay Button ── */}
       <Button
-        onClick={handlePayNow}
+        onClick={() => { feedbackPresets.tap(); handlePayNow(); }}
         disabled={paymentLoading || (isDomestic ? !kycDocFile : !aadhaarVerified) || !termsAccepted}
         className="w-full bg-coke-red hover:bg-red-600 text-white gap-2 py-5 sm:py-6 text-sm sm:text-base shadow-lg shadow-coke-red/20"
       >
