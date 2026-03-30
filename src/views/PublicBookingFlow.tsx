@@ -20,7 +20,9 @@ import { useToast } from '@/hooks/use-toast';
 import { getCourierOptions, calculateRate, type CourierOption } from '@/lib/shipping/rateCalculator';
 import { getAllCountriesForDropdown, getCountryByCode } from '@/lib/shipping/countries';
 import GuestSummaryStep from '@/components/guest-booking/GuestSummaryStep';
+import AadhaarKycUpload from '@/components/guest-booking/AadhaarKycUpload';
 import { usePincodeLookup } from '@/hooks/usePincodeLookup';
+import { useAadhaarOcr } from '@/hooks/useAadhaarOcr';
 import { INDIAN_STATES } from '@/lib/pincode-lookup';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -335,6 +337,11 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
   const [intlZipLookup, setIntlZipLookup] = useState<{ loading: boolean; city: string; state: string; error: string }>({ loading: false, city: '', state: '', error: '' });
   const [showWeightLimitModal, setShowWeightLimitModal] = useState(false);
 
+  // ── Aadhaar OCR state ──
+  const { ocrResult, isProcessing: ocrProcessing, ocrError, processAadhaar, clearOcr } = useAadhaarOcr();
+  const [extractedAadhaarNumber, setExtractedAadhaarNumber] = useState('');
+  const [isUnderAge, setIsUnderAge] = useState(false);
+
   // ── Email OTP verification state ──
   const [emailOtpState, setEmailOtpState] = useState<'idle' | 'sending' | 'sent' | 'verifying' | 'verified'>('idle');
   const [emailOtpCode, setEmailOtpCode] = useState(['', '', '', '', '', '']);
@@ -370,6 +377,9 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
   const isDocumentIntl = watchedIntlType === 'document';
   const isMedicineFlow = isInternational && rateFormData && 'shipmentType' in rateFormData && rateFormData.shipmentType === 'medicine';
   const isDocumentFlow = isInternational && rateFormData && 'shipmentType' in rateFormData && rateFormData.shipmentType === 'document';
+  const isGiftFlow = isInternational && rateFormData && 'shipmentType' in rateFormData && rateFormData.shipmentType === 'gift';
+  // All international guest flows require Aadhaar KYC
+  const requiresAadhaarKyc = isInternational && (isMedicineFlow || isDocumentFlow || isGiftFlow);
   const destinationCountryInfo = isInternational && rateFormData && 'destinationCountry' in rateFormData
     ? getCountryByCode((rateFormData as InternationalRateValues).destinationCountry) : null;
 
@@ -567,6 +577,62 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
     setStep(4);
   };
 
+  // ── Aadhaar OCR processing + auto-fill ──
+  const handleAadhaarProcess = useCallback(async () => {
+    if (!aadhaarFront) return;
+    const result = await processAadhaar(aadhaarFront, aadhaarBack);
+    if (!result) return;
+
+    // Age gate: block if under 18
+    if (result.age !== null && result.age < 18) {
+      setIsUnderAge(true);
+      return;
+    }
+    setIsUnderAge(false);
+
+    // Store extracted Aadhaar number for summary page auto-fill
+    if (result.aadhaarNumber) {
+      setExtractedAadhaarNumber(result.aadhaarNumber);
+    }
+
+    // Auto-fill sender form fields from OCR (only if currently empty or user hasn't typed)
+    if (result.name) {
+      const current = detailsForm.getValues('senderName');
+      if (!current) detailsForm.setValue('senderName', result.name);
+    }
+    if (result.address) {
+      const current = detailsForm.getValues('senderAddress');
+      if (!current) detailsForm.setValue('senderAddress', result.address);
+    }
+    if (result.city) {
+      const current = detailsForm.getValues('senderCity');
+      if (!current) detailsForm.setValue('senderCity', result.city);
+    }
+    if (result.state) {
+      detailsForm.setValue('senderState', result.state);
+    }
+    if (result.pincode) {
+      const current = detailsForm.getValues('senderPincode');
+      // For international flows, pincode isn't locked from rate form
+      if (!current || isInternational) detailsForm.setValue('senderPincode', result.pincode);
+    }
+    if (result.phone) {
+      const current = detailsForm.getValues('senderPhone');
+      if (!current) detailsForm.setValue('senderPhone', result.phone);
+    }
+  }, [aadhaarFront, aadhaarBack, processAadhaar, detailsForm, isInternational]);
+
+  // ── One-click rectify: overwrite sender fields with OCR data ──
+  const handleRectifyFromAadhaar = useCallback(() => {
+    if (!ocrResult) return;
+    if (ocrResult.name) detailsForm.setValue('senderName', ocrResult.name);
+    if (ocrResult.address) detailsForm.setValue('senderAddress', ocrResult.address);
+    if (ocrResult.city) detailsForm.setValue('senderCity', ocrResult.city);
+    if (ocrResult.state) detailsForm.setValue('senderState', ocrResult.state);
+    if (ocrResult.pincode) detailsForm.setValue('senderPincode', ocrResult.pincode);
+    if (ocrResult.phone) detailsForm.setValue('senderPhone', ocrResult.phone);
+  }, [ocrResult, detailsForm]);
+
   // ── Validate pickup address fields before sliding to sender ──
   const handlePickupNext = async () => {
     const pickupFields = ['senderName', 'senderPhone', 'senderAddress', 'senderCity', 'senderState', 'senderPincode'] as const;
@@ -579,6 +645,11 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
     const senderFields = ['senderName', 'senderPhone', 'senderEmail'] as const;
     const result = await detailsForm.trigger(senderFields);
     if (!result) return;
+    // Block if under 18
+    if (isUnderAge) {
+      toast({ title: 'Age Restriction', description: 'Sender must be 18 years or older to book a shipment.', variant: 'destructive' });
+      return;
+    }
     // Require email verification for international flows
     if (isInternational && emailOtpState !== 'verified') {
       toast({ title: 'Email not verified', description: 'Please verify your email address before continuing.', variant: 'destructive' });
@@ -1406,9 +1477,23 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                           </div>
                           <div>
                             <h3 className="font-semibold text-base">Indian Pickup Address</h3>
-                            <p className="text-xs text-muted-foreground">Where should we collect the shipment from?</p>
+                            <p className="text-xs text-muted-foreground">{requiresAadhaarKyc ? 'Upload Aadhaar to auto-fill, or enter manually' : 'Where should we collect the shipment from?'}</p>
                           </div>
                         </div>
+                        {/* Aadhaar KYC Upload — auto-fills address fields below */}
+                        {requiresAadhaarKyc && (
+                          <AadhaarKycUpload
+                            aadhaarFront={aadhaarFront}
+                            aadhaarBack={aadhaarBack}
+                            onFrontChange={setAadhaarFront}
+                            onBackChange={setAadhaarBack}
+                            ocrResult={ocrResult}
+                            isProcessing={ocrProcessing}
+                            ocrError={ocrError}
+                            onProcess={handleAadhaarProcess}
+                            isUnderAge={isUnderAge}
+                          />
+                        )}
                         <div className="space-y-4">
                           <div className="grid grid-cols-2 gap-4">
                             <FormField control={detailsForm.control} name="senderName" render={({ field }) => (
@@ -1471,7 +1556,16 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                             <p className="text-xs text-candlestick-green flex items-center gap-1">📍 {senderLookup.district}, {senderLookup.state}</p>
                           )}
                         </div>
-                        <Button type="button" onClick={handlePickupNext} className="w-full bg-coke-red hover:bg-red-600 text-white gap-2 py-5">
+                        {/* One-click rectify: re-sync pickup fields with Aadhaar OCR data */}
+                        {requiresAadhaarKyc && ocrResult && !isUnderAge && (
+                          <div className="flex justify-end">
+                            <Button type="button" variant="outline" size="sm" onClick={handleRectifyFromAadhaar} className="gap-1.5 text-xs">
+                              <IdentificationCard className="h-3.5 w-3.5" weight="duotone" />
+                              Re-sync from Aadhaar
+                            </Button>
+                          </div>
+                        )}
+                        <Button type="button" onClick={handlePickupNext} disabled={isUnderAge} className="w-full bg-coke-red hover:bg-red-600 text-white gap-2 py-5">
                           Next: Sender Details <ArrowRight className="h-4 w-4" />
                         </Button>
                       </motion.div>
@@ -1487,7 +1581,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                           </div>
                           <div>
                             <h3 className="font-semibold text-base">Sender Details</h3>
-                            <p className="text-xs text-muted-foreground">{isMedicineFlow ? 'Name and details as per Aadhaar card' : 'Your contact information'}</p>
+                            <p className="text-xs text-muted-foreground">{requiresAadhaarKyc ? 'Name and details as per Aadhaar card' : 'Your contact information'}</p>
                           </div>
                         </div>
                         {isMedicineFlow && (
@@ -1642,45 +1736,13 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                               </div>
                             </motion.div>
                           )}
-                          {isMedicineFlow && (
-                            <div className="space-y-4 pt-2">
-                              <div className="flex items-center gap-2">
-                                <IdentificationCard className="h-5 w-5 text-[#FF6B00]" weight="duotone" />
-                                <h4 className="font-semibold text-sm">Aadhaar Card Upload</h4>
-                              </div>
-                              <div className="rounded-lg border border-amber-200 dark:border-amber-800/40 bg-amber-50 dark:bg-amber-950/20 p-3 text-xs space-y-1">
-                                <p className="font-medium text-amber-900 dark:text-amber-200">How to capture a clear Aadhaar photo:</p>
-                                <ul className="list-disc list-inside text-amber-800 dark:text-amber-300 space-y-0.5">
-                                  <li>Place Aadhaar on a flat, well-lit surface</li>
-                                  <li>Avoid glare, shadows, or blurry edges</li>
-                                  <li>All 4 corners of the card must be visible</li>
-                                  <li>Name, address, and Aadhaar number must be readable</li>
-                                </ul>
-                              </div>
-                              <div className="grid grid-cols-2 gap-4">
-                                <div className="space-y-2">
-                                  <label className="text-sm font-medium">Front Side</label>
-                                  <label className="flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-[#FF6B00]/40 bg-[#FF6B00]/5 hover:bg-[#FF6B00]/10 p-4 cursor-pointer transition-colors">
-                                    <input type="file" accept="image/*,.pdf" className="hidden" onChange={(e) => { if (e.target.files?.[0]) setAadhaarFront(e.target.files[0]); }} />
-                                    {aadhaarFront ? (
-                                      <div className="text-center"><IdentificationCard className="h-8 w-8 text-candlestick-green mx-auto" weight="duotone" /><p className="text-xs font-medium text-candlestick-green mt-1">Uploaded</p><p className="text-xs text-muted-foreground truncate max-w-[120px]">{aadhaarFront.name}</p></div>
-                                    ) : (
-                                      <div className="text-center"><Upload className="h-6 w-6 text-[#FF6B00] mx-auto" weight="duotone" /><p className="text-xs font-medium text-[#FF6B00]">Upload Front</p><p className="text-[10px] text-muted-foreground">JPG, PNG or PDF</p></div>
-                                    )}
-                                  </label>
-                                </div>
-                                <div className="space-y-2">
-                                  <label className="text-sm font-medium">Back Side</label>
-                                  <label className="flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-[#FF6B00]/40 bg-[#FF6B00]/5 hover:bg-[#FF6B00]/10 p-4 cursor-pointer transition-colors">
-                                    <input type="file" accept="image/*,.pdf" className="hidden" onChange={(e) => { if (e.target.files?.[0]) setAadhaarBack(e.target.files[0]); }} />
-                                    {aadhaarBack ? (
-                                      <div className="text-center"><IdentificationCard className="h-8 w-8 text-candlestick-green mx-auto" weight="duotone" /><p className="text-xs font-medium text-candlestick-green mt-1">Uploaded</p><p className="text-xs text-muted-foreground truncate max-w-[120px]">{aadhaarBack.name}</p></div>
-                                    ) : (
-                                      <div className="text-center"><Upload className="h-6 w-6 text-[#FF6B00] mx-auto" weight="duotone" /><p className="text-xs font-medium text-[#FF6B00]">Upload Back</p><p className="text-[10px] text-muted-foreground">JPG, PNG or PDF</p></div>
-                                    )}
-                                  </label>
-                                </div>
-                              </div>
+                          {/* One-click rectify: sync sender fields with Aadhaar data */}
+                          {requiresAadhaarKyc && ocrResult && !isUnderAge && (
+                            <div className="flex justify-end">
+                              <Button type="button" variant="outline" size="sm" onClick={handleRectifyFromAadhaar} className="gap-1.5 text-xs">
+                                <IdentificationCard className="h-3.5 w-3.5" weight="duotone" />
+                                Sync with Aadhaar
+                              </Button>
                             </div>
                           )}
                         </div>
@@ -2219,6 +2281,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
             selectedCourier={selectedCourier}
             senderReceiver={senderReceiverData}
             onBack={() => setStep(3)}
+            extractedAadhaarNumber={extractedAadhaarNumber}
           />
         )}
       </main>

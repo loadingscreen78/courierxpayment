@@ -34,6 +34,8 @@ interface GuestSummaryStepProps {
   selectedCourier: any;
   senderReceiver: SenderReceiver;
   onBack: () => void;
+  /** Pre-extracted Aadhaar number from OCR (auto-fills the verification field) */
+  extractedAadhaarNumber?: string;
 }
 
 type SummaryPhase = 'review' | 'aadhaar' | 'payment' | 'success';
@@ -102,13 +104,13 @@ const packingSteps = [
 
 // ── Component ────────────────────────────────────────────────────────────────
 
-export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, senderReceiver, onBack }: GuestSummaryStepProps) {
+export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, senderReceiver, onBack, extractedAadhaarNumber }: GuestSummaryStepProps) {
   const router = useRouter();
   const { toast } = useToast();
 
   const [phase, setPhase] = useState<SummaryPhase>('review');
-  const [aadhaarInput, setAadhaarInput] = useState('');
-  const [formattedAadhaar, setFormattedAadhaar] = useState('');
+  const [aadhaarInput, setAadhaarInput] = useState(extractedAadhaarNumber || '');
+  const [formattedAadhaar, setFormattedAadhaar] = useState(extractedAadhaarNumber ? formatAadhaar(extractedAadhaarNumber) : '');
   const [aadhaarVerified, setAadhaarVerified] = useState(false);
   const [aadhaarLoading, setAadhaarLoading] = useState(false);
   const [aadhaarError, setAadhaarError] = useState('');
@@ -505,8 +507,10 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
           ) : (
             <>
               <p className="text-sm text-muted-foreground">
-                Enter your 12-digit Aadhaar number for identity verification
-                {mode === 'international' ? ' (required for customs clearance).' : ' (mandatory under Indian courier regulations).'}
+                {extractedAadhaarNumber
+                  ? 'Aadhaar number auto-filled from your uploaded document. Click Verify to confirm.'
+                  : `Enter your 12-digit Aadhaar number for identity verification${mode === 'international' ? ' (required for customs clearance).' : ' (mandatory under Indian courier regulations).'}`
+                }
               </p>
               <div className="flex gap-2">
                 <Input
