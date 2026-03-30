@@ -1556,28 +1556,37 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                         )}
                         <div className="space-y-4">
                           <div className="grid grid-cols-2 gap-4">
-                            <FormField control={detailsForm.control} name="senderName" render={({ field }) => (
+                            <FormField control={detailsForm.control} name="senderName" render={({ field }) => {
+                              const isLocked = !!(requiresAadhaarKyc && !ocrResult);
+                              return (
                               <FormItem>
                                 <FormLabel>Full Name</FormLabel>
-                                <FormControl><Input {...field} placeholder="Auto-filled after Aadhaar validation" className="h-11" disabled={requiresAadhaarKyc && !ocrResult} /></FormControl>
+                                <FormControl><Input {...field} value={isLocked ? '' : field.value} placeholder="Auto-filled after validation" className={`h-11 ${isLocked ? 'bg-muted cursor-not-allowed' : ''}`} disabled={isLocked} /></FormControl>
                                 <FormMessage />
                               </FormItem>
-                            )} />
-                            <FormField control={detailsForm.control} name="senderPhone" render={({ field }) => (
-                              <FormItem><FormLabel>Phone</FormLabel><FormControl><Input {...field} placeholder="+91 98765 43210" className="h-11" disabled={requiresAadhaarKyc && !ocrResult} /></FormControl><FormMessage /></FormItem>
-                            )} />
+                              );
+                            }} />
+                            <FormField control={detailsForm.control} name="senderPhone" render={({ field }) => {
+                              const isLocked = !!(requiresAadhaarKyc && !ocrResult);
+                              return (
+                              <FormItem><FormLabel>Phone</FormLabel><FormControl><Input {...field} value={isLocked ? '' : field.value} placeholder="Auto-filled after validation" className={`h-11 ${isLocked ? 'bg-muted cursor-not-allowed' : ''}`} disabled={isLocked} /></FormControl><FormMessage /></FormItem>
+                              );
+                            }} />
                           </div>
-                          <FormField control={detailsForm.control} name="senderEmail" render={({ field }) => (
+                          <FormField control={detailsForm.control} name="senderEmail" render={({ field }) => {
+                            const isLocked = !!(requiresAadhaarKyc && !ocrResult);
+                            return (
                             <FormItem>
                               <FormLabel>Email</FormLabel>
                               <div className="flex gap-2">
                                 <FormControl>
                                   <Input
                                     {...field}
+                                    value={isLocked ? '' : field.value}
                                     type="email"
-                                    placeholder="sender@email.com"
-                                    disabled={requiresAadhaarKyc && !ocrResult}
-                                    className={`h-11 flex-1 ${emailOtpState === 'verified' ? 'border-candlestick-green bg-candlestick-green/5' : ''}`}
+                                    placeholder={isLocked ? 'Available after validation' : 'sender@email.com'}
+                                    disabled={isLocked}
+                                    className={`h-11 flex-1 ${isLocked ? 'bg-muted cursor-not-allowed' : ''} ${emailOtpState === 'verified' ? 'border-candlestick-green bg-candlestick-green/5' : ''}`}
                                     readOnly={emailOtpState === 'verified'}
                                     onChange={(e) => {
                                       field.onChange(e);
@@ -1702,39 +1711,51 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                             </motion.div>
                           )}
 
-                          {/* Sender address fields — separate from pickup address */}
-                          <FormField control={detailsForm.control} name="senderAddress" render={({ field }) => (
+                          {/* Sender address fields */}
+                          <FormField control={detailsForm.control} name="senderAddress" render={({ field }) => {
+                            const isLocked = !!(requiresAadhaarKyc && !ocrResult);
+                            return (
                             <FormItem>
                               <FormLabel>Sender Address</FormLabel>
-                              <FormControl><Input {...field} placeholder="Full address as per Aadhaar" className="h-11" disabled={requiresAadhaarKyc && !ocrResult} /></FormControl>
+                              <FormControl><Input {...field} value={isLocked ? '' : field.value} placeholder={isLocked ? 'Available after validation' : 'Full address'} className={`h-11 ${isLocked ? 'bg-muted cursor-not-allowed' : ''}`} disabled={isLocked} /></FormControl>
                               <FormMessage />
                             </FormItem>
-                          )} />
+                            );
+                          }} />
                           <div className="grid grid-cols-3 gap-3">
-                            <FormField control={detailsForm.control} name="senderCity" render={({ field }) => (
+                            <FormField control={detailsForm.control} name="senderCity" render={({ field }) => {
+                              const isLocked = !!(requiresAadhaarKyc && !ocrResult);
+                              return (
                               <FormItem>
                                 <FormLabel>City</FormLabel>
-                                <FormControl><Input {...field} placeholder="City" className="h-11" disabled={requiresAadhaarKyc && !ocrResult} /></FormControl>
+                                <FormControl><Input {...field} value={isLocked ? '' : field.value} placeholder={isLocked ? '—' : 'City'} className={`h-11 ${isLocked ? 'bg-muted cursor-not-allowed' : ''}`} disabled={isLocked} /></FormControl>
                                 <FormMessage />
                               </FormItem>
-                            )} />
-                            <FormField control={detailsForm.control} name="senderState" render={({ field }) => (
+                              );
+                            }} />
+                            <FormField control={detailsForm.control} name="senderState" render={({ field }) => {
+                              const isLocked = !!(requiresAadhaarKyc && !ocrResult);
+                              return (
                               <FormItem>
                                 <FormLabel>State</FormLabel>
-                                <Select onValueChange={field.onChange} value={field.value} disabled={requiresAadhaarKyc && !ocrResult}>
-                                  <FormControl><SelectTrigger className="h-11"><SelectValue placeholder="State" /></SelectTrigger></FormControl>
+                                <Select onValueChange={field.onChange} value={isLocked ? '' : field.value} disabled={isLocked}>
+                                  <FormControl><SelectTrigger className={`h-11 ${isLocked ? 'bg-muted cursor-not-allowed' : ''}`}><SelectValue placeholder={isLocked ? '—' : 'State'} /></SelectTrigger></FormControl>
                                   <SelectContent>{INDIAN_STATES.map(st => <SelectItem key={st} value={st}>{st}</SelectItem>)}</SelectContent>
                                 </Select>
                                 <FormMessage />
                               </FormItem>
-                            )} />
-                            <FormField control={detailsForm.control} name="senderPincode" render={({ field }) => (
+                              );
+                            }} />
+                            <FormField control={detailsForm.control} name="senderPincode" render={({ field }) => {
+                              const isLocked = !!(requiresAadhaarKyc && !ocrResult);
+                              return (
                               <FormItem>
                                 <FormLabel>Pincode</FormLabel>
-                                <FormControl><Input {...field} placeholder="110001" maxLength={6} className="h-11" disabled={requiresAadhaarKyc && !ocrResult} /></FormControl>
+                                <FormControl><Input {...field} value={isLocked ? '' : field.value} placeholder={isLocked ? '—' : '110001'} maxLength={6} className={`h-11 ${isLocked ? 'bg-muted cursor-not-allowed' : ''}`} disabled={isLocked} /></FormControl>
                                 <FormMessage />
                               </FormItem>
-                            )} />
+                              );
+                            }} />
                           </div>
                         </div>
                         <div className="flex gap-3">
