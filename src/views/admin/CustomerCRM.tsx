@@ -41,6 +41,7 @@ import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, AreaChart, Area,
 } from 'recharts';
+import { GuestUsersManagement } from '@/components/admin/GuestUsersManagement';
 
 // ─── Types ───────────────────────────────────────────────────────────
 interface Customer {
@@ -456,6 +457,9 @@ export function CustomerCRM() {
     toast.success(`Exported ${filtered.length} customers`);
   };
 
+  // ─── Active tab ──────────────────────────────────────────────────
+  const [activeTab, setActiveTab] = useState<'customers' | 'guests'>('customers');
+
   // ─── Render ────────────────────────────────────────────────────────
   return (
     <AdminLayout>
@@ -466,16 +470,54 @@ export function CustomerCRM() {
             <h1 className="text-xl font-bold text-white tracking-tight">Customer CRM</h1>
             <p className="text-sm text-gray-500 mt-0.5">{stats.total} total customers</p>
           </div>
-          <Button
-            onClick={exportCSV}
-            variant="outline"
-            size="sm"
-            className="border-white/10 text-gray-300 hover:bg-white/5 hover:text-white"
-          >
-            <Download className="h-4 w-4 mr-2" />
-            Export CSV
-          </Button>
+          {activeTab === 'customers' && (
+            <Button
+              onClick={exportCSV}
+              variant="outline"
+              size="sm"
+              className="border-white/10 text-gray-300 hover:bg-white/5 hover:text-white"
+            >
+              <Download className="h-4 w-4 mr-2" />
+              Export CSV
+            </Button>
+          )}
         </div>
+
+        {/* Tab Switcher */}
+        <div className="flex gap-1 bg-white/[0.04] border border-white/[0.06] rounded-xl p-1">
+          <button
+            onClick={() => setActiveTab('customers')}
+            className={cn(
+              "flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all",
+              activeTab === 'customers'
+                ? "bg-white/[0.08] text-white shadow-sm"
+                : "text-gray-500 hover:text-gray-300 hover:bg-white/[0.03]"
+            )}
+          >
+            <Users className="h-4 w-4" />
+            Registered Customers
+          </button>
+          <button
+            onClick={() => setActiveTab('guests')}
+            className={cn(
+              "flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all",
+              activeTab === 'guests'
+                ? "bg-purple-500/20 text-purple-300 shadow-sm"
+                : "text-gray-500 hover:text-gray-300 hover:bg-white/[0.03]"
+            )}
+          >
+            <Users className="h-4 w-4" />
+            Guest Users
+            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-purple-500/20 text-purple-400 font-bold">NEW</span>
+          </button>
+        </div>
+
+        {/* Guest Users Tab */}
+        {activeTab === 'guests' && <GuestUsersManagement />}
+
+        {/* Registered Customers Tab */}
+        {activeTab === 'customers' && (<>
+
 
         {/* KPI Cards */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
@@ -882,6 +924,8 @@ export function CustomerCRM() {
             </>
           )}
         </div>
+      </div>
+      </>)}
       </div>
 
       {/* Customer Detail Sheet */}

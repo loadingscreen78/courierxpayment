@@ -37,6 +37,7 @@ interface Shipment {
   user_id: string;
   pickup_address: any;
   consignee_address: any;
+  is_guest: boolean;
   profiles?: {
     full_name: string;
     email: string;
@@ -65,6 +66,7 @@ export default function AllShipments() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [typeFilter, setTypeFilter] = useState('all');
   const [legFilter, setLegFilter] = useState('all');
+  const [sourceFilter, setSourceFilter] = useState('all');
   const router = useRouter();
 
   useEffect(() => {
@@ -111,13 +113,26 @@ export default function AllShipments() {
             };
           });
         }
+
+        // Fetch guest booking tracking numbers to flag guest shipments
+        const { data: guestBookings } = await supabase
+          .from('guest_bookings')
+          .select('tracking_number, awb_number');
+        const guestTrackingSet = new Set<string>();
+        const guestAwbSet = new Set<string>();
+        (guestBookings || []).forEach((gb: any) => {
+          if (gb.tracking_number) guestTrackingSet.add(gb.tracking_number);
+          if (gb.awb_number) guestAwbSet.add(gb.awb_number);
+        });
+
         setShipments(rows.map((s: any) => {
           const profile = profileMap[s.user_id];
-          // Fallback: use pickup address contact info if no profile row exists
           const fallbackName = s.pickup_address?.fullName || s.pickup_address?.full_name || '';
           const fallbackPhone = s.pickup_address?.phone || '';
+          const isGuest = guestTrackingSet.has(s.tracking_number) || guestAwbSet.has(s.domestic_awb) || guestAwbSet.has(s.international_awb) || (!s.user_id && !!s.tracking_number);
           return {
             ...s,
+            is_guest: isGuest,
             profiles: profile
               ? profile
               : (fallbackName ? { full_name: fallbackName, email: '', phone: fallbackPhone } : null),
@@ -162,11 +177,13 @@ export default function AllShipments() {
     };
   }, [statusFilter, typeFilter, legFilter]);
 
-  const filteredShipments = shipments.filter(s => 
-    s.tracking_number?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    s.recipient_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    s.destination_country?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredShipments = shipments.filter(s => {
+    const matchesSearch = s.tracking_number?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      s.recipient_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      s.destination_country?.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesSource = sourceFilter === 'all' || (sourceFilter === 'guest' && s.is_guest) || (sourceFilter === 'registered' && !s.is_guest);
+    return matchesSearch && matchesSource;
+  });
 
   return (
     <AdminLayout>
@@ -227,6 +244,16 @@ export default function AllShipments() {
               <SelectItem value="international" className="text-gray-300 focus:bg-white/10 focus:text-white">🌍 International</SelectItem>
             </SelectContent>
           </Select>
+          <Select value={sourceFilter} onValueChange={setSourceFilter}>
+            <SelectTrigger className="w-full sm:w-[160px] bg-[#16161a] border-white/10 text-white">
+              <SelectValue placeholder="Source" />
+            </SelectTrigger>
+            <SelectContent className="bg-[#16161a] border-white/10">
+              <SelectItem value="all" className="text-gray-300 focus:bg-white/10 focus:text-white">All Sources</SelectItem>
+              <SelectItem value="guest" className="text-gray-300 focus:bg-white/10 focus:text-white">👤 Guest Bookings</SelectItem>
+              <SelectItem value="registered" className="text-gray-300 focus:bg-white/10 focus:text-white">✅ Registered Users</SelectItem>
+            </SelectContent>
+          </Select>
         </motion.div>
 
         {/* Stats */}
@@ -254,6 +281,10 @@ export default function AllShipments() {
           <span className="shrink-0 inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-white/5 border border-white/10 text-green-400">
             <span className="w-2 h-2 rounded-full bg-green-500" />
             Ready: {filteredShipments.filter(s => s.current_status === 'DISPATCH_APPROVED').length}
+          </span>
+          <span className="shrink-0 inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-purple-500/10 border border-purple-500/20 text-purple-400">
+            <span className="w-2 h-2 rounded-full bg-purple-500" />
+            👤 Guest: {filteredShipments.filter(s => s.is_guest).length}
           </span>
         </motion.div>
 
@@ -303,6 +334,12 @@ export default function AllShipments() {
                         ) : (
                           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-500/10 border border-blue-500/30 text-blue-400">
                             🌍 International
+                          </span>
+                        )}
+                        {/* Guest badge */}
+                        {shipment.is_guest && (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-500/10 border border-purple-500/30 text-purple-400">
+                            👤 Guest
                           </span>
                         )}
                         <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium bg-white/5 border border-white/10">
