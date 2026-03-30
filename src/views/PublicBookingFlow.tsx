@@ -1477,23 +1477,9 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                           </div>
                           <div>
                             <h3 className="font-semibold text-base">Indian Pickup Address</h3>
-                            <p className="text-xs text-muted-foreground">{requiresAadhaarKyc ? 'Upload Aadhaar to auto-fill, or enter manually' : 'Where should we collect the shipment from?'}</p>
+                            <p className="text-xs text-muted-foreground">Where should we collect the shipment from?</p>
                           </div>
                         </div>
-                        {/* Aadhaar KYC Upload — auto-fills address fields below */}
-                        {requiresAadhaarKyc && (
-                          <AadhaarKycUpload
-                            aadhaarFront={aadhaarFront}
-                            aadhaarBack={aadhaarBack}
-                            onFrontChange={setAadhaarFront}
-                            onBackChange={setAadhaarBack}
-                            ocrResult={ocrResult}
-                            isProcessing={ocrProcessing}
-                            ocrError={ocrError}
-                            onProcess={handleAadhaarProcess}
-                            isUnderAge={isUnderAge}
-                          />
-                        )}
                         <div className="space-y-4">
                           <div className="grid grid-cols-2 gap-4">
                             <FormField control={detailsForm.control} name="senderName" render={({ field }) => (
@@ -1556,16 +1542,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                             <p className="text-xs text-candlestick-green flex items-center gap-1">📍 {senderLookup.district}, {senderLookup.state}</p>
                           )}
                         </div>
-                        {/* One-click rectify: re-sync pickup fields with Aadhaar OCR data */}
-                        {requiresAadhaarKyc && ocrResult && !isUnderAge && (
-                          <div className="flex justify-end">
-                            <Button type="button" variant="outline" size="sm" onClick={handleRectifyFromAadhaar} className="gap-1.5 text-xs">
-                              <IdentificationCard className="h-3.5 w-3.5" weight="duotone" />
-                              Re-sync from Aadhaar
-                            </Button>
-                          </div>
-                        )}
-                        <Button type="button" onClick={handlePickupNext} disabled={isUnderAge} className="w-full bg-coke-red hover:bg-red-600 text-white gap-2 py-5">
+                        <Button type="button" onClick={handlePickupNext} className="w-full bg-coke-red hover:bg-red-600 text-white gap-2 py-5">
                           Next: Sender Details <ArrowRight className="h-4 w-4" />
                         </Button>
                       </motion.div>
@@ -1736,6 +1713,62 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                               </div>
                             </motion.div>
                           )}
+
+                          {/* Aadhaar KYC Upload — for all international flows */}
+                          {requiresAadhaarKyc && (
+                            <AadhaarKycUpload
+                              aadhaarFront={aadhaarFront}
+                              aadhaarBack={aadhaarBack}
+                              onFrontChange={setAadhaarFront}
+                              onBackChange={setAadhaarBack}
+                              ocrResult={ocrResult}
+                              isProcessing={ocrProcessing}
+                              ocrError={ocrError}
+                              onProcess={handleAadhaarProcess}
+                              isUnderAge={isUnderAge}
+                            />
+                          )}
+
+                          {/* Aadhaar-extracted sender address fields */}
+                          {requiresAadhaarKyc && (
+                            <div className="space-y-3 pt-1">
+                              <p className="text-xs font-medium text-muted-foreground">Sender Address (as per Aadhaar)</p>
+                              <FormField control={detailsForm.control} name="senderAddress" render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Full Address</FormLabel>
+                                  <FormControl><Input {...field} placeholder="Auto-filled from Aadhaar or enter manually" className="h-11" /></FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )} />
+                              <div className="grid grid-cols-3 gap-3">
+                                <FormField control={detailsForm.control} name="senderCity" render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel>City</FormLabel>
+                                    <FormControl><Input {...field} placeholder="City" className="h-11" /></FormControl>
+                                    <FormMessage />
+                                  </FormItem>
+                                )} />
+                                <FormField control={detailsForm.control} name="senderState" render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel>State</FormLabel>
+                                    <Select onValueChange={field.onChange} value={field.value}>
+                                      <FormControl><SelectTrigger className="h-11"><SelectValue placeholder="State" /></SelectTrigger></FormControl>
+                                      <SelectContent>{INDIAN_STATES.map(st => <SelectItem key={st} value={st}>{st}</SelectItem>)}</SelectContent>
+                                    </Select>
+                                    <FormMessage />
+                                  </FormItem>
+                                )} />
+                                <FormField control={detailsForm.control} name="senderPincode" render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel>Pincode</FormLabel>
+                                    <FormControl><Input {...field} placeholder="110001" maxLength={6} className="h-11" /></FormControl>
+                                    <FormMessage />
+                                  </FormItem>
+                                )} />
+                              </div>
+                            </div>
+                          )}
+
                           {/* One-click rectify: sync sender fields with Aadhaar data */}
                           {requiresAadhaarKyc && ocrResult && !isUnderAge && (
                             <div className="flex justify-end">
@@ -1750,7 +1783,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                           <Button type="button" variant="outline" onClick={() => setAddressSubStep('pickup')} className="flex-1 gap-1.5">
                             <ArrowLeft className="h-4 w-4" /> Pickup
                           </Button>
-                          <Button type="button" onClick={handleSenderNext} className="flex-1 bg-coke-red hover:bg-red-600 text-white gap-2">
+                          <Button type="button" onClick={handleSenderNext} disabled={isUnderAge} className="flex-1 bg-coke-red hover:bg-red-600 text-white gap-2">
                             Next: Receiver <ArrowRight className="h-4 w-4" />
                           </Button>
                         </div>

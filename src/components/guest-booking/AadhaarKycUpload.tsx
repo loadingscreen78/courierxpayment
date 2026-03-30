@@ -135,7 +135,7 @@ export default function AadhaarKycUpload({
             <CircleNotch className="h-5 w-5 animate-spin text-[#FF6B00]" />
             <div>
               <p className="text-sm font-medium">Extracting Aadhaar details...</p>
-              <p className="text-xs text-muted-foreground">This may take 10-15 seconds</p>
+              <p className="text-xs text-muted-foreground">Processing your document, please wait</p>
             </div>
           </motion.div>
         )}
