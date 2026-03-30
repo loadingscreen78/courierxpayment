@@ -595,13 +595,16 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
       setExtractedAadhaarNumber(result.aadhaarNumber);
     }
 
-    // Auto-fill all sender fields from Aadhaar OCR
-    if (result.name) detailsForm.setValue('senderName', result.name);
-    if (result.phone) detailsForm.setValue('senderPhone', result.phone);
-    if (result.address) detailsForm.setValue('senderAddress', result.address);
-    if (result.city) detailsForm.setValue('senderCity', result.city);
-    if (result.state) detailsForm.setValue('senderState', result.state);
-    if (result.pincode) detailsForm.setValue('senderPincode', result.pincode);
+    // Auto-fill sender fields based on per-field confidence
+    // >= 50%: fill the field (user can edit)
+    // < 50%: leave empty, user must fill manually
+    const fc = result.fieldConfidence || {};
+    if (result.name && (fc.name ?? 80) >= 50) detailsForm.setValue('senderName', result.name);
+    if (result.phone && (fc.phone ?? 80) >= 50) detailsForm.setValue('senderPhone', result.phone);
+    if (result.address && (fc.address ?? 80) >= 50) detailsForm.setValue('senderAddress', result.address);
+    if (result.city && (fc.city ?? 80) >= 50) detailsForm.setValue('senderCity', result.city);
+    if (result.state && (fc.state ?? 80) >= 50) detailsForm.setValue('senderState', result.state);
+    if (result.pincode && (fc.pincode ?? 80) >= 50) detailsForm.setValue('senderPincode', result.pincode);
   }, [aadhaarFront, aadhaarBack, processAadhaar, detailsForm, isInternational]);
 
   // ── Validate pickup address fields before sliding to sender ──
@@ -1555,13 +1558,22 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                           </div>
                         )}
                         <div className="space-y-4">
+                          {/* Low confidence warning */}
+                          {requiresAadhaarKyc && ocrResult?.fieldConfidence && Object.entries(ocrResult.fieldConfidence).some(([,v]) => v > 0 && v < 60) && (
+                            <div className="rounded-lg border border-amber-200 dark:border-amber-800/40 bg-amber-50 dark:bg-amber-950/20 p-2.5 text-xs text-amber-800 dark:text-amber-300 flex items-start gap-2">
+                              <Warning className="h-3.5 w-3.5 shrink-0 mt-0.5" weight="fill" />
+                              <span>Some fields may be inaccurate (highlighted in amber). Please verify and correct them.</span>
+                            </div>
+                          )}
                           <div className="grid grid-cols-2 gap-4">
                             <FormField control={detailsForm.control} name="senderName" render={({ field }) => {
                               const isLocked = !!(requiresAadhaarKyc && !ocrResult);
+                              const fc = ocrResult?.fieldConfidence?.name ?? 100;
+                              const isWarn = ocrResult && fc > 0 && fc < 60;
                               return (
                               <FormItem>
-                                <FormLabel>Full Name</FormLabel>
-                                <FormControl><Input {...field} value={isLocked ? '' : field.value} placeholder="Auto-filled after validation" className={`h-11 ${isLocked ? 'bg-muted cursor-not-allowed' : ''}`} disabled={isLocked} /></FormControl>
+                                <FormLabel>Full Name {isWarn && <span className="text-amber-600 text-[10px] ml-1">⚠ may be incorrect</span>}</FormLabel>
+                                <FormControl><Input {...field} value={isLocked ? '' : field.value} placeholder="Auto-filled after validation" className={`h-11 ${isLocked ? 'bg-muted cursor-not-allowed' : ''} ${isWarn ? 'border-amber-400 bg-amber-50/50' : ''}`} disabled={isLocked} /></FormControl>
                                 <FormMessage />
                               </FormItem>
                               );
@@ -1715,10 +1727,12 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                           {/* Sender address fields */}
                           <FormField control={detailsForm.control} name="senderAddress" render={({ field }) => {
                             const isLocked = !!(requiresAadhaarKyc && !ocrResult);
+                            const fc = ocrResult?.fieldConfidence?.address ?? 100;
+                            const isWarn = ocrResult && fc > 0 && fc < 60;
                             return (
                             <FormItem>
-                              <FormLabel>Sender Address</FormLabel>
-                              <FormControl><Input {...field} value={isLocked ? '' : field.value} placeholder={isLocked ? 'Available after validation' : 'Full address'} className={`h-11 ${isLocked ? 'bg-muted cursor-not-allowed' : ''}`} disabled={isLocked} /></FormControl>
+                              <FormLabel>Sender Address {isWarn && <span className="text-amber-600 text-[10px] ml-1">⚠ may be incorrect</span>}</FormLabel>
+                              <FormControl><Input {...field} value={isLocked ? '' : field.value} placeholder={isLocked ? 'Available after validation' : 'Full address'} className={`h-11 ${isLocked ? 'bg-muted cursor-not-allowed' : ''} ${isWarn ? 'border-amber-400 bg-amber-50/50' : ''}`} disabled={isLocked} /></FormControl>
                               <FormMessage />
                             </FormItem>
                             );
@@ -1726,10 +1740,12 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                           <div className="grid grid-cols-3 gap-3">
                             <FormField control={detailsForm.control} name="senderCity" render={({ field }) => {
                               const isLocked = !!(requiresAadhaarKyc && !ocrResult);
+                              const fc = ocrResult?.fieldConfidence?.city ?? 100;
+                              const isWarn = ocrResult && fc > 0 && fc < 60;
                               return (
                               <FormItem>
-                                <FormLabel>City</FormLabel>
-                                <FormControl><Input {...field} value={isLocked ? '' : field.value} placeholder={isLocked ? '—' : 'City'} className={`h-11 ${isLocked ? 'bg-muted cursor-not-allowed' : ''}`} disabled={isLocked} /></FormControl>
+                                <FormLabel>City {isWarn && <span className="text-amber-600 text-[10px]">⚠</span>}</FormLabel>
+                                <FormControl><Input {...field} value={isLocked ? '' : field.value} placeholder={isLocked ? '—' : 'City'} className={`h-11 ${isLocked ? 'bg-muted cursor-not-allowed' : ''} ${isWarn ? 'border-amber-400 bg-amber-50/50' : ''}`} disabled={isLocked} /></FormControl>
                                 <FormMessage />
                               </FormItem>
                               );

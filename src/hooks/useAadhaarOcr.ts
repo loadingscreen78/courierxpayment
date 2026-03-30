@@ -15,6 +15,7 @@ export interface AadhaarOcrResult {
   phone: string;
   confidence: 'high' | 'medium' | 'low';
   warnings: string[];
+  fieldConfidence?: Record<string, number>;
 }
 
 interface UseAadhaarOcrReturn {
