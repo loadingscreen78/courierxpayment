@@ -1540,7 +1540,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                           </div>
                           <div>
                             <h3 className="font-semibold text-base">Sender Details</h3>
-                            <p className="text-xs text-muted-foreground">{requiresAadhaarKyc ? 'Name and details as per Aadhaar card' : 'Your contact information'}</p>
+                            <p className="text-xs text-muted-foreground">{requiresAadhaarKyc ? 'Verify your identity for customs compliance' : 'Your contact information'}</p>
                           </div>
                         </div>
                         {isMedicineFlow && (
@@ -1714,7 +1714,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                           {/* Aadhaar-extracted sender address fields */}
                           {requiresAadhaarKyc && (
                             <div className="space-y-3 pt-1">
-                              <p className="text-xs font-medium text-muted-foreground">Sender Address (as per Aadhaar)</p>
+                              <p className="text-xs font-medium text-muted-foreground">Sender Address</p>
                               <FormField control={detailsForm.control} name="senderAddress" render={({ field }) => (
                                 <FormItem>
                                   <FormLabel>Full Address</FormLabel>
@@ -1756,7 +1756,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                             <div className="flex justify-end">
                               <Button type="button" variant="outline" size="sm" onClick={handleRectifyFromAadhaar} className="gap-1.5 text-xs">
                                 <IdentificationCard className="h-3.5 w-3.5" weight="duotone" />
-                                Sync with Aadhaar
+                                Auto-fill from Aadhaar
                               </Button>
                             </div>
                           )}
