@@ -19,6 +19,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { useToast } from '@/hooks/use-toast';
 import { loadCashfreeScript } from '@/lib/wallet/cashfreeLoader';
 import { calculateRate } from '@/lib/shipping/rateCalculator';
+import { getCountryByCode } from '@/lib/shipping/countries';
 import { motion, AnimatePresence } from 'framer-motion';
 import { feedbackPresets } from '@/lib/haptics';
 import RouteMap from '@/components/guest-booking/RouteMap';
@@ -174,6 +175,8 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
   const basePrice = selectedCourier?.price || selectedCourier?.customer_price || 0;
   const finalPrice = Math.max(0, basePrice - couponDiscount);
   const shipmentType = rateFormData?.shipmentType || 'gift';
+  const destinationCountryInfo = !isDomestic && rateFormData?.destinationCountry
+    ? getCountryByCode(rateFormData.destinationCountry) : null;
 
   const pickupInfo = useMemo(() => getPickupInfo(), []);
 
@@ -642,7 +645,12 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <div className="min-w-0">
               <p className="font-semibold text-base sm:text-lg truncate">{courierName}</p>
-              <p className="text-xs sm:text-sm text-muted-foreground capitalize">{mode} · {shipmentType}</p>
+              <p className="text-xs sm:text-sm text-muted-foreground capitalize">
+                {mode} · {shipmentType}
+                {destinationCountryInfo && (
+                  <span> · {destinationCountryInfo.flag} {destinationCountryInfo.name}</span>
+                )}
+              </p>
             </div>
             <div className="sm:text-right shrink-0">
               <p className="text-xl sm:text-2xl font-bold">₹{basePrice.toLocaleString('en-IN')}</p>
@@ -696,7 +704,7 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
               </div>
               <div>
                 <p className="text-xs text-muted-foreground mb-1 flex items-center gap-1">
-                  <Airplane className="h-3 w-3" /> Receiver
+                  <Airplane className="h-3 w-3" /> Receiver {destinationCountryInfo && <span>· {destinationCountryInfo.flag} {destinationCountryInfo.name}</span>}
                 </p>
                 <p className="text-sm font-medium">{senderReceiver.receiverName}</p>
                 <p className="text-xs text-muted-foreground">{senderReceiver.receiverAddress}</p>
