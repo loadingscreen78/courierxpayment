@@ -12,10 +12,15 @@ export async function POST(request: NextRequest) {
     const appId = process.env.CASHFREE_APP_ID?.trim();
     const secretKey = process.env.CASHFREE_SECRET_KEY?.trim();
 
-    const body = await request.json();
-    const { amount, senderReceiver, rateFormData, selectedCourier, aadhaarNumber, couponCode } = body;
+    const formData = await request.formData();
+    const amount = Number(formData.get('amount'));
+    const senderReceiver = JSON.parse(formData.get('senderReceiver') as string || '{}');
+    const rateFormData = JSON.parse(formData.get('rateFormData') as string || '{}');
+    const selectedCourier = JSON.parse(formData.get('selectedCourier') as string || '{}');
+    const aadhaarNumber = formData.get('aadhaarNumber') as string || '';
+    const couponCode = formData.get('couponCode') as string || '';
 
-    if (!amount || !senderReceiver || !aadhaarNumber) {
+    if (!amount || !senderReceiver?.senderEmail) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
