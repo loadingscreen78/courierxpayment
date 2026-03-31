@@ -3,13 +3,11 @@ import { AppLayout } from '@/components/layout';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ProfileHeader } from '@/components/profile/ProfileHeader';
 import { AccountTab } from '@/components/profile/AccountTab';
-import { PreferencesTab } from '@/components/profile/PreferencesTab';
 import { NotificationsTab } from '@/components/profile/NotificationsTab';
 import { SecurityTab } from '@/components/profile/SecurityTab';
 import { AnimatedTabContent } from '@/components/ui/loading/AnimatedTabContent';
 import {
   AccountTabSkeleton,
-  PreferencesTabSkeleton,
   NotificationsTabSkeleton,
   SecurityTabSkeleton,
 } from '@/components/profile/skeletons';
@@ -34,9 +32,6 @@ const Profile = () => {
             <TabsTrigger value="account" className="data-[state=active]:bg-background flex-1 min-w-fit text-xs sm:text-sm px-2 sm:px-4">
               Account
             </TabsTrigger>
-            <TabsTrigger value="preferences" className="data-[state=active]:bg-background flex-1 min-w-fit text-xs sm:text-sm px-2 sm:px-4">
-              Preferences
-            </TabsTrigger>
             <TabsTrigger value="notifications" className="data-[state=active]:bg-background flex-1 min-w-fit text-xs sm:text-sm px-2 sm:px-4">
               Notifications
             </TabsTrigger>
@@ -48,12 +43,6 @@ const Profile = () => {
           <TabsContent value="account" className="mt-6">
             <AnimatedTabContent tabKey={`account-${activeTab}`} skeleton={<AccountTabSkeleton />}>
               <AccountTab />
-            </AnimatedTabContent>
-          </TabsContent>
-          
-          <TabsContent value="preferences" className="mt-6">
-            <AnimatedTabContent tabKey={`preferences-${activeTab}`} skeleton={<PreferencesTabSkeleton />}>
-              <PreferencesTab />
             </AnimatedTabContent>
           </TabsContent>
           

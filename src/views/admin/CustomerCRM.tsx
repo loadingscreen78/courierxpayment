@@ -42,6 +42,7 @@ import {
   PieChart, Pie, Cell, AreaChart, Area,
 } from 'recharts';
 import { GuestUsersManagement } from '@/components/admin/GuestUsersManagement';
+import { CustomerRequestsManagement } from '@/components/admin/CustomerRequestsManagement';
 
 // ─── Types ───────────────────────────────────────────────────────────
 interface Customer {
@@ -458,7 +459,7 @@ export function CustomerCRM() {
   };
 
   // ─── Active tab ──────────────────────────────────────────────────
-  const [activeTab, setActiveTab] = useState<'customers' | 'guests'>('customers');
+  const [activeTab, setActiveTab] = useState<'customers' | 'guests' | 'requests'>('customers');
 
   // ─── Render ────────────────────────────────────────────────────────
   return (
@@ -510,10 +511,25 @@ export function CustomerCRM() {
             Guest Users
             <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-purple-500/20 text-purple-400 font-bold">NEW</span>
           </button>
+          <button
+            onClick={() => setActiveTab('requests')}
+            className={cn(
+              "flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all",
+              activeTab === 'requests'
+                ? "bg-amber-500/20 text-amber-300 shadow-sm"
+                : "text-gray-500 hover:text-gray-300 hover:bg-white/[0.03]"
+            )}
+          >
+            <AlertCircle className="h-4 w-4" />
+            Customer Requests
+          </button>
         </div>
 
         {/* Guest Users Tab */}
         {activeTab === 'guests' && <GuestUsersManagement />}
+
+        {/* Customer Requests Tab */}
+        {activeTab === 'requests' && <CustomerRequestsManagement />}
 
         {/* Registered Customers Tab */}
         {activeTab === 'customers' && (

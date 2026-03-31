@@ -1,298 +1,334 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { useWallet } from '@/contexts/WalletContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
+import { Textarea } from '@/components/ui/textarea';
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { Lock, Key, Trash2, AlertTriangle, Eye, EyeOff } from 'lucide-react';
+import {
+  Monitor, Smartphone, Globe, Clock, Activity, Trash2, AlertTriangle,
+  Shield, Loader2, MapPin, CheckCircle2,
+} from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useHaptics } from '@/hooks/useHaptics';
 import { useSoundEffects } from '@/hooks/useSoundEffects';
 import { supabase } from '@/integrations/supabase/client';
+import { format } from 'date-fns';
+
+interface LoginEntry {
+  id: string;
+  ip_address: string | null;
+  user_agent: string | null;
+  device_type: string | null;
+  location: string | null;
+  login_method: string | null;
+  created_at: string;
+}
+
+interface ActivityEntry {
+  id: string;
+  action: string;
+  details: string | null;
+  created_at: string;
+}
 
 export const SecurityTab = () => {
-  const { user, signOut } = useAuth();
-  const { balance } = useWallet();
+  const { user } = useAuth();
   const { toast } = useToast();
-  const { mediumTap, successFeedback, errorFeedback } = useHaptics();
-  const { playSuccess, playError } = useSoundEffects();
-  
-  const [currentPassword, setCurrentPassword] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
-  const [isChangingPassword, setIsChangingPassword] = useState(false);
-  const [deleteConfirmation, setDeleteConfirmation] = useState('');
+  const { mediumTap, errorFeedback } = useHaptics();
+  const { playError } = useSoundEffects();
 
-  const handleChangePassword = async () => {
-    if (newPassword !== confirmPassword) {
-      errorFeedback();
-      playError();
-      toast({
-        title: 'Password Mismatch',
-        description: 'New password and confirmation do not match.',
-        variant: 'destructive',
+  const [logins, setLogins] = useState<LoginEntry[]>([]);
+  const [activities, setActivities] = useState<ActivityEntry[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [deletionReason, setDeletionReason] = useState('');
+  const [submittingDeletion, setSubmittingDeletion] = useState(false);
+  const [pendingDeletion, setPendingDeletion] = useState(false);
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) return;
+
+      // Fetch activity data
+      const actRes = await fetch('/api/user/activity', {
+        headers: { Authorization: `Bearer ${session.access_token}` },
       });
-      return;
-    }
+      const actData = await actRes.json();
+      setLogins(actData.logins || []);
+      setActivities(actData.activities || []);
 
-    if (newPassword.length < 8) {
-      errorFeedback();
-      playError();
-      toast({
-        title: 'Weak Password',
-        description: 'Password must be at least 8 characters long.',
-        variant: 'destructive',
+      // Check for pending deletion request
+      const reqRes = await fetch('/api/user/request-change', {
+        headers: { Authorization: `Bearer ${session.access_token}` },
       });
-      return;
-    }
-
-    mediumTap();
-    setIsChangingPassword(true);
-
-    const { error } = await supabase.auth.updateUser({
-      password: newPassword,
-    });
-
-    setIsChangingPassword(false);
-
-    if (error) {
-      errorFeedback();
-      playError();
-      toast({
-        title: 'Error',
-        description: error.message || 'Failed to change password.',
-        variant: 'destructive',
-      });
-    } else {
-      successFeedback();
-      playSuccess();
-      toast({
-        title: 'Password Changed',
-        description: 'Your password has been updated successfully.',
-      });
-      setCurrentPassword('');
-      setNewPassword('');
-      setConfirmPassword('');
+      const reqData = await reqRes.json();
+      const hasPending = reqData.requests?.some(
+        (r: any) => r.request_type === 'account_deletion' && r.status === 'pending'
+      );
+      setPendingDeletion(hasPending || false);
+    } catch {
+      // silent
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleDeleteAccount = async () => {
-    if (deleteConfirmation !== 'DELETE') {
-      errorFeedback();
-      playError();
-      toast({
-        title: 'Confirmation Required',
-        description: 'Please type DELETE to confirm account deletion.',
-        variant: 'destructive',
-      });
-      return;
-    }
-
+  const handleDeletionRequest = async () => {
     mediumTap();
+    setSubmittingDeletion(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) throw new Error('No session');
 
-    // Get current session token
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session?.access_token) {
-      errorFeedback();
-      playError();
-      toast({ title: 'Error', description: 'No active session found.', variant: 'destructive' });
-      return;
-    }
-
-    // Sign out first to clear local session, then delete server-side
-    await signOut();
-
-    const res = await fetch('/api/user/delete-account', {
-      method: 'DELETE',
-      headers: { Authorization: `Bearer ${session.access_token}` },
-    });
-
-    if (!res.ok) {
-      errorFeedback();
-      playError();
-      toast({
-        title: 'Deletion Failed',
-        description: 'Could not delete your account. Please contact support.',
-        variant: 'destructive',
+      const res = await fetch('/api/user/request-change', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          request_type: 'account_deletion',
+          reason: deletionReason || 'No reason provided',
+        }),
       });
-      return;
-    }
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to submit');
 
-    successFeedback();
-    playSuccess();
-    toast({
-      title: 'Account Deleted',
-      description: 'Your account has been permanently deleted.',
-    });
+      toast({ title: 'Request Submitted', description: 'Your account deletion request is under review.' });
+      setPendingDeletion(true);
+      setDeletionReason('');
+    } catch (err: any) {
+      errorFeedback();
+      playError();
+      toast({ title: 'Error', description: err.message, variant: 'destructive' });
+    } finally {
+      setSubmittingDeletion(false);
+    }
   };
+
+  const getDeviceIcon = (deviceType: string | null, userAgent: string | null) => {
+    const ua = (deviceType || userAgent || '').toLowerCase();
+    if (ua.includes('mobile') || ua.includes('android') || ua.includes('iphone')) {
+      return <Smartphone className="h-4 w-4" />;
+    }
+    return <Monitor className="h-4 w-4" />;
+  };
+
+  const parseDevice = (userAgent: string | null) => {
+    if (!userAgent) return 'Unknown device';
+    const ua = userAgent.toLowerCase();
+    if (ua.includes('chrome')) return 'Chrome Browser';
+    if (ua.includes('firefox')) return 'Firefox Browser';
+    if (ua.includes('safari') && !ua.includes('chrome')) return 'Safari Browser';
+    if (ua.includes('edge')) return 'Edge Browser';
+    return 'Web Browser';
+  };
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        {[1, 2, 3].map(i => (
+          <Card key={i}>
+            <CardContent className="p-6">
+              <div className="animate-pulse space-y-3">
+                <div className="h-4 bg-muted rounded w-1/3" />
+                <div className="h-3 bg-muted rounded w-2/3" />
+                <div className="h-3 bg-muted rounded w-1/2" />
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
-      {/* Change Password */}
+      {/* Login History */}
       <Card>
         <CardHeader>
           <CardTitle className="text-lg flex items-center gap-2">
-            <Key className="h-5 w-5 text-muted-foreground" />
-            Change Password
+            <Shield className="h-5 w-5 text-muted-foreground" />
+            Recent Logins
           </CardTitle>
-          <CardDescription>
-            Update your account password
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="newPassword">New Password</Label>
-            <div className="relative">
-              <Input
-                id="newPassword"
-                type={showPassword ? 'text' : 'password'}
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                placeholder="Enter new password"
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-              >
-                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-              </button>
-            </div>
-          </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="confirmPassword">Confirm New Password</Label>
-            <Input
-              id="confirmPassword"
-              type={showPassword ? 'text' : 'password'}
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              placeholder="Confirm new password"
-            />
-          </div>
-
-          <Button 
-            onClick={handleChangePassword}
-            disabled={!newPassword || !confirmPassword || isChangingPassword}
-            className="btn-press"
-          >
-            {isChangingPassword ? 'Changing...' : 'Change Password'}
-          </Button>
-        </CardContent>
-      </Card>
-
-      {/* Session Info */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg flex items-center gap-2">
-            <Lock className="h-5 w-5 text-muted-foreground" />
-            Session Information
-          </CardTitle>
+          <CardDescription>Your last 5 login sessions</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="space-y-2">
-            <div className="flex justify-between items-center p-3 bg-muted/50 rounded-lg">
-              <span className="text-sm text-muted-foreground">Signed in as</span>
-              <span className="text-sm font-medium">{user?.email}</span>
+          {logins.length === 0 ? (
+            <div className="text-center py-8">
+              <Shield className="h-8 w-8 text-muted-foreground/50 mx-auto mb-2" />
+              <p className="text-sm text-muted-foreground">No login history available yet</p>
+              <p className="text-xs text-muted-foreground/70 mt-1">Login history will appear after your next sign-in</p>
             </div>
-            <div className="flex justify-between items-center p-3 bg-muted/50 rounded-lg">
-              <span className="text-sm text-muted-foreground">Last sign in</span>
-              <span className="text-sm font-medium">
-                {user?.last_sign_in_at 
-                  ? new Date(user.last_sign_in_at).toLocaleDateString()
-                  : 'Unknown'}
-              </span>
+          ) : (
+            <div className="space-y-3">
+              {logins.map((login, i) => (
+                <div key={login.id} className={`flex items-start gap-3 p-3 rounded-lg border ${i === 0 ? 'border-success/30 bg-success/5' : 'border-border/50'}`}>
+                  <div className={`p-2 rounded-lg ${i === 0 ? 'bg-success/10 text-success' : 'bg-muted text-muted-foreground'}`}>
+                    {getDeviceIcon(login.device_type, login.user_agent)}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-medium">{parseDevice(login.user_agent)}</p>
+                      {i === 0 && (
+                        <Badge variant="outline" className="text-[10px] border-success/30 text-success bg-success/10">
+                          Current
+                        </Badge>
+                      )}
+                      {login.login_method && (
+                        <Badge variant="outline" className="text-[10px]">
+                          {login.login_method}
+                        </Badge>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
+                      {login.location && (
+                        <span className="flex items-center gap-1">
+                          <MapPin className="h-3 w-3" /> {login.location}
+                        </span>
+                      )}
+                      {login.ip_address && (
+                        <span className="flex items-center gap-1">
+                          <Globe className="h-3 w-3" /> {login.ip_address}
+                        </span>
+                      )}
+                      <span className="flex items-center gap-1">
+                        <Clock className="h-3 w-3" /> {format(new Date(login.created_at), 'dd MMM yyyy, hh:mm a')}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
-          </div>
+          )}
         </CardContent>
       </Card>
 
-      {/* Danger Zone */}
+      {/* Activity Logs */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg flex items-center gap-2">
+            <Activity className="h-5 w-5 text-muted-foreground" />
+            Activity Log
+          </CardTitle>
+          <CardDescription>Your last 20 account activities</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {activities.length === 0 ? (
+            <div className="text-center py-8">
+              <Activity className="h-8 w-8 text-muted-foreground/50 mx-auto mb-2" />
+              <p className="text-sm text-muted-foreground">No activity recorded yet</p>
+              <p className="text-xs text-muted-foreground/70 mt-1">Activities like profile updates, shipments, and requests will appear here</p>
+            </div>
+          ) : (
+            <div className="space-y-1">
+              {activities.map((act) => (
+                <div key={act.id} className="flex items-start gap-3 py-2.5 border-b border-border/30 last:border-0">
+                  <div className="w-2 h-2 rounded-full bg-primary mt-2 shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm">{act.action}</p>
+                    {act.details && <p className="text-xs text-muted-foreground mt-0.5">{act.details}</p>}
+                  </div>
+                  <span className="text-[11px] text-muted-foreground shrink-0">
+                    {format(new Date(act.created_at), 'dd MMM, hh:mm a')}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Account Deletion Request */}
       <Card className="border-destructive/50">
         <CardHeader>
           <CardTitle className="text-lg flex items-center gap-2 text-destructive">
             <AlertTriangle className="h-5 w-5" />
-            Danger Zone
+            Account Deletion
           </CardTitle>
           <CardDescription>
-            Irreversible account actions
+            Request permanent deletion of your account
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {balance > 0 && (
-            <div className="p-4 bg-destructive/10 rounded-lg border border-destructive/30">
-              <p className="text-sm text-destructive font-medium">
-                Your wallet contains ₹{balance.toLocaleString('en-IN')}
-              </p>
-              <p className="text-xs text-destructive/80 mt-1">
-                Upon account deletion, this amount will be refunded within 14 business days to your registered bank account.
-              </p>
+          {pendingDeletion ? (
+            <div className="p-4 bg-amber-500/10 rounded-lg border border-amber-500/30 flex items-start gap-3">
+              <Clock className="h-5 w-5 text-amber-500 shrink-0 mt-0.5" />
+              <div>
+                <p className="text-sm font-medium text-amber-700 dark:text-amber-400">Deletion Request Pending</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Your account deletion request is being reviewed by our admin team. You will be notified once it&apos;s processed.
+                </p>
+              </div>
             </div>
+          ) : (
+            <>
+              <div className="p-4 bg-destructive/5 rounded-lg border border-destructive/20">
+                <p className="text-sm text-muted-foreground">
+                  Requesting account deletion will send a request to our admin team. Once approved, all your data, shipment history, and wallet balance will be permanently removed. Any remaining wallet balance will be refunded to your registered bank account within 14 business days.
+                </p>
+              </div>
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="destructive" className="btn-press gap-2">
+                    <Trash2 className="h-4 w-4" />
+                    Request Account Deletion
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle className="flex items-center gap-2">
+                      <AlertTriangle className="h-5 w-5 text-destructive" />
+                      Request Account Deletion?
+                    </AlertDialogTitle>
+                    <AlertDialogDescription asChild>
+                      <div className="space-y-3">
+                        <p>This will submit a request to permanently delete your account. An admin will review and process it.</p>
+                        <div>
+                          <Label htmlFor="deletionReason" className="text-foreground text-sm">
+                            Reason (optional)
+                          </Label>
+                          <Textarea
+                            id="deletionReason"
+                            value={deletionReason}
+                            onChange={(e) => setDeletionReason(e.target.value)}
+                            placeholder="Tell us why you want to delete your account..."
+                            className="mt-2"
+                            rows={3}
+                          />
+                        </div>
+                      </div>
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={handleDeletionRequest}
+                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                      disabled={submittingDeletion}
+                    >
+                      {submittingDeletion ? (
+                        <><Loader2 className="h-4 w-4 animate-spin mr-2" /> Submitting...</>
+                      ) : (
+                        'Submit Deletion Request'
+                      )}
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            </>
           )}
-          
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button variant="destructive" className="btn-press gap-2">
-                <Trash2 className="h-4 w-4" />
-                Delete Account
-              </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle className="flex items-center gap-2">
-                  <AlertTriangle className="h-5 w-5 text-destructive" />
-                  Delete Account?
-                </AlertDialogTitle>
-                <AlertDialogDescription className="space-y-3">
-                  <p>
-                    This action is <strong>permanent and irreversible</strong>. All your data, shipment history, and preferences will be deleted.
-                  </p>
-                  {balance > 0 && (
-                    <p className="text-destructive">
-                      Your wallet balance of ₹{balance.toLocaleString('en-IN')} will be refunded within 14 business days.
-                    </p>
-                  )}
-                  <div className="pt-2">
-                    <Label htmlFor="deleteConfirm" className="text-foreground">
-                      Type <strong>DELETE</strong> to confirm
-                    </Label>
-                    <Input
-                      id="deleteConfirm"
-                      value={deleteConfirmation}
-                      onChange={(e) => setDeleteConfirmation(e.target.value)}
-                      placeholder="DELETE"
-                      className="mt-2"
-                    />
-                  </div>
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel onClick={() => setDeleteConfirmation('')}>
-                  Cancel
-                </AlertDialogCancel>
-                <AlertDialogAction
-                  onClick={handleDeleteAccount}
-                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                  disabled={deleteConfirmation !== 'DELETE'}
-                >
-                  Delete Account
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
         </CardContent>
       </Card>
     </div>
