@@ -140,6 +140,9 @@ export const Header = () => {
                   <div className="flex flex-col min-w-0">
                     <p className="text-sm font-semibold leading-none truncate">{displayName}</p>
                     <p className="text-xs leading-none text-muted-foreground mt-1 truncate">{displayEmail}</p>
+                    {profile?.account_number && (
+                      <p className="text-[10px] font-mono text-coke-red mt-1">{profile.account_number}</p>
+                    )}
                   </div>
                 </div>
               </DropdownMenuLabel>

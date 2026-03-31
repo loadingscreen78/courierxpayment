@@ -8,6 +8,7 @@ interface Profile {
   full_name: string | null;
   phone_number: string | null;
   email: string | null;
+  account_number: string | null;
   aadhaar_verified: boolean;
   aadhaar_address: string | null;
   kyc_completed_at: string | null;

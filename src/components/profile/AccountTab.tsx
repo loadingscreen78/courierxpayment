@@ -58,6 +58,22 @@ export const AccountTab = () => {
           <CardDescription>Update your personal details</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
+          {profile?.account_number && (
+            <div className="space-y-2">
+              <Label className="flex items-center gap-2">
+                Account Number
+              </Label>
+              <Input
+                value={profile.account_number}
+                disabled
+                className="bg-muted/50 font-mono font-semibold tracking-wider"
+              />
+              <p className="text-xs text-muted-foreground">
+                Your unique CourierX account number
+              </p>
+            </div>
+          )}
+
           <div className="space-y-2">
             <Label htmlFor="fullName">Full Name</Label>
             <Input

@@ -168,6 +168,7 @@ export default function OpenAccount() {
   const [aadhaarDoc, setAadhaarDoc] = useState<FileUploadState>({ ...emptyFileState });
   const [panDoc, setPanDoc] = useState<FileUploadState>({ ...emptyFileState });
   const [bankDoc, setBankDoc] = useState<FileUploadState>({ ...emptyFileState });
+  const [assignedAccountNumber, setAssignedAccountNumber] = useState<string | null>(null);
 
   // If already logged in, redirect
   useEffect(() => {
@@ -361,6 +362,32 @@ export default function OpenAccount() {
         return;
       }
 
+      // Check for duplicate phone number
+      const { data: phoneMatch } = await supabase
+        .from('profiles')
+        .select('user_id')
+        .eq('phone_number', `+91${personalData!.phone}`)
+        .neq('user_id', currentUser.id)
+        .maybeSingle();
+      if (phoneMatch) {
+        toast({ title: 'Duplicate Phone', description: 'This mobile number is already linked to another account.', variant: 'destructive' });
+        setIsLoading(false);
+        return;
+      }
+
+      // Check for duplicate Aadhaar number
+      const { data: aadhaarMatch } = await supabase
+        .from('profiles')
+        .select('user_id')
+        .eq('aadhaar_number', values.aadhaarNumber)
+        .neq('user_id', currentUser.id)
+        .maybeSingle();
+      if (aadhaarMatch) {
+        toast({ title: 'Duplicate Aadhaar', description: 'This Aadhaar number is already linked to another account.', variant: 'destructive' });
+        setIsLoading(false);
+        return;
+      }
+
       const { error } = await supabase.from('profiles').update({
         full_name: personalData!.fullName,
         phone_number: `+91${personalData!.phone}`,
@@ -389,9 +416,18 @@ export default function OpenAccount() {
         setIsLoading(false);
         return;
       }
+
+      // Re-fetch profile to get the auto-assigned account_number from DB trigger
+      const { data: updatedProfile } = await supabase
+        .from('profiles')
+        .select('account_number')
+        .eq('user_id', currentUser.id)
+        .single();
+
+      setAssignedAccountNumber(updatedProfile?.account_number || null);
       setStep('done');
-      toast({ title: 'Account Ready', description: 'Your account has been set up successfully.' });
-      setTimeout(() => { window.location.href = '/dashboard'; }, 2000);
+      toast({ title: 'Account Ready', description: `Your account number is ${updatedProfile?.account_number || 'being generated'}.` });
+      setTimeout(() => { window.location.href = '/dashboard'; }, 3000);
     } catch {
       toast({ title: 'Error', description: 'Something went wrong.', variant: 'destructive' });
     } finally {
@@ -647,7 +683,13 @@ export default function OpenAccount() {
                   <ShieldCheck className="h-8 w-8 text-candlestick-green" />
                 </div>
                 <h2 className="text-2xl font-bold font-typewriter">Account Ready!</h2>
-                <p className="text-muted-foreground text-sm">Your account has been set up. Redirecting to dashboard...</p>
+                {assignedAccountNumber && (
+                  <div className="inline-block px-4 py-2 bg-muted rounded-xl border border-border">
+                    <p className="text-xs text-muted-foreground mb-1">Your Account Number</p>
+                    <p className="text-lg font-mono font-bold text-coke-red tracking-wider">{assignedAccountNumber}</p>
+                  </div>
+                )}
+                <p className="text-muted-foreground text-sm">Redirecting to dashboard...</p>
                 <CircleNotch className="h-6 w-6 animate-spin mx-auto text-coke-red" />
               </motion.div>
             )}

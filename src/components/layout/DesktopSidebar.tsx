@@ -260,6 +260,11 @@ export const DesktopSidebar = () => {
             <p className="text-sm font-semibold text-sidebar-foreground truncate leading-none">
               {displayName}
             </p>
+            {profile?.account_number && (
+              <p className="text-[10px] font-mono text-sidebar-foreground/50 mt-0.5">
+                {profile.account_number}
+              </p>
+            )}
           </div>
           <CaretRight className="h-3.5 w-3.5 text-sidebar-foreground/30 shrink-0" />
         </Link>

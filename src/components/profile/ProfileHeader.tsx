@@ -39,6 +39,12 @@ export const ProfileHeader = () => {
             <p className="text-sm text-muted-foreground">
               {user?.email || profile?.phone_number}
             </p>
+
+            {profile?.account_number && (
+              <p className="text-xs font-mono text-coke-red font-semibold">
+                {profile.account_number}
+              </p>
+            )}
             
             <p className="text-xs text-muted-foreground/70">
               Member since {memberSince}
