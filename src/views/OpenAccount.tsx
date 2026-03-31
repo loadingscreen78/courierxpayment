@@ -350,11 +350,6 @@ export default function OpenAccount() {
           // Don't block — user can still proceed, uploads will retry
         }
       }
-      fetch('/api/email/send-welcome', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userEmail: signupEmail }),
-      }).catch(() => {});
       toast({ title: 'Email Verified', description: 'Now complete your profile.' });
       setStep('kyc-personal');
     } catch {
@@ -474,6 +469,12 @@ export default function OpenAccount() {
       setAssignedAccountNumber(updatedProfile?.account_number || null);
       setStep('done');
       toast({ title: 'Account Ready', description: `Your account number is ${updatedProfile?.account_number || 'being generated'}.` });
+      // Send welcome email only after full onboarding is complete
+      fetch('/api/email/send-welcome', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userEmail: currentUser.email }),
+      }).catch(() => {});
       setTimeout(() => { window.location.href = '/dashboard'; }, 3000);
     } catch {
       toast({ title: 'Error', description: 'Something went wrong.', variant: 'destructive' });
