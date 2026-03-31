@@ -27,6 +27,7 @@ import { getCarrierInfo } from '@/lib/shipping/courierSelection';
 import { cn } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
 import type { CourierOption } from '@/lib/domestic/types';
+import { getCourierFacts } from '@/lib/shipping/courierFacts';
 import { DomesticCourierGrid } from '@/components/domestic/DomesticCourierGrid';
 
 type ShippingMode = 'international' | 'domestic';
@@ -311,15 +312,30 @@ const CarrierCard = ({ option, isSelected, onSelect, index }: {
           <span>{option.transitDays.min}-{option.transitDays.max} business days</span>
         </div>
         <div className="space-y-2 pt-2">
-          {carrierFeatures.map((f) => {
-            const has = f[option.carrier.toLowerCase() as keyof typeof f] as boolean;
+          {(() => {
+            const facts = getCourierFacts(option.carrier);
+            if (!facts) return null;
             return (
-              <div key={f.id} className={cn("flex items-center gap-2 text-xs", has ? "text-foreground" : "text-muted-foreground/50")}>
-                {has ? <Check size={12} weight="bold" className="text-candlestick-green" /> : <X size={12} weight="bold" />}
-                <span>{f.label}</span>
-              </div>
+              <>
+                <div className="flex items-center gap-2 text-xs text-foreground">
+                  <Globe size={12} weight="bold" className="text-blue-500 shrink-0" />
+                  <span>{facts.countriesOrPincodes}</span>
+                </div>
+                <div className="flex items-center gap-2 text-xs text-foreground">
+                  <Check size={12} weight="bold" className="text-candlestick-green shrink-0" />
+                  <span>Real-time tracking</span>
+                </div>
+                <div className="flex items-center gap-2 text-xs text-foreground">
+                  <Check size={12} weight="bold" className="text-candlestick-green shrink-0" />
+                  <span>{facts.speciality.split(',')[0]}</span>
+                </div>
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <Star size={12} weight="fill" className="text-amber-400 shrink-0" />
+                  <span>Est. {facts.founded} · {facts.hq}</span>
+                </div>
+              </>
             );
-          })}
+          })()}
         </div>
         {isComingSoon ? (
           <Button variant="outline" className="w-full mt-4 opacity-50" disabled>

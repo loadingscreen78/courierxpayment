@@ -7,8 +7,9 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
   Truck, AirplaneTilt, Clock, Star, Check, CaretRight, Package,
-  CheckCircle, ShieldCheck, MapPin,
+  CheckCircle, ShieldCheck, MapPin, Buildings, Globe as GlobeIcon,
 } from '@phosphor-icons/react';
+import { getCourierFacts } from '@/lib/shipping/courierFacts';
 
 export interface DomesticCourierData {
   courier_company_id: number;
@@ -102,27 +103,40 @@ export function DomesticCourierCard({
           <span>{courier.estimated_delivery_days} business day{courier.estimated_delivery_days !== 1 ? 's' : ''}</span>
         </div>
 
-        {/* Features */}
-        <div className="space-y-1.5 pt-1 text-left">
-          <div className="flex items-center gap-2 text-xs text-foreground">
-            <Check size={12} weight="bold" className="text-candlestick-green shrink-0" />
-            <span>Real-time tracking</span>
-          </div>
-          <div className="flex items-center gap-2 text-xs text-foreground">
-            <Check size={12} weight="bold" className="text-candlestick-green shrink-0" />
-            <span>{courier.pickup_availability !== false ? 'Doorstep pickup' : 'Drop-off only'}</span>
-          </div>
-          {courier.rating > 0 && (
-            <div className="flex items-center gap-2 text-xs text-foreground">
-              <Star size={12} weight="fill" className="text-amber-400 shrink-0" />
-              <span>{courier.rating.toFixed(1)} rating</span>
+        {/* Features — real courier facts */}
+        {(() => {
+          const facts = getCourierFacts(courier.courier_name);
+          return (
+            <div className="space-y-1.5 pt-1 text-left">
+              {facts && (
+                <div className="flex items-center gap-2 text-xs text-foreground">
+                  <MapPin size={12} weight="bold" className="text-blue-500 shrink-0" />
+                  <span>{facts.countriesOrPincodes}</span>
+                </div>
+              )}
+              <div className="flex items-center gap-2 text-xs text-foreground">
+                <Check size={12} weight="bold" className="text-candlestick-green shrink-0" />
+                <span>Real-time tracking</span>
+              </div>
+              <div className="flex items-center gap-2 text-xs text-foreground">
+                <Check size={12} weight="bold" className="text-candlestick-green shrink-0" />
+                <span>{courier.pickup_availability !== false ? 'Doorstep pickup' : 'Drop-off only'}</span>
+              </div>
+              {courier.rating > 0 && (
+                <div className="flex items-center gap-2 text-xs text-foreground">
+                  <Star size={12} weight="fill" className="text-amber-400 shrink-0" />
+                  <span>{courier.rating.toFixed(1)} rating</span>
+                </div>
+              )}
+              {facts && (
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <Buildings size={12} weight="bold" className="shrink-0" />
+                  <span>Est. {facts.founded} · {facts.hq}</span>
+                </div>
+              )}
             </div>
-          )}
-          <div className="flex items-center gap-2 text-xs text-foreground">
-            <Check size={12} weight="bold" className="text-candlestick-green shrink-0" />
-            <span>GST invoice included</span>
-          </div>
-        </div>
+          );
+        })()}
 
         {/* Spacer */}
         <div className="flex-1" />
