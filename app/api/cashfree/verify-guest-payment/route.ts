@@ -77,41 +77,15 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Idempotency: use atomic update to claim this booking for processing.
-    // Only one request can transition from pending_payment → paid.
-    const { data: claimed, error: claimErr } = await supabase
-      .from('guest_bookings')
-      .update({ status: 'paid', paid_at: new Date().toISOString() })
-      .eq('order_id', orderId)
-      .in('status', ['pending_payment', 'paid'])
-      .select('order_id')
-      .maybeSingle();
-
-    // If we didn't claim it, another request is already processing
-    if (!claimed && !claimErr) {
-      // Wait briefly and re-fetch to return the result from the other request
-      await new Promise(r => setTimeout(r, 3000));
-      const { data: updated } = await supabase
+    // Mark as paid if still pending
+    if (booking.status === 'pending_payment') {
+      await supabase
         .from('guest_bookings')
-        .select('status, awb_number, label_url, tracking_number')
-        .eq('order_id', orderId)
-        .maybeSingle();
-
-      if (updated?.status === 'shipped' && updated.awb_number) {
-        return NextResponse.json({
-          success: true,
-          awbUrl: updated.label_url || '',
-          awb: updated.awb_number,
-          trackingNumber: updated.tracking_number,
-        });
-      }
-      return NextResponse.json({
-        success: true,
-        awbUrl: '',
-        trackingNumber: booking.tracking_number,
-        error: 'Payment confirmed — shipment is being processed',
-      });
+        .update({ status: 'paid', paid_at: new Date().toISOString() })
+        .eq('order_id', orderId);
     }
+
+    console.log('[verify-guest-payment] Processing booking:', orderId, 'status:', booking.status);
 
     // Parse stored booking payload
     let bookingPayload: any = null;
