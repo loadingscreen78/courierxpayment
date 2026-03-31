@@ -84,13 +84,6 @@ export async function POST(req: NextRequest) {
         email,
       });
 
-      if (linkError || !linkData) {
-        return NextResponse.json({ error: linkError?.message || 'Failed to generate session' }, { status: 500 });
-      }
-
-      // Update user password since they set one during signup
-      await supabase.auth.admin.updateUser(found.id, { password });
-
       // The hashed_token from generateLink can be used to verify OTP
       const token = linkData.properties?.hashed_token;
       if (token) {
