@@ -1,10 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+import { getServiceRoleClient } from '@/lib/shipment-lifecycle/supabaseAdmin';
 
 /**
  * Server-side signup that auto-confirms the email.
@@ -19,9 +14,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Email and password required' }, { status: 400 });
     }
 
+    const supabase = getServiceRoleClient();
+
     // Try to create the user with auto-confirm using admin API
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: createData, error: createError } = await (supabaseAdmin.auth.admin as any).createUser({
+    const { data: createData, error: createError } = await supabase.auth.admin.createUser({
       email,
       password,
       email_confirm: true,
@@ -34,7 +30,7 @@ export async function POST(req: NextRequest) {
           msg.includes('duplicate key') ||
           msg.includes('already exists')) {
         
-        const { data: signInData, error: signInError } = await supabaseAdmin.auth.signInWithPassword({
+        const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
           email,
           password,
         });
@@ -56,8 +52,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: createError.message }, { status: 400 });
     }
 
-    // User created successfully, now sign them in to get session tokens
-    const { data: signInData, error: signInError } = await supabaseAdmin.auth.signInWithPassword({
+    // User created, sign them in to get session tokens
+    const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
