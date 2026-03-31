@@ -314,11 +314,11 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
         const cashfreeMode = process.env.NEXT_PUBLIC_CASHFREE_ENV === 'sandbox' ? 'sandbox' : 'production';
         const cf = (window as any).Cashfree({ mode: cashfreeMode });
 
-        // Poll for payment status using lightweight endpoint (handles QR/UPI)
-        let paymentConfirmed = false;
+        // Use a flag to track if polling detected payment (don't update React state during modal)
+        let pollingDetectedPayment = false;
         let pollingStopped = false;
         const pollInterval = setInterval(async () => {
-          if (pollingStopped || paymentConfirmed) return;
+          if (pollingStopped || pollingDetectedPayment) return;
           try {
             const pollRes = await fetch('/api/cashfree/check-payment-status', {
               method: 'POST',
@@ -327,32 +327,12 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
             });
             const pollData = await pollRes.json();
             if (pollData.paid) {
-              paymentConfirmed = true;
-              pollingStopped = true;
+              pollingDetectedPayment = true;
               clearInterval(pollInterval);
-              // Defer state updates to avoid React error #300
-              setTimeout(() => {
-                // Trigger full verify to create shipment
-                fetch('/api/cashfree/verify-guest-payment', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ orderId: data.orderId }),
-                }).then(r => r.json()).then(verifyData => {
-                  setTrackingNumber(serverTracking);
-                  setAwbUrl(verifyData?.awbUrl || data.awbUrl || '');
-                  setPhase('success');
-                  setPaymentLoading(false);
-                  toast({ title: 'Payment Successful', description: 'Your shipment has been booked.' });
-                }).catch(() => {
-                  setTrackingNumber(serverTracking);
-                  setAwbUrl(data.awbUrl || '');
-                  setPhase('success');
-                  setPaymentLoading(false);
-                });
-              }, 0);
+              // Don't update state here — wait for modal to close
             }
-          } catch { /* ignore poll errors */ }
-        }, 5000); // Poll every 5 seconds
+          } catch { /* ignore */ }
+        }, 5000);
 
         let checkoutResult: any = null;
         try {
@@ -364,20 +344,17 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
           console.error('[GuestSummary] Cashfree checkout error:', checkoutErr);
         }
 
-        // Stop polling when modal closes
+        // Modal closed — safe to update React state now
         pollingStopped = true;
         clearInterval(pollInterval);
 
-        // If already confirmed by polling, skip
-        if (paymentConfirmed) return;
-
-        if (checkoutResult?.error) {
+        if (checkoutResult?.error && !pollingDetectedPayment) {
           toast({ title: 'Payment Failed', description: checkoutResult.error.message || 'Payment was not completed.', variant: 'destructive' });
           setPaymentLoading(false);
           return;
         }
 
-        // Step 4: Final verify after modal closes
+        // Verify payment (either polling detected it or modal reported success)
         try {
           const verifyRes = await fetch('/api/cashfree/verify-guest-payment', {
             method: 'POST',
@@ -388,6 +365,12 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
           if (verifyData.success) {
             setTrackingNumber(serverTracking);
             setAwbUrl(verifyData.awbUrl || data.awbUrl || '');
+            setPhase('success');
+            toast({ title: 'Payment Successful', description: 'Your shipment has been booked.' });
+          } else if (pollingDetectedPayment) {
+            // Polling said paid but verify failed — still show success
+            setTrackingNumber(serverTracking);
+            setAwbUrl(data.awbUrl || '');
             setPhase('success');
             toast({ title: 'Payment Successful', description: 'Your shipment has been booked.' });
           } else {
