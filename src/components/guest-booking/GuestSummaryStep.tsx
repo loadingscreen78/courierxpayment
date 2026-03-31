@@ -400,6 +400,28 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
     toast({ title: 'Copied', description: 'Tracking number copied to clipboard.' });
   };
 
+  // ── Rate breakdown for international (must be before any conditional return to satisfy Rules of Hooks) ──
+  const rateBreakdown = useMemo(() => {
+    if (mode !== 'international' || !rateFormData?.destinationCountry) return null;
+    try {
+      return calculateRate({
+        destinationCountryCode: rateFormData.destinationCountry,
+        shipmentType: rateFormData.shipmentType,
+        weightGrams: rateFormData.weightGrams,
+        dimensions: { length: rateFormData.lengthCm, width: rateFormData.widthCm, height: rateFormData.heightCm },
+        declaredValue: rateFormData.declaredValue,
+      }, true);
+    } catch { return null; }
+  }, [mode, rateFormData]);
+
+  // Aadhaar thumbnail URLs
+  const frontThumb = useMemo(() => aadhaarFront ? URL.createObjectURL(aadhaarFront) : null, [aadhaarFront]);
+  const backThumb = useMemo(() => aadhaarBack ? URL.createObjectURL(aadhaarBack) : null, [aadhaarBack]);
+
+  // Dimensions
+  const dims = rateFormData ? { l: rateFormData.lengthCm, w: rateFormData.widthCm, h: rateFormData.heightCm } : null;
+  const weight = rateFormData?.weightGrams ? `${rateFormData.weightGrams}g` : rateFormData?.weightKg ? `${rateFormData.weightKg} kg` : '';
+
   // ═══════════════════════════════════════════════════════════════════════════
   // SUCCESS PHASE
   // ═══════════════════════════════════════════════════════════════════════════
@@ -529,27 +551,6 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
     );
   }
 
-  // ── Rate breakdown for international ──
-  const rateBreakdown = useMemo(() => {
-    if (mode !== 'international' || !rateFormData?.destinationCountry) return null;
-    try {
-      return calculateRate({
-        destinationCountryCode: rateFormData.destinationCountry,
-        shipmentType: rateFormData.shipmentType,
-        weightGrams: rateFormData.weightGrams,
-        dimensions: { length: rateFormData.lengthCm, width: rateFormData.widthCm, height: rateFormData.heightCm },
-        declaredValue: rateFormData.declaredValue,
-      }, true);
-    } catch { return null; }
-  }, [mode, rateFormData]);
-
-  // Aadhaar thumbnail URLs
-  const frontThumb = useMemo(() => aadhaarFront ? URL.createObjectURL(aadhaarFront) : null, [aadhaarFront]);
-  const backThumb = useMemo(() => aadhaarBack ? URL.createObjectURL(aadhaarBack) : null, [aadhaarBack]);
-
-  // Dimensions
-  const dims = rateFormData ? { l: rateFormData.lengthCm, w: rateFormData.widthCm, h: rateFormData.heightCm } : null;
-  const weight = rateFormData?.weightGrams ? `${rateFormData.weightGrams}g` : rateFormData?.weightKg ? `${rateFormData.weightKg} kg` : '';
 
   // ═══════════════════════════════════════════════════════════════════════════
   // REVIEW PHASE (default)
