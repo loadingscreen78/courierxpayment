@@ -454,9 +454,44 @@ export default function OpenAccount() {
       }).eq('user_id', currentUser.id);
 
       if (error) {
-        toast({ title: 'Error', description: 'Failed to save details. Please try again.', variant: 'destructive' });
-        setIsLoading(false);
-        return;
+        console.error('[OpenAccount] Profile update failed:', error.message, error.code, error.details);
+        // If update failed because profile row doesn't exist, try upsert
+        if (error.code === 'PGRST116' || error.message?.includes('0 rows')) {
+          const { error: upsertError } = await supabase.from('profiles').upsert({
+            user_id: currentUser.id,
+            email: currentUser.email,
+            full_name: personalData!.fullName,
+            phone_number: `+91${personalData!.phone}`,
+            date_of_birth: personalData!.dateOfBirth,
+            sex: personalData!.sex,
+            address_line1: personalData!.addressLine1,
+            address_line2: personalData!.addressLine2 || null,
+            landmark: personalData!.landmark || null,
+            city: personalData!.city,
+            state: personalData!.state,
+            pincode: personalData!.pincode,
+            aadhaar_number: values.aadhaarNumber,
+            pan_number: values.panNumber,
+            bank_account_number: values.bankAccountNumber,
+            bank_ifsc: values.bankIfsc,
+            bank_name: values.bankName,
+            estimated_shipments_per_month: values.estimatedShipmentsPerMonth,
+            aadhaar_doc_url: aadhaarDoc.url,
+            pan_doc_url: panDoc.url,
+            bank_doc_url: bankDoc.url,
+            kyc_completed_at: new Date().toISOString(),
+          }, { onConflict: 'user_id' });
+          if (upsertError) {
+            console.error('[OpenAccount] Profile upsert also failed:', upsertError.message);
+            toast({ title: 'Error', description: `Failed to save: ${upsertError.message}`, variant: 'destructive' });
+            setIsLoading(false);
+            return;
+          }
+        } else {
+          toast({ title: 'Error', description: `Failed to save: ${error.message}`, variant: 'destructive' });
+          setIsLoading(false);
+          return;
+        }
       }
 
       // Re-fetch profile to get the auto-assigned account_number from DB trigger
