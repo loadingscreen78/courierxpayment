@@ -750,6 +750,18 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
         </div>
       </div>
 
+      {/* ── Route Map ── */}
+      <RouteMap
+        pickupAddress={senderReceiver.senderAddress}
+        pickupCity={senderReceiver.senderCity}
+        pickupPincode={senderReceiver.senderPincode}
+        destinationAddress={senderReceiver.receiverAddress}
+        destinationCity={senderReceiver.receiverCity}
+        destinationZipcode={senderReceiver.receiverZipcode}
+        destinationCountry={isDomestic ? 'India' : rateFormData?.destinationCountry}
+        mode={mode}
+      />
+
       {/* ── Identity Verification ── */}
       {isDomestic ? (
         /* ── Domestic: Government ID Upload ── */

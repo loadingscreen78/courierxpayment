@@ -61,7 +61,6 @@ export const LandingFooter = () => {
             <div className="flex flex-col items-center text-center space-y-4">
               <div className="flex items-center gap-3">
                 <img src={logoMain.src} alt="CourierX" className="h-10 w-auto rounded-lg" />
-                <span className="font-bold text-xl font-typewriter">CourierX</span>
               </div>
               <p className="text-paper-white/60 text-sm leading-relaxed max-w-xs">
                 India&apos;s only person to person courier booking platform. Send medicines, documents, gifts &amp; parcels across India and worldwide.
@@ -91,7 +90,6 @@ export const LandingFooter = () => {
             <div className="space-y-5">
               <div className="flex items-center gap-3">
                 <img src={logoMain.src} alt="CourierX" className="h-10 w-auto rounded-lg" />
-                <span className="font-bold text-xl font-typewriter">CourierX</span>
               </div>
               <p className="text-paper-white/60 text-sm leading-relaxed">
                 India&apos;s only person to person courier booking platform. Send medicines, documents, gifts &amp; parcels 
