@@ -58,9 +58,10 @@ export async function sendOtp(
         'cache-control': 'no-cache',
       },
       body: JSON.stringify({
-        variables_values: otp,
-        route: 'otp',
+        message: `Your CourierX verification code is: ${otp}`,
+        route: 'q',
         numbers: localNumber,
+        flash: '0',
       }),
     });
 
