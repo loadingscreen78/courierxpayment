@@ -1611,10 +1611,10 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                                     className="shrink-0 h-11 gap-1.5 border-coke-red/30 text-coke-red hover:bg-coke-red/5 hover:text-coke-red"
                                   >
                                     {emailOtpState === 'sending' ? (
-                                      <><Circleng...</>
+                                      <><CircleNotch className="h-4 w-4 animate-spin" /> Sending...</>
                                     ) : (
-                                
-                                 
+                                      <><EnvelopeSimple className="h-4 w-4" weight="duotone" /> Verify Email</>
+                                    )}
                                   </Button>
                                 ) : null}
                               </div>
