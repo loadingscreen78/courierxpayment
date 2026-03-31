@@ -484,6 +484,10 @@ const PublicRateCalculator = () => {
   // International state
   const [destinationCountry, setDestinationCountry] = useState('');
   const [weightGrams, setWeightGrams] = useState(500);
+  const [intlShipmentType, setIntlShipmentType] = useState<'medicine' | 'document' | 'gift'>('gift');
+  const [intlLength, setIntlLength] = useState(20);
+  const [intlWidth, setIntlWidth] = useState(15);
+  const [intlHeight, setIntlHeight] = useState(10);
   const [selectedCarrier, setSelectedCarrier] = useState<Carrier | null>(null);
 
   // Domestic state
@@ -507,8 +511,14 @@ const PublicRateCalculator = () => {
   const isCountryServed = selectedCountry?.isServed ?? false;
   const courierOptions = useMemo(() => {
     if (!destinationCountry || !isCountryServed || weightGrams <= 0) return [];
-    return getCourierOptions({ destinationCountryCode: destinationCountry, shipmentType: 'gift', weightGrams, declaredValue: 10000 });
-  }, [destinationCountry, isCountryServed, weightGrams]);
+    return getCourierOptions({
+      destinationCountryCode: destinationCountry,
+      shipmentType: intlShipmentType,
+      weightGrams,
+      dimensions: { length: intlLength, width: intlWidth, height: intlHeight },
+      declaredValue: 10000,
+    });
+  }, [destinationCountry, isCountryServed, weightGrams, intlShipmentType, intlLength, intlWidth, intlHeight]);
   const eta = useMemo(() => {
     if (!destinationCountry || !isCountryServed) return null;
     return calculateETA(destinationCountry, selectedCarrier || 'DHL');
@@ -535,7 +545,7 @@ const PublicRateCalculator = () => {
         body: JSON.stringify({
           pickupPincode, deliveryPincode, weightKg: w,
           lengthCm: domesticLength, widthCm: domesticWidth, heightCm: domesticHeight,
-          declaredValue: 5000, shipmentType: domesticShipmentType,
+          declaredValue: domesticShipmentType === 'document' ? 100 : 5000, shipmentType: domesticShipmentType,
         }),
       });
       const result = await res.json();
@@ -623,6 +633,36 @@ const PublicRateCalculator = () => {
                   <CardContent className="p-8">
                     <div className="grid lg:grid-cols-2 gap-8">
                       <div className="space-y-4">
+                        {/* Shipment Type */}
+                        <Label className="flex items-center gap-2 text-base font-semibold">
+                          <div className="w-8 h-8 rounded-lg bg-coke-red/10 flex items-center justify-center">
+                            <Package size={16} weight="bold" className="text-coke-red" />
+                          </div>
+                          What are you shipping?
+                        </Label>
+                        <div className="grid grid-cols-3 gap-3">
+                          {([
+                            { value: 'medicine' as const, label: 'Medicine', icon: Package, desc: 'Prescription medicines' },
+                            { value: 'document' as const, label: 'Document', icon: FileText, desc: 'Documents & certificates' },
+                            { value: 'gift' as const, label: 'Gift / Personal', icon: Gift, desc: 'Gifts, clothing, food' },
+                          ]).map(opt => (
+                            <motion.button key={opt.value} whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
+                              onClick={() => {
+                                setIntlShipmentType(opt.value);
+                                if (opt.value === 'document' && weightGrams > 1000) setWeightGrams(1000);
+                              }}
+                              className={cn("flex flex-col items-center gap-2 p-3 rounded-xl border-2 transition-all text-center",
+                                intlShipmentType === opt.value ? "border-coke-red bg-coke-red/5 shadow-sm" : "border-border hover:border-coke-red/30")}>
+                              <opt.icon size={22} weight="bold" className={intlShipmentType === opt.value ? "text-coke-red" : "text-muted-foreground"} />
+                              <div>
+                                <p className={cn("font-semibold text-sm", intlShipmentType === opt.value ? "text-coke-red" : "text-foreground")}>{opt.label}</p>
+                                <p className="text-[10px] text-muted-foreground leading-tight">{opt.desc}</p>
+                              </div>
+                            </motion.button>
+                          ))}
+                        </div>
+
+                        {/* Destination Country */}
                         <Label className="flex items-center gap-2 text-base font-semibold">
                           <div className="w-8 h-8 rounded-lg bg-coke-red/10 flex items-center justify-center">
                             <MapPin size={16} weight="bold" className="text-coke-red" />
@@ -656,7 +696,47 @@ const PublicRateCalculator = () => {
                           </div>
                           Package Weight
                         </Label>
-                        <WeightSelector value={weightGrams} onChange={setWeightGrams} />
+                        <WeightSelector value={weightGrams} onChange={(v) => {
+                          if (intlShipmentType === 'document' && v > 1000) setWeightGrams(1000);
+                          else setWeightGrams(v);
+                        }} />
+                        {intlShipmentType === 'document' && (
+                          <p className="text-xs text-amber-600 flex items-center gap-1">
+                            <Warning size={12} weight="bold" /> Documents max 1 kg
+                          </p>
+                        )}
+
+                        {/* Dimensions */}
+                        <Label className="flex items-center gap-2 text-base font-semibold pt-2">
+                          <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                            <Cube size={16} weight="bold" className="text-primary" />
+                          </div>
+                          Package Dimensions (cm)
+                        </Label>
+                        <div className="grid grid-cols-3 gap-2">
+                          {[
+                            { label: 'L', val: intlLength, set: setIntlLength },
+                            { label: 'W', val: intlWidth, set: setIntlWidth },
+                            { label: 'H', val: intlHeight, set: setIntlHeight },
+                          ].map(d => (
+                            <div key={d.label} className="space-y-1">
+                              <Label className="text-xs">{d.label} (cm)</Label>
+                              <Input type="number" min={1} max={150} value={d.val}
+                                onChange={(e) => d.set(Math.max(1, Number(e.target.value) || 1))}
+                                className="font-typewriter h-10" />
+                            </div>
+                          ))}
+                        </div>
+                        {(() => {
+                          const volWeight = (intlLength * intlWidth * intlHeight) / 5000;
+                          const actualKg = weightGrams / 1000;
+                          return volWeight > actualKg ? (
+                            <p className="text-xs text-amber-600 flex items-center gap-1">
+                              <Warning size={12} weight="bold" />
+                              Volumetric weight ({volWeight.toFixed(1)} kg) exceeds actual weight — charged at {volWeight.toFixed(1)} kg
+                            </p>
+                          ) : null;
+                        })()}
                       </div>
                     </div>
                   </CardContent>
@@ -679,7 +759,7 @@ const PublicRateCalculator = () => {
                       <h2 className="text-2xl md:text-3xl font-bold font-typewriter">Choose Your <span className="text-coke-red">Carrier</span></h2>
                       <p className="text-muted-foreground mt-2">Compare rates and select the best option</p>
                     </div>
-                    <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-4xl mx-auto">
                       {courierOptions.map((option, i) => (
                         <CarrierCard key={option.carrier} option={option}
                           isSelected={(selectedCarrier === option.carrier || (!selectedCarrier && option.isRecommended && !COMING_SOON_CARRIERS.includes(option.carrier))) && !COMING_SOON_CARRIERS.includes(option.carrier)}
@@ -698,6 +778,10 @@ const PublicRateCalculator = () => {
                                 mode: 'international',
                                 destinationCountry,
                                 weightGrams,
+                                shipmentType: intlShipmentType,
+                                lengthCm: intlLength,
+                                widthCm: intlWidth,
+                                heightCm: intlHeight,
                                 selectedCarrier: selectedOption?.carrier,
                                 estimatedPrice: selectedOption?.price,
                                 transitDays: selectedOption?.transitDays,
@@ -725,7 +809,7 @@ const PublicRateCalculator = () => {
                           <p className="text-muted-foreground mt-2 max-w-md mx-auto">Select a destination country and enter your package weight to see instant shipping rates.</p>
                         </div>
                         <div className="flex items-center justify-center gap-8 pt-4">
-                          {[{ icon: Globe, label: '150+ Countries' }, { icon: Truck, label: '4 Carriers' }, { icon: Lightning, label: 'Instant Quotes' }].map((item) => (
+                          {[{ icon: Globe, label: '150+ Countries' }, { icon: Truck, label: 'Top Carriers' }, { icon: Lightning, label: 'Instant Quotes' }].map((item) => (
                             <div key={item.label} className="flex items-center gap-2 text-sm text-muted-foreground">
                               <item.icon size={16} weight="bold" className="text-coke-red" /><span>{item.label}</span>
                             </div>
@@ -776,7 +860,7 @@ const PublicRateCalculator = () => {
                         <div className="space-y-2">
                           <Label className="text-xs text-muted-foreground">Shipment Type</Label>
                           <div className="grid grid-cols-2 gap-3">
-                            <button onClick={() => { setDomesticShipmentType('document'); setDomesticWeightKg(Math.min(domesticWeightKg, 1)); }}
+                            <button onClick={() => { setDomesticShipmentType('document'); setDomesticWeightKg(Math.min(domesticWeightKg, 1) || 0.5); }}
                               className={cn("flex items-center gap-3 p-3 rounded-xl border-2 transition-all text-left",
                                 domesticShipmentType === 'document' ? "border-coke-red bg-coke-red/5 shadow-sm" : "border-border hover:border-coke-red/30")}>
                               <FileText size={24} weight="bold" className={domesticShipmentType === 'document' ? "text-coke-red" : "text-muted-foreground"} />

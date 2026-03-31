@@ -407,10 +407,20 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
         if (data.widthCm) domForm.setValue('widthCm', data.widthCm);
         if (data.heightCm) domForm.setValue('heightCm', data.heightCm);
       }
+
+      if (isInternational && data.mode === 'international') {
+        if (data.destinationCountry) intlForm.setValue('destinationCountry', data.destinationCountry);
+        if (data.shipmentType) intlForm.setValue('shipmentType', data.shipmentType);
+        if (data.weightGrams) intlForm.setValue('weightGrams', data.weightGrams);
+        if (data.lengthCm) intlForm.setValue('lengthCm', data.lengthCm);
+        if (data.widthCm) intlForm.setValue('widthCm', data.widthCm);
+        if (data.heightCm) intlForm.setValue('heightCm', data.heightCm);
+      }
+
       // Clean up after reading
       localStorage.removeItem('publicRateCalcData');
     } catch { /* ignore parse errors */ }
-  }, [isInternational, domForm]);
+  }, [isInternational, domForm, intlForm]);
 
   // ── Pincode lookups for domestic rate form (step 1) ──
   const ratePickupPin = domForm.watch('pickupPincode');
