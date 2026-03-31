@@ -21,6 +21,7 @@ import { getCourierOptions, calculateRate, type CourierOption } from '@/lib/ship
 import { getAllCountriesForDropdown, getCountryByCode } from '@/lib/shipping/countries';
 import GuestSummaryStep from '@/components/guest-booking/GuestSummaryStep';
 import AadhaarKycUpload from '@/components/guest-booking/AadhaarKycUpload';
+import AddressAutocomplete from '@/components/guest-booking/AddressAutocomplete';
 import { usePincodeLookup } from '@/hooks/usePincodeLookup';
 import { useAadhaarOcr } from '@/hooks/useAadhaarOcr';
 import { INDIAN_STATES } from '@/lib/pincode-lookup';
@@ -1782,7 +1783,19 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                           <FormField control={detailsForm.control} name="receiverAddress" render={({ field }) => (
                             <FormItem>
                               <FormLabel>Full Address</FormLabel>
-                              <FormControl><Textarea {...field} placeholder={getAddressGuidance()} rows={2} className="resize-none" /></FormControl>
+                              <FormControl>
+                                <AddressAutocomplete
+                                  value={field.value}
+                                  onChange={field.onChange}
+                                  countryCode={destinationCountryInfo?.code}
+                                  placeholder={getAddressGuidance()}
+                                  onAddressSelect={(parts) => {
+                                    if (parts.city) detailsForm.setValue('receiverCity', parts.city);
+                                    if (parts.state) detailsForm.setValue('receiverState', parts.state);
+                                    if (parts.zipcode) detailsForm.setValue('receiverZipcode', parts.zipcode);
+                                  }}
+                                />
+                              </FormControl>
                               <FormMessage />
                             </FormItem>
                           )} />
