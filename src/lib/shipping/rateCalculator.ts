@@ -11,7 +11,7 @@
  * 7. GST = Subtotal × 18%
  * 8. Grand Total = Subtotal + GST
  *
- * Guest markup: 52% on top of account price
+ * Non-account markup: ~33% on top of account price (account holders get 25% off)
  */
 
 import { type Country, getCountryByCode, type RateZone, type FedExZone, type AramexZone } from './countries';
@@ -69,14 +69,20 @@ const DIM_DIVISOR = 5000;
 
 // Pricing model:
 // costPrice = base + fuel + domestic transit (our cost from carrier + domestic leg)
-// nonAccountPrice = costPrice × 2.65 (our selling price to non-account/guest users)
-// accountPrice = nonAccountPrice × 0.48 (52% discount for account holders)
-// This means: accountPrice = costPrice × 2.65 × 0.48 = costPrice × 1.272
-const COST_TO_SELLING_MULTIPLIER = 2.65;
-const ACCOUNT_DISCOUNT = 0.52; // 52% discount for account holders
+// accountPrice = costPrice × 1.272 (our selling price to account holders — same margin as before)
+// nonAccountPrice = accountPrice / 0.75 = costPrice × 1.696 (account holders get 25% off non-account price)
+const COST_TO_SELLING_MULTIPLIER = 1.696;
+const ACCOUNT_DISCOUNT = 0.25; // 25% discount for account holders vs non-account price
 
 /** @deprecated Use COST_TO_SELLING_MULTIPLIER instead */
 export const GUEST_MARKUP = COST_TO_SELLING_MULTIPLIER;
+
+/**
+ * Multiplier for domestic guest rates.
+ * Domestic base rates (from NimbusPost) = account price.
+ * Guest price = account price / (1 - ACCOUNT_DISCOUNT) = account price / 0.75
+ */
+export const DOMESTIC_GUEST_MULTIPLIER = 1 / (1 - ACCOUNT_DISCOUNT); // ≈ 1.3333
 
 /**
  * Update fuel surcharge percentages at runtime.
@@ -314,8 +320,8 @@ export const calculateRate = (
   const costWithGst = costPrice + costGst;
 
   // Step 8: Selling prices
-  // Non-account (guest) price = cost × 2.65 (includes our margin)
-  // Account price = non-account × (1 - 0.52) = non-account × 0.48
+  // Non-account (guest) price = cost × 1.696 (our selling price)
+  // Account price = non-account × 0.75 (25% discount for account holders)
   const nonAccountTotal = Math.round(costWithGst * COST_TO_SELLING_MULTIPLIER);
   const accountTotal = Math.round(nonAccountTotal * (1 - ACCOUNT_DISCOUNT));
 
@@ -341,7 +347,7 @@ export const calculateRate = (
       { label: `Fuel surcharge (${fuelPercent}%)`, amount: fuelSurcharge },
       { label: 'Domestic transit', amount: domesticTransit },
       { label: 'GST (18%)', amount: costGst },
-      ...(isGuest && savings > 0 ? [{ label: 'Open account — save 52%', amount: -savings }] : []),
+      ...(isGuest && savings > 0 ? [{ label: 'Open account to save more', amount: -savings }] : []),
     ],
   };
 };

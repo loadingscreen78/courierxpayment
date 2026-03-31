@@ -5,7 +5,7 @@ import { DOMESTIC_LIMITS } from '@/lib/domestic/types';
 import type { DomesticShipmentType } from '@/lib/domestic/types';
 import { getServiceRoleClient } from '@/lib/shipment-lifecycle/supabaseAdmin';
 
-import { GUEST_MARKUP } from '@/lib/shipping/rateCalculator';
+import { DOMESTIC_GUEST_MULTIPLIER } from '@/lib/shipping/rateCalculator';
 
 const rateCheckSchema = z.object({
   pickupPincode: z.string().regex(/^\d{6}$/, 'Invalid pickup pincode'),
@@ -95,9 +95,9 @@ export async function POST(request: NextRequest) {
       const finalCouriers = isGuest
         ? mockCouriers.map(c => ({
             ...c,
-            shipping_charge: Math.round(c.shipping_charge * GUEST_MARKUP),
-            gst_amount: Math.round(c.gst_amount * GUEST_MARKUP),
-            customer_price: Math.round(c.customer_price * GUEST_MARKUP),
+            shipping_charge: Math.round(c.shipping_charge * DOMESTIC_GUEST_MULTIPLIER),
+            gst_amount: Math.round(c.gst_amount * DOMESTIC_GUEST_MULTIPLIER),
+            customer_price: Math.round(c.customer_price * DOMESTIC_GUEST_MULTIPLIER),
           }))
         : mockCouriers;
 
@@ -110,9 +110,9 @@ export async function POST(request: NextRequest) {
     const finalCouriers = isGuest
       ? couriers.map(c => ({
           ...c,
-          shipping_charge: Math.round(c.shipping_charge * GUEST_MARKUP),
-          gst_amount: Math.round(c.gst_amount * GUEST_MARKUP),
-          customer_price: Math.round(c.customer_price * GUEST_MARKUP),
+          shipping_charge: Math.round(c.shipping_charge * DOMESTIC_GUEST_MULTIPLIER),
+          gst_amount: Math.round(c.gst_amount * DOMESTIC_GUEST_MULTIPLIER),
+          customer_price: Math.round(c.customer_price * DOMESTIC_GUEST_MULTIPLIER),
         }))
       : couriers;
 

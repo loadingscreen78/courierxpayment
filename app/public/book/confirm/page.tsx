@@ -226,7 +226,7 @@ function ConfirmContent() {
           {/* Account upsell */}
           <div className="rounded-xl border border-candlestick-green/30 bg-candlestick-green/5 p-4 text-left">
             <p className="text-sm">
-              <span className="font-semibold">Want lower rates next time?</span> Open a free account to save 52% on every shipment.
+              <span className="font-semibold">Want lower rates next time?</span> Open a free account to save 25% on every shipment.
             </p>
             <Button size="sm" variant="outline" className="mt-3 gap-1.5" onClick={() => router.push('/open-account')}>
               <UserPlus className="h-3.5 w-3.5" /> Open Account

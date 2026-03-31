@@ -52,8 +52,8 @@ export default function PublicBookPage() {
             </Button>
             <Button variant="outline" size="sm" onClick={() => router.push('/open-account')} className="rounded-xl text-xs sm:text-sm gap-1 sm:gap-1.5 px-2 sm:px-3">
               <UserPlus className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
-              <span className="hidden sm:inline">Open Account — Save 52%</span>
-              <span className="sm:hidden">Save 52%</span>
+              <span className="hidden sm:inline">Open Account — Save 25%</span>
+              <span className="sm:hidden">Save 25%</span>
             </Button>
           </div>
         </div>
@@ -76,7 +76,7 @@ export default function PublicBookPage() {
           <div className="text-sm">
             <p className="font-medium text-amber-800 dark:text-amber-300">This is a one-time shipping service</p>
             <p className="text-amber-700/80 dark:text-amber-400/70 mt-1">
-              Standard rates apply for guest shipments. For <span className="font-semibold">52% discounted rates</span>, wallet payments, shipment tracking dashboard, and other account benefits —{' '}
+              Standard rates apply for guest shipments. For <span className="font-semibold">lower rates</span>, wallet payments, shipment tracking dashboard, and other account benefits —{' '}
               <button onClick={() => router.push('/open-account')} className="text-coke-red hover:underline font-semibold">
                 open a free account
               </button>.

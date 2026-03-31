@@ -76,7 +76,7 @@ interface FileUploadState {
 const emptyFileState: FileUploadState = { file: null, uploading: false, uploaded: false, url: null, error: null };
 
 const benefits = [
-  { icon: CurrencyInr, text: '52% lower rates on all shipments' },
+  { icon: CurrencyInr, text: 'Lower rates on all shipments' },
   { icon: Package, text: 'Wallet-based payments with auto-deduction' },
   { icon: ShieldCheck, text: 'Aadhaar-verified identity for customs compliance' },
 ];
@@ -410,7 +410,7 @@ export default function OpenAccount() {
             <Link href="/"><img alt="CourierX" src="/logo.svg" className="h-10 w-auto object-contain mb-8" /></Link>
             <h2 className="text-3xl font-bold font-typewriter mb-4">Open a Free Account</h2>
             <p className="text-muted-foreground text-lg leading-relaxed">
-              Account holders get exclusive rates — <span className="font-semibold text-candlestick-green">52% lower</span> than standard pricing on every domestic and international shipment.
+              Account holders get exclusive rates — <span className="font-semibold text-candlestick-green">25% lower</span> than standard pricing on every domestic and international shipment.
             </p>
           </motion.div>
           <div className="space-y-4">
@@ -458,10 +458,10 @@ export default function OpenAccount() {
               <motion.div key="signup" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-5">
                 <div>
                   <h1 className="text-2xl font-bold flex items-center gap-2"><UserPlus className="h-6 w-6 text-coke-red" /> Open Account</h1>
-                  <p className="text-muted-foreground text-sm mt-1">Create your account to unlock 52% lower shipping rates.</p>
+                  <p className="text-muted-foreground text-sm mt-1">Create your account to unlock lower shipping rates.</p>
                 </div>
                 <div className="lg:hidden rounded-xl border border-candlestick-green/30 bg-candlestick-green/5 p-3">
-                  <p className="text-sm font-medium text-candlestick-green">Account holders save 52% on every shipment.</p>
+                  <p className="text-sm font-medium text-candlestick-green">Account holders save 25% on every shipment.</p>
                 </div>
                 <Form {...signupForm}>
                   <form onSubmit={signupForm.handleSubmit(handleSignUp)} className="space-y-4">

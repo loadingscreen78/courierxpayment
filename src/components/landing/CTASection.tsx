@@ -106,7 +106,7 @@ export const CTASection = () => {
                   className="text-muted-foreground text-lg leading-relaxed"
                 >
                   Book your personal courier instantly — domestic across India or international to 150+ countries. Open a free account with Aadhaar KYC to unlock 
-                  <span className="font-semibold text-foreground"> 52% lower rates</span> on every shipment.
+                  <span className="font-semibold text-foreground"> lower rates</span> on every shipment.
                 </motion.p>
                 
                 <motion.div
@@ -130,7 +130,7 @@ export const CTASection = () => {
                     className="border-border text-foreground hover:bg-accent transition-all duration-300"
                     onClick={() => router.push('/open-account')}
                   >
-                    Open Account — Save 52%
+                    Open Account — Save 25%
                   </Button>
                 </motion.div>
               </div>

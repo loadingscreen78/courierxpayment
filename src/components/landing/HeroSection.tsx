@@ -153,7 +153,7 @@ export const HeroSection = () => {
               transition={{ duration: 0.6, delay: 0.9 }}
               className="hidden sm:block text-sm text-muted-foreground"
             >
-              Account holders save up to <span className="font-semibold text-candlestick-green">52%</span> on every shipment.{' '}
+              Account holders save up to <span className="font-semibold text-candlestick-green">25%</span> on every shipment.{' '}
               <button onClick={() => router.push('/open-account')} className="text-coke-red hover:underline font-medium">
                 Open a free account →
               </button>

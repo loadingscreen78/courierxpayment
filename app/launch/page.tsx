@@ -992,7 +992,7 @@ function drawAct5(ctx: CanvasRenderingContext2D, W: number, H: number, t: number
   ctx.font = "bold 12px 'IBM Plex Sans', sans-serif";
   ctx.fillStyle = '#FFF';
   ctx.textAlign = 'center';
-  ctx.fillText('Ship Now — Save 52%', W - 140, 37);
+  ctx.fillText('Ship Now — Save 25%', W - 140, 37);
   ctx.textAlign = 'left';
 
   // Hero section

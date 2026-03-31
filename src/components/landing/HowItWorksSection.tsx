@@ -42,7 +42,7 @@ const accountSteps = [
   {
     icon: IdentificationCard,
     title: 'Sign Up & KYC',
-    description: 'Quick registration with Aadhaar verification. Unlock 52% lower rates.',
+    description: 'Quick registration with Aadhaar verification. Unlock lower rates.',
     step: '01',
   },
   {
@@ -137,7 +137,7 @@ export const HowItWorksSection = () => {
                 <UserCirclePlus className="h-4 w-4 sm:h-5 sm:w-5" />
                 With Account
                 <span className="hidden sm:inline text-[10px] font-bold bg-white/20 px-1.5 py-0.5 rounded-full">
-                  SAVE 52%
+                  SAVE 25%
                 </span>
               </span>
             </button>
@@ -236,8 +236,7 @@ export const HowItWorksSection = () => {
                 </button>
               </>
             ) : (
-              <>Account holders save up to <span className="font-semibold text-candlestick-green">52%</span> on every shipment with wallet payments and priority support.</>
-            )}
+              <>Account holders save up to <span className="font-semibold text-candlestick-green">25%</span> on every shipment with wallet payments and priority support.</>            )}
           </motion.p>
         </AnimatedSection>
       </div>

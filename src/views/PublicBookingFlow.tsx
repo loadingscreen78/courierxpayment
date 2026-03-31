@@ -835,8 +835,8 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
             <Button variant="ghost" size="sm" onClick={() => router.push('/auth')} className="rounded-xl text-xs sm:text-sm px-2 sm:px-3">Sign In</Button>
             <Button variant="outline" size="sm" onClick={() => router.push('/open-account')} className="rounded-xl text-xs sm:text-sm gap-1 sm:gap-1.5 px-2 sm:px-3 hidden xs:flex">
               <UserPlus className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
-              <span className="hidden sm:inline">Open Account — Save 52%</span>
-              <span className="sm:hidden">Save 52%</span>
+              <span className="hidden sm:inline">Open Account — Save 25%</span>
+              <span className="sm:hidden">Save 25%</span>
             </Button>
           </div>
         </div>
@@ -1210,7 +1210,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
             {/* Account savings banner */}
             <div className="rounded-xl border border-candlestick-green/30 bg-candlestick-green/5 p-4">
               <p className="text-sm">
-                💡 <span className="font-medium">Account holders pay up to 52% less</span> on these same routes.{' '}
+                💡 <span className="font-medium">Account holders get better rates</span> on these same routes.{' '}
                 <button onClick={() => router.push('/open-account')} className="text-coke-red hover:underline font-semibold">Open a free account →</button>
               </p>
             </div>
@@ -2306,7 +2306,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                 </button>
               </div>
               <p className="text-sm text-muted-foreground">
-                Guest bookings are limited to 10 kg. To ship heavier packages, open a free account and enjoy up to 52% lower rates.
+                Guest bookings are limited to 10 kg. To ship heavier packages, open a free account and enjoy lower rates.
               </p>
               <div className="flex gap-3 pt-2">
                 <Button variant="outline" onClick={() => setShowWeightLimitModal(false)} className="flex-1">
