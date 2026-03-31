@@ -28,9 +28,11 @@ export async function POST(request: NextRequest) {
     const result = await sendOtp(validation.data.phone);
 
     if (!result.success) {
+      const isProviderError = result.error !== 'FAST2SMS_API_KEY is not configured'
+        && !result.error?.includes('Validation');
       return NextResponse.json(
         { success: false, error: result.error || 'Failed to send OTP' },
-        { status: 400 }
+        { status: isProviderError ? 502 : 400 }
       );
     }
 

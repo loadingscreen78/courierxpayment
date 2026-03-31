@@ -64,11 +64,19 @@ export async function sendOtp(
       }),
     });
 
-    const data = await res.json();
+    const text = await res.text();
+    let data: Record<string, unknown>;
+    try {
+      data = JSON.parse(text);
+    } catch {
+      console.error('[FAST2SMS] Non-JSON response:', text);
+      return { success: false, error: 'Unexpected response from SMS provider' };
+    }
 
     if (!res.ok || data.return === false) {
-      console.error('[FAST2SMS] Send failed:', data);
-      return { success: false, error: data.message?.[0] || 'Failed to send OTP' };
+      const msg = Array.isArray(data.message) ? data.message[0] : (data.message as string);
+      console.error('[FAST2SMS] Send failed:', JSON.stringify(data));
+      return { success: false, error: msg || `SMS send failed (HTTP ${res.status})` };
     }
 
     // Store OTP for verification

@@ -287,8 +287,8 @@ const PublicTracking = () => {
         return false;
       }
       return true;
-    } catch {
-      setError('Failed to send OTP. Please try again.');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to send OTP. Please try again.');
       return false;
     }
   };
