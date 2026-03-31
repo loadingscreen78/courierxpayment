@@ -23,6 +23,7 @@ import GuestSummaryStep from '@/components/guest-booking/GuestSummaryStep';
 import AadhaarKycUpload from '@/components/guest-booking/AadhaarKycUpload';
 import AddressAutocomplete from '@/components/guest-booking/AddressAutocomplete';
 import { usePincodeLookup } from '@/hooks/usePincodeLookup';
+import { DomesticCourierGrid } from '@/components/domestic/DomesticCourierGrid';
 import { useAadhaarOcr } from '@/hooks/useAadhaarOcr';
 import { INDIAN_STATES } from '@/lib/pincode-lookup';
 import Link from 'next/link';
@@ -1395,33 +1396,14 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                         <span>Showing air service rates for document shipments</span>
                       </div>
                     )}
-                    {filteredDomestic.map((c: any) => (
-                    <div key={c.courier_company_id} className="bg-card rounded-xl border border-border p-3 sm:p-4 hover:border-coke-red/30 transition-colors">
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <h3 className="font-semibold text-sm sm:text-base truncate">{c.courier_name}</h3>
-                            <span className="text-[10px] sm:text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground capitalize shrink-0">{c.mode}</span>
-                            {c.is_recommended && (
-                              <span className="text-[10px] sm:text-xs px-2 py-0.5 rounded-full bg-candlestick-green/10 text-candlestick-green font-medium shrink-0">Cheapest</span>
-                            )}
-                          </div>
-                          <p className="text-xs sm:text-sm text-muted-foreground mt-1">{c.estimated_delivery_days} days delivery</p>
-                        </div>
-                        <div className="flex items-center justify-between sm:block sm:text-right shrink-0">
-                          <div>
-                            <p className="text-xl sm:text-2xl font-bold">₹{c.customer_price?.toLocaleString('en-IN')}</p>
-                            <div className="text-[10px] sm:text-xs text-muted-foreground mt-0.5">
-                              Base: ₹{c.shipping_charge?.toLocaleString('en-IN')} + GST: ₹{c.gst_amount?.toLocaleString('en-IN')}
-                            </div>
-                          </div>
-                          <Button size="sm" className="mt-2 bg-coke-red hover:bg-red-600 text-white" onClick={() => { feedbackPresets.select(); handleSelectCourier(c); }}>
-                            Book Now
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
+                    <DomesticCourierGrid
+                      couriers={filteredDomestic}
+                      selectedId={null}
+                      onSelect={() => {}}
+                      showBookButton
+                      onBook={(courier) => { feedbackPresets.select(); handleSelectCourier(courier); }}
+                      maxItems={15}
+                    />
                 </div>
                 );
               })()

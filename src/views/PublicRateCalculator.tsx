@@ -27,6 +27,7 @@ import { getCarrierInfo } from '@/lib/shipping/courierSelection';
 import { cn } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
 import type { CourierOption } from '@/lib/domestic/types';
+import { DomesticCourierGrid } from '@/components/domestic/DomesticCourierGrid';
 
 type ShippingMode = 'international' | 'domestic';
 type DomesticShipmentType = 'document' | 'gift';
@@ -331,90 +332,6 @@ const CarrierCard = ({ option, isSelected, onSelect, index }: {
           </Button>
         )}
       </div>
-    </motion.div>
-  );
-};
-
-// ─── Domestic Courier Card ────────────────────────────────────────────
-const DomesticCourierCard = ({ courier, isSelected, onSelect, index }: {
-  courier: CourierOption; isSelected: boolean; onSelect: () => void; index: number;
-}) => {
-  const [showBreakdown, setShowBreakdown] = useState(false);
-  const isAir = courier.mode === 'air';
-  return (
-    <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4, delay: index * 0.08 }}
-      whileHover={{ y: -4, scale: 1.01 }} onClick={onSelect}
-      className={cn("relative cursor-pointer rounded-2xl border-2 p-5 transition-all duration-300",
-        isSelected ? "border-coke-red bg-coke-red/5 shadow-xl shadow-coke-red/10"
-          : "border-border bg-card hover:border-coke-red/30 hover:shadow-lg")}>
-      {courier.is_recommended && (
-        <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="absolute -top-3 -right-3 z-10">
-          <Badge className="bg-gradient-to-r from-amber-500 to-orange-500 text-white border-0 shadow-lg px-3 py-1">
-            <Star size={12} weight="fill" className="mr-1" /> Best Value
-          </Badge>
-        </motion.div>
-      )}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3 flex-1 min-w-0">
-          <div className={cn("w-12 h-12 rounded-xl flex items-center justify-center shrink-0",
-            isSelected ? "bg-coke-red/15" : "bg-muted")}>
-            {isSelected ? <Check size={24} weight="bold" className="text-coke-red" />
-              : <Truck size={24} weight="bold" className="text-muted-foreground" />}
-          </div>
-          <div className="min-w-0">
-            <div className="flex items-center gap-2 flex-wrap">
-              <p className={cn("font-semibold truncate", isSelected ? "text-coke-red" : "text-foreground")}>
-                {courier.courier_name}
-              </p>
-              <Badge variant="outline" className={cn("text-[10px] shrink-0 gap-1",
-                isAir ? "bg-blue-500/10 text-blue-600 border-blue-500/20" : "bg-amber-500/10 text-amber-600 border-amber-500/20")}>
-                {isAir ? <><AirplaneTilt size={10} weight="bold" /> Air</> : <><Truck size={10} weight="bold" /> Surface</>}
-              </Badge>
-            </div>
-            <div className="flex items-center gap-3 mt-1">
-              <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                <Clock size={14} weight="bold" /> {courier.estimated_delivery_days} day{courier.estimated_delivery_days !== 1 ? 's' : ''}
-              </span>
-              {courier.rating > 0 && (
-                <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                  <Star size={14} weight="fill" className="text-amber-400" /> {courier.rating.toFixed(1)}
-                </span>
-              )}
-            </div>
-          </div>
-        </div>
-        <div className="text-right shrink-0 ml-3">
-          <p className={cn("text-2xl font-bold font-typewriter", isSelected ? "text-coke-red" : "text-foreground")}>
-            ₹{courier.customer_price.toLocaleString('en-IN')}
-          </p>
-          <button onClick={(e) => { e.stopPropagation(); setShowBreakdown(!showBreakdown); }}
-            className="text-[10px] text-muted-foreground hover:text-foreground transition-colors">
-            {showBreakdown ? 'hide' : 'view'} breakdown
-          </button>
-        </div>
-      </div>
-      <AnimatePresence>
-        {showBreakdown && (
-          <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }} className="overflow-hidden" onClick={(e) => e.stopPropagation()}>
-            <div className="mt-3 pt-3 border-t border-border/50 space-y-1.5">
-              <div className="flex justify-between text-xs">
-                <span className="text-muted-foreground">Shipping Charges</span>
-                <span className="font-medium">₹{courier.shipping_charge.toLocaleString('en-IN')}</span>
-              </div>
-              <div className="flex justify-between text-xs">
-                <span className="text-muted-foreground">GST (18%)</span>
-                <span className="font-medium">₹{courier.gst_amount.toLocaleString('en-IN')}</span>
-              </div>
-              <div className="flex justify-between text-xs font-semibold pt-1 border-t border-dashed border-border/50">
-                <span>Total</span>
-                <span className="text-coke-red">₹{courier.customer_price.toLocaleString('en-IN')}</span>
-              </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </motion.div>
   );
 };
@@ -995,7 +912,7 @@ const PublicRateCalculator = () => {
                         Choose Your <span className="text-coke-red">Courier</span>
                       </h2>
                       <p className="text-muted-foreground mt-2">
-                        Top {Math.min(filteredDomesticCouriers.length, 4)} option{Math.min(filteredDomesticCouriers.length, 4) !== 1 ? 's' : ''} for {pickupPincode} → {deliveryPincode}
+                        {filteredDomesticCouriers.length} option{filteredDomesticCouriers.length !== 1 ? 's' : ''} for {pickupPincode} → {deliveryPincode}
                       </p>
                     </div>
 
@@ -1023,13 +940,12 @@ const PublicRateCalculator = () => {
                     )}
 
                     {/* Courier Cards */}
-                    <div className="space-y-3 max-w-3xl mx-auto">
-                      {filteredDomesticCouriers.slice(0, 4).map((courier, index) => (
-                        <DomesticCourierCard key={courier.courier_company_id} courier={courier}
-                          isSelected={selectedDomesticCourier?.courier_company_id === courier.courier_company_id}
-                          onSelect={() => setSelectedDomesticCourier(courier)} index={index} />
-                      ))}
-                    </div>
+                    <DomesticCourierGrid
+                      couriers={filteredDomesticCouriers.slice(0, 15)}
+                      selectedId={selectedDomesticCourier?.courier_company_id}
+                      onSelect={(courier) => setSelectedDomesticCourier(courier as CourierOption)}
+                      maxItems={15}
+                    />
 
                     {/* Domestic Summary */}
                     {selectedDomesticCourier && (
