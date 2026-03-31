@@ -314,10 +314,16 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
         const cashfreeMode = process.env.NEXT_PUBLIC_CASHFREE_ENV === 'sandbox' ? 'sandbox' : 'production';
         const cf = (window as any).Cashfree({ mode: cashfreeMode });
 
-        const checkoutResult = await cf.checkout({
-          paymentSessionId: data.paymentSessionId,
-          redirectTarget: '_modal',
-        });
+        let checkoutResult: any = null;
+        try {
+          checkoutResult = await cf.checkout({
+            paymentSessionId: data.paymentSessionId,
+            redirectTarget: '_modal',
+          });
+        } catch (checkoutErr: any) {
+          console.error('[GuestSummary] Cashfree checkout error:', checkoutErr);
+          // If checkout throws, try verifying anyway — payment may have gone through
+        }
 
         if (checkoutResult?.error) {
           toast({ title: 'Payment Failed', description: checkoutResult.error.message || 'Payment was not completed.', variant: 'destructive' });
@@ -325,30 +331,27 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
           return;
         }
 
-        // Step 4: Verify payment
-        if (checkoutResult?.paymentDetails || checkoutResult?.redirect === 'if_required') {
-          // Verify with server
-          try {
-            const verifyRes = await fetch('/api/cashfree/verify-guest-payment', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ orderId: data.orderId }),
-            });
-            const verifyData = await verifyRes.json();
-            if (verifyData.success) {
-              setTrackingNumber(serverTracking);
-              setAwbUrl(verifyData.awbUrl || data.awbUrl || '');
-              setPhase('success');
-              toast({ title: 'Payment Successful', description: 'Your shipment has been booked.' });
-            } else {
-              toast({ title: 'Payment Verification Failed', description: 'Please contact support with your order ID.', variant: 'destructive' });
-            }
-          } catch {
-            // Assume success if verification endpoint fails — order was created
+        // Step 4: Verify payment — always verify regardless of checkoutResult shape
+        try {
+          const verifyRes = await fetch('/api/cashfree/verify-guest-payment', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ orderId: data.orderId }),
+          });
+          const verifyData = await verifyRes.json();
+          if (verifyData.success) {
             setTrackingNumber(serverTracking);
-            setAwbUrl(data.awbUrl || '');
+            setAwbUrl(verifyData.awbUrl || data.awbUrl || '');
             setPhase('success');
+            toast({ title: 'Payment Successful', description: 'Your shipment has been booked.' });
+          } else {
+            toast({ title: 'Payment Verification Failed', description: 'Please contact support with your order ID.', variant: 'destructive' });
           }
+        } catch {
+          // Assume success if verification endpoint fails — order was created
+          setTrackingNumber(serverTracking);
+          setAwbUrl(data.awbUrl || '');
+          setPhase('success');
         }
       } else {
         // Dev mode — no Cashfree configured, simulate success
