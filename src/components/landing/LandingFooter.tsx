@@ -18,6 +18,7 @@ const quickLinks = [
   { label: 'Track Shipment', href: '/public/track' },
   { label: 'Rate Calculator', href: '/public/rate-calculator' },
   { label: 'Domestic Courier', href: '/services/domestic-courier' },
+  { label: 'Blog', href: '/blog' },
   { label: 'Ship Medicine', href: '/auth' },
   { label: 'Ship Documents', href: '/auth' },
   { label: 'Ship Gifts', href: '/auth' },

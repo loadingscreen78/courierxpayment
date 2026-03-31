@@ -153,6 +153,89 @@ export function FAQJsonLd({ faqs }: { faqs: { question: string; answer: string }
   );
 }
 
+export function BlogPostingJsonLd({ post }: {
+  post: {
+    title: string;
+    slug: string;
+    excerpt?: string | null;
+    content?: string;
+    cover_image?: string | null;
+    author_name?: string | null;
+    published_at?: string | null;
+    updated_at?: string;
+    category?: string;
+    tags?: string[];
+  };
+}) {
+  const data = {
+    '@context': 'https://schema.org',
+    '@type': 'BlogPosting',
+    headline: post.title,
+    description: post.excerpt || '',
+    image: post.cover_image || 'https://courierx.in/lovable-uploads/19a008e8-fa55-402b-94a0-f1a05b4d70b4.png',
+    url: `https://courierx.in/blog/${post.slug}`,
+    datePublished: post.published_at || new Date().toISOString(),
+    dateModified: post.updated_at || post.published_at || new Date().toISOString(),
+    author: {
+      '@type': 'Person',
+      name: post.author_name || 'CourierX Team',
+    },
+    publisher: {
+      '@type': 'Organization',
+      name: 'CourierX',
+      url: 'https://courierx.in',
+      logo: {
+        '@type': 'ImageObject',
+        url: 'https://courierx.in/logo.svg',
+      },
+    },
+    mainEntityOfPage: {
+      '@type': 'WebPage',
+      '@id': `https://courierx.in/blog/${post.slug}`,
+    },
+    articleSection: post.category || 'General',
+    keywords: (post.tags || []).join(', '),
+  };
+
+  return (
+    <script
+      type="application/ld+json"
+      dangerouslySetInnerHTML={{ __html: JSON.stringify(data) }}
+    />
+  );
+}
+
+export function BlogListJsonLd({ posts }: {
+  posts: { title: string; slug: string; excerpt?: string | null; published_at?: string | null }[];
+}) {
+  const data = {
+    '@context': 'https://schema.org',
+    '@type': 'Blog',
+    name: 'CourierX Blog — Shipping, Logistics & Compliance Insights from India',
+    description: 'Expert guides on international courier from India, medicine shipping compliance, logistics tips, and courier industry updates from CourierX.',
+    url: 'https://courierx.in/blog',
+    publisher: {
+      '@type': 'Organization',
+      name: 'CourierX',
+      url: 'https://courierx.in',
+    },
+    blogPost: posts.slice(0, 10).map(p => ({
+      '@type': 'BlogPosting',
+      headline: p.title,
+      description: p.excerpt || '',
+      url: `https://courierx.in/blog/${p.slug}`,
+      datePublished: p.published_at || new Date().toISOString(),
+    })),
+  };
+
+  return (
+    <script
+      type="application/ld+json"
+      dangerouslySetInnerHTML={{ __html: JSON.stringify(data) }}
+    />
+  );
+}
+
 export function BreadcrumbJsonLd({ items }: { items: { name: string; url: string }[] }) {
   const data = {
     '@context': 'https://schema.org',

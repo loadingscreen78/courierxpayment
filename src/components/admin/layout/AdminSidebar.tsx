@@ -17,6 +17,7 @@ import {
   ChartBar,
   Users,
   Gear,
+  Article,
 } from '@phosphor-icons/react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAdminAuth } from '@/hooks/useAdminAuth';
@@ -31,6 +32,7 @@ const navItems = [
   { title: 'Outbound', href: '/admin/outbound', icon: Truck },
   { title: 'All Shipments', href: '/admin/shipments', icon: Package },
   { title: 'Customer CRM', href: '/admin/customers', icon: Users, adminOnly: true },
+  { title: 'Blog', href: '/admin/blog', icon: Article, adminOnly: true },
   { title: 'CXBC Partners', href: '/admin/cxbc-partners', icon: Briefcase, adminOnly: true },
   { title: 'Finance', href: '/admin/finance', icon: CurrencyDollar, adminOnly: true },
   { title: 'Role Management', href: '/admin/roles', icon: ShieldCheck, adminOnly: true },

@@ -10,3 +10,4 @@ export { CouponManagement } from './CouponManagement';
 export { FinanceManagement } from './FinanceManagement';
 export { default as AWBLabels } from './AWBLabels';
 export { CustomerCRM } from './CustomerCRM';
+export { BlogManagement } from './BlogManagement';

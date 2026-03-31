@@ -137,6 +137,7 @@ export default function HomePage() {
 
       {/* Static links for crawlers — hidden visually but present in HTML */}
       <div style={{ display: 'none' }}>
+        <a href="/blog">CourierX Blog — Shipping, Logistics & Compliance Insights</a>
         <a href="/about">About CourierX — Person to Person Courier Booking</a>
         <a href="/public/rate-calculator">Courier Rate Calculator — Domestic & International</a>
         <a href="/public/track">Track Shipment</a>
