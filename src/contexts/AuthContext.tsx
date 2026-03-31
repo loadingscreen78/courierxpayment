@@ -33,6 +33,8 @@ interface AuthContextType {
   signInWithGoogle: (idToken: string, nonce?: string) => Promise<{ error: Error | null }>;
   sendWhatsAppOtp: (phone: string) => Promise<{ error: Error | null }>;
   verifyWhatsAppOtp: (phone: string, code: string) => Promise<{ error: Error | null }>;
+  sendPhoneOtp: (phone: string) => Promise<{ error: Error | null }>;
+  verifyPhoneOtp: (phone: string, code: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
   updateProfile: (updates: Partial<Profile>) => Promise<{ error: Error | null }>;
   completeAadhaarKyc: (aadhaarNumber: string, otp: string) => Promise<{ error: Error | null; address?: string }>;
@@ -204,6 +206,51 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   }, []);
 
+  /** Send Phone OTP via FAST2SMS */
+  const sendPhoneOtp = useCallback(async (phone: string): Promise<{ error: Error | null }> => {
+    try {
+      const res = await fetch('/api/auth/phone-otp/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        return { error: new Error(data.error || 'Failed to send OTP') };
+      }
+      return { error: null };
+    } catch (err) {
+      return { error: err as Error };
+    }
+  }, []);
+
+  /** Verify Phone OTP via FAST2SMS, then sign into Supabase */
+  const verifyPhoneOtp = useCallback(async (phone: string, code: string): Promise<{ error: Error | null }> => {
+    try {
+      const res = await fetch('/api/auth/phone-otp/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone, code }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        return { error: new Error(data.error || 'Phone OTP verification failed') };
+      }
+
+      if (data.session?.access_token && data.session?.refresh_token) {
+        const { error } = await supabase.auth.setSession({
+          access_token: data.session.access_token,
+          refresh_token: data.session.refresh_token,
+        });
+        if (error) return { error: error as Error };
+      }
+
+      return { error: null };
+    } catch (err) {
+      return { error: err as Error };
+    }
+  }, []);
+
   const signOut = useCallback(async () => {
     try {
       if (typeof google !== 'undefined' && google.accounts?.id) {
@@ -267,10 +314,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     signInWithGoogle,
     sendWhatsAppOtp,
     verifyWhatsAppOtp,
+    sendPhoneOtp,
+    verifyPhoneOtp,
     signOut,
     updateProfile,
     completeAadhaarKyc,
-  }), [user, session, profile, loading, signInWithEmail, signUpWithEmail, signInWithOtp, verifyOtp, signInWithGoogle, sendWhatsAppOtp, verifyWhatsAppOtp, signOut, updateProfile, completeAadhaarKyc]);
+  }), [user, session, profile, loading, signInWithEmail, signUpWithEmail, signInWithOtp, verifyOtp, signInWithGoogle, sendWhatsAppOtp, verifyWhatsAppOtp, sendPhoneOtp, verifyPhoneOtp, signOut, updateProfile, completeAadhaarKyc]);
 
   return (
     <AuthContext.Provider value={contextValue}>

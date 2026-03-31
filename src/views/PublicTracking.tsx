@@ -87,19 +87,27 @@ function getEstimatedDelivery(createdAt: string): string {
 const OTPModal = ({
   phone,
   onVerify,
+  onResend,
   onClose,
 }: {
   phone: string;
   onVerify: (otp: string) => void;
+  onResend: () => void;
   onClose: () => void;
 }) => {
   const [otp, setOtp] = useState('');
   const [resendTimer, setResendTimer] = useState(30);
+  const [verifying, setVerifying] = useState(false);
 
   useEffect(() => {
     const timer = setInterval(() => setResendTimer(p => p > 0 ? p - 1 : 0), 1000);
     return () => clearInterval(timer);
   }, []);
+
+  const handleResend = () => {
+    onResend();
+    setResendTimer(30);
+  };
 
   return (
     <motion.div
@@ -132,17 +140,17 @@ const OTPModal = ({
         </div>
         <Button
           className="w-full h-12 bg-coke-red hover:bg-coke-red/90"
-          onClick={() => onVerify(otp)}
-          disabled={otp.length !== 6}
+          onClick={() => { setVerifying(true); onVerify(otp); }}
+          disabled={otp.length !== 6 || verifying}
         >
           <Shield size={20} weight="bold" className="mr-2" />
-          Verify & Track
+          {verifying ? 'Verifying...' : 'Verify & Track'}
         </Button>
         <p className="text-center text-sm text-muted-foreground mt-4">
           {resendTimer > 0 ? (
             <>Resend OTP in <span className="font-semibold">{resendTimer}s</span></>
           ) : (
-            <button className="text-coke-red hover:underline" onClick={() => setResendTimer(30)}>
+            <button className="text-coke-red hover:underline" onClick={handleResend}>
               Resend OTP
             </button>
           )}
@@ -266,26 +274,46 @@ const PublicTracking = () => {
     }
   }, [searchParams]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const handlePhoneSearch = () => {
+  const sendPhoneOtp = async () => {
+    try {
+      const res = await fetch('/api/auth/phone-otp/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone: `+91${phoneNumber}` }),
+      });
+      const json = await res.json();
+      if (!res.ok || !json.success) {
+        setError(json.error || 'Failed to send OTP. Please try again.');
+        return false;
+      }
+      return true;
+    } catch {
+      setError('Failed to send OTP. Please try again.');
+      return false;
+    }
+  };
+
+  const handlePhoneSearch = async () => {
     setError('');
     if (phoneNumber.length !== 10) {
       setError('Enter a valid 10-digit mobile number.');
       return;
     }
-    setShowOTP(true);
+    const sent = await sendPhoneOtp();
+    if (sent) setShowOTP(true);
   };
 
   const handleOTPVerify = async (otp: string) => {
-    // Verify OTP via Twilio
+    // Verify OTP via FAST2SMS
     try {
-      const res = await fetch('/api/auth/whatsapp/verify-otp', {
+      const res = await fetch('/api/auth/phone-otp/verify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ phone: `+91${phoneNumber}`, code: otp }),
       });
       const json = await res.json();
       if (!json.success) {
-        setError('Invalid OTP. Please try again.');
+        setError(json.error || 'Invalid OTP. Please try again.');
         return;
       }
     } catch {
@@ -337,6 +365,7 @@ const PublicTracking = () => {
           <OTPModal
             phone={phoneNumber}
             onVerify={handleOTPVerify}
+            onResend={sendPhoneOtp}
             onClose={() => setShowOTP(false)}
           />
         )}
