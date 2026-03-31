@@ -32,13 +32,22 @@ export async function POST(req: NextRequest) {
           createError.message.includes('duplicate key') ||
           createError.message.includes('already exists')) {
         
-        // Ensure the existing user's email is confirmed
-        const { data: { users } } = await supabaseAdmin.auth.admin.listUsers();
-        const existingUser = users?.find(u => u.email === email.toLowerCase());
-        if (existingUser && !existingUser.email_confirmed_at) {
-          await supabaseAdmin.auth.admin.updateUser(existingUser.id, {
-            email_confirm: true,
+        // Ensure the existing user's email is confirmed using listUsers with filter
+        try {
+          const { data: listData } = await supabaseAdmin.auth.admin.listUsers({
+            page: 1,
+            perPage: 1,
           });
+          // Find by email from the response
+          const users = (listData as any)?.users || [];
+          const existingUser = users.find((u: any) => u.email === email.toLowerCase());
+          if (existingUser && !existingUser.email_confirmed_at) {
+            await supabaseAdmin.auth.admin.updateUser(existingUser.id, {
+              email_confirm: true,
+            });
+          }
+        } catch {
+          // Non-critical — proceed to sign in anyway
         }
 
         // Sign in the existing user
