@@ -228,10 +228,29 @@ export default function OpenAccount() {
   ) => {
     setter({ file, uploading: true, uploaded: false, url: null, error: null });
     try {
-      const { data: { user: u } } = await supabase.auth.getUser();
-      if (!u) { setter({ ...emptyFileState, error: 'Not authenticated' }); return; }
+      // Try getSession first (more reliable right after signup), fallback to getUser
+      let userId: string | null = null;
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user?.id) {
+        userId = session.user.id;
+      } else {
+        // Retry after a short delay — session may still be propagating
+        await new Promise(r => setTimeout(r, 1000));
+        const { data: { session: retrySession } } = await supabase.auth.getSession();
+        if (retrySession?.user?.id) {
+          userId = retrySession.user.id;
+        } else {
+          const { data: { user: u } } = await supabase.auth.getUser();
+          userId = u?.id || null;
+        }
+      }
 
-      const path = generateFilePath(u.id, docType, file.name);
+      if (!userId) {
+        setter({ ...emptyFileState, error: 'Not authenticated. Please refresh and try again.' });
+        return;
+      }
+
+      const path = generateFilePath(userId, docType, file.name);
       const result = await uploadWithValidation({
         bucket: STORAGE_BUCKETS.KYC_DOCUMENTS,
         file,
