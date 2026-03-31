@@ -37,7 +37,7 @@ type PhoneFormValues = z.infer<typeof phoneSchema>;
 type OtpFormValues = z.infer<typeof otpSchema>;
 
 type AuthStep = 'panel-select' | 'method' | 'otp';
-type AuthMethod = 'email' | 'whatsapp';
+type AuthMethod = 'email' | 'sms';
 type AuthMode = 'signin' | 'signup';
 type PanelType = 'customer' | 'admin' | 'cxbc';
 
@@ -115,7 +115,7 @@ const stats = [
 const Auth = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { user, signInWithEmail, signUpWithEmail, signInWithOtp, verifyOtp, signInWithGoogle, sendWhatsAppOtp, verifyWhatsAppOtp } = useAuth();
+  const { user, signInWithEmail, signUpWithEmail, signInWithOtp, verifyOtp, signInWithGoogle, sendPhoneOtp, verifyPhoneOtp } = useAuth();
   const { toast } = useToast();
   
   const [step, setStep] = useState<AuthStep>('panel-select');
@@ -493,7 +493,7 @@ const Auth = () => {
 
   const handleSendOtp = async (values: PhoneFormValues) => {
     setIsLoading(true);
-    const { error } = await sendWhatsAppOtp(values.phone);
+    const { error } = await sendPhoneOtp(values.phone);
     setIsLoading(false);
     if (error) { toast({ title: 'Error', description: error.message, variant: 'destructive' }); return; }
     setPhoneNumber(values.phone);
@@ -503,8 +503,8 @@ const Auth = () => {
 
   const handleVerifyOtp = async (values: OtpFormValues) => {
     setIsLoading(true);
-    const { error } = method === 'whatsapp'
-      ? await verifyWhatsAppOtp(phoneNumber, values.otp)
+    const { error } = method === 'sms'
+      ? await verifyPhoneOtp(phoneNumber, values.otp)
       : await verifyOtp(phoneNumber, values.otp);
     if (error) { setIsLoading(false); toast({ title: 'Failed', description: error.message, variant: 'destructive' }); return; }
     toast({ title: 'Welcome!', description: 'Signed in.' });
@@ -564,8 +564,8 @@ const Auth = () => {
 
   const handleResendOtp = async () => {
     setIsLoading(true);
-    const { error } = method === 'whatsapp'
-      ? await sendWhatsAppOtp(phoneNumber)
+    const { error } = method === 'sms'
+      ? await sendPhoneOtp(phoneNumber)
       : await signInWithOtp(phoneNumber);
     setIsLoading(false);
     if (error) { toast({ title: 'Error', description: 'Failed to resend.', variant: 'destructive' }); return; }
@@ -895,7 +895,7 @@ const Auth = () => {
                 {/* Method Tabs for Customer */}
                 {selectedPanel === 'customer' && (
                   <div className="flex gap-2 p-1 bg-muted rounded-lg">
-                    {(['email', 'whatsapp'] as AuthMethod[]).map((m) => (
+                    {(['email', 'sms'] as AuthMethod[]).map((m) => (
                       <button
                         key={m}
                         onClick={() => setMethod(m)}
@@ -906,7 +906,7 @@ const Auth = () => {
                         }`}
                       >
                         {m === 'email' ? <Envelope size={16} weight="bold" /> : <Phone size={16} weight="bold" />}
-                        {m === 'email' ? 'Email' : 'WhatsApp'}
+                        {m === 'email' ? 'Email' : 'SMS'}
                       </button>
                     ))}
                   </div>
@@ -1087,7 +1087,7 @@ const Auth = () => {
                 )}
 
                 {/* WhatsApp Form */}
-                {selectedPanel === 'customer' && method === 'whatsapp' && (
+                {selectedPanel === 'customer' && method === 'sms' && (
                   <Form {...phoneForm}>
                     <form onSubmit={phoneForm.handleSubmit(handleSendOtp)} className="space-y-4">
                       <FormField
@@ -1098,7 +1098,7 @@ const Auth = () => {
                             <FormControl>
                               <Input
                                 type="tel"
-                                placeholder="WhatsApp Number (+91...)"
+                                placeholder="Phone Number (+91...)"
                                 className="h-12 rounded-full border-border bg-background px-5 focus:border-coke-red focus:ring-coke-red/20"
                                 {...field}
                               />
