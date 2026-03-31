@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from 'react';
-import { motion, useScroll, useTransform, useInView } from 'framer-motion';
+import { motion, useInView } from 'framer-motion';
 import {
   Mail,
   Phone,
@@ -30,6 +30,9 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
+import dynamic from 'next/dynamic';
+import mapboxgl from 'mapbox-gl';
+import 'mapbox-gl/dist/mapbox-gl.css';
 
 // Typing effect hook
 const useTypingEffect = (text: string, speed: number = 50, startOnView: boolean = true) => {
@@ -66,21 +69,23 @@ const officeLocations = [
     id: 1,
     city: 'Pune',
     country: 'India',
-    address: 'A/1801, Gagan Unnati, Kondhwa BK, Pune – 411048',
+    address: 'A/1801, Gagan Unnati, Katraj Kondhwa Road, Near ISKCON Temple, Kondhwa BK, Pune – 411048',
     phone: '+91 8484050057',
     email: 'info@courierx.in',
-    coordinates: { x: 52, y: 42 },
+    lng: 73.8567,
+    lat: 18.5204,
     isHQ: true,
     timezone: 'IST (UTC+5:30)',
   },
   {
     id: 2,
-    city: 'Eastern India',
+    city: 'Cuttack',
     country: 'India',
-    address: 'Eastern India Operations',
+    address: 'Urali, Rathagargaha Sahi, near Utkal Karate School, Cuttack – 753011',
     phone: '+91 7008368628',
     email: 'info@courierx.in',
-    coordinates: { x: 62, y: 38 },
+    lng: 85.8830,
+    lat: 20.4625,
     isHQ: false,
     timezone: 'IST (UTC+5:30)',
   },
@@ -103,7 +108,7 @@ const stats = [
   { value: '4.9/5', label: 'Customer Rating' },
 ];
 
-// Animated Map Component
+// Mapbox Office Map Component
 const InteractiveMap = ({ 
   locations, 
   selectedLocation, 
@@ -113,166 +118,114 @@ const InteractiveMap = ({
   selectedLocation: number | null;
   onSelectLocation: (id: number) => void;
 }) => {
+  const mapContainer = useRef<HTMLDivElement>(null);
+  const mapRef = useRef<mapboxgl.Map | null>(null);
+  const markersRef = useRef<mapboxgl.Marker[]>([]);
+  const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
+
+  useEffect(() => {
+    if (!token || !mapContainer.current || mapRef.current) return;
+
+    mapboxgl.accessToken = token;
+    const map = new mapboxgl.Map({
+      container: mapContainer.current,
+      style: 'mapbox://styles/mapbox/light-v11',
+      center: [80, 19.5],
+      zoom: 4.2,
+      interactive: true,
+      attributionControl: false,
+    });
+
+    map.addControl(new mapboxgl.NavigationControl({ showCompass: false }), 'top-right');
+
+    map.on('load', () => {
+      // Add route line between offices
+      map.addSource('office-route', {
+        type: 'geojson',
+        data: {
+          type: 'Feature',
+          properties: {},
+          geometry: {
+            type: 'LineString',
+            coordinates: locations.map(l => [l.lng, l.lat]),
+          },
+        },
+      });
+
+      map.addLayer({
+        id: 'office-route-line',
+        type: 'line',
+        source: 'office-route',
+        layout: { 'line-join': 'round', 'line-cap': 'round' },
+        paint: {
+          'line-color': '#F40000',
+          'line-width': 2,
+          'line-dasharray': [4, 4],
+          'line-opacity': 0.5,
+        },
+      });
+
+      // Add markers
+      locations.forEach((loc) => {
+        const el = document.createElement('div');
+        el.style.cssText = `
+          width: 36px; height: 36px; border-radius: 50%;
+          background: ${loc.isHQ ? '#F40000' : '#1a1a1a'};
+          border: 3px solid white;
+          box-shadow: 0 2px 12px rgba(0,0,0,0.25);
+          cursor: pointer;
+          display: flex; align-items: center; justify-content: center;
+          transition: transform 0.2s;
+        `;
+        el.innerHTML = loc.isHQ
+          ? '<svg width="16" height="16" viewBox="0 0 24 24" fill="white"><path d="M3 21V7l9-4 9 4v14H3zm2-2h14V8.2l-7-3.1L5 8.2V19zm3-2h2v-4h4v4h2v-6l-5-3-5 3v6z"/></svg>'
+          : '<svg width="14" height="14" viewBox="0 0 24 24" fill="white"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>';
+
+        el.addEventListener('mouseenter', () => { el.style.transform = 'scale(1.15)'; });
+        el.addEventListener('mouseleave', () => { el.style.transform = 'scale(1)'; });
+        el.addEventListener('click', () => {
+          onSelectLocation(loc.id);
+          map.flyTo({ center: [loc.lng, loc.lat], zoom: 10, duration: 1000 });
+        });
+
+        const marker = new mapboxgl.Marker({ element: el })
+          .setLngLat([loc.lng, loc.lat])
+          .addTo(map);
+
+        markersRef.current.push(marker);
+      });
+    });
+
+    mapRef.current = map;
+
+    return () => {
+      markersRef.current.forEach(m => m.remove());
+      markersRef.current = [];
+      map.remove();
+      mapRef.current = null;
+    };
+  }, [token, locations, onSelectLocation]);
+
+  // Fly to selected location
+  useEffect(() => {
+    if (!mapRef.current || !selectedLocation) return;
+    const loc = locations.find(l => l.id === selectedLocation);
+    if (loc) {
+      mapRef.current.flyTo({ center: [loc.lng, loc.lat], zoom: 10, duration: 1000 });
+    }
+  }, [selectedLocation, locations]);
+
+  if (!token) {
+    return (
+      <div className="w-full aspect-[2/1] bg-muted rounded-3xl flex items-center justify-center text-muted-foreground text-sm">
+        Map unavailable
+      </div>
+    );
+  }
+
   return (
-    <div className="relative w-full aspect-[2/1] bg-gradient-to-br from-charcoal/5 to-primary/5 rounded-3xl overflow-hidden border border-border">
-      {/* Grid Pattern Background */}
-      <div 
-        className="absolute inset-0 opacity-20"
-        style={{
-          backgroundImage: `
-            linear-gradient(rgba(227, 24, 55, 0.1) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(227, 24, 55, 0.1) 1px, transparent 1px)
-          `,
-          backgroundSize: '40px 40px',
-        }}
-      />
-      
-      {/* Animated Globe Lines */}
-      <svg className="absolute inset-0 w-full h-full" viewBox="0 0 100 50">
-        {/* Latitude lines */}
-        {[15, 25, 35, 45].map((y, i) => (
-          <motion.path
-            key={`lat-${i}`}
-            d={`M 5 ${y} Q 50 ${y + (i % 2 === 0 ? 3 : -3)} 95 ${y}`}
-            stroke="currentColor"
-            strokeWidth="0.2"
-            fill="none"
-            className="text-muted-foreground/30"
-            initial={{ pathLength: 0 }}
-            animate={{ pathLength: 1 }}
-            transition={{ duration: 2, delay: i * 0.2 }}
-          />
-        ))}
-        {/* Longitude lines */}
-        {[20, 35, 50, 65, 80].map((x, i) => (
-          <motion.path
-            key={`lng-${i}`}
-            d={`M ${x} 5 Q ${x + (i % 2 === 0 ? 3 : -3)} 25 ${x} 45`}
-            stroke="currentColor"
-            strokeWidth="0.2"
-            fill="none"
-            className="text-muted-foreground/30"
-            initial={{ pathLength: 0 }}
-            animate={{ pathLength: 1 }}
-            transition={{ duration: 2, delay: 0.5 + i * 0.2 }}
-          />
-        ))}
-        
-        {/* Connection lines between offices */}
-        {locations.slice(1).map((loc, i) => (
-          <motion.line
-            key={`connection-${i}`}
-            x1={locations[0].coordinates.x}
-            y1={locations[0].coordinates.y}
-            x2={loc.coordinates.x}
-            y2={loc.coordinates.y}
-            stroke="#E31837"
-            strokeWidth="0.3"
-            strokeDasharray="2 2"
-            initial={{ pathLength: 0, opacity: 0 }}
-            animate={{ pathLength: 1, opacity: 0.4 }}
-            transition={{ duration: 1.5, delay: 1 + i * 0.3 }}
-          />
-        ))}
-      </svg>
-
-      {/* Location Pins */}
-      {locations.map((location, index) => (
-        <motion.button
-          key={location.id}
-          initial={{ scale: 0, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          transition={{ 
-            type: 'spring', 
-            stiffness: 200, 
-            delay: 0.5 + index * 0.15 
-          }}
-          onClick={() => onSelectLocation(location.id)}
-          className="absolute transform -translate-x-1/2 -translate-y-1/2 group"
-          style={{ 
-            left: `${location.coordinates.x}%`, 
-            top: `${location.coordinates.y}%` 
-          }}
-        >
-          {/* Pulse ring */}
-          <motion.div
-            className={`absolute inset-0 rounded-full ${
-              location.isHQ ? 'bg-coke-red' : 'bg-primary'
-            }`}
-            animate={{ 
-              scale: selectedLocation === location.id ? [1, 2, 1] : [1, 1.5, 1],
-              opacity: [0.5, 0, 0.5]
-            }}
-            transition={{ duration: 2, repeat: Infinity }}
-          />
-          
-          {/* Pin */}
-          <motion.div
-            whileHover={{ scale: 1.2 }}
-            whileTap={{ scale: 0.9 }}
-            className={`relative w-8 h-8 rounded-full flex items-center justify-center shadow-lg cursor-pointer transition-all ${
-              selectedLocation === location.id
-                ? 'bg-coke-red ring-4 ring-coke-red/30'
-                : location.isHQ
-                ? 'bg-coke-red'
-                : 'bg-primary hover:bg-primary/90'
-            }`}
-          >
-            {location.isHQ ? (
-              <Building2 className="w-4 h-4 text-white" />
-            ) : (
-              <MapPin className="w-4 h-4 text-white" />
-            )}
-          </motion.div>
-          
-          {/* Label */}
-          <motion.div
-            initial={{ opacity: 0, y: 5 }}
-            animate={{ 
-              opacity: selectedLocation === location.id ? 1 : 0,
-              y: selectedLocation === location.id ? 0 : 5
-            }}
-            className="absolute top-full mt-2 left-1/2 -translate-x-1/2 whitespace-nowrap"
-          >
-            <span className="px-2 py-1 bg-card border border-border rounded-lg text-xs font-medium shadow-lg">
-              {location.city}
-              {location.isHQ && (
-                <span className="ml-1 text-coke-red">(HQ)</span>
-              )}
-            </span>
-          </motion.div>
-        </motion.button>
-      ))}
-
-      {/* Floating particles - using deterministic positions to avoid hydration mismatch */}
-      {[
-        { left: 25, top: 30, duration: 3.5, delay: 0.2 },
-        { left: 35, top: 45, duration: 4.2, delay: 0.8 },
-        { left: 50, top: 25, duration: 3.8, delay: 1.4 },
-        { left: 65, top: 55, duration: 4.5, delay: 0.5 },
-        { left: 40, top: 65, duration: 3.2, delay: 1.1 },
-        { left: 70, top: 35, duration: 4.0, delay: 1.8 },
-        { left: 55, top: 50, duration: 3.6, delay: 0.3 },
-        { left: 30, top: 60, duration: 4.3, delay: 1.6 },
-      ].map((particle, i) => (
-        <motion.div
-          key={i}
-          className="absolute w-1 h-1 rounded-full bg-coke-red/40"
-          style={{
-            left: `${particle.left}%`,
-            top: `${particle.top}%`,
-          }}
-          animate={{
-            y: [0, -20, 0],
-            opacity: [0.2, 0.6, 0.2],
-          }}
-          transition={{
-            duration: particle.duration,
-            repeat: Infinity,
-            delay: particle.delay,
-          }}
-        />
-      ))}
+    <div className="w-full aspect-[2/1] rounded-2xl overflow-hidden border border-border">
+      <div ref={mapContainer} style={{ width: '100%', height: '100%' }} />
     </div>
   );
 };
@@ -422,27 +375,12 @@ const ContactForm = () => {
 // Main Contact Page Component
 const Contact = () => {
   const containerRef = useRef<HTMLDivElement>(null);
-  const heroRef = useRef<HTMLElement>(null);
-  const isHeroInView = useInView(heroRef, { once: true });
   const [selectedLocation, setSelectedLocation] = useState<number | null>(1);
   const [isMounted, setIsMounted] = useState(false);
-
-  const { displayText: heroText, ref: typingRef } = useTypingEffect(
-    'Get in Touch',
-    60
-  );
 
   useEffect(() => {
     setIsMounted(true);
   }, []);
-  
-  const { scrollYProgress } = useScroll({
-    target: containerRef,
-    offset: ['start start', 'end end'],
-  });
-
-  const heroOpacity = useTransform(scrollYProgress, [0, 0.15], [1, 0]);
-  const heroScale = useTransform(scrollYProgress, [0, 0.15], [1, 0.95]);
 
   const selectedOffice = officeLocations.find(loc => loc.id === selectedLocation);
 
@@ -451,116 +389,36 @@ const Contact = () => {
       <LandingHeader />
 
       {!isMounted ? (
-        /* Loading skeleton to prevent hydration mismatch */
-        <div className="flex items-center justify-center min-h-[50vh] pt-20">
+        <div className="flex items-center justify-center min-h-[20vh] pt-20">
           <div className="animate-pulse">
             <div className="w-16 h-16 rounded-2xl bg-muted" />
           </div>
         </div>
       ) : (
         <>
-          {/* Hero Section */}
-          <motion.section
-            ref={heroRef}
-            style={{ opacity: heroOpacity, scale: heroScale }}
-            className="relative min-h-[50vh] flex items-center justify-center overflow-hidden pt-20"
-          >
-            {/* Background Effects */}
-            <div className="absolute inset-0 bg-gradient-to-br from-coke-red/5 via-background to-primary/5" />
-        
-        {/* Animated circles - deterministic to avoid hydration mismatch */}
-        <div className="absolute inset-0 overflow-hidden">
-          {[
-            { size: 300, duration: 20 },
-            { size: 500, duration: 30 },
-            { size: 700, duration: 40 },
-          ].map((circle, i) => (
-            <motion.div
-              key={i}
-              className="absolute rounded-full border border-coke-red/10"
-              style={{
-                width: `${circle.size}px`,
-                height: `${circle.size}px`,
-                left: '50%',
-                top: '50%',
-                x: '-50%',
-                y: '-50%',
-              }}
-              animate={{ 
-                rotate: 360,
-                scale: [1, 1.05, 1],
-              }}
-              transition={{ 
-                rotate: { duration: circle.duration, repeat: Infinity, ease: 'linear' },
-                scale: { duration: 4, repeat: Infinity, ease: 'easeInOut' }
-              }}
-            />
-          ))}
-        </div>
-
-        <div className="container relative z-10 text-center space-y-6 py-16">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={isHeroInView ? { opacity: 1, y: 0 } : {}}
-            transition={{ duration: 0.6 }}
-          >
-            <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-coke-red/10 text-coke-red text-sm font-medium mb-4">
-              <Headphones className="h-4 w-4" />
-              We&apos;re Here to Help
-            </span>
-          </motion.div>
-
-          <motion.h1
-            initial={{ opacity: 0, y: 30 }}
-            animate={isHeroInView ? { opacity: 1, y: 0 } : {}}
-            transition={{ duration: 0.7, delay: 0.1 }}
-            className="text-3xl sm:text-4xl md:text-6xl lg:text-7xl font-bold font-typewriter"
-          >
-            <span ref={typingRef} className="text-foreground">
-              {heroText}
-            </span>
-            {heroText.length > 0 && (
-              <motion.span
-                animate={{ opacity: [1, 0] }}
-                transition={{ duration: 0.5, repeat: Infinity, repeatType: 'reverse' }}
-                className="text-coke-red"
-              >
-                |
-              </motion.span>
-            )}
-          </motion.h1>
-
-          <motion.p
-            initial={{ opacity: 0, y: 20 }}
-            animate={isHeroInView ? { opacity: 1, y: 0 } : {}}
-            transition={{ duration: 0.6, delay: 0.2 }}
-            className="text-xl text-muted-foreground max-w-2xl mx-auto"
-          >
-            Have questions about shipping? Need support? Our global team is ready to assist you 24/7.
-          </motion.p>
-
-          {/* Stats */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={isHeroInView ? { opacity: 1, y: 0 } : {}}
-            transition={{ duration: 0.6, delay: 0.3 }}
-            className="flex flex-wrap justify-center gap-8 pt-8"
-          >
-            {stats.map((stat, i) => (
-              <motion.div
-                key={stat.label}
-                initial={{ opacity: 0, scale: 0.8 }}
-                animate={isHeroInView ? { opacity: 1, scale: 1 } : {}}
-                transition={{ duration: 0.4, delay: 0.4 + i * 0.1 }}
-                className="text-center"
-              >
-                <p className="text-3xl font-bold font-typewriter text-coke-red">{stat.value}</p>
-                <p className="text-sm text-muted-foreground">{stat.label}</p>
-              </motion.div>
-            ))}
-          </motion.div>
-        </div>
-          </motion.section>
+          {/* Compact Header */}
+          <section className="pt-28 pb-8">
+            <div className="container text-center space-y-4">
+              <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-coke-red/10 text-coke-red text-sm font-medium">
+                <Headphones className="h-4 w-4" />
+                We&apos;re Here to Help
+              </span>
+              <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold font-typewriter">
+                Get in Touch
+              </h1>
+              <p className="text-muted-foreground max-w-xl mx-auto">
+                Have questions about shipping? Need support? Our team is ready to assist you 24/7.
+              </p>
+              <div className="flex flex-wrap justify-center gap-8 pt-4">
+                {stats.map((stat) => (
+                  <div key={stat.label} className="text-center">
+                    <p className="text-2xl font-bold font-typewriter text-coke-red">{stat.value}</p>
+                    <p className="text-sm text-muted-foreground">{stat.label}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </section>
 
           {/* Company Identity - Indiano Ventures */}
           <section className="py-10">
@@ -735,7 +593,7 @@ const Contact = () => {
                       </div>
                     </div>
 
-                    <Button variant="outline" className="w-full group">
+                    <Button variant="outline" className="w-full group" onClick={() => window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(selectedOffice.address)}`, '_blank')}>
                       <Navigation className="h-4 w-4 mr-2" />
                       Get Directions
                       <ArrowRight className="h-4 w-4 ml-auto transition-transform group-hover:translate-x-1" />
