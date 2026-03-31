@@ -12,8 +12,39 @@ interface RouteMapProps {
   destinationCity: string;
   destinationZipcode: string;
   destinationCountry?: string;
+  destinationCountryName?: string;
   mode: 'international' | 'domestic';
 }
+
+// India center (New Delhi) - always the origin for all shipments
+const INDIA_CENTER: [number, number] = [77.2090, 28.6139];
+
+// Known country coordinates [lng, lat] for reliable international mapping
+const COUNTRY_COORDS: Record<string, [number, number]> = {
+  US: [-77.04, 38.91], GB: [-0.13, 51.51], AE: [55.27, 25.20],
+  CA: [-75.70, 45.42], AU: [149.13, -35.28], SG: [103.82, 1.35],
+  DE: [13.41, 52.52], FR: [2.35, 48.86], JP: [139.69, 35.69],
+  KR: [126.98, 37.57], NL: [4.90, 52.37], IT: [12.50, 41.90],
+  ES: [-3.70, 40.42], SE: [18.07, 59.33], CH: [7.45, 46.95],
+  NZ: [174.76, -41.29], MY: [101.69, 3.14], TH: [100.50, 13.76],
+  PH: [120.98, 14.60], ID: [106.85, -6.21], VN: [105.83, 21.03],
+  SA: [46.68, 24.71], QA: [51.53, 25.29], KW: [47.98, 29.38],
+  BH: [50.56, 26.23], OM: [58.38, 23.59], BD: [90.41, 23.81],
+  LK: [79.86, 6.93], NP: [85.32, 27.72], PK: [73.05, 33.68],
+  ZA: [28.05, -26.20], KE: [36.82, -1.29], NG: [3.38, 6.52],
+  EG: [31.24, 30.04], BR: [-47.88, -15.79], MX: [-99.13, 19.43],
+  AR: [-58.38, -34.60], CL: [-70.67, -33.45], CO: [-74.07, 4.71],
+  PE: [-77.04, -12.05], HK: [114.17, 22.32], TW: [121.57, 25.03],
+  CN: [116.41, 39.90], RU: [37.62, 55.76], TR: [32.86, 39.93],
+  IL: [35.21, 31.77], GR: [23.73, 37.98], PT: [-9.14, 38.72],
+  PL: [21.01, 52.23], CZ: [14.44, 50.08], AT: [16.37, 48.21],
+  BE: [4.35, 50.85], DK: [12.57, 55.68], NO: [10.75, 59.91],
+  FI: [24.94, 60.17], IE: [-6.26, 53.35], HU: [19.04, 47.50],
+  RO: [26.10, 44.43], MU: [57.55, -20.16], JO: [35.91, 31.95],
+  LB: [35.50, 33.89], GH: [-0.19, 5.60], TZ: [39.21, -6.79],
+  ET: [38.76, 9.03], UG: [32.58, 0.35], MM: [96.20, 16.87],
+  KH: [104.93, 11.56], LA: [102.63, 17.98],
+};
 
 // Geocode using Mapbox Geocoding API
 async function geocode(query: string, token: string): Promise<[number, number] | null> {
@@ -65,11 +96,53 @@ function generateArc(start: [number, number], end: [number, number], steps = 80)
   return points;
 }
 
-export default function RouteMap({
-  pickupAddress, pickupCity, pickupPincode,
-  destinationAddress, destinationCity, destinationZipcode,
-  destinationCountry, mode,
-}: RouteMapProps) {
+/**
+ * Resolve coordinates for the route.
+ * International: India center as origin, known country coords or country-name geocode for destination.
+ * Domestic: pincode-based geocoding for both ends (pincode + India is reliable).
+ */
+async function resolveCoords(
+  props: RouteMapProps,
+  token: string,
+): Promise<{ pickup: [number, number]; dest: [number, number] } | null> {
+  const { pickupCity, pickupPincode, destinationCity, destinationZipcode, destinationCountry, mode } = props;
+
+  if (mode === 'international') {
+    // Origin: always India — use pincode geocode if available, else India center
+    let pickupCoords: [number, number] = INDIA_CENTER;
+    if (pickupPincode) {
+      const pincodeResult = await geocode(`${pickupPincode}, India`, token);
+      if (pincodeResult) pickupCoords = pincodeResult;
+    }
+
+    // Destination: use known coords lookup first, then geocode by country name
+    const countryCode = (destinationCountry || '').toUpperCase();
+    let destCoords = COUNTRY_COORDS[countryCode] || null;
+    if (!destCoords) {
+      // Fallback: geocode by country name or code
+      const countryQuery = props.destinationCountryName || destinationCountry || '';
+      if (countryQuery) {
+        destCoords = await geocode(countryQuery, token);
+      }
+    }
+    if (!destCoords) return null;
+    return { pickup: pickupCoords, dest: destCoords };
+  }
+
+  // Domestic: pincode-based geocoding (very reliable for India)
+  const [pickupCoords, destCoords] = await Promise.all([
+    geocode(pickupPincode ? `${pickupPincode}, ${pickupCity || ''}, India` : `${pickupCity}, India`, token),
+    geocode(destinationZipcode ? `${destinationZipcode}, ${destinationCity || ''}, India` : `${destinationCity}, India`, token),
+  ]);
+  if (!pickupCoords || !destCoords) return null;
+  return { pickup: pickupCoords, dest: destCoords };
+}
+
+export default function RouteMap(props: RouteMapProps) {
+  const {
+    pickupPincode, destinationCountry, destinationCountryName, mode,
+  } = props;
+
   const mapContainer = useRef<HTMLDivElement>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
   const animRef = useRef<number>(0);
@@ -79,33 +152,39 @@ export default function RouteMap({
 
   const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
 
-  const pickupQuery = useMemo(
-    () => [pickupAddress, pickupCity, pickupPincode, 'India'].filter(Boolean).join(', '),
-    [pickupAddress, pickupCity, pickupPincode]
-  );
-  const destQuery = useMemo(
-    () => [destinationAddress, destinationCity, destinationZipcode, destinationCountry || ''].filter(Boolean).join(', '),
-    [destinationAddress, destinationCity, destinationZipcode, destinationCountry]
+  // Stable key to detect when we need to re-init the map
+  const mapKey = useMemo(
+    () => mode === 'international'
+      ? `intl-${pickupPincode}-${destinationCountry}`
+      : `dom-${pickupPincode}-${props.destinationZipcode}`,
+    [mode, pickupPincode, destinationCountry, props.destinationZipcode]
   );
 
   useEffect(() => {
-    if (!token || !mapContainer.current || mapRef.current) return;
+    if (!token || !mapContainer.current) return;
+
+    // Clean up previous map
+    if (mapRef.current) {
+      cancelAnimationFrame(animRef.current);
+      mapRef.current.remove();
+      mapRef.current = null;
+    }
 
     let cancelled = false;
+    setLoading(true);
+    setError(false);
 
     const init = async () => {
       try {
-        const [pickupCoords, destCoords] = await Promise.all([
-          geocode(pickupQuery, token),
-          geocode(destQuery, token),
-        ]);
+        const coords = await resolveCoords(props, token);
 
-        if (cancelled || !pickupCoords || !destCoords || !mapContainer.current) {
+        if (cancelled || !coords || !mapContainer.current) {
           if (!cancelled) setError(true);
           setLoading(false);
           return;
         }
 
+        const { pickup: pickupCoords, dest: destCoords } = coords;
         const km = haversineKm(pickupCoords, destCoords);
         setDistanceKm(Math.round(km));
 
@@ -152,7 +231,6 @@ export default function RouteMap({
             data: { type: 'Feature', properties: { bearing: 0 }, geometry: { type: 'Point', coordinates: arcCoords[0] } },
           });
 
-          // Load airplane icon
           const img = new Image(40, 40);
           img.onload = () => {
             if (map.hasImage('airplane')) return;
@@ -170,7 +248,6 @@ export default function RouteMap({
                 'icon-ignore-placement': true,
               },
             });
-            // Start animation
             let idx = 0;
             const animate = () => {
               idx = (idx + 1) % arcCoords.length;
@@ -190,9 +267,9 @@ export default function RouteMap({
           };
           img.src = buildAirplaneSvgUrl();
 
-          // Pickup marker
+          // Origin marker (India) — blue with package emoji
           addPulseMarker(map, pickupCoords, '#3B82F6', '📦');
-          // Destination marker
+          // Destination marker — green with pin emoji
           addPulseMarker(map, destCoords, '#10B981', '📍');
 
           setLoading(false);
@@ -212,9 +289,18 @@ export default function RouteMap({
       mapRef.current?.remove();
       mapRef.current = null;
     };
-  }, [token, pickupQuery, destQuery]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [token, mapKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!token || error) return null;
+
+  // Build the distance bar label
+  const distanceLabel = mode === 'international' && destinationCountryName
+    ? `India → ${destinationCountryName}`
+    : mode === 'international' && destinationCountry
+    ? `India → ${destinationCountry}`
+    : mode === 'domestic'
+    ? 'Domestic'
+    : '';
 
   return (
     <div className="rounded-xl overflow-hidden border border-border bg-card">
@@ -230,8 +316,12 @@ export default function RouteMap({
         <div className="flex items-center justify-center gap-2 py-2.5 px-4 border-t border-border bg-muted/30">
           <span className="text-xs text-muted-foreground">Distance:</span>
           <span className="text-sm font-semibold">{distanceKm.toLocaleString('en-IN')} km</span>
-          <span className="text-xs text-muted-foreground">·</span>
-          <span className="text-xs text-muted-foreground capitalize">{mode}</span>
+          {distanceLabel && (
+            <>
+              <span className="text-xs text-muted-foreground">·</span>
+              <span className="text-xs text-muted-foreground">{distanceLabel}</span>
+            </>
+          )}
         </div>
       )}
     </div>
@@ -263,7 +353,6 @@ function addPulseMarker(map: mapboxgl.Map, coords: [number, number], color: stri
       <div style="width:28px;height:28px;border-radius:50%;background:${color};border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.25);display:flex;align-items:center;justify-content:center;font-size:13px;">${emoji}</div>
     </div>
   `;
-  // Inject pulse keyframes if not already present
   if (!document.getElementById('pulse-ring-style')) {
     const style = document.createElement('style');
     style.id = 'pulse-ring-style';

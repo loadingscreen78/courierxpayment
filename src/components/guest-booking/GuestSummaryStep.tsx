@@ -767,6 +767,7 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
         destinationCity={senderReceiver.receiverCity}
         destinationZipcode={senderReceiver.receiverZipcode}
         destinationCountry={isDomestic ? 'India' : rateFormData?.destinationCountry}
+        destinationCountryName={destinationCountryInfo?.name}
         mode={mode}
       />
 
