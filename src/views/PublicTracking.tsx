@@ -16,6 +16,9 @@ import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp
 import { cn } from '@/lib/utils';
 import { STATUS_LABEL_MAP, LEG_LABEL_MAP } from '@/lib/shipment-lifecycle/statusLabelMap';
 import type { ShipmentStatus, ShipmentLeg, TimelineSource } from '@/lib/shipment-lifecycle/types';
+import dynamic from 'next/dynamic';
+
+const ShipmentMap = dynamic(() => import('@/components/tracking/ShipmentMap'), { ssr: false });
 
 // ---------------------------------------------------------------------------
 // Types
@@ -518,6 +521,15 @@ const PublicTracking = () => {
                       <p className="text-white/60 text-xs mt-1">{progress}% complete</p>
                     </div>
                   </motion.div>
+
+                  {/* Route Map */}
+                  <ShipmentMap
+                    origin={shipment.origin_address}
+                    destination={shipment.destination_address}
+                    destinationCountry={shipment.destination_country}
+                    currentLeg={shipment.current_leg}
+                    currentStatus={shipment.current_status}
+                  />
 
                   {/* Shipment Info */}
                   <Card className="border-border rounded-2xl">
