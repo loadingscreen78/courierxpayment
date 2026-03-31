@@ -10,7 +10,7 @@ import {
   CurrencyInr, Tag, CheckCircle, Warning, DownloadSimple, Copy,
   Clock, Scissors, SealCheck, Drop, ArrowLeft, Cube, Info,
   Ruler, IdentificationCard, House, Upload, FileText, Camera, X, Eye,
-  Pill, Receipt, Passport, FolderOpen,
+  Pill, Receipt, IdentificationBadge, FolderOpen,
 } from '@phosphor-icons/react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -543,7 +543,7 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
                 </div>
                 <div className="flex gap-3 p-3 rounded-lg bg-blue-50 dark:bg-blue-950/20">
                   <div className="w-9 h-9 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center shrink-0">
-                    <Passport className="h-4.5 w-4.5 text-blue-600" weight="duotone" />
+                    <IdentificationBadge className="h-4.5 w-4.5 text-blue-600" weight="duotone" />
                   </div>
                   <div>
                     <p className="text-sm font-medium">Recipient&apos;s Passport Copy</p>
