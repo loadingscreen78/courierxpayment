@@ -580,41 +580,29 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
   };
 
   // ── Aadhaar OCR processing + auto-fill ──
-  // Background processing: only extract age (block <18) and 12-digit Aadhaar number
-  // Only perform extraction tasks if overall confidence >= 90%
+  // Background processing: extract age (block <18) and 12-digit Aadhaar number
   const handleAadhaarProcess = useCallback(async () => {
     if (!aadhaarFront) return;
     const result = await processAadhaar(aadhaarFront, aadhaarBack);
     if (!result) return;
 
-    // Calculate overall extraction accuracy from field confidences
-    const fc = result.fieldConfidence || {};
-    const aadhaarConf = fc.aadhaarNumber ?? (result.confidence === 'high' ? 95 : result.confidence === 'medium' ? 75 : 50);
-    const ageConf = fc.dob ?? fc.age ?? (result.age !== null ? 90 : 0);
-    // Use the average of aadhaar number and age/dob confidence as overall accuracy
-    const relevantConfidences = [aadhaarConf];
-    if (result.age !== null) relevantConfidences.push(ageConf);
-    const overallAccuracy = relevantConfidences.reduce((a, b) => a + b, 0) / relevantConfidences.length;
+    // Task 1: Age gate — block if under 18
+    if (result.age !== null && result.age < 18) {
+      setIsUnderAge(true);
+      return;
+    }
+    setIsUnderAge(false);
 
-    // Only perform age check and Aadhaar extraction if accuracy > 90%
-    if (overallAccuracy >= 90) {
-      // Task 1: Age gate — block if under 18
-      if (result.age !== null && result.age < 18) {
-        setIsUnderAge(true);
-        return;
+    // Task 2: Extract 12-digit Aadhaar number and silently auto-fill summary page
+    if (result.aadhaarNumber) {
+      const cleaned = result.aadhaarNumber.replace(/\D/g, '');
+      if (cleaned.length === 12) {
+        setExtractedAadhaarNumber(cleaned);
       }
-      setIsUnderAge(false);
-
-      // Task 2: Extract 12-digit Aadhaar number and silently auto-fill summary page
-      if (result.aadhaarNumber && result.aadhaarNumber.replace(/\D/g, '').length === 12) {
-        setExtractedAadhaarNumber(result.aadhaarNumber.replace(/\D/g, ''));
-      }
-    } else {
-      // Low accuracy — skip auto-extraction, user will enter Aadhaar manually on summary page
-      setIsUnderAge(false);
     }
 
-    // Auto-fill sender name and phone from OCR (these are still on the pickup step)
+    // Auto-fill sender fields from OCR (name, address etc. for pickup step)
+    const fc = result.fieldConfidence || {};
     if (result.name && (fc.name ?? 80) >= 50) detailsForm.setValue('senderName', result.name);
     if (result.phone && (fc.phone ?? 80) >= 50) detailsForm.setValue('senderPhone', result.phone);
     if (result.address && (fc.address ?? 80) >= 50) detailsForm.setValue('senderAddress', result.address);

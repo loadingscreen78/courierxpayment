@@ -176,15 +176,18 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
   const pickupInfo = useMemo(() => getPickupInfo(), []);
 
   // ── Auto-verify Aadhaar if extracted from OCR ──
-  // When extractedAadhaarNumber is provided (from Tesseract OCR), auto-verify it
-  // without requiring the user to click the verify button
+  // When extractedAadhaarNumber is provided (from Tesseract OCR), auto-fill and auto-verify
   useEffect(() => {
-    if (extractedAadhaarNumber && extractedAadhaarNumber.length === 12 && !aadhaarVerified && !aadhaarLoading) {
+    if (extractedAadhaarNumber && !aadhaarVerified && !aadhaarLoading) {
       const raw = extractedAadhaarNumber.replace(/\D/g, '');
-      if (raw.length === 12 && validateVerhoeff(raw)) {
+      if (raw.length === 12) {
+        // Always fill the field so user can see/correct it
         setAadhaarInput(raw);
         setFormattedAadhaar(formatAadhaar(raw));
-        setAadhaarVerified(true);
+        // Auto-verify only if Verhoeff checksum passes
+        if (validateVerhoeff(raw)) {
+          setAadhaarVerified(true);
+        }
       }
     }
   }, [extractedAadhaarNumber]); // eslint-disable-line react-hooks/exhaustive-deps
