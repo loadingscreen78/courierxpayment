@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServiceRoleClient } from '@/lib/shipment-lifecycle/supabaseAdmin';
 import { CASHFREE_API_BASE, CASHFREE_API_VERSION } from '@/lib/wallet/cashfreeConfig';
-import { createDomesticShipment } from '@/lib/domestic/nimbusPostDomestic';
+import { createDomesticShipment, fetchDomesticRates } from '@/lib/domestic/nimbusPostDomestic';
 import { lookupPincode } from '@/lib/pincode-lookup';
 import { getNearestWarehouse } from '@/lib/warehouse/getWarehouse';
 import { sendEmail } from '@/lib/email/resend';
@@ -136,6 +136,10 @@ export async function POST(request: NextRequest) {
     // Determine if this is an international booking
     const isInternational = !!rateFormData?.destinationCountry;
 
+    console.log('[verify-guest-payment] Booking type:', isInternational ? 'INTERNATIONAL' : 'DOMESTIC', 
+      'shipmentType:', rateFormData?.shipmentType,
+      'selectedCourier keys:', selectedCourier ? Object.keys(selectedCourier) : 'null');
+
     // ── Create NimbusPost shipment ──
     const skipNimbus = !process.env.NIMBUS_EMAIL || !process.env.NIMBUS_PASSWORD;
 
@@ -177,7 +181,6 @@ export async function POST(request: NextRequest) {
           // (international rates come from our own calculator, not NimbusPost).
           // We need to fetch domestic rates for customer→warehouse and pick cheapest.
           if (!courierId) {
-            const { fetchDomesticRates } = await import('@/lib/domestic/nimbusPostDomestic');
             const weightKg = Number(rateFormData?.weightGrams) ? Number(rateFormData.weightGrams) / 1000 : 0.5;
             try {
               const domesticRates = await fetchDomesticRates({

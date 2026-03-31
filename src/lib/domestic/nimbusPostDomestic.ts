@@ -204,6 +204,8 @@ export interface CreateDomesticShipmentParams {
   content_description: string;
   /** Optional custom order number (e.g. CRX tracking number). Auto-generated if omitted. */
   order_number?: string;
+  /** Optional NimbusPost warehouse name. Defaults to NIMBUS_WAREHOUSE_NAME env var or 'default'. */
+  warehouse_name?: string;
 }
 
 export interface CreateDomesticShipmentResponse {
@@ -243,7 +245,7 @@ export async function createDomesticShipment(
       phone: String(params.delivery.phone),
     },
     pickup: {
-      warehouse_name: process.env.NIMBUS_WAREHOUSE_NAME || 'default',
+      warehouse_name: params.warehouse_name || process.env.NIMBUS_WAREHOUSE_NAME || 'default',
       name: params.pickup.name,
       address: params.pickup.address,
       address_2: '',
@@ -270,7 +272,10 @@ export async function createDomesticShipment(
     delivery_pin: params.delivery.pincode,
     pickup_state: params.pickup.state,
     delivery_state: params.delivery.state,
+    warehouse_name: params.warehouse_name || process.env.NIMBUS_WAREHOUSE_NAME || 'default',
   }));
+
+  console.log('[nimbusPostDomestic] Full payload:', JSON.stringify(payload));
 
   const res = await fetch(`${NIMBUS_API_BASE}/shipments`, {
     method: 'POST',
@@ -288,6 +293,8 @@ export async function createDomesticShipment(
   }
 
   const data = await res.json();
+
+  console.log('[nimbusPostDomestic] Response:', JSON.stringify(data));
 
   if (data?.status === false) {
     console.error('[nimbusPostDomestic] createDomesticShipment failed response:', JSON.stringify(data));

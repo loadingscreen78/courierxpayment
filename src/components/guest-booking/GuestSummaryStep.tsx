@@ -493,8 +493,8 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
           </div>
         </motion.div>
 
-        {/* ── Documents Required (International only) ── */}
-        {mode === 'international' && (
+        {/* ── Documents Required (International medicine & gift only) ── */}
+        {mode === 'international' && shipmentType !== 'document' && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
