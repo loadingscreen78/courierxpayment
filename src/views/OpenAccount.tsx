@@ -316,11 +316,39 @@ export default function OpenAccount() {
         setIsLoading(false);
         return;
       }
-      const { error } = await signUpWithEmail(signupEmail, signupPassword);
-      if (error) {
-        toast({ title: 'Error', description: error.message, variant: 'destructive' });
+      // Use server-side signup that auto-confirms email and returns session tokens.
+      // This avoids the issue where supabase.auth.signUp() doesn't create a session
+      // when email confirmation is enabled (we already verified via our own OTP).
+      const signupRes = await fetch('/api/auth/signup-confirmed', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: signupEmail, password: signupPassword }),
+      });
+      const signupData = await signupRes.json();
+      if (!signupRes.ok || !signupData.success) {
+        toast({ title: 'Error', description: signupData.error || 'Signup failed', variant: 'destructive' });
         setIsLoading(false);
         return;
+      }
+      // Set the session tokens in the client so the user is fully authenticated
+      if (signupData.session?.access_token && signupData.session?.refresh_token) {
+        await supabase.auth.setSession({
+          access_token: signupData.session.access_token,
+          refresh_token: signupData.session.refresh_token,
+        });
+      }
+      // signUp may not create a session if email confirmation is enabled in Supabase.
+      // Since we already verified the email via our own OTP, sign in immediately to establish a session.
+      const { data: { session: currentSession } } = await supabase.auth.getSession();
+      if (!currentSession) {
+        const { error: signInError } = await supabase.auth.signInWithPassword({
+          email: signupEmail,
+          password: signupPassword,
+        });
+        if (signInError) {
+          console.warn('[OpenAccount] Auto sign-in after signup failed:', signInError.message);
+          // Don't block — user can still proceed, uploads will retry
+        }
       }
       fetch('/api/email/send-welcome', {
         method: 'POST',
