@@ -613,8 +613,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
       setIsUnderAge(false);
     }
 
-    // Auto-fill sender fields from OCR (name, address etc.) regardless of the 90% gate
-    // These are convenience fills — user can always edit
+    // Auto-fill sender name and phone from OCR (these are still on the pickup step)
     if (result.name && (fc.name ?? 80) >= 50) detailsForm.setValue('senderName', result.name);
     if (result.phone && (fc.phone ?? 80) >= 50) detailsForm.setValue('senderPhone', result.phone);
     if (result.address && (fc.address ?? 80) >= 50) detailsForm.setValue('senderAddress', result.address);
@@ -638,7 +637,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
 
   // ── Validate sender fields before sliding to receiver ──
   const handleSenderNext = async () => {
-    const senderFields = ['senderName', 'senderPhone', 'senderEmail'] as const;
+    const senderFields = ['senderPhone', 'senderEmail'] as const;
     const result = await detailsForm.trigger(senderFields);
     if (!result) return;
     // Block if under 18
@@ -1723,73 +1722,6 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                               isUnderAge={isUnderAge}
                             />
                           )}
-
-                          {isMedicineFlow && (
-                            <div className="rounded-lg border border-orange-200 dark:border-orange-800/40 bg-orange-50 dark:bg-orange-950/20 p-3 text-xs text-orange-800 dark:text-orange-300 flex items-start gap-2">
-                              <IdentificationCard className="h-4 w-4 shrink-0 mt-0.5" weight="fill" />
-                              <span>Sender name must match your Aadhaar card exactly. This is required for medicine customs clearance under CSB-IV.</span>
-                            </div>
-                          )}
-
-                          {/* ── 4. Sender details (auto-filled from OCR when available, always editable) ── */}
-                          {requiresAadhaarKyc && ocrResult?.fieldConfidence && Object.entries(ocrResult.fieldConfidence).some(([,v]) => v > 0 && v < 60) && (
-                            <div className="rounded-lg border border-amber-200 dark:border-amber-800/40 bg-amber-50 dark:bg-amber-950/20 p-2.5 text-xs text-amber-800 dark:text-amber-300 flex items-start gap-2">
-                              <Warning className="h-3.5 w-3.5 shrink-0 mt-0.5" weight="fill" />
-                              <span>Some fields may be inaccurate (highlighted in amber). Please verify and correct them.</span>
-                            </div>
-                          )}
-                          <FormField control={detailsForm.control} name="senderName" render={({ field }) => {
-                            const fc = ocrResult?.fieldConfidence?.name ?? 100;
-                            const isWarn = ocrResult && fc > 0 && fc < 60;
-                            return (
-                            <FormItem>
-                              <FormLabel>Full Name {isWarn && <span className="text-amber-600 text-[10px] ml-1">⚠ may be incorrect</span>}</FormLabel>
-                              <FormControl><Input {...field} placeholder="Full name as on Aadhaar" className={`h-11 ${isWarn ? 'border-amber-400 bg-amber-50/50' : ''}`} /></FormControl>
-                              <FormMessage />
-                            </FormItem>
-                            );
-                          }} />
-                          <FormField control={detailsForm.control} name="senderAddress" render={({ field }) => {
-                            const fc = ocrResult?.fieldConfidence?.address ?? 100;
-                            const isWarn = ocrResult && fc > 0 && fc < 60;
-                            return (
-                            <FormItem>
-                              <FormLabel>Sender Address {isWarn && <span className="text-amber-600 text-[10px] ml-1">⚠ may be incorrect</span>}</FormLabel>
-                              <FormControl><Input {...field} placeholder="Full address" className={`h-11 ${isWarn ? 'border-amber-400 bg-amber-50/50' : ''}`} /></FormControl>
-                              <FormMessage />
-                            </FormItem>
-                            );
-                          }} />
-                          <div className="grid grid-cols-1 xs:grid-cols-3 gap-3">
-                            <FormField control={detailsForm.control} name="senderCity" render={({ field }) => {
-                              const fc = ocrResult?.fieldConfidence?.city ?? 100;
-                              const isWarn = ocrResult && fc > 0 && fc < 60;
-                              return (
-                              <FormItem>
-                                <FormLabel>City {isWarn && <span className="text-amber-600 text-[10px]">⚠</span>}</FormLabel>
-                                <FormControl><Input {...field} placeholder="City" className={`h-11 ${isWarn ? 'border-amber-400 bg-amber-50/50' : ''}`} /></FormControl>
-                                <FormMessage />
-                              </FormItem>
-                              );
-                            }} />
-                            <FormField control={detailsForm.control} name="senderState" render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>State</FormLabel>
-                                <Select onValueChange={field.onChange} value={field.value}>
-                                  <FormControl><SelectTrigger className="h-11"><SelectValue placeholder="State" /></SelectTrigger></FormControl>
-                                  <SelectContent>{INDIAN_STATES.map(st => <SelectItem key={st} value={st}>{st}</SelectItem>)}</SelectContent>
-                                </Select>
-                                <FormMessage />
-                              </FormItem>
-                            )} />
-                            <FormField control={detailsForm.control} name="senderPincode" render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Pincode</FormLabel>
-                                <FormControl><Input {...field} placeholder="110001" maxLength={6} className="h-11" /></FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )} />
-                          </div>
                         </div>
                         <div className="flex gap-3">
                           <Button type="button" variant="outline" onClick={() => { feedbackPresets.tap(); setAddressSubStep('pickup'); }} className="flex-1 gap-1.5">

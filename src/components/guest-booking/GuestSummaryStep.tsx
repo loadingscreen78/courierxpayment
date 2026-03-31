@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useRef, useCallback } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
@@ -174,6 +174,20 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
   const shipmentType = rateFormData?.shipmentType || 'gift';
 
   const pickupInfo = useMemo(() => getPickupInfo(), []);
+
+  // ── Auto-verify Aadhaar if extracted from OCR ──
+  // When extractedAadhaarNumber is provided (from Tesseract OCR), auto-verify it
+  // without requiring the user to click the verify button
+  useEffect(() => {
+    if (extractedAadhaarNumber && extractedAadhaarNumber.length === 12 && !aadhaarVerified && !aadhaarLoading) {
+      const raw = extractedAadhaarNumber.replace(/\D/g, '');
+      if (raw.length === 12 && validateVerhoeff(raw)) {
+        setAadhaarInput(raw);
+        setFormattedAadhaar(formatAadhaar(raw));
+        setAadhaarVerified(true);
+      }
+    }
+  }, [extractedAadhaarNumber]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Aadhaar handlers ──
 
