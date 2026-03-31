@@ -125,6 +125,7 @@ export default function RouteMap({
           fitBoundsOptions: { padding: { top: 48, bottom: 48, left: 40, right: 40 } },
           interactive: false,
           attributionControl: false,
+          projection: 'mercator',
         });
 
         map.on('load', () => {
