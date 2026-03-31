@@ -26,7 +26,6 @@ import { useShipments, Shipment } from '@/hooks/useShipments';
 import { useAddresses } from '@/hooks/useAddresses';
 import { getStatusLabel, getStatusDotColor, getLegLabel } from '@/lib/shipment-lifecycle/statusLabelMap';
 import { ShipmentStatus, ShipmentLeg } from '@/lib/shipment-lifecycle/types';
-import { KycPromptBanner } from '@/components/dashboard/KycPromptBanner';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -223,7 +222,6 @@ const Index = () => {
   const isInternational = mode === 'international';
   
   const displayName = profile?.full_name?.split(' ')[0] || 'there';
-  const isKycComplete = profile?.aadhaar_verified;
 
   // Show loading state with branded loader (truck animation)
   if (loading) {
@@ -241,15 +239,6 @@ const Index = () => {
           transition={{ duration: 0.35, ease: 'easeInOut' }}
           className="space-y-8 pb-8"
         >
-        {/* KYC Banner */}
-        <AnimatePresence>
-          {!isKycComplete && (
-            <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}>
-              <KycPromptBanner userName={profile?.full_name || undefined} />
-            </motion.div>
-          )}
-        </AnimatePresence>
-
         {/* Mode Banner — info only, no toggle (toggle lives in sidebar + header) */}
         <motion.div
           initial={{ opacity: 0, y: -8 }}

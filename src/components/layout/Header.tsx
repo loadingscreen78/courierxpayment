@@ -1,6 +1,6 @@
 "use client";
 
-import { Wallet, Calculator, Bell, SignOut, Warning, Sparkle, CaretDown } from '@phosphor-icons/react';
+import { Wallet, Calculator, Bell, SignOut, Warning, CaretDown } from '@phosphor-icons/react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -13,7 +13,6 @@ import {
 import { useAuth } from '@/contexts/AuthContext';
 import { useWallet, MIN_BALANCE_REQUIRED } from '@/contexts/WalletContext';
 import { useRouter } from 'next/navigation';
-import { VerificationBadge } from '@/components/ui/verification-badge';
 const logoMain = { src: '/lovable-uploads/logo.png' };
 import { cn } from '@/lib/utils';
 import { ShippingModeToggle } from '@/components/ui/ShippingModeToggle';
@@ -30,7 +29,6 @@ export const Header = () => {
     router.replace('/auth');
   };  const displayName = profile?.full_name || user?.email?.split('@')[0] || 'User';
   const displayEmail = user?.email || profile?.phone_number || '';
-  const isVerified = profile?.aadhaar_verified;
   const isLowBalance = balance < MIN_BALANCE_REQUIRED;
 
   return (
@@ -145,17 +143,6 @@ export const Header = () => {
                   </div>
                 </div>
               </DropdownMenuLabel>
-              
-              <DropdownMenuItem className="cursor-default focus:bg-transparent rounded-lg py-1.5">
-                <VerificationBadge isVerified={!!isVerified} size="sm" />
-              </DropdownMenuItem>
-              
-              {!isVerified && (
-                <DropdownMenuItem onClick={() => router.push('/auth/kyc')} className="rounded-lg text-sm">
-                  <Sparkle className="mr-2 h-3.5 w-3.5 text-amber-500" />
-                  Complete KYC
-                </DropdownMenuItem>
-              )}
               
               <DropdownMenuItem onClick={() => router.push('/profile')} className="rounded-lg text-sm">
                 Profile & Settings

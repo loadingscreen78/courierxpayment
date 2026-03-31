@@ -1,5 +1,4 @@
 import { useAuth } from '@/contexts/AuthContext';
-import { VerificationBadge } from '@/components/ui/verification-badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { format } from 'date-fns';
 
@@ -35,7 +34,6 @@ export const ProfileHeader = () => {
               <h1 className="text-2xl font-bold font-typewriter text-foreground">
                 {displayName}
               </h1>
-              <VerificationBadge isVerified={!!profile?.aadhaar_verified} size="sm" showLabel />
             </div>
             
             <p className="text-sm text-muted-foreground">

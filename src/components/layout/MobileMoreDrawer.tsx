@@ -20,7 +20,6 @@ import {
   DrawerHeader,
   DrawerTitle,
 } from '@/components/ui/drawer';
-import { VerificationBadge } from '@/components/ui/verification-badge';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 
@@ -88,7 +87,6 @@ export const MobileMoreDrawer = ({ open, onOpenChange }: MobileMoreDrawerProps) 
 
   const displayName = profile?.full_name || user?.email?.split('@')[0] || 'User';
   const displayEmail = user?.email || '';
-  const isVerified = profile?.aadhaar_verified;
 
   const handleSignOut = async () => {
     mediumTap();
@@ -134,9 +132,6 @@ export const MobileMoreDrawer = ({ open, onOpenChange }: MobileMoreDrawerProps) 
             <div className="flex-1 min-w-0 text-left">
               <p className="font-semibold truncate text-sm">{displayName}</p>
               <p className="text-xs text-muted-foreground truncate">{displayEmail}</p>
-              <div className="mt-1">
-                <VerificationBadge isVerified={!!isVerified} size="sm" showLabel={true} />
-              </div>
             </div>
             <ChevronRight className="h-4 w-4 text-muted-foreground/50 shrink-0" />
           </motion.button>

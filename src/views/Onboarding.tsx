@@ -55,7 +55,7 @@ const Onboarding = () => {
   // Skip onboarding if profile is already complete
   useEffect(() => {
     if (!loading && profile?.full_name) {
-      // MOCK MODE: Skip KYC check, go directly to dashboard
+      // Profile already complete, go directly to dashboard
       router.replace('/');
     }
   }, [profile, loading, router]);
@@ -88,7 +88,7 @@ const Onboarding = () => {
     playSuccess();
     setStep('complete');
     
-    // Redirect to dashboard — KYC is now handled during account opening
+    // Redirect to dashboard
     setTimeout(() => {
       router.replace('/dashboard');
     }, 2000);
@@ -156,7 +156,7 @@ const Onboarding = () => {
               </Button>
               
               <p className="text-center text-xs text-muted-foreground">
-                Quick setup: Complete your profile and verify identity
+                Quick setup: Complete your profile to get started
               </p>
             </CardContent>
           </Card>
@@ -182,7 +182,7 @@ const Onboarding = () => {
                     name="fullName"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Full Name (as per Aadhaar)</FormLabel>
+                        <FormLabel>Full Name</FormLabel>
                         <FormControl>
                           <Input
                             placeholder="Enter your full name"

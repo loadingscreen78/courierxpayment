@@ -16,7 +16,6 @@ import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
-import { VerificationBadge } from '@/components/ui/verification-badge';
 import { useHaptics } from '@/hooks/useHaptics';
 import logoSymbol from '@/assets/logo-symbol.jpeg';
 import { useShipments } from '@/hooks/useShipments';
@@ -154,7 +153,6 @@ export const DesktopSidebar = () => {
   };
 
   const displayName = profile?.full_name || user?.email?.split('@')[0] || 'User';
-  const isVerified = profile?.aadhaar_verified;
 
   const navGroups = [
     {
@@ -262,9 +260,6 @@ export const DesktopSidebar = () => {
             <p className="text-sm font-semibold text-sidebar-foreground truncate leading-none">
               {displayName}
             </p>
-            <div className="mt-1">
-              <VerificationBadge isVerified={!!isVerified} size="sm" showLabel={true} />
-            </div>
           </div>
           <CaretRight className="h-3.5 w-3.5 text-sidebar-foreground/30 shrink-0" />
         </Link>

@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { MapPin, FileText, Plus, CaretRight, CheckCircle, Clock } from '@phosphor-icons/react';
+import { MapPin, FileText, Plus, CaretRight } from '@phosphor-icons/react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -11,9 +11,6 @@ import { Badge } from '@/components/ui/badge';
 import { AnimatedTabContent } from '@/components/ui/loading/AnimatedTabContent';
 import { AddressesTabSkeleton, DocumentsTabSkeleton } from '@/components/vault/skeletons';
 import { useAddresses, type Address } from '@/hooks/useAddresses';
-import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
-import { useQuery } from '@tanstack/react-query';
 
 const AddressPreviewCard = ({ address }: { address: Address }) => {
   const router = useRouter();
@@ -48,24 +45,6 @@ const MyVault = () => {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState('addresses');
   const { addresses, loading: addressesLoading } = useAddresses();
-  const { user } = useAuth();
-
-  // Fetch KYC status from profile
-  const { data: profile, isLoading: profileLoading } = useQuery({
-    queryKey: ['profile-kyc', user?.id],
-    queryFn: async () => {
-      if (!user) return null;
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('aadhaar_verified, kyc_completed_at, aadhaar_address')
-        .eq('user_id', user.id)
-        .maybeSingle();
-      
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!user,
-  });
 
   const pickupAddresses = addresses.filter(a => a.type === 'pickup').slice(0, 3);
   const deliveryAddresses = addresses.filter(a => a.type === 'delivery').slice(0, 3);
@@ -76,7 +55,7 @@ const MyVault = () => {
         {/* Header */}
         <div>
           <h1 className="text-2xl font-typewriter font-bold">My Vault</h1>
-          <p className="text-muted-foreground">Manage your saved addresses and KYC documents</p>
+          <p className="text-muted-foreground">Manage your saved addresses and documents</p>
         </div>
 
         {/* Tabs */}
@@ -172,57 +151,15 @@ const MyVault = () => {
             <AnimatedTabContent tabKey={activeTab}>
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-lg">KYC Documents</CardTitle>
-                  <CardDescription>Your verified identity documents</CardDescription>
+                  <CardTitle className="text-lg">Documents</CardTitle>
+                  <CardDescription>Your uploaded documents from bookings</CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-4">
-                  {profileLoading ? (
-                    <DocumentsTabSkeleton />
-                  ) : (
-                    <>
-                      {/* Aadhaar Card Status */}
-                      <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
-                        <div className="flex items-center gap-3">
-                          <div className={`p-2 rounded-lg ${profile?.aadhaar_verified ? 'bg-success/20' : 'bg-warning/20'}`}>
-                            {profile?.aadhaar_verified ? (
-                              <CheckCircle className="h-5 w-5 text-success" />
-                            ) : (
-                              <Clock className="h-5 w-5 text-warning" />
-                            )}
-                          </div>
-                          <div>
-                            <p className="font-medium">Aadhaar Card</p>
-                            <p className="text-sm text-muted-foreground">Primary KYC Document</p>
-                            {profile?.aadhaar_verified && profile?.aadhaar_address && (
-                              <p className="text-xs text-muted-foreground mt-1 max-w-[300px] truncate">
-                                {profile.aadhaar_address}
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                        {profile?.aadhaar_verified ? (
-                          <span className="text-xs font-medium px-2 py-1 bg-success/20 text-success rounded-full">
-                            Verified
-                          </span>
-                        ) : (
-                          <Button 
-                            size="sm" 
-                            variant="outline"
-                            onClick={() => router.push('/kyc')}
-                          >
-                            Verify Now
-                          </Button>
-                        )}
-                      </div>
-
-                      {/* Uploaded Documents */}
-                      <div className="text-center py-8 text-muted-foreground border-t pt-8">
-                      <FileText size={40} weight="bold" className="mx-auto mb-3 opacity-30" />
-                        <p className="text-sm">Other documents will appear here</p>
-                        <p className="text-xs">Prescriptions, IDs, and invoices from bookings</p>
-                      </div>
-                    </>
-                  )}
+                <CardContent>
+                  <div className="text-center py-8 text-muted-foreground">
+                    <FileText size={40} weight="bold" className="mx-auto mb-3 opacity-30" />
+                    <p className="text-sm">Documents will appear here</p>
+                    <p className="text-xs">Prescriptions, IDs, and invoices from bookings</p>
+                  </div>
                 </CardContent>
               </Card>
             </AnimatedTabContent>
@@ -234,4 +171,3 @@ const MyVault = () => {
 };
 
 export default MyVault;
-
