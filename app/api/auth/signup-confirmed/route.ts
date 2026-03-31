@@ -19,38 +19,21 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Email and password required' }, { status: 400 });
     }
 
-    // First try to create the user with auto-confirm using admin API
-    const { data: createData, error: createError } = await supabaseAdmin.auth.admin.createUser({
+    // Try to create the user with auto-confirm using admin API
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: createData, error: createError } = await (supabaseAdmin.auth.admin as any).createUser({
       email,
       password,
-      email_confirm: true, // Auto-confirm since we already verified via OTP
+      email_confirm: true,
     });
 
     if (createError) {
-      // If user already exists, try to sign them in directly
-      if (createError.message.includes('already been registered') || 
-          createError.message.includes('duplicate key') ||
-          createError.message.includes('already exists')) {
+      const msg = createError.message || '';
+      // If user already exists, just sign them in
+      if (msg.includes('already been registered') || 
+          msg.includes('duplicate key') ||
+          msg.includes('already exists')) {
         
-        // Ensure the existing user's email is confirmed using listUsers with filter
-        try {
-          const { data: listData } = await supabaseAdmin.auth.admin.listUsers({
-            page: 1,
-            perPage: 1,
-          });
-          // Find by email from the response
-          const users = (listData as any)?.users || [];
-          const existingUser = users.find((u: any) => u.email === email.toLowerCase());
-          if (existingUser && !existingUser.email_confirmed_at) {
-            await supabaseAdmin.auth.admin.updateUser(existingUser.id, {
-              email_confirm: true,
-            });
-          }
-        } catch {
-          // Non-critical — proceed to sign in anyway
-        }
-
-        // Sign in the existing user
         const { data: signInData, error: signInError } = await supabaseAdmin.auth.signInWithPassword({
           email,
           password,
@@ -80,7 +63,6 @@ export async function POST(req: NextRequest) {
     });
 
     if (signInError) {
-      // User was created but sign-in failed — shouldn't happen with auto-confirm
       console.error('[signup-confirmed] Sign-in after create failed:', signInError.message);
       return NextResponse.json({ error: 'Account created but sign-in failed. Please try logging in.' }, { status: 500 });
     }
