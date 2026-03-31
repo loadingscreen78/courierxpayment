@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useCallback, useState, useEffect } from 'react';
-import { IdentificationCard, Upload, X, CircleNotch, Warning, CheckCircle, ShieldCheck, Camera, Eye } from '@phosphor-icons/react';
+import { Upload, X, CircleNotch, Warning, CheckCircle, ShieldCheck, Camera, Eye, Fingerprint } from '@phosphor-icons/react';
 import { Button } from '@/components/ui/button';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { AadhaarOcrResult } from '@/hooks/useAadhaarOcr';
@@ -117,14 +117,12 @@ function AadhaarCameraCapture({ side, onCapture, onClose }: {
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
       className="fixed inset-0 z-[100] bg-black flex flex-col">
-      {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 bg-black/90 text-white z-10">
         <p className="text-sm font-semibold">Capture Aadhaar {side === 'front' ? 'Front' : 'Back'}</p>
         <button onClick={() => { if (stream) stream.getTracks().forEach(t => t.stop()); onClose(); }} className="p-1">
           <X className="h-5 w-5" weight="bold" />
         </button>
       </div>
-
       {error ? (
         <div className="flex-1 flex items-center justify-center p-6 text-center">
           <div className="space-y-3">
@@ -134,7 +132,6 @@ function AadhaarCameraCapture({ side, onCapture, onClose }: {
           </div>
         </div>
       ) : captured ? (
-        /* Preview captured image */
         <div className="flex-1 flex flex-col">
           <div className="flex-1 relative flex items-center justify-center bg-black p-4">
             <img src={captured} alt="Captured" className="max-w-full max-h-full rounded-lg object-contain" />
@@ -145,36 +142,28 @@ function AadhaarCameraCapture({ side, onCapture, onClose }: {
           </div>
         </div>
       ) : (
-        /* Live camera with guide overlay */
         <div className="flex-1 flex flex-col">
           <div className="flex-1 relative overflow-hidden bg-black">
             <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover" />
-            {/* Aadhaar card guide overlay */}
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
               <div className="relative" style={{ width: '88%', aspectRatio: '1.6' }}>
-                {/* Card outline */}
                 <div className="absolute inset-0 border-2 border-white/70 rounded-xl" />
-                {/* Corner markers */}
                 <div className="absolute top-0 left-0 w-6 h-6 border-t-3 border-l-3 border-[#FF6B00] rounded-tl-lg" />
                 <div className="absolute top-0 right-0 w-6 h-6 border-t-3 border-r-3 border-[#FF6B00] rounded-tr-lg" />
                 <div className="absolute bottom-0 left-0 w-6 h-6 border-b-3 border-l-3 border-[#FF6B00] rounded-bl-lg" />
                 <div className="absolute bottom-0 right-0 w-6 h-6 border-b-3 border-r-3 border-[#FF6B00] rounded-br-lg" />
-                {/* Guide text */}
                 <div className="absolute -bottom-8 left-0 right-0 text-center">
                   <p className="text-white/80 text-xs">Align Aadhaar card within the frame</p>
                 </div>
               </div>
             </div>
-            {/* Dark overlay outside card area */}
             <div className="absolute inset-0 pointer-events-none" style={{
               background: 'radial-gradient(ellipse 75% 55% at center, transparent 0%, rgba(0,0,0,0.6) 100%)'
             }} />
           </div>
-          {/* Tips */}
           <div className="px-4 py-2 bg-black/90 text-center space-y-1">
             <p className="text-white/60 text-[10px]">Hold steady • Good lighting • No glare or shadows</p>
           </div>
-          {/* Capture button */}
           <div className="flex justify-center py-4 bg-black/90">
             <button onClick={capture} className="w-16 h-16 rounded-full border-4 border-white flex items-center justify-center active:scale-95 transition-transform">
               <div className="w-12 h-12 rounded-full bg-white" />
@@ -183,6 +172,95 @@ function AadhaarCameraCapture({ side, onCapture, onClose }: {
         </div>
       )}
       <canvas ref={canvasRef} className="hidden" />
+    </motion.div>
+  );
+}
+
+// ── Animated Aadhaar Validation Loading Screen ───────────────────────────────
+
+const validationSteps = [
+  'Scanning document...',
+  'Reading Aadhaar details...',
+  'Verifying identity...',
+  'Almost done...',
+];
+
+function AadhaarValidationLoader() {
+  const [stepIdx, setStepIdx] = useState(0);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setStepIdx(prev => (prev + 1) % validationSteps.length);
+    }, 2000);
+    return () => clearInterval(interval);
+  }, []);
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, scale: 0.95 }}
+      animate={{ opacity: 1, scale: 1 }}
+      exit={{ opacity: 0, scale: 0.95 }}
+      className="rounded-2xl border border-[#FF6B00]/20 bg-gradient-to-b from-[#FF6B00]/[0.04] to-transparent p-6 sm:p-8 space-y-5"
+    >
+      {/* Animated fingerprint icon */}
+      <div className="flex justify-center">
+        <div className="relative">
+          <motion.div
+            animate={{ scale: [1, 1.15, 1], opacity: [0.3, 0.6, 0.3] }}
+            transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+            className="absolute inset-0 rounded-full bg-[#FF6B00]/20 blur-xl"
+            style={{ width: 80, height: 80, top: -8, left: -8 }}
+          />
+          <motion.div
+            animate={{ rotate: [0, 5, -5, 0] }}
+            transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
+            className="relative w-16 h-16 rounded-full bg-gradient-to-br from-[#FF6B00]/20 to-[#FF6B00]/5 border border-[#FF6B00]/30 flex items-center justify-center"
+          >
+            <Fingerprint className="h-8 w-8 text-[#FF6B00]" weight="duotone" />
+          </motion.div>
+        </div>
+      </div>
+
+      {/* Title */}
+      <div className="text-center space-y-1.5">
+        <h4 className="font-semibold text-base">Validating Aadhaar</h4>
+        <p className="text-xs text-muted-foreground">Please wait while we verify your document</p>
+      </div>
+
+      {/* Animated progress bar */}
+      <div className="space-y-2">
+        <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+          <motion.div
+            className="h-full rounded-full bg-gradient-to-r from-[#FF6B00] to-[#FF8533]"
+            animate={{ width: ['0%', '30%', '60%', '85%', '95%'] }}
+            transition={{ duration: 8, ease: 'easeOut' }}
+          />
+        </div>
+        <AnimatePresence mode="wait">
+          <motion.p
+            key={stepIdx}
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.3 }}
+            className="text-xs text-center text-muted-foreground"
+          >
+            {validationSteps[stepIdx]}
+          </motion.p>
+        </AnimatePresence>
+      </div>
+
+      {/* Pulsing dots */}
+      <div className="flex justify-center gap-1.5">
+        {[0, 1, 2].map(i => (
+          <motion.div
+            key={i}
+            animate={{ scale: [1, 1.4, 1], opacity: [0.4, 1, 0.4] }}
+            transition={{ duration: 1.2, repeat: Infinity, delay: i * 0.2 }}
+            className="w-2 h-2 rounded-full bg-[#FF6B00]"
+          />
+        ))}
+      </div>
     </motion.div>
   );
 }
@@ -198,8 +276,23 @@ export default function AadhaarKycUpload({
   const [isMobile, setIsMobile] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [cameraOpen, setCameraOpen] = useState<'front' | 'back' | null>(null);
+  const [autoTriggered, setAutoTriggered] = useState(false);
 
   useEffect(() => { setIsMobile(/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)); }, []);
+
+  // Auto-trigger OCR when front image is uploaded (no manual button needed)
+  useEffect(() => {
+    if (aadhaarFront && !ocrResult && !isProcessing && !ocrError && !autoTriggered) {
+      setAutoTriggered(true);
+      // Small delay so the UI shows the uploaded thumbnail first
+      const timer = setTimeout(() => onProcess(), 400);
+      return () => clearTimeout(timer);
+    }
+    // Reset auto-trigger if front image is removed
+    if (!aadhaarFront) {
+      setAutoTriggered(false);
+    }
+  }, [aadhaarFront, ocrResult, isProcessing, ocrError, autoTriggered, onProcess]);
 
   const handleFile = useCallback((e: React.ChangeEvent<HTMLInputElement>, side: 'front' | 'back') => {
     const file = e.target.files?.[0];
@@ -209,7 +302,7 @@ export default function AadhaarKycUpload({
     if (side === 'front') onFrontChange(file); else onBackChange(file);
   }, [onFrontChange, onBackChange]);
 
-  const removeFront = () => { onFrontChange(null); if (frontRef.current) frontRef.current.value = ''; };
+  const removeFront = () => { onFrontChange(null); setAutoTriggered(false); if (frontRef.current) frontRef.current.value = ''; };
   const removeBack = () => { onBackChange(null); if (backRef.current) backRef.current.value = ''; };
   const openPreview = (file: File) => setPreviewUrl(URL.createObjectURL(file));
   const closePreview = () => { if (previewUrl) URL.revokeObjectURL(previewUrl); setPreviewUrl(null); };
@@ -217,6 +310,19 @@ export default function AadhaarKycUpload({
     if (side === 'front') onFrontChange(file); else onBackChange(file);
     setCameraOpen(null);
   }, [onFrontChange, onBackChange]);
+
+  // If processing, show the animated validation screen instead of upload UI
+  if (isProcessing) {
+    return (
+      <div className="space-y-4 pt-2">
+        <div className="flex items-center gap-2">
+          <ShieldCheck className="h-5 w-5 text-[#FF6B00]" weight="duotone" />
+          <h4 className="font-semibold text-sm">Aadhaar Verification</h4>
+        </div>
+        <AadhaarValidationLoader />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4 pt-2">
@@ -236,23 +342,14 @@ export default function AadhaarKycUpload({
         <UploadCard label="Front Side *" file={aadhaarFront} inputRef={frontRef} onFileChange={(e) => handleFile(e, 'front')} onRemove={removeFront} onPreview={() => aadhaarFront && openPreview(aadhaarFront)} isMobile={isMobile} onCameraClick={() => setCameraOpen('front')} />
         <UploadCard label="Back Side" file={aadhaarBack} inputRef={backRef} onFileChange={(e) => handleFile(e, 'back')} onRemove={removeBack} onPreview={() => aadhaarBack && openPreview(aadhaarBack)} isMobile={isMobile} onCameraClick={() => setCameraOpen('back')} />
       </div>
-      {aadhaarFront && !ocrResult && !isProcessing && (
-        <Button type="button" onClick={onProcess} className="w-full bg-[#FF6B00] hover:bg-[#FF6B00]/90 text-white gap-2">
-          <ShieldCheck className="h-4 w-4" weight="bold" /> Validate Aadhaar
-        </Button>
-      )}
-      <AnimatePresence>
-        {isProcessing && (
-          <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="flex items-center justify-center gap-3 p-4 rounded-lg bg-muted/50 border border-border">
-            <CircleNotch className="h-5 w-5 animate-spin text-[#FF6B00]" />
-            <div><p className="text-sm font-medium">Validating your Aadhaar...</p><p className="text-xs text-muted-foreground">Verifying document for compliance</p></div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {/* No manual "Validate Aadhaar" button — OCR triggers automatically on upload */}
       {ocrError && (
         <div className="flex items-start gap-2 p-3 rounded-lg bg-destructive/5 border border-destructive/20 text-sm">
           <Warning className="h-4 w-4 text-destructive shrink-0 mt-0.5" weight="fill" />
-          <div><p className="text-destructive font-medium">Validation failed. Please enter details manually.</p><p className="text-xs text-muted-foreground mt-0.5">You can fill in the fields below.</p></div>
+          <div>
+            <p className="text-destructive font-medium">Validation failed. Please re-upload or enter details manually.</p>
+            <p className="text-xs text-muted-foreground mt-0.5">You can fill in the fields below.</p>
+          </div>
         </div>
       )}
       {isUnderAge && (
@@ -266,7 +363,7 @@ export default function AadhaarKycUpload({
         {ocrResult && !isUnderAge && (
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="rounded-lg border border-candlestick-green/30 bg-candlestick-green/5 px-4 py-3 flex items-center gap-3">
             <CheckCircle className="h-5 w-5 text-candlestick-green shrink-0" weight="fill" />
-            <div><p className="text-sm font-medium text-candlestick-green">Aadhaar validated successfully</p><p className="text-xs text-muted-foreground">Your details have been verified and filled below. Please review.</p></div>
+            <div><p className="text-sm font-medium text-candlestick-green">Aadhaar validated successfully</p><p className="text-xs text-muted-foreground">Your identity has been verified.</p></div>
           </motion.div>
         )}
       </AnimatePresence>

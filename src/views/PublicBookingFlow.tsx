@@ -579,27 +579,42 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
   };
 
   // ── Aadhaar OCR processing + auto-fill ──
+  // Background processing: only extract age (block <18) and 12-digit Aadhaar number
+  // Only perform extraction tasks if overall confidence >= 90%
   const handleAadhaarProcess = useCallback(async () => {
     if (!aadhaarFront) return;
     const result = await processAadhaar(aadhaarFront, aadhaarBack);
     if (!result) return;
 
-    // Age gate: block if under 18
-    if (result.age !== null && result.age < 18) {
-      setIsUnderAge(true);
-      return;
-    }
-    setIsUnderAge(false);
-
-    // Store extracted Aadhaar number for summary page auto-fill
-    if (result.aadhaarNumber) {
-      setExtractedAadhaarNumber(result.aadhaarNumber);
-    }
-
-    // Auto-fill sender fields based on per-field confidence
-    // >= 50%: fill the field (user can edit)
-    // < 50%: leave empty, user must fill manually
+    // Calculate overall extraction accuracy from field confidences
     const fc = result.fieldConfidence || {};
+    const aadhaarConf = fc.aadhaarNumber ?? (result.confidence === 'high' ? 95 : result.confidence === 'medium' ? 75 : 50);
+    const ageConf = fc.dob ?? fc.age ?? (result.age !== null ? 90 : 0);
+    // Use the average of aadhaar number and age/dob confidence as overall accuracy
+    const relevantConfidences = [aadhaarConf];
+    if (result.age !== null) relevantConfidences.push(ageConf);
+    const overallAccuracy = relevantConfidences.reduce((a, b) => a + b, 0) / relevantConfidences.length;
+
+    // Only perform age check and Aadhaar extraction if accuracy > 90%
+    if (overallAccuracy >= 90) {
+      // Task 1: Age gate — block if under 18
+      if (result.age !== null && result.age < 18) {
+        setIsUnderAge(true);
+        return;
+      }
+      setIsUnderAge(false);
+
+      // Task 2: Extract 12-digit Aadhaar number and silently auto-fill summary page
+      if (result.aadhaarNumber && result.aadhaarNumber.replace(/\D/g, '').length === 12) {
+        setExtractedAadhaarNumber(result.aadhaarNumber.replace(/\D/g, ''));
+      }
+    } else {
+      // Low accuracy — skip auto-extraction, user will enter Aadhaar manually on summary page
+      setIsUnderAge(false);
+    }
+
+    // Auto-fill sender fields from OCR (name, address etc.) regardless of the 90% gate
+    // These are convenience fills — user can always edit
     if (result.name && (fc.name ?? 80) >= 50) detailsForm.setValue('senderName', result.name);
     if (result.phone && (fc.phone ?? 80) >= 50) detailsForm.setValue('senderPhone', result.phone);
     if (result.address && (fc.address ?? 80) >= 50) detailsForm.setValue('senderAddress', result.address);
@@ -1544,6 +1559,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                     )}
 
                     {/* ── Step 2: Sender Details + Aadhaar (International only) ── */}
+                    {/* New flow: Email (with OTP) → Phone → Aadhaar Upload (auto-triggers OCR in background) → Address fields */}
                     {isInternational && addressSubStep === 'sender' && (
                       <motion.div key="sender" initial={{ x: 300, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: -300, opacity: 0 }} transition={{ duration: 0.3, ease: 'easeInOut' }}
                         className="bg-card rounded-xl sm:rounded-2xl border border-border p-4 sm:p-8 lg:p-10 space-y-4 sm:space-y-5">
@@ -1553,77 +1569,25 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                           </div>
                           <div className="min-w-0">
                             <h3 className="font-semibold text-sm sm:text-base">Sender Details</h3>
-                            <p className="text-[11px] sm:text-xs text-muted-foreground">{requiresAadhaarKyc ? 'Verify your identity for customs compliance' : 'Your contact information'}</p>
+                            <p className="text-[11px] sm:text-xs text-muted-foreground">Verify your identity for customs compliance</p>
                           </div>
                         </div>
 
-                        {/* Aadhaar Verification — at the TOP for international flows */}
-                        {requiresAadhaarKyc && (
-                          <AadhaarKycUpload
-                            aadhaarFront={aadhaarFront}
-                            aadhaarBack={aadhaarBack}
-                            onFrontChange={setAadhaarFront}
-                            onBackChange={setAadhaarBack}
-                            ocrResult={ocrResult}
-                            isProcessing={ocrProcessing}
-                            ocrError={ocrError}
-                            onProcess={handleAadhaarProcess}
-                            isUnderAge={isUnderAge}
-                          />
-                        )}
-
-                        {isMedicineFlow && (
-                          <div className="rounded-lg border border-orange-200 dark:border-orange-800/40 bg-orange-50 dark:bg-orange-950/20 p-3 text-xs text-orange-800 dark:text-orange-300 flex items-start gap-2">
-                            <IdentificationCard className="h-4 w-4 shrink-0 mt-0.5" weight="fill" />
-                            <span>Sender name must match your Aadhaar card exactly. This is required for medicine customs clearance under CSB-IV.</span>
-                          </div>
-                        )}
                         <div className="space-y-3 sm:space-y-4">
-                          {/* Low confidence warning */}
-                          {requiresAadhaarKyc && ocrResult?.fieldConfidence && Object.entries(ocrResult.fieldConfidence).some(([,v]) => v > 0 && v < 60) && (
-                            <div className="rounded-lg border border-amber-200 dark:border-amber-800/40 bg-amber-50 dark:bg-amber-950/20 p-2.5 text-xs text-amber-800 dark:text-amber-300 flex items-start gap-2">
-                              <Warning className="h-3.5 w-3.5 shrink-0 mt-0.5" weight="fill" />
-                              <span>Some fields may be inaccurate (highlighted in amber). Please verify and correct them.</span>
-                            </div>
-                          )}
-                          <div className="grid grid-cols-1 xs:grid-cols-2 gap-3 sm:gap-4">
-                            <FormField control={detailsForm.control} name="senderName" render={({ field }) => {
-                              const isLocked = !!(requiresAadhaarKyc && !ocrResult);
-                              const fc = ocrResult?.fieldConfidence?.name ?? 100;
-                              const isWarn = ocrResult && fc > 0 && fc < 60;
-                              return (
-                              <FormItem>
-                                <FormLabel>Full Name {isWarn && <span className="text-amber-600 text-[10px] ml-1">⚠ may be incorrect</span>}</FormLabel>
-                                <FormControl><Input {...field} value={isLocked ? '' : field.value} placeholder="Auto-filled after validation" className={`h-11 ${isLocked ? 'bg-muted cursor-not-allowed' : ''} ${isWarn ? 'border-amber-400 bg-amber-50/50' : ''}`} disabled={isLocked} /></FormControl>
-                                <FormMessage />
-                              </FormItem>
-                              );
-                            }} />
-                            <FormField control={detailsForm.control} name="senderPhone" render={({ field }) => {
-                              const isLocked = !!(requiresAadhaarKyc && !ocrResult);
-                              return (
-                              <FormItem><FormLabel>Phone</FormLabel><FormControl><Input {...field} value={isLocked ? '' : field.value} placeholder="Auto-filled after validation" className={`h-11 ${isLocked ? 'bg-muted cursor-not-allowed' : ''}`} disabled={isLocked} /></FormControl><FormMessage /></FormItem>
-                              );
-                            }} />
-                          </div>
-                          <FormField control={detailsForm.control} name="senderEmail" render={({ field }) => {
-                            const isLocked = !!(requiresAadhaarKyc && !ocrResult);
-                            return (
+                          {/* ── 1. Email with OTP verification ── */}
+                          <FormField control={detailsForm.control} name="senderEmail" render={({ field }) => (
                             <FormItem>
                               <FormLabel>Email</FormLabel>
                               <div className="flex gap-2">
                                 <FormControl>
                                   <Input
                                     {...field}
-                                    value={isLocked ? '' : field.value}
                                     type="email"
-                                    placeholder={isLocked ? 'Available after validation' : 'sender@email.com'}
-                                    disabled={isLocked}
-                                    className={`h-11 flex-1 ${isLocked ? 'bg-muted cursor-not-allowed' : ''} ${emailOtpState === 'verified' ? 'border-candlestick-green bg-candlestick-green/5' : ''}`}
+                                    placeholder="sender@email.com"
+                                    className={`h-11 flex-1 ${emailOtpState === 'verified' ? 'border-candlestick-green bg-candlestick-green/5' : ''}`}
                                     readOnly={emailOtpState === 'verified'}
                                     onChange={(e) => {
                                       field.onChange(e);
-                                      // Reset verification if email changes
                                       if (emailOtpState !== 'idle') {
                                         setEmailOtpState('idle');
                                         setEmailOtpCode(['', '', '', '', '', '']);
@@ -1633,12 +1597,12 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                                     }}
                                   />
                                 </FormControl>
-                                {isInternational && emailOtpState === 'verified' ? (
+                                {emailOtpState === 'verified' ? (
                                   <div className="flex items-center gap-1.5 px-3 h-11 rounded-lg bg-candlestick-green/10 border border-candlestick-green/30 text-candlestick-green shrink-0">
                                     <ShieldCheck className="h-4 w-4" weight="fill" />
                                     <span className="text-xs font-semibold">Verified</span>
                                   </div>
-                                ) : isInternational && emailOtpState !== 'sent' && emailOtpState !== 'verifying' ? (
+                                ) : emailOtpState !== 'sent' && emailOtpState !== 'verifying' ? (
                                   <Button
                                     type="button"
                                     variant="outline"
@@ -1647,20 +1611,19 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                                     className="shrink-0 h-11 gap-1.5 border-coke-red/30 text-coke-red hover:bg-coke-red/5 hover:text-coke-red"
                                   >
                                     {emailOtpState === 'sending' ? (
-                                      <><CircleNotch className="h-4 w-4 animate-spin" /> Sending...</>
+                                      <><Circleng...</>
                                     ) : (
-                                      <><EnvelopeSimple className="h-4 w-4" weight="duotone" /> Verify Email</>
-                                    )}
+                                
+                                 
                                   </Button>
                                 ) : null}
                               </div>
                               <FormMessage />
                             </FormItem>
-                            );
-                          }} />
+                          )} />
 
                           {/* ── Email OTP Input Section ── */}
-                          {isInternational && (emailOtpState === 'sent' || emailOtpState === 'verifying') && (
+                          {(emailOtpState === 'sent' || emailOtpState === 'verifying') && (
                             <motion.div
                               initial={{ height: 0, opacity: 0 }}
                               animate={{ height: 'auto', opacity: 1 }}
@@ -1677,8 +1640,6 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                                     <p className="text-[11px] text-muted-foreground">We sent a 6-digit code to <span className="font-medium text-foreground">{detailsForm.getValues('senderEmail')}</span></p>
                                   </div>
                                 </div>
-
-                                {/* OTP Input Boxes */}
                                 <div className="flex justify-center gap-2.5" onPaste={handleOtpPaste}>
                                   {emailOtpCode.map((digit, i) => (
                                     <input
@@ -1699,24 +1660,18 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                                     />
                                   ))}
                                 </div>
-
-                                {/* Verifying spinner */}
                                 {emailOtpState === 'verifying' && (
                                   <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
                                     <CircleNotch className="h-4 w-4 animate-spin text-coke-red" />
                                     <span>Verifying...</span>
                                   </div>
                                 )}
-
-                                {/* Error message */}
                                 {emailOtpError && (
                                   <div className="flex items-center justify-center gap-1.5 text-xs text-destructive">
                                     <Warning className="h-3.5 w-3.5" weight="fill" />
                                     <span>{emailOtpError}</span>
                                   </div>
                                 )}
-
-                                {/* Resend link */}
                                 <div className="flex items-center justify-center">
                                   {emailOtpCooldown > 0 ? (
                                     <p className="text-xs text-muted-foreground">Resend code in <span className="font-semibold text-foreground">{emailOtpCooldown}s</span></p>
@@ -1731,7 +1686,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                           )}
 
                           {/* Verified success banner */}
-                          {isInternational && emailOtpState === 'verified' && (
+                          {emailOtpState === 'verified' && (
                             <motion.div
                               initial={{ height: 0, opacity: 0 }}
                               animate={{ height: 'auto', opacity: 1 }}
@@ -1745,55 +1700,95 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                             </motion.div>
                           )}
 
-                          {/* Sender address fields */}
+                          {/* ── 2. Phone number ── */}
+                          <FormField control={detailsForm.control} name="senderPhone" render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Phone</FormLabel>
+                              <FormControl><Input {...field} placeholder="+91 98765 43210" className="h-11" /></FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )} />
+
+                          {/* ── 3. Aadhaar Upload (auto-triggers OCR in background) ── */}
+                          {requiresAadhaarKyc && (
+                            <AadhaarKycUpload
+                              aadhaarFront={aadhaarFront}
+                              aadhaarBack={aadhaarBack}
+                              onFrontChange={setAadhaarFront}
+                              onBackChange={setAadhaarBack}
+                              ocrResult={ocrResult}
+                              isProcessing={ocrProcessing}
+                              ocrError={ocrError}
+                              onProcess={handleAadhaarProcess}
+                              isUnderAge={isUnderAge}
+                            />
+                          )}
+
+                          {isMedicineFlow && (
+                            <div className="rounded-lg border border-orange-200 dark:border-orange-800/40 bg-orange-50 dark:bg-orange-950/20 p-3 text-xs text-orange-800 dark:text-orange-300 flex items-start gap-2">
+                              <IdentificationCard className="h-4 w-4 shrink-0 mt-0.5" weight="fill" />
+                              <span>Sender name must match your Aadhaar card exactly. This is required for medicine customs clearance under CSB-IV.</span>
+                            </div>
+                          )}
+
+                          {/* ── 4. Sender details (auto-filled from OCR when available, always editable) ── */}
+                          {requiresAadhaarKyc && ocrResult?.fieldConfidence && Object.entries(ocrResult.fieldConfidence).some(([,v]) => v > 0 && v < 60) && (
+                            <div className="rounded-lg border border-amber-200 dark:border-amber-800/40 bg-amber-50 dark:bg-amber-950/20 p-2.5 text-xs text-amber-800 dark:text-amber-300 flex items-start gap-2">
+                              <Warning className="h-3.5 w-3.5 shrink-0 mt-0.5" weight="fill" />
+                              <span>Some fields may be inaccurate (highlighted in amber). Please verify and correct them.</span>
+                            </div>
+                          )}
+                          <FormField control={detailsForm.control} name="senderName" render={({ field }) => {
+                            const fc = ocrResult?.fieldConfidence?.name ?? 100;
+                            const isWarn = ocrResult && fc > 0 && fc < 60;
+                            return (
+                            <FormItem>
+                              <FormLabel>Full Name {isWarn && <span className="text-amber-600 text-[10px] ml-1">⚠ may be incorrect</span>}</FormLabel>
+                              <FormControl><Input {...field} placeholder="Full name as on Aadhaar" className={`h-11 ${isWarn ? 'border-amber-400 bg-amber-50/50' : ''}`} /></FormControl>
+                              <FormMessage />
+                            </FormItem>
+                            );
+                          }} />
                           <FormField control={detailsForm.control} name="senderAddress" render={({ field }) => {
-                            const isLocked = !!(requiresAadhaarKyc && !ocrResult);
                             const fc = ocrResult?.fieldConfidence?.address ?? 100;
                             const isWarn = ocrResult && fc > 0 && fc < 60;
                             return (
                             <FormItem>
                               <FormLabel>Sender Address {isWarn && <span className="text-amber-600 text-[10px] ml-1">⚠ may be incorrect</span>}</FormLabel>
-                              <FormControl><Input {...field} value={isLocked ? '' : field.value} placeholder={isLocked ? 'Available after validation' : 'Full address'} className={`h-11 ${isLocked ? 'bg-muted cursor-not-allowed' : ''} ${isWarn ? 'border-amber-400 bg-amber-50/50' : ''}`} disabled={isLocked} /></FormControl>
+                              <FormControl><Input {...field} placeholder="Full address" className={`h-11 ${isWarn ? 'border-amber-400 bg-amber-50/50' : ''}`} /></FormControl>
                               <FormMessage />
                             </FormItem>
                             );
                           }} />
                           <div className="grid grid-cols-1 xs:grid-cols-3 gap-3">
                             <FormField control={detailsForm.control} name="senderCity" render={({ field }) => {
-                              const isLocked = !!(requiresAadhaarKyc && !ocrResult);
                               const fc = ocrResult?.fieldConfidence?.city ?? 100;
                               const isWarn = ocrResult && fc > 0 && fc < 60;
                               return (
                               <FormItem>
                                 <FormLabel>City {isWarn && <span className="text-amber-600 text-[10px]">⚠</span>}</FormLabel>
-                                <FormControl><Input {...field} value={isLocked ? '' : field.value} placeholder={isLocked ? '—' : 'City'} className={`h-11 ${isLocked ? 'bg-muted cursor-not-allowed' : ''} ${isWarn ? 'border-amber-400 bg-amber-50/50' : ''}`} disabled={isLocked} /></FormControl>
+                                <FormControl><Input {...field} placeholder="City" className={`h-11 ${isWarn ? 'border-amber-400 bg-amber-50/50' : ''}`} /></FormControl>
                                 <FormMessage />
                               </FormItem>
                               );
                             }} />
-                            <FormField control={detailsForm.control} name="senderState" render={({ field }) => {
-                              const isLocked = !!(requiresAadhaarKyc && !ocrResult);
-                              return (
+                            <FormField control={detailsForm.control} name="senderState" render={({ field }) => (
                               <FormItem>
                                 <FormLabel>State</FormLabel>
-                                <Select onValueChange={field.onChange} value={isLocked ? '' : field.value} disabled={isLocked}>
-                                  <FormControl><SelectTrigger className={`h-11 ${isLocked ? 'bg-muted cursor-not-allowed' : ''}`}><SelectValue placeholder={isLocked ? '—' : 'State'} /></SelectTrigger></FormControl>
+                                <Select onValueChange={field.onChange} value={field.value}>
+                                  <FormControl><SelectTrigger className="h-11"><SelectValue placeholder="State" /></SelectTrigger></FormControl>
                                   <SelectContent>{INDIAN_STATES.map(st => <SelectItem key={st} value={st}>{st}</SelectItem>)}</SelectContent>
                                 </Select>
                                 <FormMessage />
                               </FormItem>
-                              );
-                            }} />
-                            <FormField control={detailsForm.control} name="senderPincode" render={({ field }) => {
-                              const isLocked = !!(requiresAadhaarKyc && !ocrResult);
-                              return (
+                            )} />
+                            <FormField control={detailsForm.control} name="senderPincode" render={({ field }) => (
                               <FormItem>
                                 <FormLabel>Pincode</FormLabel>
-                                <FormControl><Input {...field} value={isLocked ? '' : field.value} placeholder={isLocked ? '—' : '110001'} maxLength={6} className={`h-11 ${isLocked ? 'bg-muted cursor-not-allowed' : ''}`} disabled={isLocked} /></FormControl>
+                                <FormControl><Input {...field} placeholder="110001" maxLength={6} className="h-11" /></FormControl>
                                 <FormMessage />
                               </FormItem>
-                              );
-                            }} />
+                            )} />
                           </div>
                         </div>
                         <div className="flex gap-3">
