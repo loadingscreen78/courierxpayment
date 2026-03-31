@@ -3,8 +3,11 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import {
-  Truck, AirplaneTilt, Clock, Star, CheckCircle,
+  Truck, AirplaneTilt, Clock, Star, Check, CaretRight, Package,
+  CheckCircle, ShieldCheck, MapPin,
 } from '@phosphor-icons/react';
 
 export interface DomesticCourierData {
@@ -33,124 +36,119 @@ interface DomesticCourierCardProps {
 export function DomesticCourierCard({
   courier, isSelected, onSelect, index, showBookButton, onBook,
 }: DomesticCourierCardProps) {
-  const [showBreakdown, setShowBreakdown] = useState(false);
   const isAir = courier.mode === 'air';
+  const ModeIcon = isAir ? AirplaneTilt : Truck;
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
+      initial={{ opacity: 0, y: 30 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3, delay: index * 0.05 }}
-      whileHover={{ y: -2 }}
+      transition={{ duration: 0.4, delay: index * 0.08 }}
+      whileHover={{ y: -6, scale: 1.02 }}
       onClick={onSelect}
       className={cn(
-        "relative cursor-pointer rounded-xl border-2 p-4 transition-all duration-200 flex flex-col h-full",
+        "relative rounded-3xl border-2 p-6 transition-all duration-300 flex flex-col h-full cursor-pointer",
         isSelected
-          ? "border-coke-red bg-coke-red/5 shadow-lg shadow-coke-red/10"
-          : "border-border bg-card hover:border-coke-red/30 hover:shadow-md"
+          ? "border-coke-red bg-coke-red/5 shadow-xl shadow-coke-red/10"
+          : "border-border bg-card hover:border-coke-red/30 hover:shadow-lg"
       )}
     >
-      {/* Recommended badge */}
+      {/* Best Value badge */}
       {courier.is_recommended && (
-        <div className="absolute -top-2.5 left-3 z-10">
-          <span className="inline-flex items-center gap-1 text-[10px] font-semibold bg-gradient-to-r from-amber-500 to-orange-500 text-white px-2.5 py-0.5 rounded-full shadow-sm">
-            <Star size={10} weight="fill" /> Best Value
-          </span>
-        </div>
+        <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="absolute -top-3 -right-3 z-10">
+          <Badge className="bg-gradient-to-r from-amber-500 to-orange-500 text-white border-0 shadow-lg px-3 py-1">
+            <Star size={12} weight="fill" className="mr-1" /> Best Value
+          </Badge>
+        </motion.div>
       )}
 
-      {/* Mode badge */}
-      <div className="flex items-center justify-between mb-3">
-        <span className={cn(
-          "inline-flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full",
-          isAir
-            ? "bg-blue-500/10 text-blue-600 border border-blue-500/20"
-            : "bg-amber-500/10 text-amber-600 border border-amber-500/20"
-        )}>
-          {isAir ? <><AirplaneTilt size={10} weight="bold" /> Air</> : <><Truck size={10} weight="bold" /> Surface</>}
-        </span>
-        {isSelected && (
-          <CheckCircle size={20} weight="fill" className="text-coke-red" />
-        )}
-      </div>
-
-      {/* Courier name */}
-      <h3 className={cn(
-        "font-semibold text-sm leading-tight truncate",
-        isSelected ? "text-coke-red" : "text-foreground"
-      )}>
-        {courier.courier_name}
-      </h3>
-
-      {/* Price — prominent */}
-      <p className={cn(
-        "text-2xl font-bold font-typewriter mt-2",
-        isSelected ? "text-coke-red" : "text-foreground"
-      )}>
-        ₹{courier.customer_price.toLocaleString('en-IN')}
-      </p>
-
-      {/* Key details */}
-      <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
-        <span className="flex items-center gap-1">
-          <Clock size={12} weight="bold" />
-          {courier.estimated_delivery_days} day{courier.estimated_delivery_days !== 1 ? 's' : ''}
-        </span>
-        {courier.rating > 0 && (
-          <span className="flex items-center gap-1">
-            <Star size={12} weight="fill" className="text-amber-400" />
-            {courier.rating.toFixed(1)}
-          </span>
-        )}
-      </div>
-
-      {/* Spacer to push bottom content down */}
-      <div className="flex-1" />
-
-      {/* Breakdown toggle */}
-      <button
-        onClick={(e) => { e.stopPropagation(); setShowBreakdown(!showBreakdown); }}
-        className="text-[10px] text-muted-foreground hover:text-foreground transition-colors mt-2 text-left"
-      >
-        {showBreakdown ? 'Hide' : 'View'} breakdown
-      </button>
-
+      {/* Selected checkmark */}
       <AnimatePresence>
-        {showBreakdown && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            className="overflow-hidden"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="mt-2 pt-2 border-t border-border/50 space-y-1">
-              <div className="flex justify-between text-[11px]">
-                <span className="text-muted-foreground">Shipping</span>
-                <span className="font-medium">₹{courier.shipping_charge.toLocaleString('en-IN')}</span>
-              </div>
-              <div className="flex justify-between text-[11px]">
-                <span className="text-muted-foreground">GST (18%)</span>
-                <span className="font-medium">₹{courier.gst_amount.toLocaleString('en-IN')}</span>
-              </div>
-              <div className="flex justify-between text-[11px] font-semibold pt-1 border-t border-dashed border-border/50">
-                <span>Total</span>
-                <span className="text-coke-red">₹{courier.customer_price.toLocaleString('en-IN')}</span>
-              </div>
-            </div>
+        {isSelected && (
+          <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ scale: 0 }}
+            className="absolute top-4 left-4 w-6 h-6 rounded-full bg-coke-red flex items-center justify-center">
+            <Check size={16} weight="bold" className="text-white" />
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* Optional Book button for guest flows */}
-      {showBookButton && (
-        <button
-          onClick={(e) => { e.stopPropagation(); onBook?.(); }}
-          className="mt-3 w-full py-2 rounded-lg bg-coke-red hover:bg-red-600 text-white text-sm font-medium transition-colors"
-        >
-          Book Now
-        </button>
-      )}
+      {/* Centered content */}
+      <div className="text-center space-y-4 flex-1 flex flex-col">
+        {/* Icon */}
+        <div className={cn(
+          "w-14 h-14 mx-auto rounded-2xl flex items-center justify-center",
+          isSelected ? "bg-coke-red text-white" : "bg-muted"
+        )}>
+          <ModeIcon size={28} weight="bold" />
+        </div>
+
+        {/* Name & mode */}
+        <div>
+          <h3 className="font-bold text-base font-typewriter leading-tight">{courier.courier_name}</h3>
+          <p className="text-xs text-muted-foreground mt-0.5 capitalize">{courier.mode} delivery</p>
+        </div>
+
+        {/* Price */}
+        <div className="py-3 border-y border-border/50">
+          <p className={cn("text-3xl font-bold", isSelected ? "text-coke-red" : "text-foreground")}>
+            ₹{courier.customer_price.toLocaleString('en-IN')}
+          </p>
+          <p className="text-xs text-muted-foreground mt-1">incl. all taxes</p>
+        </div>
+
+        {/* Delivery time */}
+        <div className="flex items-center justify-center gap-2 text-sm">
+          <Clock size={16} weight="bold" className="text-muted-foreground" />
+          <span>{courier.estimated_delivery_days} business day{courier.estimated_delivery_days !== 1 ? 's' : ''}</span>
+        </div>
+
+        {/* Features */}
+        <div className="space-y-2 pt-1 text-left">
+          <div className="flex items-center gap-2 text-xs text-foreground">
+            <Check size={12} weight="bold" className="text-candlestick-green shrink-0" />
+            <span>Real-time tracking</span>
+          </div>
+          <div className="flex items-center gap-2 text-xs text-foreground">
+            <Check size={12} weight="bold" className="text-candlestick-green shrink-0" />
+            <span>{courier.pickup_availability !== false ? 'Doorstep pickup' : 'Drop-off only'}</span>
+          </div>
+          {courier.rating > 0 && (
+            <div className="flex items-center gap-2 text-xs text-foreground">
+              <Star size={12} weight="fill" className="text-amber-400 shrink-0" />
+              <span>{courier.rating.toFixed(1)} rating</span>
+            </div>
+          )}
+          <div className="flex items-center gap-2 text-xs text-foreground">
+            <Check size={12} weight="bold" className="text-candlestick-green shrink-0" />
+            <span>GST invoice included</span>
+          </div>
+        </div>
+
+        {/* Spacer */}
+        <div className="flex-1" />
+
+        {/* Action button */}
+        {showBookButton ? (
+          <Button
+            size="sm"
+            className={cn("w-full mt-2 transition-all bg-coke-red hover:bg-coke-red/90 text-white")}
+            onClick={(e) => { e.stopPropagation(); onBook?.(); }}
+          >
+            Book Now <CaretRight size={16} weight="bold" className="ml-1" />
+          </Button>
+        ) : (
+          <Button
+            variant={isSelected ? "default" : "outline"}
+            size="sm"
+            className={cn("w-full mt-2 transition-all", isSelected && "bg-coke-red hover:bg-coke-red/90")}
+          >
+            {isSelected
+              ? <><Check size={16} weight="bold" className="mr-1" /> Selected</>
+              : <>Select <CaretRight size={16} weight="bold" className="ml-1" /></>
+            }
+          </Button>
+        )}
+      </div>
     </motion.div>
   );
 }
@@ -172,7 +170,7 @@ export function DomesticCourierGrid({
   const visible = couriers.slice(0, maxItems);
 
   return (
-    <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-5 gap-3">
+    <div className="grid grid-cols-1 xs:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-5 gap-4">
       {visible.map((courier, index) => (
         <DomesticCourierCard
           key={courier.courier_company_id}
