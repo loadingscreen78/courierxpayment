@@ -47,7 +47,7 @@ export function DomesticCourierCard({
       whileHover={{ y: -6, scale: 1.02 }}
       onClick={onSelect}
       className={cn(
-        "relative rounded-3xl border-2 p-6 transition-all duration-300 flex flex-col h-full cursor-pointer",
+        "relative rounded-2xl border-2 p-4 sm:p-5 transition-all duration-300 flex flex-col h-full cursor-pointer",
         isSelected
           ? "border-coke-red bg-coke-red/5 shadow-xl shadow-coke-red/10"
           : "border-border bg-card hover:border-coke-red/30 hover:shadow-lg"
@@ -73,37 +73,37 @@ export function DomesticCourierCard({
       </AnimatePresence>
 
       {/* Centered content */}
-      <div className="text-center space-y-4 flex-1 flex flex-col">
+      <div className="text-center space-y-3 flex-1 flex flex-col">
         {/* Icon */}
         <div className={cn(
-          "w-14 h-14 mx-auto rounded-2xl flex items-center justify-center",
+          "w-12 h-12 mx-auto rounded-xl flex items-center justify-center",
           isSelected ? "bg-coke-red text-white" : "bg-muted"
         )}>
-          <ModeIcon size={28} weight="bold" />
+          <ModeIcon size={24} weight="bold" />
         </div>
 
         {/* Name & mode */}
         <div>
-          <h3 className="font-bold text-base font-typewriter leading-tight">{courier.courier_name}</h3>
-          <p className="text-xs text-muted-foreground mt-0.5 capitalize">{courier.mode} delivery</p>
+          <h3 className="font-bold text-sm sm:text-base font-typewriter leading-tight">{courier.courier_name}</h3>
+          <p className="text-[11px] text-muted-foreground mt-0.5 capitalize">{courier.mode} delivery</p>
         </div>
 
         {/* Price */}
-        <div className="py-3 border-y border-border/50">
-          <p className={cn("text-3xl font-bold", isSelected ? "text-coke-red" : "text-foreground")}>
+        <div className="py-2.5 border-y border-border/50">
+          <p className={cn("text-2xl sm:text-3xl font-bold", isSelected ? "text-coke-red" : "text-foreground")}>
             ₹{courier.customer_price.toLocaleString('en-IN')}
           </p>
-          <p className="text-xs text-muted-foreground mt-1">incl. all taxes</p>
+          <p className="text-[11px] text-muted-foreground mt-0.5">incl. all taxes</p>
         </div>
 
         {/* Delivery time */}
-        <div className="flex items-center justify-center gap-2 text-sm">
-          <Clock size={16} weight="bold" className="text-muted-foreground" />
+        <div className="flex items-center justify-center gap-1.5 text-sm">
+          <Clock size={14} weight="bold" className="text-muted-foreground" />
           <span>{courier.estimated_delivery_days} business day{courier.estimated_delivery_days !== 1 ? 's' : ''}</span>
         </div>
 
         {/* Features */}
-        <div className="space-y-2 pt-1 text-left">
+        <div className="space-y-1.5 pt-1 text-left">
           <div className="flex items-center gap-2 text-xs text-foreground">
             <Check size={12} weight="bold" className="text-candlestick-green shrink-0" />
             <span>Real-time tracking</span>
@@ -168,9 +168,20 @@ export function DomesticCourierGrid({
   couriers, selectedId, onSelect, showBookButton, onBook, maxItems = 15,
 }: DomesticCourierGridProps) {
   const visible = couriers.slice(0, maxItems);
+  const count = visible.length;
+
+  // Dynamic grid: adapt columns to item count for a clean look
+  // 1 item = 1 col centered, 2 = 2 cols, 3 = 3 cols, 4+ = 2 cols on sm, 3 on md, 4 on xl
+  const gridClass = count === 1
+    ? "grid grid-cols-1 max-w-sm mx-auto gap-4"
+    : count === 2
+    ? "grid grid-cols-1 xs:grid-cols-2 max-w-2xl mx-auto gap-4"
+    : count === 3
+    ? "grid grid-cols-1 xs:grid-cols-2 md:grid-cols-3 max-w-4xl mx-auto gap-4"
+    : "grid grid-cols-1 xs:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4";
 
   return (
-    <div className="grid grid-cols-1 xs:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+    <div className={gridClass}>
       {visible.map((courier, index) => (
         <DomesticCourierCard
           key={courier.courier_company_id}
