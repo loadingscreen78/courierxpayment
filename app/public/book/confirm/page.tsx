@@ -234,7 +234,7 @@ function ConfirmContent() {
           </div>
 
           <div className="flex gap-3">
-            <Button variant="outline" className="flex-1" onClick={() => router.push('/public/track')}>
+            <Button variant="outline" className="flex-1" onClick={() => router.push(`/public/track?tracking=${encodeURIComponent(trackingNumber)}`)}>
               Track Shipment
             </Button>
             <Button className="flex-1 bg-coke-red hover:bg-red-600 text-white gap-1.5" onClick={() => router.push('/public/book')}>

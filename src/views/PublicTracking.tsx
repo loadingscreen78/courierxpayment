@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import {
   MagnifyingGlass, Package, CheckCircle, Globe, Phone, Shield,
   CaretDown, X, CalendarBlank, ArrowClockwise, Circle,
@@ -203,6 +204,7 @@ const TrackingTimeline = ({ entries }: { entries: TrackingTimelineEntry[] }) => 
 // ---------------------------------------------------------------------------
 
 const PublicTracking = () => {
+  const searchParams = useSearchParams();
   const [trackingNumber, setTrackingNumber] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [showOTP, setShowOTP] = useState(false);
@@ -251,6 +253,15 @@ const PublicTracking = () => {
     setTimeline([]);
     fetchTracking(trackingNumber);
   };
+
+  // Auto-search if tracking number is in URL params
+  useEffect(() => {
+    const urlTracking = searchParams.get('tracking');
+    if (urlTracking && !shipment && !loading) {
+      setTrackingNumber(urlTracking);
+      fetchTracking(urlTracking);
+    }
+  }, [searchParams]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handlePhoneSearch = () => {
     setError('');

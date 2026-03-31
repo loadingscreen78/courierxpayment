@@ -1,3 +1,4 @@
+import { Suspense } from 'react';
 import PublicTracking from '@/views/PublicTracking';
 import type { Metadata } from 'next';
 
@@ -9,5 +10,9 @@ export const metadata: Metadata = {
 };
 
 export default function PublicTrackPage() {
-  return <PublicTracking />;
+  return (
+    <Suspense>
+      <PublicTracking />
+    </Suspense>
+  );
 }
