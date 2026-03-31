@@ -69,9 +69,9 @@ const DIM_DIVISOR = 5000;
 
 // Pricing model:
 // costPrice = base + fuel + domestic transit (our cost from carrier + domestic leg)
-// accountPrice = costPrice × 1.272 (our selling price to account holders — same margin as before)
-// nonAccountPrice = accountPrice / 0.75 = costPrice × 1.696 (account holders get 25% off non-account price)
-const COST_TO_SELLING_MULTIPLIER = 1.696;
+// nonAccountPrice = costPrice × 3.5333 (selling price to non-account/guest users)
+// accountPrice = nonAccountPrice × 0.75 (25% discount) = costPrice × 2.65 (same margin as before)
+const COST_TO_SELLING_MULTIPLIER = 2.65 / 0.75; // ≈ 3.5333
 const ACCOUNT_DISCOUNT = 0.25; // 25% discount for account holders vs non-account price
 
 /** @deprecated Use COST_TO_SELLING_MULTIPLIER instead */
@@ -79,8 +79,9 @@ export const GUEST_MARKUP = COST_TO_SELLING_MULTIPLIER;
 
 /**
  * Multiplier for domestic guest rates.
- * Domestic base rates (from NimbusPost) = account price.
- * Guest price = account price / (1 - ACCOUNT_DISCOUNT) = account price / 0.75
+ * Domestic base rates (from NimbusPost) = account holder price.
+ * Guest price = accountPrice / 0.75 ≈ accountPrice × 1.3333
+ * So account holders get 25% off the guest price.
  */
 export const DOMESTIC_GUEST_MULTIPLIER = 1 / (1 - ACCOUNT_DISCOUNT); // ≈ 1.3333
 
@@ -320,8 +321,8 @@ export const calculateRate = (
   const costWithGst = costPrice + costGst;
 
   // Step 8: Selling prices
-  // Non-account (guest) price = cost × 1.696 (our selling price)
-  // Account price = non-account × 0.75 (25% discount for account holders)
+  // Non-account (guest) price = cost × 3.5333 (our selling price)
+  // Account price = non-account × 0.75 (25% discount) = cost × 2.65
   const nonAccountTotal = Math.round(costWithGst * COST_TO_SELLING_MULTIPLIER);
   const accountTotal = Math.round(nonAccountTotal * (1 - ACCOUNT_DISCOUNT));
 
