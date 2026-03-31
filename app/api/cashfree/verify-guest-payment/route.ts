@@ -83,7 +83,7 @@ export async function POST(request: NextRequest) {
       .from('guest_bookings')
       .update({ status: 'paid', paid_at: new Date().toISOString() })
       .eq('order_id', orderId)
-      .eq('status', 'pending_payment')
+      .in('status', ['pending_payment', 'paid'])
       .select('order_id')
       .maybeSingle();
 
@@ -182,6 +182,12 @@ export async function POST(request: NextRequest) {
           // We need to fetch domestic rates for customer→warehouse and pick cheapest.
           if (!courierId) {
             const weightKg = Number(rateFormData?.weightGrams) ? Number(rateFormData.weightGrams) / 1000 : 0.5;
+            console.log('[verify-guest-payment] No courierId for intl, fetching domestic rates:', JSON.stringify({
+              pickupPincode: senderPincode,
+              deliveryPincode: warehouse.pincode,
+              weightKg,
+              senderState,
+            }));
             try {
               const domesticRates = await fetchDomesticRates({
                 pickupPincode: senderPincode,
@@ -193,6 +199,8 @@ export async function POST(request: NextRequest) {
                 declaredValue: Number(rateFormData?.declaredValue) || 1000,
                 shipmentType: 'gift',
               });
+              console.log('[verify-guest-payment] Domestic rates result:', domesticRates.length, 'couriers found',
+                domesticRates.length > 0 ? `cheapest: ${domesticRates[0].courier_name} id=${domesticRates[0].courier_company_id}` : 'NONE');
               if (domesticRates.length > 0) {
                 courierId = domesticRates[0].courier_company_id;
               }
