@@ -10,6 +10,7 @@ import {
   CurrencyInr, Tag, CheckCircle, Warning, DownloadSimple, Copy,
   Clock, Scissors, SealCheck, Drop, ArrowLeft, Cube, Info,
   Ruler, IdentificationCard, House, Upload, FileText, Camera, X, Eye,
+  Pill, Receipt, Passport, FolderOpen,
 } from '@phosphor-icons/react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -491,6 +492,75 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
             </ol>
           </div>
         </motion.div>
+
+        {/* ── Documents Required (International only) ── */}
+        {mode === 'international' && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.55 }}
+            className="bg-card rounded-xl border-2 border-blue-200 dark:border-blue-800/40 p-5 space-y-4"
+          >
+            <h3 className="font-semibold flex items-center gap-2">
+              <FolderOpen className="h-5 w-5 text-blue-600" weight="duotone" />
+              Documents Required for Customs
+            </h3>
+            <p className="text-sm text-muted-foreground">
+              Keep the following documents ready digitally. Customs may request these during clearance.
+            </p>
+
+            {shipmentType === 'medicine' ? (
+              <div className="space-y-3">
+                <div className="flex gap-3 p-3 rounded-lg bg-blue-50 dark:bg-blue-950/20">
+                  <div className="w-9 h-9 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center shrink-0">
+                    <Pill className="h-4.5 w-4.5 text-blue-600" weight="duotone" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium">Doctor&apos;s Prescription</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">Must be on a doctor&apos;s letterhead/pad with the doctor&apos;s registration number clearly visible. The prescription must not be older than 90 days.</p>
+                  </div>
+                </div>
+                <div className="flex gap-3 p-3 rounded-lg bg-blue-50 dark:bg-blue-950/20">
+                  <div className="w-9 h-9 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center shrink-0">
+                    <Receipt className="h-4.5 w-4.5 text-blue-600" weight="duotone" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium">Medicine Purchase Bill</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">The pharmacy bill must be in the name of the recipient/patient. It should list all medicines being shipped.</p>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <div className="flex gap-3 p-3 rounded-lg bg-blue-50 dark:bg-blue-950/20">
+                  <div className="w-9 h-9 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center shrink-0">
+                    <Receipt className="h-4.5 w-4.5 text-blue-600" weight="duotone" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium">Purchase Bills</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">Purchase receipts or invoices for all items being shipped. This helps customs verify the declared value.</p>
+                  </div>
+                </div>
+                <div className="flex gap-3 p-3 rounded-lg bg-blue-50 dark:bg-blue-950/20">
+                  <div className="w-9 h-9 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center shrink-0">
+                    <Passport className="h-4.5 w-4.5 text-blue-600" weight="duotone" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium">Recipient&apos;s Passport Copy</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">A clear copy of the recipient&apos;s passport (front page with photo and details) for customs verification.</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div className="bg-amber-50 dark:bg-amber-950/30 rounded-lg p-3">
+              <p className="text-xs text-amber-800 dark:text-amber-300 flex items-center gap-1.5">
+                <Warning className="h-3.5 w-3.5 shrink-0" weight="fill" />
+                Keep these documents saved on your phone. Our team or customs may contact you for these during transit.
+              </p>
+            </div>
+          </motion.div>
+        )}
 
         {/* Pickup info */}
         <motion.div

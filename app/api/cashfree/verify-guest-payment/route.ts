@@ -3,6 +3,7 @@ import { getServiceRoleClient } from '@/lib/shipment-lifecycle/supabaseAdmin';
 import { CASHFREE_API_BASE, CASHFREE_API_VERSION } from '@/lib/wallet/cashfreeConfig';
 import { createDomesticShipment } from '@/lib/domestic/nimbusPostDomestic';
 import { lookupPincode } from '@/lib/pincode-lookup';
+import { getNearestWarehouse } from '@/lib/warehouse/getWarehouse';
 import { sendEmail } from '@/lib/email/resend';
 import { renderSenderConfirmationEmail, renderReceiverNotificationEmail, type GuestBookingEmailData } from '@/lib/email/templates/guestBookingConfirmation';
 
@@ -132,6 +133,9 @@ export async function POST(request: NextRequest) {
 
     const { senderReceiver, rateFormData, selectedCourier } = bookingPayload;
 
+    // Determine if this is an international booking
+    const isInternational = !!rateFormData?.destinationCountry;
+
     // ── Create NimbusPost shipment ──
     const skipNimbus = !process.env.NIMBUS_EMAIL || !process.env.NIMBUS_PASSWORD;
 
@@ -144,109 +148,167 @@ export async function POST(request: NextRequest) {
     } else {
       try {
         // Resolve courier_id — NimbusPost returns this in rate check
-        const courierId = Number(
+        // For international bookings, we need a domestic courier to ship to warehouse
+        let courierId = Number(
           selectedCourier?.courier_company_id
           || selectedCourier?.courier_id
           || selectedCourier?.id
           || 0
         );
 
-        if (!courierId) {
-          throw new Error('No courier_company_id in selectedCourier');
-        }
-
-        // Get weight — domestic form uses weightKg
-        const weightKg = Number(rateFormData?.weightKg) || 0.5;
-
         // Clean phone numbers — NimbusPost expects 10-digit Indian numbers
         const cleanPhone = (phone: string) => {
           const digits = (phone || '').replace(/\D/g, '');
-          // Remove leading 91 country code if present
           return digits.length > 10 ? digits.slice(-10) : digits || '9999999999';
         };
 
-        // Get sender/receiver pincodes
+        // Get sender pincode and state
         const senderPincode = senderReceiver.senderPincode
           || rateFormData?.pickupPincode || '';
-        const receiverPincode = senderReceiver.receiverZipcode
-          || senderReceiver.receiverPincode
-          || rateFormData?.deliveryPincode || '';
-
-        // Lookup states from pincodes (NimbusPost requires state)
-        const [senderLookup, receiverLookup] = await Promise.all([
-          lookupPincode(senderPincode),
-          lookupPincode(receiverPincode),
-        ]);
-
+        const senderLookup = await lookupPincode(senderPincode);
         const senderState = senderLookup?.state || 'Unknown';
-        const receiverState = receiverLookup?.state || 'Unknown';
         const senderCity = senderReceiver.senderCity || senderLookup?.city || 'Unknown';
-        const receiverCity = senderReceiver.receiverCity || receiverLookup?.city || 'Unknown';
 
-        console.log('[verify-guest-payment] NimbusPost payload:', JSON.stringify({
-          courier_id: courierId,
-          tracking: booking.tracking_number,
-          weight: weightKg,
-          senderPincode,
-          receiverPincode,
-          senderState,
-          receiverState,
-        }));
+        if (isInternational) {
+          // ── INTERNATIONAL: pickup = customer, delivery = nearest warehouse ──
+          const warehouse = await getNearestWarehouse(senderState);
 
-        const nimbusResult = await createDomesticShipment({
-          courier_id: courierId,
-          order_number: booking.tracking_number || `CXG-${Date.now()}`,
-          pickup: {
-            name: senderReceiver.senderName || 'Sender',
-            phone: cleanPhone(senderReceiver.senderPhone),
-            address: senderReceiver.senderAddress || 'Address',
-            city: senderCity,
-            state: senderState,
-            pincode: senderPincode,
-          },
-          delivery: {
-            name: senderReceiver.receiverName || 'Receiver',
-            phone: cleanPhone(senderReceiver.receiverPhone),
-            address: senderReceiver.receiverAddress || 'Address',
-            city: receiverCity,
-            state: receiverState,
-            pincode: receiverPincode,
-          },
-          order_amount: Number(rateFormData?.declaredValue) || Number(booking.amount) || 100,
-          weight: weightKg,
-          length: Number(rateFormData?.lengthCm) || 20,
-          breadth: Number(rateFormData?.widthCm) || 15,
-          height: Number(rateFormData?.heightCm) || 10,
-          payment_type: 'prepaid',
-          content_description: senderReceiver.contentDescription
-            || rateFormData?.shipmentType
-            || 'Guest Shipment',
-        });
+          // For international, we don't have a NimbusPost courier_id from rate check
+          // (international rates come from our own calculator, not NimbusPost).
+          // We need to fetch domestic rates for customer→warehouse and pick cheapest.
+          if (!courierId) {
+            const { fetchDomesticRates } = await import('@/lib/domestic/nimbusPostDomestic');
+            const weightKg = Number(rateFormData?.weightGrams) ? Number(rateFormData.weightGrams) / 1000 : 0.5;
+            try {
+              const domesticRates = await fetchDomesticRates({
+                pickupPincode: senderPincode,
+                deliveryPincode: warehouse.pincode,
+                weightKg,
+                lengthCm: Number(rateFormData?.lengthCm) || 20,
+                widthCm: Number(rateFormData?.widthCm) || 15,
+                heightCm: Number(rateFormData?.heightCm) || 10,
+                declaredValue: Number(rateFormData?.declaredValue) || 1000,
+                shipmentType: 'gift',
+              });
+              if (domesticRates.length > 0) {
+                courierId = domesticRates[0].courier_company_id;
+              }
+            } catch (rateErr) {
+              console.error('[verify-guest-payment] Failed to fetch domestic rates for intl leg:', rateErr);
+            }
+          }
 
-        if (nimbusResult.success && nimbusResult.awb) {
-          awb = nimbusResult.awb;
-          labelUrl = nimbusResult.label_url || '';
-          console.log('[verify-guest-payment] NimbusPost shipment created. AWB:', awb);
-        } else {
-          console.error('[verify-guest-payment] NimbusPost failed:', nimbusResult.error);
-          await supabase
-            .from('guest_bookings')
-            .update({
-              status: 'paid_nimbus_failed',
-              booking_payload: {
-                ...bookingPayload,
-                _nimbus_error: nimbusResult.error || 'Unknown',
-                _failed_at: new Date().toISOString(),
-              },
-            })
-            .eq('order_id', orderId);
+          if (!courierId) {
+            throw new Error('No domestic courier available for customer→warehouse leg');
+          }
 
-          return NextResponse.json({
-            success: true,
-            awbUrl: '',
-            trackingNumber: booking.tracking_number,
-            error: nimbusResult.error || 'Shipment creation failed — our team will process manually',
+          const weightKg = Number(rateFormData?.weightGrams) ? Number(rateFormData.weightGrams) / 1000 : 0.5;
+
+          console.log('[verify-guest-payment] International NimbusPost: customer→warehouse', JSON.stringify({
+            courier_id: courierId,
+            tracking: booking.tracking_number,
+            weight: weightKg,
+            pickup: senderPincode,
+            delivery: warehouse.pincode,
+            warehouse: warehouse.name,
+          }));
+
+          const nimbusResult = await createDomesticShipment({
+            courier_id: courierId,
+            order_number: booking.tracking_number || `CXG-${Date.now()}`,
+            pickup: {
+              name: senderReceiver.senderName || 'Sender',
+              phone: cleanPhone(senderReceiver.senderPhone),
+              address: senderReceiver.senderAddress || 'Address',
+              city: senderCity,
+              state: senderState,
+              pincode: senderPincode,
+            },
+            delivery: {
+              name: warehouse.name,
+              phone: cleanPhone(warehouse.phone),
+              address: warehouse.address,
+              city: warehouse.city,
+              state: warehouse.state,
+              pincode: warehouse.pincode,
+            },
+            order_amount: Number(rateFormData?.declaredValue) || Number(booking.amount) || 100,
+            weight: weightKg,
+            length: Number(rateFormData?.lengthCm) || 20,
+            breadth: Number(rateFormData?.widthCm) || 15,
+            height: Number(rateFormData?.heightCm) || 10,
+            payment_type: 'prepaid',
+            content_description: senderReceiver.contentDescription
+              || rateFormData?.shipmentType
+              || 'International Guest Shipment',
           });
+
+          if (nimbusResult.success && nimbusResult.awb) {
+            awb = nimbusResult.awb;
+            labelUrl = nimbusResult.label_url || '';
+            console.log('[verify-guest-payment] NimbusPost intl domestic leg created. AWB:', awb);
+          } else {
+            throw new Error(nimbusResult.error || 'NimbusPost domestic leg failed');
+          }
+        } else {
+          // ── DOMESTIC: pickup = customer, delivery = receiver (as before) ──
+          if (!courierId) {
+            throw new Error('No courier_company_id in selectedCourier');
+          }
+
+          const weightKg = Number(rateFormData?.weightKg) || 0.5;
+          const receiverPincode = senderReceiver.receiverZipcode
+            || senderReceiver.receiverPincode
+            || rateFormData?.deliveryPincode || '';
+          const receiverLookup = await lookupPincode(receiverPincode);
+          const receiverState = receiverLookup?.state || 'Unknown';
+          const receiverCity = senderReceiver.receiverCity || receiverLookup?.city || 'Unknown';
+
+          console.log('[verify-guest-payment] Domestic NimbusPost payload:', JSON.stringify({
+            courier_id: courierId,
+            tracking: booking.tracking_number,
+            weight: weightKg,
+            senderPincode,
+            receiverPincode,
+          }));
+
+          const nimbusResult = await createDomesticShipment({
+            courier_id: courierId,
+            order_number: booking.tracking_number || `CXG-${Date.now()}`,
+            pickup: {
+              name: senderReceiver.senderName || 'Sender',
+              phone: cleanPhone(senderReceiver.senderPhone),
+              address: senderReceiver.senderAddress || 'Address',
+              city: senderCity,
+              state: senderState,
+              pincode: senderPincode,
+            },
+            delivery: {
+              name: senderReceiver.receiverName || 'Receiver',
+              phone: cleanPhone(senderReceiver.receiverPhone),
+              address: senderReceiver.receiverAddress || 'Address',
+              city: receiverCity,
+              state: receiverState,
+              pincode: receiverPincode,
+            },
+            order_amount: Number(rateFormData?.declaredValue) || Number(booking.amount) || 100,
+            weight: weightKg,
+            length: Number(rateFormData?.lengthCm) || 20,
+            breadth: Number(rateFormData?.widthCm) || 15,
+            height: Number(rateFormData?.heightCm) || 10,
+            payment_type: 'prepaid',
+            content_description: senderReceiver.contentDescription
+              || rateFormData?.shipmentType
+              || 'Guest Shipment',
+          });
+
+          if (nimbusResult.success && nimbusResult.awb) {
+            awb = nimbusResult.awb;
+            labelUrl = nimbusResult.label_url || '';
+            console.log('[verify-guest-payment] NimbusPost domestic shipment created. AWB:', awb);
+          } else {
+            throw new Error(nimbusResult.error || 'NimbusPost shipment creation failed');
+          }
         }
       } catch (err: any) {
         console.error('[verify-guest-payment] NimbusPost exception:', err);
@@ -342,6 +404,8 @@ export async function POST(request: NextRequest) {
       awbUrl: labelUrl,
       awb,
       trackingNumber: booking.tracking_number,
+      shipmentType: rateFormData?.shipmentType || '',
+      mode: isInternational ? 'international' : 'domestic',
     });
   } catch (error) {
     console.error('[verify-guest-payment] Error:', error);
