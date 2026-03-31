@@ -310,9 +310,34 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
           return;
         }
 
-        // Step 3: Open Cashfree checkout modal
+        // Step 3: Open Cashfree checkout modal + poll for payment
         const cashfreeMode = process.env.NEXT_PUBLIC_CASHFREE_ENV === 'sandbox' ? 'sandbox' : 'production';
         const cf = (window as any).Cashfree({ mode: cashfreeMode });
+
+        // Start polling for payment status (handles QR/UPI where modal doesn't auto-detect)
+        let paymentConfirmed = false;
+        let pollingStopped = false;
+        const pollInterval = setInterval(async () => {
+          if (pollingStopped || paymentConfirmed) return;
+          try {
+            const pollRes = await fetch('/api/cashfree/verify-guest-payment', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ orderId: data.orderId }),
+            });
+            const pollData = await pollRes.json();
+            if (pollData.success) {
+              paymentConfirmed = true;
+              pollingStopped = true;
+              clearInterval(pollInterval);
+              setTrackingNumber(serverTracking);
+              setAwbUrl(pollData.awbUrl || data.awbUrl || '');
+              setPhase('success');
+              setPaymentLoading(false);
+              toast({ title: 'Payment Successful', description: 'Your shipment has been booked.' });
+            }
+          } catch { /* ignore poll errors */ }
+        }, 4000); // Poll every 4 seconds
 
         let checkoutResult: any = null;
         try {
@@ -322,8 +347,14 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
           });
         } catch (checkoutErr: any) {
           console.error('[GuestSummary] Cashfree checkout error:', checkoutErr);
-          // If checkout throws, try verifying anyway — payment may have gone through
         }
+
+        // Stop polling when modal closes
+        pollingStopped = true;
+        clearInterval(pollInterval);
+
+        // If already confirmed by polling, skip
+        if (paymentConfirmed) return;
 
         if (checkoutResult?.error) {
           toast({ title: 'Payment Failed', description: checkoutResult.error.message || 'Payment was not completed.', variant: 'destructive' });
@@ -331,7 +362,7 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
           return;
         }
 
-        // Step 4: Verify payment — always verify regardless of checkoutResult shape
+        // Step 4: Final verify after modal closes
         try {
           const verifyRes = await fetch('/api/cashfree/verify-guest-payment', {
             method: 'POST',
@@ -348,7 +379,6 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
             toast({ title: 'Payment Verification Failed', description: 'Please contact support with your order ID.', variant: 'destructive' });
           }
         } catch {
-          // Assume success if verification endpoint fails — order was created
           setTrackingNumber(serverTracking);
           setAwbUrl(data.awbUrl || '');
           setPhase('success');
