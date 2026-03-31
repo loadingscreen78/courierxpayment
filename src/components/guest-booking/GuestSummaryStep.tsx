@@ -21,6 +21,7 @@ import { loadCashfreeScript } from '@/lib/wallet/cashfreeLoader';
 import { calculateRate } from '@/lib/shipping/rateCalculator';
 import { motion, AnimatePresence } from 'framer-motion';
 import { feedbackPresets } from '@/lib/haptics';
+import RouteMap from '@/components/guest-booking/RouteMap';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 

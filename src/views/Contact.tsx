@@ -130,11 +130,14 @@ const InteractiveMap = ({
     const map = new mapboxgl.Map({
       container: mapContainer.current,
       style: 'mapbox://styles/mapbox/light-v11',
-      center: [80, 19.5],
-      zoom: 4.2,
       interactive: true,
       attributionControl: false,
     });
+
+    // Fit bounds to show all offices
+    const bounds = new mapboxgl.LngLatBounds();
+    locations.forEach(loc => bounds.extend([loc.lng, loc.lat]));
+    map.fitBounds(bounds, { padding: 80, maxZoom: 6 });
 
     map.addControl(new mapboxgl.NavigationControl({ showCompass: false }), 'top-right');
 
