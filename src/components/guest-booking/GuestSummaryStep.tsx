@@ -314,30 +314,45 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
         const cashfreeMode = process.env.NEXT_PUBLIC_CASHFREE_ENV === 'sandbox' ? 'sandbox' : 'production';
         const cf = (window as any).Cashfree({ mode: cashfreeMode });
 
-        // Start polling for payment status (handles QR/UPI where modal doesn't auto-detect)
+        // Poll for payment status using lightweight endpoint (handles QR/UPI)
         let paymentConfirmed = false;
         let pollingStopped = false;
         const pollInterval = setInterval(async () => {
           if (pollingStopped || paymentConfirmed) return;
           try {
-            const pollRes = await fetch('/api/cashfree/verify-guest-payment', {
+            const pollRes = await fetch('/api/cashfree/check-payment-status', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ orderId: data.orderId }),
             });
             const pollData = await pollRes.json();
-            if (pollData.success) {
+            if (pollData.paid) {
               paymentConfirmed = true;
               pollingStopped = true;
               clearInterval(pollInterval);
-              setTrackingNumber(serverTracking);
-              setAwbUrl(pollData.awbUrl || data.awbUrl || '');
-              setPhase('success');
-              setPaymentLoading(false);
-              toast({ title: 'Payment Successful', description: 'Your shipment has been booked.' });
+              // Defer state updates to avoid React error #300
+              setTimeout(() => {
+                // Trigger full verify to create shipment
+                fetch('/api/cashfree/verify-guest-payment', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ orderId: data.orderId }),
+                }).then(r => r.json()).then(verifyData => {
+                  setTrackingNumber(serverTracking);
+                  setAwbUrl(verifyData?.awbUrl || data.awbUrl || '');
+                  setPhase('success');
+                  setPaymentLoading(false);
+                  toast({ title: 'Payment Successful', description: 'Your shipment has been booked.' });
+                }).catch(() => {
+                  setTrackingNumber(serverTracking);
+                  setAwbUrl(data.awbUrl || '');
+                  setPhase('success');
+                  setPaymentLoading(false);
+                });
+              }, 0);
             }
           } catch { /* ignore poll errors */ }
-        }, 4000); // Poll every 4 seconds
+        }, 5000); // Poll every 5 seconds
 
         let checkoutResult: any = null;
         try {
