@@ -31,7 +31,7 @@ import type { CourierOption } from '@/lib/domestic/types';
 type ShippingMode = 'international' | 'domestic';
 type DomesticShipmentType = 'document' | 'gift';
 type DomesticFilterTab = 'all' | 'air' | 'surface';
-const COMING_SOON_CARRIERS = ['ShipGlobal', 'Aramex'];
+const COMING_SOON_CARRIERS = ['ShipGlobal'];
 
 const carrierFeatures = [
   { id: 'tracking', label: 'Real-time tracking', dhl: true, fedex: true, aramex: true, shipglobal: false },
@@ -911,7 +911,7 @@ const PublicRateCalculator = () => {
                         Choose Your <span className="text-coke-red">Courier</span>
                       </h2>
                       <p className="text-muted-foreground mt-2">
-                        {filteredDomesticCouriers.length} option{filteredDomesticCouriers.length !== 1 ? 's' : ''} for {pickupPincode} → {deliveryPincode}
+                        Top {Math.min(filteredDomesticCouriers.length, 4)} option{Math.min(filteredDomesticCouriers.length, 4) !== 1 ? 's' : ''} for {pickupPincode} → {deliveryPincode}
                       </p>
                     </div>
 
@@ -940,7 +940,7 @@ const PublicRateCalculator = () => {
 
                     {/* Courier Cards */}
                     <div className="space-y-3 max-w-3xl mx-auto">
-                      {filteredDomesticCouriers.map((courier, index) => (
+                      {filteredDomesticCouriers.slice(0, 4).map((courier, index) => (
                         <DomesticCourierCard key={courier.courier_company_id} courier={courier}
                           isSelected={selectedDomesticCourier?.courier_company_id === courier.courier_company_id}
                           onSelect={() => setSelectedDomesticCourier(courier)} index={index} />

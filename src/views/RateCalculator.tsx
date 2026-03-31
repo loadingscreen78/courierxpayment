@@ -34,7 +34,7 @@ const carrierFeatures = [
   { id: 'weekend', label: 'Weekend delivery', dhl: true, fedex: false, aramex: false, shipglobal: false },
 ];
 
-const COMING_SOON_CARRIERS: string[] = ['ShipGlobal', 'Aramex'];
+const COMING_SOON_CARRIERS: string[] = ['ShipGlobal'];
 
 const RateCalculator = () => {
   const router = useRouter();
