@@ -331,11 +331,12 @@ export default function AadhaarKycUpload({
         <h4 className="font-semibold text-sm">Aadhaar Verification</h4>
       </div>
       <div className="rounded-lg border border-blue-200 dark:border-blue-800/40 bg-blue-50 dark:bg-blue-950/20 p-3 text-xs space-y-1">
-        <p className="font-medium text-blue-900 dark:text-blue-200">Required for international shipment verification:</p>
+        <p className="font-medium text-blue-900 dark:text-blue-200">Your Aadhaar helps us process your shipment smoothly:</p>
         <ul className="list-disc list-inside text-blue-800 dark:text-blue-300 space-y-0.5">
-          <li>Upload front and back of your Aadhaar card</li>
-          <li>Only JPEG and PNG images accepted — max 5MB each</li>
-          <li>Ensure the document is clear, well-lit, and readable</li>
+          <li>Indian customs requires identity verification for all international shipments</li>
+          <li>Your sender address will be picked from your Aadhaar details automatically</li>
+          <li>Upload front and back — JPEG or PNG, max 5MB each</li>
+          <li>Make sure the document is clear, well-lit, and readable</li>
         </ul>
       </div>
       <div className="grid grid-cols-2 gap-4">
