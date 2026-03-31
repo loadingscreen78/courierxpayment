@@ -843,7 +843,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
         </div>
       </header>
 
-      <main className="container max-w-3xl py-4 sm:py-8 px-3 sm:px-4 space-y-4 sm:space-y-6 pb-28 md:pb-8">
+      <main className="container max-w-3xl lg:max-w-[55vw] py-4 sm:py-8 px-3 sm:px-4 space-y-4 sm:space-y-6 pb-28 md:pb-8">
         {/* Back + Title */}
         <div className="flex items-center gap-3 sm:gap-4">
           <Button variant="ghost" size="icon" onClick={() => { feedbackPresets.tap(); handleBack(); }} className="shrink-0 h-9 w-9 sm:h-10 sm:w-10">
