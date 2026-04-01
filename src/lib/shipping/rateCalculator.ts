@@ -353,7 +353,7 @@ export const calculateRate = (
     zone: country.rateZone,
     billableWeightKg,
     breakdown: [
-      { label: 'Base rate', amount: markedUpBase },
+      { label: 'Base rate', amount: baseRate }, // Show REAL base rate, not marked up
       { label: `Fuel surcharge (${fuelPercent}%)`, amount: fuelSurcharge },
       { label: 'Domestic transit', amount: domesticTransit },
       { label: 'GST (18%)', amount: gst },
