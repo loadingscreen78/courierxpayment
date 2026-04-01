@@ -95,8 +95,32 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const signInWithEmail = useCallback(async (email: string, password: string) => {
     try {
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
-      return { error: error as Error | null };
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      
+      if (error) {
+        return { error: error as Error | null };
+      }
+
+      // Check account status after successful sign in
+      if (data.session) {
+        const statusRes = await fetch('/api/auth/check-account-status', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${data.session.access_token}`,
+          },
+        });
+
+        if (statusRes.ok) {
+          const statusData = await statusRes.json();
+          if (!statusData.allowed) {
+            // Sign out the user if account is not active
+            await supabase.auth.signOut();
+            return { error: new Error(statusData.message || 'Account not active') };
+          }
+        }
+      }
+
+      return { error: null };
     } catch (err) {
       return { error: err as Error };
     }

@@ -53,12 +53,66 @@ export async function PATCH(req: NextRequest) {
     // Get the request
     const { data: request, error: fetchErr } = await supabaseAdmin
       .from('customer_requests')
-      .select('*')
+      .select('*, profiles:user_id(full_name, email, phone_number)')
       .eq('id', request_id)
       .single();
 
     if (fetchErr || !request) return NextResponse.json({ error: 'Request not found' }, { status: 404 });
     if (request.status !== 'pending') return NextResponse.json({ error: 'Request already resolved' }, { status: 400 });
+
+    // Handle account_opening approval
+    if (action === 'approved' && request.request_type === 'account_opening') {
+      // Activate the account
+      await supabaseAdmin
+        .from('profiles')
+        .update({ account_status: 'active' })
+        .eq('user_id', request.user_id);
+
+      // Send approval email via Resend
+      const customerEmail = request.profiles?.email;
+      const customerName = request.profiles?.full_name || 'Customer';
+      if (customerEmail) {
+        await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/email/account-approved`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            userEmail: customerEmail,
+            userName: customerName,
+          }),
+        }).catch(err => console.error('[PATCH] Failed to send approval email:', err));
+      }
+
+      // Log activity
+      await supabaseAdmin.from('activity_logs').insert({
+        user_id: request.user_id,
+        action: 'Account activated by admin',
+        details: admin_notes || '',
+      });
+    }
+
+    // Handle account_opening rejection
+    if (action === 'rejected' && request.request_type === 'account_opening') {
+      // Mark account as rejected
+      await supabaseAdmin
+        .from('profiles')
+        .update({ account_status: 'rejected' })
+        .eq('user_id', request.user_id);
+
+      // Send rejection email
+      const customerEmail = request.profiles?.email;
+      const customerName = request.profiles?.full_name || 'Customer';
+      if (customerEmail) {
+        await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/email/account-rejected`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            userEmail: customerEmail,
+            userName: customerName,
+            reason: admin_notes || 'Your application did not meet our requirements.',
+          }),
+        }).catch(err => console.error('[PATCH] Failed to send rejection email:', err));
+      }
+    }
 
     // If approving a mobile change, update the profile
     if (action === 'approved' && request.request_type === 'mobile_change' && request.requested_value) {

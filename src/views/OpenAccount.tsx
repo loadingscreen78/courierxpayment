@@ -387,7 +387,7 @@ export default function OpenAccount() {
     setStep('kyc-docs');
   };
 
-  // ── Step 4: Documents + details → save everything ──
+  // ── Step 4: Documents + details → save everything and create approval request ──
 
   const handleDocsSubmit = async (values: DocsFormValues) => {
     // Validate all 3 docs uploaded
@@ -430,6 +430,7 @@ export default function OpenAccount() {
         return;
       }
 
+      // Save profile with account_status = 'pending'
       const { error } = await supabase.from('profiles').update({
         full_name: personalData!.fullName,
         phone_number: `+91${personalData!.phone}`,
@@ -451,6 +452,7 @@ export default function OpenAccount() {
         pan_doc_url: panDoc.url,
         bank_doc_url: bankDoc.url,
         kyc_completed_at: new Date().toISOString(),
+        account_status: 'pending', // Account needs admin approval
       }).eq('user_id', currentUser.id);
 
       if (error) {
@@ -480,6 +482,7 @@ export default function OpenAccount() {
             pan_doc_url: panDoc.url,
             bank_doc_url: bankDoc.url,
             kyc_completed_at: new Date().toISOString(),
+            account_status: 'pending', // Account needs admin approval
           }, { onConflict: 'user_id' });
           if (upsertError) {
             console.error('[OpenAccount] Profile upsert also failed:', upsertError.message);
@@ -494,6 +497,19 @@ export default function OpenAccount() {
         }
       }
 
+      // Create account opening request for admin approval
+      const { error: requestError } = await supabase.from('customer_requests').insert({
+        user_id: currentUser.id,
+        request_type: 'account_opening',
+        status: 'pending',
+        reason: `New account registration - ${personalData!.fullName}`,
+      });
+
+      if (requestError) {
+        console.error('[OpenAccount] Failed to create approval request:', requestError);
+        // Don't block the flow, admin can still see the pending profile
+      }
+
       // Re-fetch profile to get the auto-assigned account_number from DB trigger
       const { data: updatedProfile } = await supabase
         .from('profiles')
@@ -503,14 +519,12 @@ export default function OpenAccount() {
 
       setAssignedAccountNumber(updatedProfile?.account_number || null);
       setStep('done');
-      toast({ title: 'Account Ready', description: `Your account number is ${updatedProfile?.account_number || 'being generated'}.` });
-      // Send welcome email only after full onboarding is complete
-      fetch('/api/email/send-welcome', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userEmail: currentUser.email }),
-      }).catch(() => {});
-      setTimeout(() => { window.location.href = '/dashboard'; }, 3000);
+      toast({ title: 'Application Submitted', description: 'Your account is pending admin approval. You will receive an email once approved.' });
+      
+      // Sign out the user so they can't access the system until approved
+      await supabase.auth.signOut();
+      
+      setTimeout(() => { window.location.href = '/'; }, 4000);
     } catch {
       toast({ title: 'Error', description: 'Something went wrong.', variant: 'destructive' });
     } finally {
@@ -762,17 +776,21 @@ export default function OpenAccount() {
             {/* ── STEP 5: Done ── */}
             {step === 'done' && (
               <motion.div key="done" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="text-center space-y-4 py-12">
-                <div className="mx-auto h-16 w-16 rounded-full bg-candlestick-green/10 flex items-center justify-center">
-                  <ShieldCheck className="h-8 w-8 text-candlestick-green" />
+                <div className="mx-auto h-16 w-16 rounded-full bg-amber-500/10 flex items-center justify-center">
+                  <ShieldCheck className="h-8 w-8 text-amber-500" />
                 </div>
-                <h2 className="text-2xl font-bold font-typewriter">Account Ready!</h2>
+                <h2 className="text-2xl font-bold font-typewriter">Application Submitted!</h2>
                 {assignedAccountNumber && (
                   <div className="inline-block px-4 py-2 bg-muted rounded-xl border border-border">
                     <p className="text-xs text-muted-foreground mb-1">Your Account Number</p>
                     <p className="text-lg font-mono font-bold text-coke-red tracking-wider">{assignedAccountNumber}</p>
                   </div>
                 )}
-                <p className="text-muted-foreground text-sm">Redirecting to dashboard...</p>
+                <div className="max-w-sm mx-auto space-y-2">
+                  <p className="text-sm text-muted-foreground">Your account is pending admin approval.</p>
+                  <p className="text-sm text-muted-foreground">You will receive an email notification once your account is activated.</p>
+                </div>
+                <p className="text-xs text-muted-foreground">Redirecting to home...</p>
                 <CircleNotch className="h-6 w-6 animate-spin mx-auto text-coke-red" />
               </motion.div>
             )}

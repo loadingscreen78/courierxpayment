@@ -6,7 +6,7 @@ import { toast } from 'sonner';
 import { format, parseISO } from 'date-fns';
 import {
   Phone, Trash2, CheckCircle2, XCircle, Clock, Loader2,
-  User, Mail, AlertCircle, MessageSquare,
+  User, Mail, AlertCircle, MessageSquare, UserPlus,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -25,7 +25,7 @@ import { cn } from '@/lib/utils';
 interface CustomerRequest {
   id: string;
   user_id: string;
-  request_type: 'mobile_change' | 'account_deletion';
+  request_type: 'mobile_change' | 'account_deletion' | 'account_opening';
   status: 'pending' | 'approved' | 'rejected';
   current_value: string | null;
   requested_value: string | null;
@@ -133,11 +133,12 @@ export function CustomerRequestsManagement() {
         </div>
         <div className="flex gap-2">
           <Select value={typeFilter} onValueChange={setTypeFilter}>
-            <SelectTrigger className="w-[160px] bg-white/5 border-white/10 text-gray-300 h-9 text-xs">
+            <SelectTrigger className="w-[180px] bg-white/5 border-white/10 text-gray-300 h-9 text-xs">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Types</SelectItem>
+              <SelectItem value="account_opening">Account Opening</SelectItem>
               <SelectItem value="mobile_change">Mobile Change</SelectItem>
               <SelectItem value="account_deletion">Account Deletion</SelectItem>
             </SelectContent>
@@ -182,16 +183,18 @@ export function CustomerRequestsManagement() {
                 <div className="flex items-start gap-3 min-w-0 flex-1">
                   <div className={cn(
                     "w-10 h-10 rounded-xl flex items-center justify-center shrink-0",
-                    req.request_type === 'mobile_change'
+                    req.request_type === 'account_opening'
+                      ? 'bg-green-500/15 text-green-400'
+                      : req.request_type === 'mobile_change'
                       ? 'bg-blue-500/15 text-blue-400'
                       : 'bg-red-500/15 text-red-400'
                   )}>
-                    {req.request_type === 'mobile_change' ? <Phone className="h-5 w-5" /> : <Trash2 className="h-5 w-5" />}
+                    {req.request_type === 'account_opening' ? <UserPlus className="h-5 w-5" /> : req.request_type === 'mobile_change' ? <Phone className="h-5 w-5" /> : <Trash2 className="h-5 w-5" />}
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2 flex-wrap">
                       <p className="text-sm font-medium text-white">
-                        {req.request_type === 'mobile_change' ? 'Mobile Number Change' : 'Account Deletion'}
+                        {req.request_type === 'account_opening' ? 'New Account Registration' : req.request_type === 'mobile_change' ? 'Mobile Number Change' : 'Account Deletion'}
                       </p>
                       <StatusBadge status={req.status} />
                     </div>
@@ -275,7 +278,9 @@ export function CustomerRequestsManagement() {
               {actionType === 'approved' ? 'Approve' : 'Reject'} Request
             </DialogTitle>
             <DialogDescription className="text-gray-500">
-              {actionTarget?.request_type === 'mobile_change'
+              {actionTarget?.request_type === 'account_opening'
+                ? `${actionType === 'approved' ? 'Approve and activate' : 'Reject'} account registration for ${actionTarget?.profiles?.full_name || actionTarget?.profiles?.email}`
+                : actionTarget?.request_type === 'mobile_change'
                 ? `${actionType === 'approved' ? 'Approve' : 'Reject'} mobile change from ${actionTarget?.current_value} to ${actionTarget?.requested_value}`
                 : `${actionType === 'approved' ? 'Approve' : 'Reject'} account deletion for ${actionTarget?.profiles?.full_name || actionTarget?.profiles?.email}`
               }
