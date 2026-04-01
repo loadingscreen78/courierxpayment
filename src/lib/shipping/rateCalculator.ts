@@ -69,21 +69,26 @@ const DIM_DIVISOR = 5000;
 
 // Pricing model:
 // costPrice = base + fuel + domestic transit (our cost from carrier + domestic leg)
-// nonAccountPrice = costPrice × 3.5333 (selling price to non-account/guest users)
-// accountPrice = nonAccountPrice × 0.75 (25% discount) = costPrice × 2.65 (same margin as before)
-const COST_TO_SELLING_MULTIPLIER = 2.65 / 0.75; // ≈ 3.5333
-const ACCOUNT_DISCOUNT = 0.25; // 25% discount for account holders vs non-account price
+// Account holder price = costPrice × 2.65
+// Non-account (guest) price = costPrice × 3.53
+const ACCOUNT_HOLDER_MULTIPLIER = 2.65;
+const NON_ACCOUNT_MULTIPLIER = 3.53;
 
-/** @deprecated Use COST_TO_SELLING_MULTIPLIER instead */
-export const GUEST_MARKUP = COST_TO_SELLING_MULTIPLIER;
+/** @deprecated Use NON_ACCOUNT_MULTIPLIER instead */
+export const GUEST_MARKUP = NON_ACCOUNT_MULTIPLIER;
+
+/** @deprecated Use ACCOUNT_HOLDER_MULTIPLIER instead */
+export const COST_TO_SELLING_MULTIPLIER = NON_ACCOUNT_MULTIPLIER;
+
+/** @deprecated Discount is now implicit in the multipliers */
+export const ACCOUNT_DISCOUNT = (NON_ACCOUNT_MULTIPLIER - ACCOUNT_HOLDER_MULTIPLIER) / NON_ACCOUNT_MULTIPLIER; // ≈ 0.249
 
 /**
  * Multiplier for domestic guest rates.
  * Domestic base rates (from NimbusPost) = account holder price.
- * Guest price = accountPrice / 0.75 ≈ accountPrice × 1.3333
- * So account holders get 25% off the guest price.
+ * Guest price = accountPrice × (3.53 / 2.65) ≈ accountPrice × 1.332
  */
-export const DOMESTIC_GUEST_MULTIPLIER = 1 / (1 - ACCOUNT_DISCOUNT); // ≈ 1.3333
+export const DOMESTIC_GUEST_MULTIPLIER = NON_ACCOUNT_MULTIPLIER / ACCOUNT_HOLDER_MULTIPLIER; // ≈ 1.332
 
 /**
  * Update fuel surcharge percentages at runtime.
@@ -321,13 +326,13 @@ export const calculateRate = (
   const costWithGst = costPrice + costGst;
 
   // Step 8: Selling prices
-  // Non-account (guest) price = cost × 3.5333 (our selling price)
-  // Account price = non-account × 0.75 (25% discount) = cost × 2.65
-  const nonAccountTotal = Math.round(costWithGst * COST_TO_SELLING_MULTIPLIER);
-  const accountTotal = Math.round(nonAccountTotal * (1 - ACCOUNT_DISCOUNT));
+  // Account holder price = cost × 2.65
+  // Non-account (guest) price = cost × 3.53
+  const accountTotal = Math.round(costWithGst * ACCOUNT_HOLDER_MULTIPLIER);
+  const nonAccountTotal = Math.round(costWithGst * NON_ACCOUNT_MULTIPLIER);
 
   const total = isGuest ? nonAccountTotal : accountTotal;
-  const savings = isGuest ? (nonAccountTotal - accountTotal) : 0;
+  const savings = isGuest ? 0 : (nonAccountTotal - accountTotal);
 
   return {
     baseRate,
