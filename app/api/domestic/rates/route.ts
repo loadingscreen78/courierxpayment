@@ -93,12 +93,16 @@ export async function POST(request: NextRequest) {
 
       // Apply guest markup if applicable
       const finalCouriers = isGuest
-        ? mockCouriers.map(c => ({
-            ...c,
-            shipping_charge: Math.round(c.shipping_charge * DOMESTIC_GUEST_MULTIPLIER),
-            gst_amount: Math.round(c.gst_amount * DOMESTIC_GUEST_MULTIPLIER),
-            customer_price: Math.round(c.customer_price * DOMESTIC_GUEST_MULTIPLIER),
-          }))
+        ? mockCouriers.map(c => {
+            const guestShipping = Math.round(c.freight_charge * 3.53);
+            const guestGst = Math.round(guestShipping * 0.18);
+            return {
+              ...c,
+              shipping_charge: guestShipping,
+              gst_amount: guestGst,
+              customer_price: guestShipping + guestGst,
+            };
+          })
         : mockCouriers;
 
       return NextResponse.json({ success: true, couriers: finalCouriers, isGuest });
@@ -107,13 +111,19 @@ export async function POST(request: NextRequest) {
     const couriers = await fetchDomesticRates(data as import('@/lib/domestic/types').RateCheckRequest);
 
     // Apply guest markup if applicable
+    // For guests: freight × 3.53, then add 18% GST
+    // For account holders: freight × 2.65, then add 18% GST (already done in fetchDomesticRates)
     const finalCouriers = isGuest
-      ? couriers.map(c => ({
-          ...c,
-          shipping_charge: Math.round(c.shipping_charge * DOMESTIC_GUEST_MULTIPLIER),
-          gst_amount: Math.round(c.gst_amount * DOMESTIC_GUEST_MULTIPLIER),
-          customer_price: Math.round(c.customer_price * DOMESTIC_GUEST_MULTIPLIER),
-        }))
+      ? couriers.map(c => {
+          const guestShipping = Math.round(c.freight_charge * 3.53);
+          const guestGst = Math.round(guestShipping * 0.18);
+          return {
+            ...c,
+            shipping_charge: guestShipping,
+            gst_amount: guestGst,
+            customer_price: guestShipping + guestGst,
+          };
+        })
       : couriers;
 
     if (finalCouriers.length === 0) {

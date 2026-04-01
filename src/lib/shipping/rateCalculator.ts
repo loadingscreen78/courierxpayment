@@ -311,49 +311,53 @@ export const calculateRate = (
 
   if (baseRate === 0) return null;
 
-  // Step 4: Fuel Surcharge (carrier-specific, updated via scraper)
+  // Apply multiplier to base rate ONLY
+  const multiplier = isGuest ? NON_ACCOUNT_MULTIPLIER : ACCOUNT_HOLDER_MULTIPLIER;
+  const markedUpBase = Math.round(baseRate * multiplier);
+
+  // Fuel Surcharge (carrier-specific, on original base rate)
   const fuelPercent = carrier === 'Aramex' ? ARAMEX_FUEL_SURCHARGE_PERCENT : FEDEX_FUEL_SURCHARGE_PERCENT;
   const fuelSurcharge = Math.round(baseRate * fuelPercent / 100);
 
-  // Step 5: Domestic transit cost (pickup to warehouse/airport) — ₹80 per kg
+  // Domestic transit cost (pickup to warehouse/airport) — ₹80 per kg
   const domesticTransit = Math.round(Math.max(billableWeightKg, 1) * DOMESTIC_TRANSIT_PER_KG);
 
-  // Step 6: Cost price (what we pay the carrier + domestic leg)
-  const costPrice = baseRate + fuelSurcharge + domesticTransit;
+  // Subtotal = marked up base + surcharges
+  const subtotal = markedUpBase + fuelSurcharge + domesticTransit;
 
-  // Step 7: GST @ 18% on cost
-  const costGst = Math.round(costPrice * GST_RATE);
-  const costWithGst = costPrice + costGst;
+  // GST @ 18% on subtotal
+  const gst = Math.round(subtotal * GST_RATE);
+  
+  // Total
+  const total = subtotal + gst;
 
-  // Step 8: Selling prices
-  // Account holder price = cost × 2.65
-  // Non-account (guest) price = cost × 3.53
-  const accountTotal = Math.round(costWithGst * ACCOUNT_HOLDER_MULTIPLIER);
-  const nonAccountTotal = Math.round(costWithGst * NON_ACCOUNT_MULTIPLIER);
-
-  const total = isGuest ? nonAccountTotal : accountTotal;
-  const savings = isGuest ? 0 : (nonAccountTotal - accountTotal);
+  // Calculate savings for guests
+  const accountMarkedUpBase = Math.round(baseRate * ACCOUNT_HOLDER_MULTIPLIER);
+  const accountSubtotal = accountMarkedUpBase + fuelSurcharge + domesticTransit;
+  const accountGst = Math.round(accountSubtotal * GST_RATE);
+  const accountTotal = accountSubtotal + accountGst;
+  const savings = isGuest ? (total - accountTotal) : 0;
 
   return {
-    baseRate,
+    baseRate: markedUpBase,
     weightCharge: 0,
     fuelSurcharge,
     insurance: 0,
     handlingFee: 0,
     customsFee: 0,
     exportClearance: domesticTransit,
-    subtotal: costPrice,
-    gst: costGst,
+    subtotal,
+    gst,
     total,
     carrier,
     zone: country.rateZone,
     billableWeightKg,
     breakdown: [
-      { label: 'Base rate', amount: baseRate },
+      { label: 'Base rate', amount: markedUpBase },
       { label: `Fuel surcharge (${fuelPercent}%)`, amount: fuelSurcharge },
       { label: 'Domestic transit', amount: domesticTransit },
-      { label: 'GST (18%)', amount: costGst },
-      ...(isGuest && savings > 0 ? [{ label: 'Open account to save more', amount: -savings }] : []),
+      { label: 'GST (18%)', amount: gst },
+      ...(isGuest && savings > 0 ? [{ label: 'Open account to save', amount: -savings }] : []),
     ],
   };
 };
