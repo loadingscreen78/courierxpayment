@@ -134,14 +134,16 @@ const InteractiveMap = ({
       style: 'mapbox://styles/mapbox/light-v11',
       interactive: true,
       attributionControl: false,
+      minZoom: 4.5,
+      maxZoom: 15,
     });
 
-    // Fit bounds to show all offices - zoomed in to show both locations clearly
+    // Fit bounds to show both offices clearly - India view
     const bounds = new mapboxgl.LngLatBounds();
     locations.forEach(loc => bounds.extend([loc.lng, loc.lat]));
     map.fitBounds(bounds, { 
       padding: { top: 80, bottom: 80, left: 80, right: 80 },
-      maxZoom: 6,
+      maxZoom: 5.8,
       duration: 0 
     });
 
