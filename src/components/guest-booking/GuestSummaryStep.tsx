@@ -233,8 +233,8 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
 
   // ── Coupon handler ──
 
-  const handleApplyCoupon = async () => {
-    const codeToApply = couponCode.trim().toUpperCase();
+  const handleApplyCoupon = async (codeToValidate?: string) => {
+    const codeToApply = (codeToValidate || couponCode).trim().toUpperCase();
     if (!codeToApply) return;
     setCouponLoading(true);
     try {
@@ -1013,27 +1013,44 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
       )}
 
       {/* ── Coupon Code ── */}
-      <PublicCouponBanner
-        onApply={(code) => {
-          setCouponCode(code);
-          handleApplyCoupon();
-        }}
-        isApplied={couponApplied}
-        isLoading={couponLoading}
-      />
+      {!couponApplied && (
+        <PublicCouponBanner
+          onApply={(code) => {
+            handleApplyCoupon(code);
+          }}
+          isApplied={couponApplied}
+          isLoading={couponLoading}
+        />
+      )}
       
-      <div className="bg-card rounded-xl border border-border p-5 space-y-3">
-        <h3 className="font-semibold text-sm flex items-center gap-2">
-          <Tag className="h-4 w-4 text-coke-red" weight="duotone" />
-          Have a different coupon?
-        </h3>
-        {couponApplied ? (
+      {couponApplied ? (
+        /* Show applied coupon status - no manual input */
+        <div className="bg-card rounded-xl border border-candlestick-green/30 p-5">
           <div className="flex items-center gap-2 p-2.5 rounded-lg bg-candlestick-green/5 border border-candlestick-green/20">
-            <CheckCircle className="h-4 w-4 text-candlestick-green" weight="fill" />
-            <span className="text-sm font-medium text-candlestick-green">{couponCode.toUpperCase()} — ₹{couponDiscount} off</span>
-            <button onClick={() => { setCouponApplied(false); setCouponDiscount(0); setCouponCode(''); }} className="ml-auto text-xs text-muted-foreground hover:text-foreground">Remove</button>
+            <CheckCircle className="h-5 w-5 text-candlestick-green" weight="fill" />
+            <div className="flex-1">
+              <p className="text-sm font-medium text-candlestick-green">{couponCode.toUpperCase()} Applied</p>
+              <p className="text-xs text-muted-foreground">You saved ₹{couponDiscount}</p>
+            </div>
+            <button 
+              onClick={() => { 
+                setCouponApplied(false); 
+                setCouponDiscount(0); 
+                setCouponCode(''); 
+              }} 
+              className="text-xs text-muted-foreground hover:text-foreground px-3 py-1.5 rounded-lg hover:bg-white/10 transition-colors"
+            >
+              Remove
+            </button>
           </div>
-        ) : (
+        </div>
+      ) : (
+        /* Show manual coupon input only if no coupon applied */
+        <div className="bg-card rounded-xl border border-border p-5 space-y-3">
+          <h3 className="font-semibold text-sm flex items-center gap-2">
+            <Tag className="h-4 w-4 text-coke-red" weight="duotone" />
+            Have a different coupon code?
+          </h3>
           <div className="flex gap-2">
             <Input
               placeholder="Enter coupon code"
@@ -1041,12 +1058,16 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
               onChange={e => setCouponCode(e.target.value.toUpperCase())}
               className="flex-1 uppercase"
             />
-            <Button variant="outline" onClick={() => { feedbackPresets.tap(); handleApplyCoupon(); }} disabled={couponLoading || !couponCode.trim()}>
+            <Button 
+              variant="outline" 
+              onClick={() => { feedbackPresets.tap(); handleApplyCoupon(); }} 
+              disabled={couponLoading || !couponCode.trim()}
+            >
               {couponLoading ? <CircleNotch className="h-4 w-4 animate-spin" /> : 'Apply'}
             </Button>
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* ── Price Breakdown ── */}
       <div className="bg-card rounded-xl border border-border p-5 space-y-2">
