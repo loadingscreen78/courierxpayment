@@ -458,71 +458,6 @@ const Contact = () => {
             </div>
           </section>
 
-          {/* Company Identity - Goldilocks Zone */}
-          <section className="py-10">
-            <div className="container">
-              <motion.div
-                initial={{ opacity: 0, y: 30 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                className="relative rounded-3xl bg-card border border-border p-8 md:p-12 shadow-xl overflow-hidden"
-              >
-                <div className="absolute top-0 right-0 w-64 h-64 bg-coke-red/5 rounded-full -translate-y-1/2 translate-x-1/2" />
-                
-                <div className="relative z-10 grid md:grid-cols-2 gap-8 items-center">
-                  <div className="space-y-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 rounded-2xl bg-coke-red/10 flex items-center justify-center">
-                        <Building2 className="h-6 w-6 text-coke-red" />
-                      </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground font-medium">Operated by</p>
-                        <h3 className="text-2xl font-bold font-typewriter">Goldilocks Zone Private Limited</h3>
-                      </div>
-                    </div>
-                    <p className="text-muted-foreground leading-relaxed">
-                      CourierX™ is a brand of Goldilocks Zone Private Limited, a registered company in India providing reliable international and domestic courier services.
-                    </p>
-                  </div>
-
-                  <div className="grid gap-3">
-                    <div className="flex items-start gap-3 p-4 rounded-xl bg-gradient-to-br from-coke-red/10 to-coke-red/5 border border-coke-red/20">
-                      <Building2 className="h-5 w-5 text-coke-red mt-0.5 shrink-0" />
-                      <div>
-                        <p className="text-sm font-semibold text-coke-red">Headquarters</p>
-                        <p className="text-sm text-muted-foreground">A/1801, Gagan Unnati, Katraj Kondhwa Road, Near ISKCON Temple, Kondhwa BK, Pune – 411048, Maharashtra, India</p>
-                      </div>
-                    </div>
-                    <div className="flex items-start gap-3 p-4 rounded-xl bg-muted/50">
-                      <MapPin className="h-5 w-5 text-primary mt-0.5 shrink-0" />
-                      <div>
-                        <p className="text-sm font-medium">Registered Office</p>
-                        <p className="text-sm text-muted-foreground">At, Rathagadasahi, Urali, Cuttack, Cuttack Sadar, Orissa, India, 753011</p>
-                        <p className="text-sm text-muted-foreground mt-1">CIN: U52290OD2026PTC053323</p>
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="flex items-center gap-3 p-4 rounded-xl bg-muted/50">
-                        <Mail className="h-5 w-5 text-primary shrink-0" />
-                        <div>
-                          <p className="text-sm font-medium">Email</p>
-                          <p className="text-xs text-muted-foreground">info@courierx.in</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-3 p-4 rounded-xl bg-muted/50">
-                        <Phone className="h-5 w-5 text-candlestick-green shrink-0" />
-                        <div>
-                          <p className="text-sm font-medium">Phone</p>
-                          <p className="text-xs text-muted-foreground">+91 8484050057</p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </motion.div>
-            </div>
-          </section>
-
           {/* Main Content */}
           <section className="py-16 relative">
             <div className="container">
@@ -556,6 +491,44 @@ const Contact = () => {
               transition={{ duration: 0.6 }}
               className="space-y-6"
             >
+              {/* Company Info Card */}
+              <div className="bg-card border border-border rounded-3xl p-6 shadow-xl">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-10 h-10 rounded-xl bg-coke-red/10 flex items-center justify-center">
+                    <Building2 className="h-5 w-5 text-coke-red" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold font-typewriter">Goldilocks Zone Private Limited</h3>
+                    <p className="text-xs text-muted-foreground">Operating CourierX™</p>
+                  </div>
+                </div>
+                <p className="text-sm text-muted-foreground mb-4">
+                  A registered company in India providing reliable international and domestic courier services.
+                </p>
+                <div className="grid grid-cols-2 gap-3">
+                  <a 
+                    href="mailto:info@courierx.in"
+                    className="flex items-center gap-2 p-3 rounded-xl bg-muted/50 hover:bg-muted transition-colors"
+                  >
+                    <Mail className="h-4 w-4 text-primary shrink-0" />
+                    <div>
+                      <p className="text-xs font-medium">Email</p>
+                      <p className="text-xs text-muted-foreground">info@courierx.in</p>
+                    </div>
+                  </a>
+                  <a 
+                    href="tel:+918484050057"
+                    className="flex items-center gap-2 p-3 rounded-xl bg-muted/50 hover:bg-muted transition-colors"
+                  >
+                    <Phone className="h-4 w-4 text-candlestick-green shrink-0" />
+                    <div>
+                      <p className="text-xs font-medium">Phone</p>
+                      <p className="text-xs text-muted-foreground">+91 8484050057</p>
+                    </div>
+                  </a>
+                </div>
+              </div>
+
               {/* Interactive Map */}
               <div className="bg-card border border-border rounded-3xl p-6 shadow-xl">
                 <div className="flex items-center gap-3 mb-4">
@@ -563,8 +536,8 @@ const Contact = () => {
                     <Globe className="h-5 w-5 text-primary" />
                   </div>
                   <div>
-                    <h3 className="font-bold font-typewriter">Our Global Offices</h3>
-                    <p className="text-xs text-muted-foreground">Click on a pin to see details</p>
+                    <h3 className="font-bold font-typewriter">Our Offices</h3>
+                    <p className="text-xs text-muted-foreground">Click on a location to view details</p>
                   </div>
                 </div>
                 
@@ -610,9 +583,14 @@ const Contact = () => {
                     <div className="grid gap-3">
                       <div className="flex items-start gap-3 p-3 rounded-xl bg-muted/50">
                         <MapPin className="h-5 w-5 text-coke-red mt-0.5" />
-                        <div>
+                        <div className="flex-1">
                           <p className="text-sm font-medium">Address</p>
                           <p className="text-sm text-muted-foreground">{selectedOffice.address}</p>
+                          {!selectedOffice.isHQ && (
+                            <p className="text-xs text-muted-foreground mt-2 pt-2 border-t border-border">
+                              CIN: U52290OD2026PTC053323
+                            </p>
+                          )}
                         </div>
                       </div>
                       
