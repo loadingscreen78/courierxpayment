@@ -4,6 +4,7 @@ export interface EmailPayload {
   to: string;
   subject: string;
   html: string;
+  replyTo?: string;
 }
 
 export interface EmailResult {
@@ -31,6 +32,7 @@ export async function sendEmail(payload: EmailPayload): Promise<EmailResult> {
       to: payload.to,
       subject: payload.subject,
       html: payload.html,
+      ...(payload.replyTo && { reply_to: payload.replyTo }),
     });
 
     if (error) {
