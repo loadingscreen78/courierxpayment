@@ -136,10 +136,14 @@ const InteractiveMap = ({
       attributionControl: false,
     });
 
-    // Fit bounds to show all offices with better zoom
+    // Fit bounds to show all offices - zoomed in to show both locations clearly
     const bounds = new mapboxgl.LngLatBounds();
     locations.forEach(loc => bounds.extend([loc.lng, loc.lat]));
-    map.fitBounds(bounds, { padding: 100, maxZoom: 5.5, duration: 0 });
+    map.fitBounds(bounds, { 
+      padding: { top: 80, bottom: 80, left: 80, right: 80 },
+      maxZoom: 6,
+      duration: 0 
+    });
 
     map.addControl(new mapboxgl.NavigationControl({ showCompass: false }), 'top-right');
 
@@ -170,30 +174,59 @@ const InteractiveMap = ({
         },
       });
 
-      // Add markers
+      // Add markers with labels
       locations.forEach((loc) => {
+        // Create marker container
+        const container = document.createElement('div');
+        container.style.cssText = 'display: flex; flex-direction: column; align-items: center; cursor: pointer;';
+        
+        // Create marker pin
         const el = document.createElement('div');
         el.style.cssText = `
-          width: 36px; height: 36px; border-radius: 50%;
+          width: 44px; height: 44px; border-radius: 50%;
           background: ${loc.isHQ ? '#F40000' : '#1a1a1a'};
-          border: 3px solid white;
-          box-shadow: 0 2px 12px rgba(0,0,0,0.25);
-          cursor: pointer;
+          border: 4px solid white;
+          box-shadow: 0 4px 16px rgba(0,0,0,0.3);
           display: flex; align-items: center; justify-content: center;
           transition: transform 0.2s;
         `;
         el.innerHTML = loc.isHQ
-          ? '<svg width="16" height="16" viewBox="0 0 24 24" fill="white"><path d="M3 21V7l9-4 9 4v14H3zm2-2h14V8.2l-7-3.1L5 8.2V19zm3-2h2v-4h4v4h2v-6l-5-3-5 3v6z"/></svg>'
-          : '<svg width="14" height="14" viewBox="0 0 24 24" fill="white"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>';
+          ? '<svg width="20" height="20" viewBox="0 0 24 24" fill="white"><path d="M3 21V7l9-4 9 4v14H3zm2-2h14V8.2l-7-3.1L5 8.2V19zm3-2h2v-4h4v4h2v-6l-5-3-5 3v6z"/></svg>'
+          : '<svg width="18" height="18" viewBox="0 0 24 24" fill="white"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>';
+        
+        // Create label
+        const label = document.createElement('div');
+        label.style.cssText = `
+          margin-top: 8px;
+          padding: 4px 10px;
+          background: white;
+          border: 1px solid ${loc.isHQ ? '#F40000' : '#1a1a1a'};
+          border-radius: 12px;
+          font-size: 11px;
+          font-weight: 600;
+          color: ${loc.isHQ ? '#F40000' : '#1a1a1a'};
+          white-space: nowrap;
+          box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        `;
+        label.textContent = loc.label;
+        
+        container.appendChild(el);
+        container.appendChild(label);
 
-        el.addEventListener('mouseenter', () => { el.style.transform = 'scale(1.15)'; });
-        el.addEventListener('mouseleave', () => { el.style.transform = 'scale(1)'; });
-        el.addEventListener('click', () => {
+        container.addEventListener('mouseenter', () => { 
+          el.style.transform = 'scale(1.15)'; 
+          label.style.transform = 'scale(1.05)';
+        });
+        container.addEventListener('mouseleave', () => { 
+          el.style.transform = 'scale(1)'; 
+          label.style.transform = 'scale(1)';
+        });
+        container.addEventListener('click', () => {
           onSelectLocation(loc.id);
           map.flyTo({ center: [loc.lng, loc.lat], zoom: 12, duration: 1000 });
         });
 
-        const marker = new mapboxgl.Marker({ element: el })
+        const marker = new mapboxgl.Marker({ element: container, anchor: 'bottom' })
           .setLngLat([loc.lng, loc.lat])
           .addTo(map);
 
