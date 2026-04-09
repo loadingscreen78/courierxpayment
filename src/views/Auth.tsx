@@ -1080,7 +1080,7 @@ const Auth = () => {
                   <p className="text-center text-xs text-muted-foreground/70">
                     By continuing, you agree to the terms of{' '}
                     <a href="/terms-and-conditions" className="underline hover:text-coke-red transition-colors">
-                      Indiano Ventures Private Limited
+                      Goldilocks Zone Private Limited
                     </a>
                     .
                   </p>
@@ -1186,7 +1186,7 @@ const Auth = () => {
 
         {/* Footer */}
         <div className="p-4 sm:p-6 border-t border-border flex flex-col sm:flex-row items-center justify-between gap-2 text-xs sm:text-sm text-muted-foreground">
-          <span className="font-typewriter">© 2026 Indiano Ventures Private Limited</span>
+          <span className="font-typewriter">© 2026 Goldilocks Zone Private Limited</span>
           <div className="flex items-center gap-4">
             <a href="/contact" className="hover:text-coke-red transition-colors">Contact Us</a>
             <span>English</span>

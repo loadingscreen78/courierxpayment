@@ -170,7 +170,7 @@ export const LandingFooter = () => {
                 <div className="flex items-start gap-3">
                   <MapPin className="h-4 w-4 text-coke-red mt-0.5 shrink-0" />
                   <span className="text-paper-white/60 text-xs leading-relaxed">
-                    A/1801, Gagan Unnati, Kondhwa BK, Pune – 411048, Maharashtra
+                    At, Rathagadasahi, Urali, Cuttack, Cuttack Sadar, Orissa, 753011
                   </span>
                 </div>
                 <div className="flex flex-wrap gap-x-5 gap-y-2">
@@ -194,8 +194,8 @@ export const LandingFooter = () => {
                 <li className="flex items-start gap-3 group">
                   <MapPin className="h-5 w-5 text-paper-white/60 mt-0.5 group-hover:text-coke-red transition-colors" />
                   <span className="text-paper-white/60 text-sm">
-                    A/1801, Gagan Unnati, Kondhwa BK,<br />
-                    Pune – 411048, Maharashtra, India
+                    At, Rathagadasahi, Urali, Cuttack,<br />
+                    Cuttack Sadar, Orissa, India, 753011
                   </span>
                 </li>
                 <li>

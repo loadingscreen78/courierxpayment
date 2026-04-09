@@ -67,13 +67,13 @@ const useTypingEffect = (text: string, speed: number = 50, startOnView: boolean 
 const officeLocations = [
   {
     id: 1,
-    city: 'Pune',
+    city: 'Cuttack',
     country: 'India',
-    address: 'A/1801, Gagan Unnati, Katraj Kondhwa Road, Near ISKCON Temple, Kondhwa BK, Pune – 411048',
+    address: 'At, Rathagadasahi, Urali, Cuttack, Cuttack Sadar, Orissa, India, 753011',
     phone: '+91 8484050057',
     email: 'info@courierx.in',
-    lng: 73.8567,
-    lat: 18.5204,
+    lng: 85.8245,
+    lat: 20.4625,
     isHQ: true,
     timezone: 'IST (UTC+5:30)',
   },
@@ -423,7 +423,7 @@ const Contact = () => {
             </div>
           </section>
 
-          {/* Company Identity - Indiano Ventures */}
+          {/* Company Identity - Goldilocks Zone */}
           <section className="py-10">
             <div className="container">
               <motion.div
@@ -442,11 +442,11 @@ const Contact = () => {
                       </div>
                       <div>
                         <p className="text-sm text-muted-foreground font-medium">Operated by</p>
-                        <h3 className="text-2xl font-bold font-typewriter">Indiano Ventures Private Limited</h3>
+                        <h3 className="text-2xl font-bold font-typewriter">Goldilocks Zone Private Limited</h3>
                       </div>
                     </div>
                     <p className="text-muted-foreground leading-relaxed">
-                      CourierX™ is a brand of Indiano Ventures Private Limited, a registered company in India providing reliable international and domestic courier services.
+                      CourierX™ is a brand of Goldilocks Zone Private Limited, a registered company in India providing reliable international and domestic courier services.
                     </p>
                   </div>
 
@@ -455,7 +455,8 @@ const Contact = () => {
                       <MapPin className="h-5 w-5 text-coke-red mt-0.5 shrink-0" />
                       <div>
                         <p className="text-sm font-medium">Registered Address</p>
-                        <p className="text-sm text-muted-foreground">A/1801, Gagan Unnati, Kondhwa BK, Pune – 411048, Maharashtra, India</p>
+                        <p className="text-sm text-muted-foreground">At, Rathagadasahi, Urali, Cuttack, Cuttack Sadar, Orissa, India, 753011</p>
+                        <p className="text-sm text-muted-foreground mt-1">CIN: U52290OD2026PTC053323</p>
                       </div>
                     </div>
                     <div className="grid grid-cols-2 gap-3">

@@ -25,9 +25,10 @@ const TermsAndConditions = () => {
             <h1 className="text-4xl font-bold font-typewriter text-foreground mb-4">CourierX™ Terms of Service</h1>
             <p className="text-muted-foreground">Effective Date: 23rd February 2026</p>
             <p className="text-muted-foreground text-sm mt-2">
-              Operated by: Indiano Ventures Private Limited<br />
-              Registered Address: A/1801, Gagan Unnati, Kondhwa BK, Pune – 411048, Maharashtra, India<br />
-              Governing Law: Maharashtra, India
+              Operated by: Goldilocks Zone Private Limited<br />
+              Registered Address: At, Rathagadasahi, Urali, Cuttack, Cuttack Sadar, Orissa, India, 753011<br />
+              CIN: U52290OD2026PTC053323<br />
+              Governing Law: Orissa, India
             </p>
           </motion.div>
 
@@ -225,7 +226,7 @@ const TermsAndConditions = () => {
                 11. Dispute Resolution
               </h2>
               <p className="text-muted-foreground leading-relaxed">
-                Governing law: Maharashtra, India. All disputes shall be resolved through binding arbitration in Pune under the Arbitration &amp; Conciliation Act, 1996.
+                Governing law: Orissa, India. All disputes shall be resolved through binding arbitration in Cuttack under the Arbitration &amp; Conciliation Act, 1996.
               </p>
             </motion.section>
           </div>

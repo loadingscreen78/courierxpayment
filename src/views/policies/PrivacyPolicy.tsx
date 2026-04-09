@@ -34,7 +34,7 @@ const PrivacyPolicy = () => {
                 1. Introduction
               </h2>
               <p className="text-muted-foreground leading-relaxed">
-                CourierX™ is operated by Indiano Ventures Private Limited. This Privacy Policy explains how we collect, use, and protect personal information.
+                CourierX™ is operated by Goldilocks Zone Private Limited. This Privacy Policy explains how we collect, use, and protect personal information.
               </p>
             </motion.section>
 
@@ -158,7 +158,7 @@ const PrivacyPolicy = () => {
                 <div>
                   <p className="text-muted-foreground text-sm">
                     <strong className="text-foreground">Email:</strong> grievances@courierx.in<br />
-                    <strong className="text-foreground">Address:</strong> Pune Office<br />
+                    <strong className="text-foreground">Address:</strong> Cuttack Office<br />
                     <strong className="text-foreground">Response Timeline:</strong> 15 days
                   </p>
                 </div>

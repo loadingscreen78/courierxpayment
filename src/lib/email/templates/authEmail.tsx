@@ -87,7 +87,7 @@ export function renderAuthEmail({ type, confirmationUrl, email }: AuthEmailProps
           <tr>
             <td style="padding: 24px 40px; background-color: #f9f9f9; border-radius: 0 0 8px 8px; text-align: center;">
               <p style="margin: 0 0 8px; color: #999999; font-size: 13px;">
-                © 2026 Indiano Ventures Private Limited
+                © 2026 Goldilocks Zone Private Limited
               </p>
               <p style="margin: 0; color: #999999; font-size: 13px;">
                 <a href="https://courierx.in/contact" style="color: #E31837; text-decoration: none;">Contact Us</a> • 

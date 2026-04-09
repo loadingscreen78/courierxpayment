@@ -16,11 +16,11 @@ export interface WarehouseAddress {
 const FALLBACK_WAREHOUSES: WarehouseAddress[] = [
   {
     id: 'wh_maharashtra',
-    name: 'CourierX Maharashtra Warehouse',
+    name: 'CourierX Orissa Warehouse',
     phone: '8484050057',
-    address: 'Floor 18th, A-1801, Gagan Unnati, Katraj Kondhwa Road, Near ISKCON Temple, Kondhwa BK',
-    city: 'Pune',
-    state: 'Maharashtra',
+    address: 'At, Rathagadasahi, Urali',
+    city: 'Cuttack',
+    state: 'Orissa',
     pincode: '411048',
     region: 'maharashtra',
     isDefault: true,
