@@ -67,13 +67,14 @@ const useTypingEffect = (text: string, speed: number = 50, startOnView: boolean 
 const officeLocations = [
   {
     id: 1,
-    city: 'Cuttack',
+    city: 'Pune',
     country: 'India',
-    address: 'At, Rathagadasahi, Urali, Cuttack, Cuttack Sadar, Orissa, India, 753011',
+    label: 'Headquarters',
+    address: 'A/1801, Gagan Unnati, Katraj Kondhwa Road, Near ISKCON Temple, Kondhwa BK, Pune – 411048, Maharashtra',
     phone: '+91 8484050057',
     email: 'info@courierx.in',
-    lng: 85.8245,
-    lat: 20.4625,
+    lng: 73.8567,
+    lat: 18.5204,
     isHQ: true,
     timezone: 'IST (UTC+5:30)',
   },
@@ -81,10 +82,11 @@ const officeLocations = [
     id: 2,
     city: 'Cuttack',
     country: 'India',
-    address: 'Urali, Rathagargaha Sahi, near Utkal Karate School, Cuttack – 753011',
+    label: 'Registered Office',
+    address: 'At, Rathagadasahi, Urali, Cuttack, Cuttack Sadar, Orissa, India, 753011',
     phone: '+91 7008368628',
     email: 'info@courierx.in',
-    lng: 85.8830,
+    lng: 85.8245,
     lat: 20.4625,
     isHQ: false,
     timezone: 'IST (UTC+5:30)',
@@ -134,10 +136,10 @@ const InteractiveMap = ({
       attributionControl: false,
     });
 
-    // Fit bounds to show all offices
+    // Fit bounds to show all offices with better zoom
     const bounds = new mapboxgl.LngLatBounds();
     locations.forEach(loc => bounds.extend([loc.lng, loc.lat]));
-    map.fitBounds(bounds, { padding: 80, maxZoom: 6 });
+    map.fitBounds(bounds, { padding: 100, maxZoom: 5.5, duration: 0 });
 
     map.addControl(new mapboxgl.NavigationControl({ showCompass: false }), 'top-right');
 
@@ -188,7 +190,7 @@ const InteractiveMap = ({
         el.addEventListener('mouseleave', () => { el.style.transform = 'scale(1)'; });
         el.addEventListener('click', () => {
           onSelectLocation(loc.id);
-          map.flyTo({ center: [loc.lng, loc.lat], zoom: 10, duration: 1000 });
+          map.flyTo({ center: [loc.lng, loc.lat], zoom: 12, duration: 1000 });
         });
 
         const marker = new mapboxgl.Marker({ element: el })
@@ -214,7 +216,7 @@ const InteractiveMap = ({
     if (!mapRef.current || !selectedLocation) return;
     const loc = locations.find(l => l.id === selectedLocation);
     if (loc) {
-      mapRef.current.flyTo({ center: [loc.lng, loc.lat], zoom: 10, duration: 1000 });
+      mapRef.current.flyTo({ center: [loc.lng, loc.lat], zoom: 12, duration: 1000 });
     }
   }, [selectedLocation, locations]);
 
@@ -451,10 +453,17 @@ const Contact = () => {
                   </div>
 
                   <div className="grid gap-3">
-                    <div className="flex items-start gap-3 p-4 rounded-xl bg-muted/50">
-                      <MapPin className="h-5 w-5 text-coke-red mt-0.5 shrink-0" />
+                    <div className="flex items-start gap-3 p-4 rounded-xl bg-gradient-to-br from-coke-red/10 to-coke-red/5 border border-coke-red/20">
+                      <Building2 className="h-5 w-5 text-coke-red mt-0.5 shrink-0" />
                       <div>
-                        <p className="text-sm font-medium">Registered Address</p>
+                        <p className="text-sm font-semibold text-coke-red">Headquarters</p>
+                        <p className="text-sm text-muted-foreground">A/1801, Gagan Unnati, Katraj Kondhwa Road, Near ISKCON Temple, Kondhwa BK, Pune – 411048, Maharashtra, India</p>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-3 p-4 rounded-xl bg-muted/50">
+                      <MapPin className="h-5 w-5 text-primary mt-0.5 shrink-0" />
+                      <div>
+                        <p className="text-sm font-medium">Registered Office</p>
                         <p className="text-sm text-muted-foreground">At, Rathagadasahi, Urali, Cuttack, Cuttack Sadar, Orissa, India, 753011</p>
                         <p className="text-sm text-muted-foreground mt-1">CIN: U52290OD2026PTC053323</p>
                       </div>
@@ -549,11 +558,13 @@ const Contact = () => {
                           <h3 className="text-xl font-bold font-typewriter">
                             {selectedOffice.city}
                           </h3>
-                          {selectedOffice.isHQ && (
-                            <span className="px-2 py-0.5 bg-coke-red/10 text-coke-red text-xs font-medium rounded-full">
-                              Headquarters
-                            </span>
-                          )}
+                          <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${
+                            selectedOffice.isHQ 
+                              ? 'bg-coke-red/10 text-coke-red' 
+                              : 'bg-primary/10 text-primary'
+                          }`}>
+                            {selectedOffice.label}
+                          </span>
                         </div>
                         <p className="text-sm text-muted-foreground">{selectedOffice.country}</p>
                       </div>
