@@ -170,17 +170,17 @@ export const LandingFooter = () => {
                 <div className="flex items-start gap-3">
                   <MapPin className="h-4 w-4 text-coke-red mt-0.5 shrink-0" />
                   <span className="text-paper-white/60 text-xs leading-relaxed">
-                    At, Rathagadasahi, Urali, Cuttack, Cuttack Sadar, Orissa, 753011
+                    A/1801, Gagan Unnati, Kondhwa BK, Pune – 411048, Maharashtra
                   </span>
                 </div>
                 <div className="flex flex-wrap gap-x-5 gap-y-2">
-                  <a href="tel:+917008368628" className="flex items-center gap-2 text-paper-white/60 hover:text-paper-white text-xs transition-colors">
-                    <Phone className="h-3.5 w-3.5 text-coke-red shrink-0" />
-                    +91 7008368628
-                  </a>
                   <a href="tel:+918484050057" className="flex items-center gap-2 text-paper-white/60 hover:text-paper-white text-xs transition-colors">
                     <Phone className="h-3.5 w-3.5 text-coke-red shrink-0" />
                     +91 8484050057
+                  </a>
+                  <a href="tel:+917008368628" className="flex items-center gap-2 text-paper-white/60 hover:text-paper-white text-xs transition-colors">
+                    <Phone className="h-3.5 w-3.5 text-coke-red shrink-0" />
+                    +91 7008368628
                   </a>
                   <a href="mailto:info@courierx.in" className="flex items-center gap-2 text-paper-white/60 hover:text-paper-white text-xs transition-colors">
                     <Mail className="h-3.5 w-3.5 text-coke-red shrink-0" />
@@ -194,8 +194,8 @@ export const LandingFooter = () => {
                 <li className="flex items-start gap-3 group">
                   <MapPin className="h-5 w-5 text-paper-white/60 mt-0.5 group-hover:text-coke-red transition-colors" />
                   <span className="text-paper-white/60 text-sm">
-                    At, Rathagadasahi, Urali, Cuttack,<br />
-                    Cuttack Sadar, Orissa, India, 753011
+                    A/1801, Gagan Unnati, Kondhwa BK,<br />
+                    Pune – 411048, Maharashtra, India
                   </span>
                 </li>
                 <li>
