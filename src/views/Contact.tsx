@@ -508,19 +508,12 @@ const Contact = () => {
                   A registered company in India providing reliable international and domestic courier services.
                 </p>
                 
-                {/* Addresses */}
-                <div className="space-y-3 mb-4 pb-4 border-b border-border">
-                  <div className="flex items-start gap-2">
-                    <Building2 className="h-4 w-4 text-coke-red mt-0.5 shrink-0" />
-                    <div>
-                      <p className="text-xs font-semibold text-coke-red">Headquarters</p>
-                      <p className="text-xs text-muted-foreground">A/1801, Gagan Unnati, Kondhwa BK, Pune – 411048, Maharashtra</p>
-                    </div>
-                  </div>
+                {/* Registered Office Address */}
+                <div className="mb-4 pb-4 border-b border-border">
                   <div className="flex items-start gap-2">
                     <MapPin className="h-4 w-4 text-primary mt-0.5 shrink-0" />
                     <div>
-                      <p className="text-xs font-semibold text-primary">Registered Office</p>
+                      <p className="text-xs font-semibold text-foreground">Registered Office</p>
                       <p className="text-xs text-muted-foreground">At, Rathagadasahi, Urali, Cuttack, Cuttack Sadar, Orissa, 753011</p>
                       <p className="text-xs text-muted-foreground mt-1">CIN: U52290OD2026PTC053323</p>
                     </div>
