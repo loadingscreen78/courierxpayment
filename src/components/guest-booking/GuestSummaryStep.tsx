@@ -23,6 +23,7 @@ import { getCountryByCode } from '@/lib/shipping/countries';
 import { motion, AnimatePresence } from 'framer-motion';
 import { feedbackPresets } from '@/lib/haptics';
 import RouteMap from '@/components/guest-booking/RouteMap';
+import { PublicCouponBanner } from '@/components/guest-booking/PublicCouponBanner';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -233,17 +234,19 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
   // ── Coupon handler ──
 
   const handleApplyCoupon = async () => {
-    if (!couponCode.trim()) return;
+    const codeToApply = couponCode.trim().toUpperCase();
+    if (!codeToApply) return;
     setCouponLoading(true);
     try {
       // Guest coupon validation — simple check against public coupons
       const res = await fetch('/api/coupons/validate-guest', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code: couponCode.trim().toUpperCase(), amount: basePrice }),
+        body: JSON.stringify({ code: codeToApply, amount: basePrice }),
       });
       const data = await res.json();
       if (data.valid) {
+        setCouponCode(codeToApply);
         setCouponDiscount(data.discountAmount || 0);
         setCouponApplied(true);
         toast({ title: 'Coupon Applied', description: `You saved ₹${data.discountAmount}` });
@@ -1010,10 +1013,19 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
       )}
 
       {/* ── Coupon Code ── */}
+      <PublicCouponBanner
+        onApply={(code) => {
+          setCouponCode(code);
+          handleApplyCoupon();
+        }}
+        isApplied={couponApplied}
+        isLoading={couponLoading}
+      />
+      
       <div className="bg-card rounded-xl border border-border p-5 space-y-3">
         <h3 className="font-semibold text-sm flex items-center gap-2">
           <Tag className="h-4 w-4 text-coke-red" weight="duotone" />
-          Have a coupon?
+          Have a different coupon?
         </h3>
         {couponApplied ? (
           <div className="flex items-center gap-2 p-2.5 rounded-lg bg-candlestick-green/5 border border-candlestick-green/20">

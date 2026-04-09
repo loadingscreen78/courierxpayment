@@ -440,7 +440,7 @@ export function CouponManagement({ embedded = false }: { embedded?: boolean }) {
             )}
             {isGuest && (
               <Badge className="text-[10px] bg-green-500/20 text-green-400 border-green-500/30">
-                <Gift className="h-2.5 w-2.5 mr-1" />Guest
+                <Gift className="h-2.5 w-2.5 mr-1" />Guest · Public
               </Badge>
             )}
             {coupon.valid_until && new Date(coupon.valid_until) < new Date() && (
@@ -584,8 +584,8 @@ export function CouponManagement({ embedded = false }: { embedded?: boolean }) {
           <div className="flex items-start gap-3 p-3 rounded-xl bg-green-500/5 border border-green-500/20">
             <Gift className="h-4 w-4 text-green-400 mt-0.5 shrink-0" />
             <p className="text-xs text-green-300/80">
-              Guest coupons give a direct discount (flat ₹ or %) on the shipping cost during guest Ship Now bookings. 
-              These are applied at checkout before payment.
+              Guest coupons are public discount codes available to all users during guest Ship Now bookings. 
+              These are applied at checkout before payment and give a direct discount (flat ₹ or %) on the shipping cost.
             </p>
           </div>
         )}
