@@ -274,21 +274,54 @@ const InteractiveMap = ({
 const ContactForm = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [formData, setFormData] = useState({
+    firstName: '',
+    lastName: '',
+    email: '',
+    phone: '',
+    reason: '',
+    message: '',
+  });
   const { toast } = useToast();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
     
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    
-    setIsSubmitting(false);
-    setIsSubmitted(true);
-    toast({
-      title: 'Message Sent!',
-      description: 'We\'ll get back to you within 24 hours.',
-    });
+    try {
+      const response = await fetch('/api/email/send-contact-form', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        setIsSubmitted(true);
+        toast({
+          title: 'Message Sent!',
+          description: 'We\'ll get back to you within 2 hours.',
+        });
+      } else {
+        throw new Error(data.error || 'Failed to send message');
+      }
+    } catch (error) {
+      console.error('Contact form error:', error);
+      toast({
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Failed to send message. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleInputChange = (field: string, value: string) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
   };
 
   if (isSubmitted) {
@@ -310,7 +343,17 @@ const ContactForm = () => {
         <p className="text-muted-foreground mb-6">
           Your message has been received. Our team will respond shortly.
         </p>
-        <Button onClick={() => setIsSubmitted(false)} variant="outline">
+        <Button onClick={() => {
+          setIsSubmitted(false);
+          setFormData({
+            firstName: '',
+            lastName: '',
+            email: '',
+            phone: '',
+            reason: '',
+            message: '',
+          });
+        }} variant="outline">
           Send Another Message
         </Button>
       </motion.div>
@@ -327,6 +370,8 @@ const ContactForm = () => {
             placeholder="John" 
             required 
             className="bg-background/50"
+            value={formData.firstName}
+            onChange={(e) => handleInputChange('firstName', e.target.value)}
           />
         </div>
         <div className="space-y-2">
@@ -336,6 +381,8 @@ const ContactForm = () => {
             placeholder="Doe" 
             required 
             className="bg-background/50"
+            value={formData.lastName}
+            onChange={(e) => handleInputChange('lastName', e.target.value)}
           />
         </div>
       </div>
@@ -348,6 +395,8 @@ const ContactForm = () => {
           placeholder="john@example.com" 
           required 
           className="bg-background/50"
+          value={formData.email}
+          onChange={(e) => handleInputChange('email', e.target.value)}
         />
       </div>
       
@@ -358,12 +407,14 @@ const ContactForm = () => {
           type="tel" 
           placeholder="+91 98765 43210" 
           className="bg-background/50"
+          value={formData.phone}
+          onChange={(e) => handleInputChange('phone', e.target.value)}
         />
       </div>
       
       <div className="space-y-2">
         <Label htmlFor="reason">How can we help?</Label>
-        <Select required>
+        <Select required value={formData.reason} onValueChange={(value) => handleInputChange('reason', value)}>
           <SelectTrigger className="bg-background/50">
             <SelectValue placeholder="Select a topic" />
           </SelectTrigger>
@@ -385,6 +436,8 @@ const ContactForm = () => {
           rows={4}
           required
           className="bg-background/50 resize-none"
+          value={formData.message}
+          onChange={(e) => handleInputChange('message', e.target.value)}
         />
       </div>
       
