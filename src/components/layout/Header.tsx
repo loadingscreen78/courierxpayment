@@ -46,11 +46,14 @@ export const Header = () => {
           </span>
         </div>
 
+        {/* Shipping Mode Toggle - Always Visible */}
+        <div className="flex items-center gap-2">
+          <ShippingModeToggle compact className="md:hidden" />
+          <ShippingModeToggle className="hidden md:flex" />
+        </div>
+
         {/* Desktop Quick Actions */}
         <div className="hidden md:flex items-center gap-2">
-          {/* Shipping Mode Toggle */}
-          <ShippingModeToggle />
-
           {/* Wallet Balance */}
           <button
             onClick={() => router.push('/wallet')}
