@@ -18,7 +18,6 @@ const logoMain = { src: '/lovable-uploads/logo.png' };
 import { motion, AnimatePresence } from 'framer-motion';
 import { useGoogleGsi } from '@/hooks/useGoogleGsi';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
-import { MobileShippingToggle } from '@/components/ui/MobileShippingToggle';
 
 const emailPasswordSchema = z.object({
   email: z.string().email('Please enter a valid email address'),
@@ -814,10 +813,6 @@ const Auth = () => {
             <img src={logoMain.src} alt="CourierX" className="h-8 w-auto rounded-lg" />
           </a>
           <div className="flex items-center gap-3">
-            {/* Mobile-only shipping mode toggle */}
-            <div className="lg:hidden">
-              <MobileShippingToggle />
-            </div>
             {step !== 'panel-select' && (
               <button
                 onClick={() => { 
