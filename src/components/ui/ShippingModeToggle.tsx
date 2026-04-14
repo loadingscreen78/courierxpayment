@@ -134,3 +134,4 @@ export const ShippingModeToggle = ({ compact = false, className }: ShippingModeT
       </div>
     </button>
   );
+};
