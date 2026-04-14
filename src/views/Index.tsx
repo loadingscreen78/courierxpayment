@@ -228,6 +228,13 @@ const Index = () => {
     return <CourierXLoader isLoading={true} />;
   }
 
+  // Redirect new users with no shipments to new-shipment page
+  const hasNoShipments = activeShipments.length === 0 && deliveredShipments.length === 0;
+  if (hasNoShipments && !isInternational) {
+    router.replace('/new-shipment');
+    return <CourierXLoader isLoading={true} />;
+  }
+
   return (
     <AppLayout>
       <AnimatePresence mode="wait">

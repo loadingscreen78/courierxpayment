@@ -1,7 +1,8 @@
 'use client';
 
-import { createContext, useContext, useState, useCallback, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useState, useCallback, ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
+import { supabase } from '@/integrations/supabase/client';
 
 export type ShippingMode = 'international' | 'domestic';
 
@@ -27,18 +28,46 @@ export const ShippingModeProvider = ({ children }: { children: ReactNode }) => {
   const [isSwitching, setIsSwitching] = useState(false);
   const router = useRouter();
 
-  const setMode = useCallback((newMode: ShippingMode) => {
+  const setMode = useCallback(async (newMode: ShippingMode) => {
     if (newMode === mode) return;
     setIsSwitching(true);
-    setTimeout(() => {
+    
+    setTimeout(async () => {
       setModeState(newMode);
       localStorage.setItem(STORAGE_KEY, newMode);
-      // Navigate to the appropriate dashboard after switching
-      if (newMode === 'international') {
-        router.push('/dashboard');
+      
+      // Check if user has any shipments
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: shipments, error } = await supabase
+          .from('shipments')
+          .select('id')
+          .eq('user_id', user.id)
+          .limit(1);
+        
+        const hasShipments = shipments && shipments.length > 0;
+        
+        // Navigate based on mode and shipment history
+        if (hasShipments) {
+          // User has shipments - always go to dashboard
+          router.push('/dashboard');
+        } else {
+          // New user with no shipments
+          if (newMode === 'international') {
+            router.push('/dashboard');
+          } else {
+            router.push('/new-shipment');
+          }
+        }
       } else {
-        router.push('/new-shipment');
+        // Not logged in - default behavior
+        if (newMode === 'international') {
+          router.push('/dashboard');
+        } else {
+          router.push('/new-shipment');
+        }
       }
+      
       setTimeout(() => setIsSwitching(false), 600);
     }, 800);
   }, [mode, router]);
