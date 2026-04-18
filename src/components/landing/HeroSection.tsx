@@ -1,11 +1,10 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { Package, ShieldCheck, Clock, Globe, Sparkle, ArrowRight, UserPlus } from '@phosphor-icons/react';
-import { Button } from '@/components/ui/button';
+import { Sparkle } from '@phosphor-icons/react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { CourierXMotionGraphic } from './CourierXMotionGraphic';
+import { HeroCTAForm } from './HeroCTAForm';
 
 const rotatingWords = ['Essentials', 'Medicines', 'Documents', 'Gifts', 'Parcels'];
 
@@ -120,31 +119,6 @@ export const HeroSection = () => {
             </motion.p>
 
             {/* Trust Badges — hidden on mobile, shown on sm+ */}
-            {/* CTA Buttons */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.7 }}
-              className="flex gap-3 sm:gap-4 pt-1"
-            >
-              <Button 
-                size="lg" 
-                className="group gap-2 text-sm sm:text-lg px-5 sm:px-8 py-4 sm:py-6 bg-coke-red hover:bg-coke-red/90 shadow-lg shadow-coke-red/25 transition-all duration-300 hover:shadow-xl hover:shadow-coke-red/30 hover:-translate-y-0.5"
-                onClick={() => router.push('/public/book')}
-              >
-                Ship Now
-                <ArrowRight className="h-5 w-5 transition-transform group-hover:translate-x-1" weight="bold" />
-              </Button>
-              <Button 
-                variant="outline" 
-                size="lg" 
-                className="group gap-2 text-sm sm:text-lg px-5 sm:px-8 py-4 sm:py-6 border-2 hover:bg-primary/5 transition-all duration-300 hover:-translate-y-0.5"
-                onClick={() => router.push('/open-account')}
-              >
-                <UserPlus className="h-5 w-5" />
-                Open Account
-              </Button>
-            </motion.div>
 
             {/* Account Benefit Note — hidden on mobile */}
             <motion.p
@@ -180,14 +154,14 @@ export const HeroSection = () => {
             </motion.div>
           </div>
 
-          {/* Right Visual - Motion Graphic Demo */}
+          {/* Right Visual - CTA Form */}
           <motion.div
             initial={{ opacity: 0, x: 60 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.8, delay: 0.5 }}
-            className="relative hidden lg:block"
+            className="relative flex justify-center"
           >
-            <CourierXMotionGraphic />
+            <HeroCTAForm />
           </motion.div>
         </div>
       </div>
