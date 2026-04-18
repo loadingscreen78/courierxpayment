@@ -56,6 +56,7 @@ const statusOptions = [
   { value: 'CUSTOMS_CLEARANCE', label: 'Customs Clearance' },
   { value: 'INTL_OUT_FOR_DELIVERY', label: 'Out for Delivery (International)' },
   { value: 'INTL_DELIVERED', label: 'Delivered' },
+  { value: 'CANCELLED', label: 'Cancelled' },
   { value: 'FAILED', label: 'Failed' },
 ];
 
@@ -285,6 +286,10 @@ export default function AllShipments() {
           <span className="shrink-0 inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-purple-500/10 border border-purple-500/20 text-purple-400">
             <span className="w-2 h-2 rounded-full bg-purple-500" />
             👤 Guest: {filteredShipments.filter(s => s.is_guest).length}
+          </span>
+          <span className="shrink-0 inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-red-500/10 border border-red-500/20 text-red-400">
+            <span className="w-2 h-2 rounded-full bg-red-500" />
+            Cancelled: {filteredShipments.filter(s => s.current_status === 'CANCELLED').length}
           </span>
         </motion.div>
 

@@ -21,7 +21,8 @@ export type ShipmentStatus =
   | 'INTL_OUT_FOR_DELIVERY'
   | 'INTL_DELIVERED'
   // Terminal
-  | 'FAILED';
+  | 'FAILED'
+  | 'CANCELLED';
 
 export type TimelineSource = 'NIMBUS' | 'INTERNAL' | 'SIMULATION' | 'SYSTEM';
 

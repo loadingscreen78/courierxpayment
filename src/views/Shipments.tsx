@@ -13,6 +13,17 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet';
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
+import {
   Truck,
   Package,
   MagnifyingGlass,
@@ -25,8 +36,10 @@ import {
   Gift,
   CaretRight,
   CircleNotch,
+  XCircle,
 } from '@phosphor-icons/react';
 import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
 import { useShipments, getShipmentDetails, type Shipment as DBShipment, type ShipmentWithItems } from '@/hooks/useShipments';
 import { useShipmentTimeline } from '@/hooks/useShipmentTimeline';
 import { ShipmentTimeline } from '@/components/shipment/ShipmentTimeline';
@@ -156,16 +169,24 @@ const ShipmentCard = ({ shipment, onClick }: { shipment: UIShipment; onClick: ()
   );
 };
 
+const CANCELLABLE_STATUSES: ShipmentStatus[] = [
+  'PENDING', 'BOOKING_CONFIRMED', 'PICKED_UP', 'IN_TRANSIT',
+  'OUT_FOR_DELIVERY', 'DELIVERED', 'ARRIVED_AT_WAREHOUSE',
+  'QUALITY_CHECKED', 'PACKAGED',
+];
+
 const ShipmentDetailSheet = ({
   shipment,
   shipmentDetails,
   loadingDetails,
   onClose,
+  onCancelled,
 }: {
   shipment: UIShipment;
   shipmentDetails: ShipmentWithItems | null;
   loadingDetails: boolean;
   onClose: () => void;
+  onCancelled: () => void;
 }) => {
   const { entries: timelineEntries, loading: timelineLoading } = useShipmentTimeline(
     shipment.id,
@@ -174,6 +195,50 @@ const ShipmentDetailSheet = ({
   );
   const [refreshing, setRefreshing] = useState(false);
   const [refreshMsg, setRefreshMsg] = useState<string | null>(null);
+  const [cancelling, setCancelling] = useState(false);
+
+  const canCancel = CANCELLABLE_STATUSES.includes(shipment.currentStatus);
+
+  const handleCancelShipment = async () => {
+    setCancelling(true);
+    try {
+      const { supabase } = await import('@/integrations/supabase/client');
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast.error('Not authenticated. Please log in again.');
+        return;
+      }
+
+      const res = await fetch('/api/shipments/cancel', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ shipmentId: shipment.id }),
+      });
+
+      const json = await res.json();
+
+      if (!res.ok || !json.success) {
+        toast.error(json.error || 'Failed to cancel shipment');
+        return;
+      }
+
+      if (json.refundAmount > 0) {
+        toast.success(`Shipment cancelled. ₹${json.refundAmount.toLocaleString('en-IN')} refunded to your wallet.`);
+      } else {
+        toast.success('Shipment cancelled successfully.');
+      }
+
+      onCancelled();
+      onClose();
+    } catch {
+      toast.error('Something went wrong. Please try again.');
+    } finally {
+      setCancelling(false);
+    }
+  };
 
   const handleRefreshTracking = async () => {
     setRefreshing(true);
@@ -339,6 +404,47 @@ const ShipmentDetailSheet = ({
 
           <Separator />
 
+          {/* Cancel Shipment */}
+          {canCancel && (
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button
+                  variant="destructive"
+                  className="w-full"
+                  disabled={cancelling}
+                >
+                  <XCircle size={16} weight="bold" className="mr-2" />
+                  {cancelling ? 'Cancelling...' : 'Cancel Shipment'}
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Cancel Shipment?</AlertDialogTitle>
+                  <AlertDialogDescription asChild>
+                    <div className="space-y-2">
+                      <p>
+                        You will receive a 100% refund of ₹{shipment.totalAmount.toLocaleString('en-IN')} to your CourierX wallet.
+                      </p>
+                      <p className="font-medium text-destructive">
+                        This action cannot be undone.
+                      </p>
+                    </div>
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel disabled={cancelling}>Keep Shipment</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={handleCancelShipment}
+                    disabled={cancelling}
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  >
+                    {cancelling ? 'Cancelling...' : 'Yes, Cancel & Refund'}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          )}
+
           {/* Real Timeline from shipment_timeline table */}
           <div>
             <div className="flex items-center justify-between mb-4">
@@ -371,7 +477,7 @@ const ShipmentsPage = () => {
   const [shipmentDetails, setShipmentDetails] = useState<ShipmentWithItems | null>(null);
   const [loadingDetails, setLoadingDetails] = useState(false);
 
-  const { shipments: dbShipments, loading, error } = useShipments();
+  const { shipments: dbShipments, loading, error, refetch } = useShipments();
 
   // Transform DB shipments to UI shipments
   const shipments = dbShipments.map(transformShipment);
@@ -382,7 +488,7 @@ const ShipmentsPage = () => {
     shipment.destination.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const activeShipments = filteredShipments.filter(s => s.currentLeg !== 'COMPLETED');
+  const activeShipments = filteredShipments.filter(s => s.currentLeg !== 'COMPLETED' && s.currentStatus !== 'CANCELLED');
   const inTransit = filteredShipments.filter(s =>
     s.currentLeg === 'INTERNATIONAL' ||
     s.currentStatus === 'IN_TRANSIT' ||
@@ -564,6 +670,7 @@ const ShipmentsPage = () => {
               shipmentDetails={shipmentDetails}
               loadingDetails={loadingDetails}
               onClose={() => setSelectedShipment(null)}
+              onCancelled={refetch}
             />
           )}
         </SheetContent>

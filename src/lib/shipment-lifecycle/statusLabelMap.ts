@@ -23,6 +23,7 @@ export const STATUS_LABEL_MAP: Record<ShipmentStatus, StatusDisplayInfo> = {
   INTL_OUT_FOR_DELIVERY:    { label: 'Out for Delivery (International)', dotColor: 'bg-purple-500', badgeVariant: 'default' },
   INTL_DELIVERED:           { label: 'Delivered',                        dotColor: 'bg-green-500',  badgeVariant: 'success' },
   FAILED:                   { label: 'Failed',                           dotColor: 'bg-red-500',    badgeVariant: 'destructive' },
+  CANCELLED:                { label: 'Cancelled',                        dotColor: 'bg-red-500',    badgeVariant: 'destructive' },
 };
 
 export const LEG_LABEL_MAP: Record<ShipmentLeg, string> = {
