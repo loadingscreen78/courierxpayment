@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { List, X, Package, CaretRight, UserPlus } from '@phosphor-icons/react';
+import { List, X, CaretRight, UserPlus } from '@phosphor-icons/react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -46,7 +46,7 @@ export const LandingHeader = () => {
 
         {/* Desktop: nav links + CTAs — right */}
         <div className="hidden lg:flex items-center gap-1">
-          <nav className="flex items-center mr-4">
+          <nav className="flex items-center">
             {navLinks.map((link) => (
               <Link
                 key={link.label}
@@ -58,28 +58,24 @@ export const LandingHeader = () => {
             ))}
           </nav>
 
+          {/* Divider */}
+          <div className="mx-4 h-6 w-px bg-border" />
+
+          {/* Auth buttons */}
           <Link
             href="/auth"
-            className="px-3.5 py-2 text-[15px] font-medium text-muted-foreground hover:text-foreground transition-colors rounded-xl hover:bg-muted/60"
+            className="px-4 py-2 text-[15px] font-medium text-muted-foreground hover:text-foreground transition-colors rounded-xl hover:bg-muted/60"
           >
             Sign In
           </Link>
 
           <Link
             href="/open-account"
-            className="flex items-center gap-1.5 px-3.5 py-2 text-[15px] font-medium text-muted-foreground hover:text-foreground transition-colors rounded-xl hover:bg-muted/60"
+            className="flex items-center gap-1.5 ml-1 px-5 py-2.5 text-[15px] font-semibold bg-coke-red hover:bg-red-600 text-white rounded-xl transition-colors shadow-md shadow-coke-red/20"
           >
             <UserPlus className="h-4 w-4" />
             Open Account
           </Link>
-
-          <button
-            onClick={() => router.push('/public/book')}
-            className="ml-2 flex items-center gap-1.5 bg-coke-red hover:bg-red-600 text-white px-5 py-2.5 rounded-xl text-[15px] font-semibold transition-colors shadow-md shadow-coke-red/20"
-          >
-            <Package className="h-4 w-4" />
-            Ship Now
-          </button>
         </div>
 
         {/* Mobile: hamburger */}
@@ -147,20 +143,13 @@ export const LandingHeader = () => {
                   Sign In
                 </button>
                 <button
-                  className="flex-1 h-11 rounded-xl text-sm font-medium border border-border hover:bg-muted/60 transition-colors flex items-center justify-center gap-1.5"
+                  className="flex-1 h-11 rounded-xl text-sm font-semibold bg-coke-red hover:bg-red-600 text-white transition-colors flex items-center justify-center gap-1.5"
                   onClick={() => { router.push('/open-account'); setMobileMenuOpen(false); }}
                 >
                   <UserPlus className="h-3.5 w-3.5" />
                   Open Account
                 </button>
               </div>
-              <button
-                className="w-full h-12 rounded-xl text-sm font-semibold bg-coke-red hover:bg-red-600 text-white transition-colors flex items-center justify-center gap-1.5"
-                onClick={() => { router.push('/public/book'); setMobileMenuOpen(false); }}
-              >
-                <Package className="h-4 w-4" />
-                Ship Now
-              </button>
             </motion.div>
           </motion.div>
         )}
