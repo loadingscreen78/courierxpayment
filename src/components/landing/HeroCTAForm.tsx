@@ -282,7 +282,7 @@ export const HeroCTAForm = () => {
 
 
   return (
-    <div className="w-full max-w-md">
+    <div className="w-full">
       <div className="rounded-2xl border border-border bg-card/95 backdrop-blur-sm shadow-2xl shadow-black/10 overflow-hidden">
         <Tabs defaultValue="ship" className="w-full">
           {/* Tab Headers */}
