@@ -341,7 +341,18 @@ export const ReviewStep = ({ data, aggregatedSupplyDays, aggregatedTotalValue, o
       </Card>
 
       {/* Wallet Balance Check */}
-      <WalletBalanceCheck totalAmount={grandTotal} onProceed={handleConfirmBooking} />
+      <WalletBalanceCheck
+        totalAmount={grandTotal}
+        onProceed={handleConfirmBooking}
+        shippingCost={shippingCost}
+        addonsTotal={addonsTotal}
+        carrierName={shippingRate.name}
+        billItems={[
+          { label: `Shipping (${shippingRate.name})`, amount: shippingCost },
+          ...(data.insurance ? [{ label: 'Shipment Insurance', amount: INSURANCE_PRICE }] : []),
+          ...(data.specialPackaging ? [{ label: 'Special Packaging', amount: SPECIAL_PACKAGING_PRICE }] : []),
+        ]}
+      />
     </div>
   );
 };

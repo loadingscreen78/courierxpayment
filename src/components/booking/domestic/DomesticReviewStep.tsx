@@ -114,6 +114,12 @@ const DomesticReviewStepComponent = ({ data }: Props) => {
         <WalletBalanceCheck
           totalAmount={courier.customer_price}
           onProceed={() => {/* handled by parent submit button */}}
+          shippingCost={courier.shipping_charge}
+          carrierName={courier.courier_name}
+          billItems={[
+            { label: 'Shipping Charges', amount: courier.shipping_charge },
+            { label: 'GST (18%)', amount: courier.gst_amount },
+          ]}
         />
       </div>
     </div>

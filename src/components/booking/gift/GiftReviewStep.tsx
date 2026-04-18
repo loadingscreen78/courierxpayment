@@ -232,7 +232,18 @@ export const GiftReviewStep = ({ data, totalValue, onConfirmBooking }: GiftRevie
       </Card>
 
       {/* Wallet Balance Check */}
-      <WalletBalanceCheck totalAmount={grandTotal} onProceed={handleConfirmBooking} />
+      <WalletBalanceCheck
+        totalAmount={grandTotal}
+        onProceed={handleConfirmBooking}
+        shippingCost={shippingPrice}
+        addonsTotal={addonsTotal}
+        carrierName={shippingRate.name}
+        billItems={[
+          { label: `Shipping (${shippingRate.name})`, amount: shippingPrice },
+          ...(data.insurance ? [{ label: 'Shipment Insurance', amount: INSURANCE_PRICE }] : []),
+          ...(data.giftWrapping ? [{ label: 'Gift Wrapping', amount: GIFT_WRAPPING_PRICE }] : []),
+        ]}
+      />
     </div>
   );
 };

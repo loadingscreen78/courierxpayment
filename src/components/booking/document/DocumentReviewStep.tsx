@@ -222,7 +222,18 @@ export const DocumentReviewStep = memo(({ data, onConfirmBooking }: DocumentRevi
       </Card>
 
       {/* Wallet Balance Check */}
-      <WalletBalanceCheck totalAmount={grandTotal} onProceed={handleConfirmBooking} />
+      <WalletBalanceCheck
+        totalAmount={grandTotal}
+        onProceed={handleConfirmBooking}
+        shippingCost={shippingPrice}
+        addonsTotal={addonsTotal}
+        carrierName={shippingRate.name}
+        billItems={[
+          { label: `Shipping (${shippingRate.name})`, amount: shippingPrice },
+          ...(data.insurance ? [{ label: 'Document Insurance', amount: INSURANCE_PRICE }] : []),
+          ...(data.waterproofPackaging ? [{ label: 'Waterproof Packaging', amount: WATERPROOF_PRICE }] : []),
+        ]}
+      />
     </div>
   );
 });
