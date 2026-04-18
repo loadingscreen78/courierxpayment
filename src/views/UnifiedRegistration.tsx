@@ -120,10 +120,10 @@ function getRegistrationStep(flowStep: FlowStep): RegistrationStep | null {
 
 // ─── Aadhaar types for instructions panel ────────────────────────────
 const AADHAAR_TYPES = [
-  { label: 'Original Aadhaar Card', desc: 'Physical card issued by UIDAI', icon: '🪪' },
-  { label: 'Aadhaar Letter', desc: 'Printed letter from enrollment center', icon: '📄' },
-  { label: 'e-Aadhaar (PDF)', desc: 'Downloaded from uidai.gov.in', icon: '📑' },
-  { label: 'mAadhaar Screenshot', desc: 'Screenshot from mAadhaar app', icon: '📱' },
+  { label: 'Original Aadhaar Card', desc: 'Physical card issued by UIDAI', icon: 'ID' },
+  { label: 'Aadhaar Letter', desc: 'Printed letter from enrollment center', icon: 'Doc' },
+  { label: 'e-Aadhaar (PDF)', desc: 'Downloaded from uidai.gov.in', icon: 'PDF' },
+  { label: 'mAadhaar Screenshot', desc: 'Screenshot from mAadhaar app', icon: 'App' },
 ];
 
 // ─── Indian states ───────────────────────────────────────────────────

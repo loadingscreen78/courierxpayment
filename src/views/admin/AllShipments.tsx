@@ -241,8 +241,8 @@ export default function AllShipments() {
             </SelectTrigger>
             <SelectContent className="bg-[#16161a] border-white/10">
               <SelectItem value="all" className="text-gray-300 focus:bg-white/10 focus:text-white">All Routes</SelectItem>
-              <SelectItem value="domestic" className="text-gray-300 focus:bg-white/10 focus:text-white">🇮🇳 Domestic</SelectItem>
-              <SelectItem value="international" className="text-gray-300 focus:bg-white/10 focus:text-white">🌍 International</SelectItem>
+              <SelectItem value="domestic" className="text-gray-300 focus:bg-white/10 focus:text-white">Domestic</SelectItem>
+              <SelectItem value="international" className="text-gray-300 focus:bg-white/10 focus:text-white">International</SelectItem>
             </SelectContent>
           </Select>
           <Select value={sourceFilter} onValueChange={setSourceFilter}>
@@ -251,8 +251,8 @@ export default function AllShipments() {
             </SelectTrigger>
             <SelectContent className="bg-[#16161a] border-white/10">
               <SelectItem value="all" className="text-gray-300 focus:bg-white/10 focus:text-white">All Sources</SelectItem>
-              <SelectItem value="guest" className="text-gray-300 focus:bg-white/10 focus:text-white">👤 Guest Bookings</SelectItem>
-              <SelectItem value="registered" className="text-gray-300 focus:bg-white/10 focus:text-white">✅ Registered Users</SelectItem>
+              <SelectItem value="guest" className="text-gray-300 focus:bg-white/10 focus:text-white">Guest Bookings</SelectItem>
+              <SelectItem value="registered" className="text-gray-300 focus:bg-white/10 focus:text-white">Registered Users</SelectItem>
             </SelectContent>
           </Select>
         </motion.div>
@@ -269,11 +269,11 @@ export default function AllShipments() {
           </span>
           <span className="shrink-0 inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-white/5 border border-white/10 text-green-400">
             <span className="w-2 h-2 rounded-full bg-green-500" />
-            🇮🇳 Domestic: {filteredShipments.filter(s => s.current_leg === 'DOMESTIC').length}
+            Domestic: {filteredShipments.filter(s => s.current_leg === 'DOMESTIC').length}
           </span>
           <span className="shrink-0 inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-white/5 border border-white/10 text-blue-400">
             <span className="w-2 h-2 rounded-full bg-blue-500" />
-            🌍 International: {filteredShipments.filter(s => s.current_leg !== 'DOMESTIC').length}
+            International: {filteredShipments.filter(s => s.current_leg !== 'DOMESTIC').length}
           </span>
           <span className="shrink-0 inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-white/5 border border-white/10 text-amber-400">
             <span className="w-2 h-2 rounded-full bg-amber-500" />
@@ -285,7 +285,7 @@ export default function AllShipments() {
           </span>
           <span className="shrink-0 inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-purple-500/10 border border-purple-500/20 text-purple-400">
             <span className="w-2 h-2 rounded-full bg-purple-500" />
-            👤 Guest: {filteredShipments.filter(s => s.is_guest).length}
+            Guest: {filteredShipments.filter(s => s.is_guest).length}
           </span>
           <span className="shrink-0 inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-red-500/10 border border-red-500/20 text-red-400">
             <span className="w-2 h-2 rounded-full bg-red-500" />
@@ -321,10 +321,10 @@ export default function AllShipments() {
               >
                 <div className="flex items-center justify-between gap-4">
                   <div className="flex items-center gap-4 flex-1 min-w-0">
-                    <div className="w-10 h-10 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center text-lg shrink-0">
-                      {shipment.shipment_type === 'medicine' && '💊'}
-                      {shipment.shipment_type === 'document' && '📄'}
-                      {shipment.shipment_type === 'gift' && '🎁'}
+                    <div className="w-10 h-10 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center text-sm font-bold text-gray-400 shrink-0">
+                      {shipment.shipment_type === 'medicine' && 'Rx'}
+                      {shipment.shipment_type === 'document' && 'Doc'}
+                      {shipment.shipment_type === 'gift' && 'Gift'}
                     </div>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2 flex-wrap mb-1">
@@ -334,17 +334,17 @@ export default function AllShipments() {
                         {/* Domestic / International badge */}
                         {shipment.current_leg === 'DOMESTIC' ? (
                           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-green-500/10 border border-green-500/30 text-green-400">
-                            🇮🇳 Domestic
+                            Domestic
                           </span>
                         ) : (
                           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-500/10 border border-blue-500/30 text-blue-400">
-                            🌍 International
+                            International
                           </span>
                         )}
                         {/* Guest badge */}
                         {shipment.is_guest && (
                           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-500/10 border border-purple-500/30 text-purple-400">
-                            👤 Guest
+                            Guest
                           </span>
                         )}
                         <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium bg-white/5 border border-white/10">

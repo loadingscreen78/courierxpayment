@@ -90,11 +90,11 @@ export default function QCWorkbench() {
 
   const getShipmentTypeIcon = (type: string) => {
     const icons: Record<string, string> = {
-      medicine: '💊',
-      document: '📄',
-      gift: '🎁',
+      medicine: 'Rx',
+      document: 'Doc',
+      gift: 'Gift',
     };
-    return icons[type] || '📦';
+    return icons[type] || 'Pkg';
   };
 
   return (

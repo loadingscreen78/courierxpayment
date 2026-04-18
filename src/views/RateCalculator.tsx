@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo, useCallback, memo } from 'react';
-import { Calculator, Package, MapPin, Scales, Clock, Truck, Warning, Info, Check, X, Star } from '@phosphor-icons/react';
+import { Calculator, Package, MapPin, Scales, Clock, Truck, Warning, Info, Check, X, Star, Pill, FileText as FileDoc, Gift as GiftIcon } from '@phosphor-icons/react';
 import { AppLayout } from '@/components/layout';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -13,6 +13,7 @@ import { CountrySelector } from '@/components/shipping/CountrySelector';
 import { CountryRegulations } from '@/components/shipping/CountryRegulations';
 import { ETADisplay } from '@/components/shipping/ETADisplay';
 import { ProhibitedItemsAlert } from '@/components/shipping/ProhibitedItemsAlert';
+import { ShippingModeToggle } from '@/components/ui/ShippingModeToggle';
 import { useCountries } from '@/hooks/useCountries';
 import { useSeo } from '@/hooks/useSeo';
 import { getCourierOptions, Carrier } from '@/lib/shipping/rateCalculator';
@@ -139,6 +140,9 @@ const RateCalculator = () => {
           <p className="text-muted-foreground max-w-2xl mx-auto">
             Get instant quotes and delivery estimates. Select destination and weight.
           </p>
+          <div className="flex justify-center">
+            <ShippingModeToggle />
+          </div>
         </div>
 
         {/* Simple Input Form */}
@@ -153,9 +157,9 @@ const RateCalculator = () => {
                 </Label>
                 <div className="grid grid-cols-3 gap-2">
                   {[
-                    { value: 'medicine' as const, label: 'Medicine', icon: '💊' },
-                    { value: 'document' as const, label: 'Document', icon: '📄' },
-                    { value: 'gift' as const, label: 'Gift', icon: '🎁' }
+                    { value: 'medicine' as const, label: 'Medicine', Icon: Pill },
+                    { value: 'document' as const, label: 'Document', Icon: FileDoc },
+                    { value: 'gift' as const, label: 'Gift', Icon: GiftIcon }
                   ].map((type) => (
                     <button
                       key={type.value}
@@ -167,7 +171,9 @@ const RateCalculator = () => {
                           : "bg-card border-border hover:border-primary/50"
                       )}
                     >
-                      <span className="text-2xl">{type.icon}</span>
+                      <type.Icon size={28} weight="bold" className={cn(
+                        shipmentType === type.value ? "text-primary" : "text-muted-foreground"
+                      )} />
                       <span className={cn(
                         "text-xs font-medium",
                         shipmentType === type.value ? "text-primary" : "text-foreground"
@@ -265,10 +271,10 @@ const RateCalculator = () => {
                 {/* Quick Weight Presets */}
                 <div className="grid grid-cols-4 gap-2">
                   {[
-                    { value: 500, label: '500g', icon: '📦' },
-                    { value: 1000, label: '1kg', icon: '📦' },
-                    { value: 2000, label: '2kg', icon: '📦' },
-                    { value: 5000, label: '5kg', icon: '📦' }
+                    { value: 500, label: '500g', icon: '' },
+                    { value: 1000, label: '1kg', icon: '' },
+                    { value: 2000, label: '2kg', icon: '' },
+                    { value: 5000, label: '5kg', icon: '' }
                   ].map((preset) => (
                     <button
                       key={preset.value}
@@ -281,7 +287,11 @@ const RateCalculator = () => {
                           : "bg-card border-border hover:border-primary/50"
                       )}
                     >
-                      <div className="text-3xl mb-2">{preset.icon}</div>
+                      <div className="flex items-center justify-center mb-2">
+                        <Scales size={28} weight="bold" className={cn(
+                          weightGrams === preset.value ? "text-primary" : "text-muted-foreground"
+                        )} />
+                      </div>
                       <div className={cn(
                         "text-sm font-bold font-typewriter",
                         weightGrams === preset.value ? "text-primary" : "text-foreground"

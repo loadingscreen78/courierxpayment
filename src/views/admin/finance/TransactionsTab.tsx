@@ -289,7 +289,7 @@ export function TransactionsTab() {
                       <td className="px-4 py-3 text-white font-mono text-xs">{row.tracking_number}</td>
                       <td className="px-4 py-3">
                         <span className="capitalize text-xs px-2 py-0.5 rounded-full bg-white/5 border border-white/10 text-gray-300">
-                          {row.shipment_type === 'medicine' ? '💊' : row.shipment_type === 'document' ? '📄' : '🎁'} {row.shipment_type}
+                          {row.shipment_type === 'medicine' ? 'Rx' : row.shipment_type === 'document' ? 'Doc' : 'Gift'} {row.shipment_type}
                         </span>
                       </td>
                       <td className="px-4 py-3 text-blue-400 font-bold">₹{Number(row.total_amount).toFixed(2)}</td>

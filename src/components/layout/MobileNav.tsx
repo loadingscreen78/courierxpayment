@@ -217,7 +217,7 @@ export const MobileNav = () => {
             <div className="flex items-center justify-between">
               <div>
                 <SheetTitle className="font-typewriter text-xl">
-                  {isDomestic ? '🇮🇳 Ship Across India' : 'What are you shipping?'}
+                  {isDomestic ? 'Ship Across India' : 'What are you shipping?'}
                 </SheetTitle>
                 <p className="text-sm text-muted-foreground mt-0.5">
                   {isDomestic ? 'Direct pickup, no warehouse' : 'Choose a shipment type to get started'}

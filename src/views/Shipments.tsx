@@ -742,7 +742,7 @@ const ShipmentsPage = () => {
                     <h3 className="font-semibold mb-1">No active shipments</h3>
                     <p className="text-sm mb-4">Start shipping your medicines, documents, or gifts internationally</p>
                     <Button variant="default" className="bg-coke-red hover:bg-coke-red/90" asChild>
-                      <a href="/">Book a new shipment</a>
+                      <a href="/new-shipment">Book a new shipment</a>
                     </Button>
                   </div>
                 ) : (

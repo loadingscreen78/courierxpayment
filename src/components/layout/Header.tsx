@@ -13,16 +13,12 @@ import {
 import { useAuth } from '@/contexts/AuthContext';
 import { useWallet } from '@/contexts/WalletContext';
 import { useRouter } from 'next/navigation';
-const logoMain = { src: '/lovable-uploads/logo.png' };
 import { cn } from '@/lib/utils';
-import { ShippingModeToggle } from '@/components/ui/ShippingModeToggle';
-import { useShippingMode } from '@/contexts/ShippingModeContext';
 
 export const Header = () => {
   const { user, profile, signOut } = useAuth();
   const { balance } = useWallet();
   const router = useRouter();
-  const { mode, isSwitching } = useShippingMode();
 
   const handleSignOut = async () => {
     await signOut();
@@ -33,21 +29,20 @@ export const Header = () => {
 
   return (
     <header className="sticky top-0 z-40 bg-background/80 backdrop-blur-xl border-b border-border/40">
-      <div className="flex items-center justify-between h-14 px-4 lg:px-6">
-        {/* Logo */}
-        <div className="flex items-center gap-2.5">
-          <img 
-            src={logoMain.src} 
-            alt="CourierX" 
-            className="h-8 w-auto object-contain"
-          />
+      <div className="flex items-center justify-end h-14 px-4 lg:px-6">
+        {/* Right Actions - Rate Calculator, Wallet, Notifications, Profile */}
+        <div className="flex items-center gap-1.5">
+          {/* Rate Calculator */}
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="gap-1.5 rounded-xl text-muted-foreground hover:text-foreground h-9"
+            onClick={() => router.push('/rate-calculator')}
+          >
+            <Calculator className="h-4 w-4" />
+            <span className="hidden sm:inline text-sm">Calculate</span>
+          </Button>
 
-        </div>
-
-        {/* Center - Desktop Quick Actions */}
-        <div className="hidden md:flex items-center gap-2">
-          {/* Shipping Mode Toggle */}
-          <ShippingModeToggle />
           {/* Wallet Balance */}
           <button
             onClick={() => router.push('/wallet')}
@@ -76,41 +71,6 @@ export const Header = () => {
             </div>
             {isLowBalance && (
               <span className="w-1.5 h-1.5 bg-destructive rounded-full animate-pulse shrink-0" />
-            )}
-          </button>
-
-          {/* Rate Calculator */}
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            className="gap-1.5 rounded-xl text-muted-foreground hover:text-foreground h-9"
-            onClick={() => router.push('/rate-calculator')}
-          >
-            <Calculator className="h-4 w-4" />
-            <span className="hidden lg:inline text-sm">Calculate</span>
-          </Button>
-        </div>
-
-        {/* Right Actions */}
-        <div className="flex items-center gap-1">
-          {/* Mobile Shipping Mode Toggle */}
-          <ShippingModeToggle compact className="md:hidden mr-1" />
-          
-          {/* Mobile Wallet */}
-          <button
-            onClick={() => router.push('/wallet')}
-            className={cn(
-              "relative md:hidden flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl transition-all border text-xs font-bold font-typewriter",
-              isLowBalance 
-                ? 'bg-red-50 border-red-200 text-destructive' 
-                : 'bg-muted/60 border-border/50 text-foreground'
-            )}
-          >
-            {isLowBalance && <Warning className="h-3 w-3" />}
-            <Wallet className="h-3 w-3" />
-            ₹{balance.toLocaleString('en-IN')}
-            {isLowBalance && (
-              <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-destructive rounded-full animate-pulse" />
             )}
           </button>
 

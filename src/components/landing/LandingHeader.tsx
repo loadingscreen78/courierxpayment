@@ -1,16 +1,21 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { List, X, CaretRight, UserPlus } from '@phosphor-icons/react';
+import { List, X, CaretRight, UserPlus, User } from '@phosphor-icons/react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/contexts/AuthContext';
 
 export const LandingHeader = () => {
   const router = useRouter();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const { user, profile } = useAuth();
+
+  const isSignedIn = !!user;
+  const displayName = profile?.full_name?.split(' ')[0] || user?.email?.split('@')[0] || 'Account';
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 20);
@@ -61,21 +66,35 @@ export const LandingHeader = () => {
           {/* Divider */}
           <div className="mx-4 h-6 w-px bg-border" />
 
-          {/* Auth buttons */}
-          <Link
-            href="/auth"
-            className="px-4 py-2 text-[15px] font-medium text-muted-foreground hover:text-foreground transition-colors rounded-xl hover:bg-muted/60"
-          >
-            Sign In
-          </Link>
+          {/* Auth buttons - show profile if signed in */}
+          {isSignedIn ? (
+            <Link
+              href="/dashboard"
+              className="flex items-center gap-2 px-4 py-2 text-[15px] font-semibold bg-coke-red hover:bg-red-600 text-white rounded-xl transition-colors shadow-md shadow-coke-red/20"
+            >
+              <div className="h-6 w-6 rounded-md bg-white/20 flex items-center justify-center text-white text-xs font-bold shrink-0">
+                {displayName.charAt(0).toUpperCase()}
+              </div>
+              {displayName}
+            </Link>
+          ) : (
+            <>
+              <Link
+                href="/auth"
+                className="px-4 py-2 text-[15px] font-medium text-muted-foreground hover:text-foreground transition-colors rounded-xl hover:bg-muted/60"
+              >
+                Sign In
+              </Link>
 
-          <Link
-            href="/register"
-            className="flex items-center gap-1.5 ml-1 px-5 py-2.5 text-[15px] font-semibold bg-coke-red hover:bg-red-600 text-white rounded-xl transition-colors shadow-md shadow-coke-red/20"
-          >
-            <UserPlus className="h-4 w-4" />
-            Open Account
-          </Link>
+              <Link
+                href="/register"
+                className="flex items-center gap-1.5 ml-1 px-5 py-2.5 text-[15px] font-semibold bg-coke-red hover:bg-red-600 text-white rounded-xl transition-colors shadow-md shadow-coke-red/20"
+              >
+                <UserPlus className="h-4 w-4" />
+                Open Account
+              </Link>
+            </>
+          )}
         </div>
 
         {/* Mobile: hamburger */}
@@ -135,21 +154,33 @@ export const LandingHeader = () => {
               transition={{ delay: 0.18 }}
               className="px-4 py-4 border-t border-border/50 space-y-2"
             >
-              <div className="flex gap-2">
+              {isSignedIn ? (
                 <button
-                  className="flex-1 h-11 rounded-xl text-sm font-medium border border-border hover:bg-muted/60 transition-colors"
-                  onClick={() => { router.push('/auth'); setMobileMenuOpen(false); }}
+                  className="w-full h-11 rounded-xl text-sm font-semibold bg-coke-red hover:bg-red-600 text-white transition-colors flex items-center justify-center gap-2"
+                  onClick={() => { router.push('/dashboard'); setMobileMenuOpen(false); }}
                 >
-                  Sign In
+                  <div className="h-6 w-6 rounded-md bg-white/20 flex items-center justify-center text-white text-xs font-bold shrink-0">
+                    {displayName.charAt(0).toUpperCase()}
+                  </div>
+                  Go to Dashboard
                 </button>
-                <button
-                  className="flex-1 h-11 rounded-xl text-sm font-semibold bg-coke-red hover:bg-red-600 text-white transition-colors flex items-center justify-center gap-1.5"
-                  onClick={() => { router.push('/register'); setMobileMenuOpen(false); }}
-                >
-                  <UserPlus className="h-3.5 w-3.5" />
-                  Open Account
-                </button>
-              </div>
+              ) : (
+                <div className="flex gap-2">
+                  <button
+                    className="flex-1 h-11 rounded-xl text-sm font-medium border border-border hover:bg-muted/60 transition-colors"
+                    onClick={() => { router.push('/auth'); setMobileMenuOpen(false); }}
+                  >
+                    Sign In
+                  </button>
+                  <button
+                    className="flex-1 h-11 rounded-xl text-sm font-semibold bg-coke-red hover:bg-red-600 text-white transition-colors flex items-center justify-center gap-1.5"
+                    onClick={() => { router.push('/register'); setMobileMenuOpen(false); }}
+                  >
+                    <UserPlus className="h-3.5 w-3.5" />
+                    Open Account
+                  </button>
+                </div>
+              )}
             </motion.div>
           </motion.div>
         )}

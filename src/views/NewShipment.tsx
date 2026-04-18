@@ -7,6 +7,7 @@ import { Card } from '@/components/ui/card';
 import { useHaptics } from '@/hooks/useHaptics';
 import { deleteDraftsByType } from '@/lib/drafts/draftService';
 import { useShippingMode } from '@/contexts/ShippingModeContext';
+import { ShippingModeToggle } from '@/components/ui/ShippingModeToggle';
 
 interface ShipmentTypeCardProps {
   icon: React.ElementType;
@@ -61,13 +62,16 @@ const NewShipment = () => {
     <AppLayout>
       <div className="max-w-2xl mx-auto space-y-8 animate-fade-in">
         {/* Header */}
-        <div className="text-center space-y-2">
+        <div className="text-center space-y-3">
           <h1 className="text-3xl font-typewriter font-bold">Create New Shipment</h1>
           <p className="text-muted-foreground">
             {isDomestic
               ? 'Ship documents or parcels anywhere across India'
               : 'Select the type of shipment you want to send internationally'}
           </p>
+          <div className="flex justify-center">
+            <ShippingModeToggle />
+          </div>
         </div>
 
         {/* Shipment Type Selection */}
@@ -126,7 +130,7 @@ const NewShipment = () => {
           <p className="text-sm text-muted-foreground text-center">
             {isDomestic ? (
               <>
-                <span className="font-semibold">🇮🇳 Domestic Shipping:</span> Direct pickup from your address. No warehouse involvement. AWB label provided instantly.
+                <span className="font-semibold">Domestic Shipping:</span> Direct pickup from your address. No warehouse involvement. AWB label provided instantly.
               </>
             ) : (
               <>

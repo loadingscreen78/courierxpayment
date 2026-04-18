@@ -358,10 +358,10 @@ function AWBCard({ shipment, isRegenerating, onDownload, onRegenerate, mode }: {
     <div className="bg-[#16161a] rounded-[2rem] border border-white/5 p-4 hover:bg-white/[0.02] transition-all">
       <div className="flex items-start justify-between gap-4">
         <div className="flex items-start gap-4 flex-1 min-w-0">
-          <div className="w-10 h-10 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center text-lg shrink-0">
-            {shipment.shipment_type === 'medicine' && '💊'}
-            {shipment.shipment_type === 'document' && '📄'}
-            {shipment.shipment_type === 'gift' && '🎁'}
+          <div className="w-10 h-10 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center text-sm font-bold text-gray-400 shrink-0">
+            {shipment.shipment_type === 'medicine' && 'Rx'}
+            {shipment.shipment_type === 'document' && 'Doc'}
+            {shipment.shipment_type === 'gift' && 'Gift'}
           </div>
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2 flex-wrap mb-1">

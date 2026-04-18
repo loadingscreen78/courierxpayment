@@ -1096,7 +1096,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                           <FormLabel>Pickup Pincode</FormLabel>
                           <FormControl><Input {...field} placeholder="110001" maxLength={6} /></FormControl>
                           {pickupLookup.loading && <p className="text-xs text-muted-foreground flex items-center gap-1"><CircleNotch className="h-3 w-3 animate-spin" /> Looking up...</p>}
-                          {pickupLookup.state && <p className="text-xs text-candlestick-green">📍 {pickupLookup.district}, {pickupLookup.state}</p>}
+                          {pickupLookup.state && <p className="text-xs text-candlestick-green">{pickupLookup.district}, {pickupLookup.state}</p>}
                           {pickupLookup.error && <p className="text-xs text-destructive">{pickupLookup.error}</p>}
                           <FormMessage />
                         </FormItem>
@@ -1106,7 +1106,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                           <FormLabel>Delivery Pincode</FormLabel>
                           <FormControl><Input {...field} placeholder="400001" maxLength={6} /></FormControl>
                           {deliveryLookup.loading && <p className="text-xs text-muted-foreground flex items-center gap-1"><CircleNotch className="h-3 w-3 animate-spin" /> Looking up...</p>}
-                          {deliveryLookup.state && <p className="text-xs text-candlestick-green">📍 {deliveryLookup.district}, {deliveryLookup.state}</p>}
+                          {deliveryLookup.state && <p className="text-xs text-candlestick-green">{deliveryLookup.district}, {deliveryLookup.state}</p>}
                           {deliveryLookup.error && <p className="text-xs text-destructive">{deliveryLookup.error}</p>}
                           <FormMessage />
                         </FormItem>
@@ -1211,7 +1211,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
             {/* Account savings banner */}
             <div className="rounded-xl border border-candlestick-green/30 bg-candlestick-green/5 p-4">
               <p className="text-sm">
-                💡 <span className="font-medium">Account holders get better rates</span> on these same routes.{' '}
+                <span className="font-medium">Account holders get better rates</span> on these same routes.{' '}
                 <button onClick={() => router.push('/register')} className="text-coke-red hover:underline font-semibold">Open a free account →</button>
               </p>
             </div>
@@ -1529,7 +1529,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                             )} />
                           </div>
                           {senderLookup.state && senderLookup.district && (
-                            <p className="text-xs text-candlestick-green flex items-center gap-1">📍 {senderLookup.district}, {senderLookup.state}</p>
+                            <p className="text-xs text-candlestick-green flex items-center gap-1">{senderLookup.district}, {senderLookup.state}</p>
                           )}
                         </div>
                         <Button type="button" onClick={() => { feedbackPresets.stepChange(); handlePickupNext(); }} className="w-full bg-coke-red hover:bg-red-600 text-white gap-2 py-5">
@@ -1817,7 +1817,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                                   <Input {...field} placeholder={isInternational ? 'Zipcode' : '400001'} maxLength={isInternational ? 10 : 6} readOnly={!isInternational && !!domesticDeliveryPincode} className={`h-11 ${!isInternational && domesticDeliveryPincode ? 'bg-muted' : ''}`} />
                                 </FormControl>
                                 {isInternational && intlZipLookup.loading && <p className="text-xs text-muted-foreground flex items-center gap-1"><CircleNotch className="h-3 w-3 animate-spin" /> Looking up...</p>}
-                                {isInternational && intlZipLookup.city && <p className="text-xs text-candlestick-green">📍 {intlZipLookup.city}{intlZipLookup.state ? `, ${intlZipLookup.state}` : ''}</p>}
+                                {isInternational && intlZipLookup.city && <p className="text-xs text-candlestick-green">{intlZipLookup.city}{intlZipLookup.state ? `, ${intlZipLookup.state}` : ''}</p>}
                                 {!isInternational && receiverLookup.loading && <p className="text-xs text-muted-foreground flex items-center gap-1"><CircleNotch className="h-3 w-3 animate-spin" /> Looking up...</p>}
                                 {!isInternational && receiverLookup.state && <p className="text-xs text-candlestick-green">{receiverLookup.district}, {receiverLookup.state}</p>}
                                 {!isInternational && receiverLookup.error && <p className="text-xs text-destructive">{receiverLookup.error}</p>}

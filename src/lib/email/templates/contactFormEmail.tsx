@@ -33,7 +33,7 @@ export function renderContactFormEmail({
                 <tr>
                   <td style="background: linear-gradient(135deg, #F40000 0%, #C00000 100%); padding: 32px 40px; text-align: center;">
                     <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: 700;">
-                      📬 New Contact Form Submission
+                      New Contact Form Submission
                     </h1>
                     <p style="margin: 8px 0 0; color: rgba(255,255,255,0.9); font-size: 14px;">
                       CourierX Contact Form
@@ -103,7 +103,7 @@ export function renderContactFormEmail({
                       <p style="margin: 0 0 16px; color: #666666; font-size: 14px;">Quick Actions</p>
                       <a href="mailto:${email}?subject=Re: Your CourierX Inquiry" 
                          style="display: inline-block; background-color: #F40000; color: #ffffff; font-size: 14px; font-weight: 700; text-decoration: none; padding: 12px 28px; border-radius: 8px; margin: 0 8px;">
-                        📧 Reply to Customer
+                        Reply to Customer
                       </a>
                     </div>
 

@@ -403,7 +403,7 @@ export default function AddAddress() {
             <div className="space-y-1.5">
               <Label className="text-xs text-white/60">Country</Label>
               <div className="h-11 px-4 flex items-center rounded-xl bg-white/[0.02] border border-white/[0.06] text-white/50 text-sm">
-                🇮🇳 India
+                India
               </div>
             </div>
           </div>

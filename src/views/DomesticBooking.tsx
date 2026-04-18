@@ -175,7 +175,7 @@ const DomesticBooking = () => {
         {/* Header */}
         <div className="text-center space-y-2">
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 text-primary">
-            <span className="text-lg">🇮🇳</span>
+            <span className="text-lg font-bold text-coke-red">IN</span>
             <span className="font-semibold text-sm">Domestic Shipping</span>
           </div>
           <h1 className="text-2xl md:text-3xl font-typewriter font-bold">
