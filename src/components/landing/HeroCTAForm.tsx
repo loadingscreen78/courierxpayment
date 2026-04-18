@@ -77,6 +77,39 @@ const countryOptions = (() => {
   }
 })();
 
+// ── Pin Input (defined outside to avoid remount on parent re-render) ─────────
+
+const PinInput = ({ value, onChange, meta, placeholder }: {
+  value: string;
+  onChange: (v: string) => void;
+  meta: PincodeMeta;
+  placeholder: string;
+}) => (
+  <div className="space-y-1">
+    <div className="relative">
+      <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" weight="bold" />
+      <Input
+        type="text"
+        inputMode="numeric"
+        maxLength={6}
+        placeholder={placeholder}
+        value={value}
+        onChange={e => onChange(e.target.value.replace(/\D/g, '').slice(0, 6))}
+        className="pl-9 h-11 rounded-xl border-border bg-background text-sm focus:border-coke-red focus:ring-coke-red/20"
+      />
+      {meta.loading && (
+        <CircleNotch className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />
+      )}
+    </div>
+    {meta.district && !meta.error && (
+      <p className="text-xs text-muted-foreground pl-1">{meta.district}, {meta.state}</p>
+    )}
+    {meta.error && (
+      <p className="text-xs text-destructive pl-1">{meta.error}</p>
+    )}
+  </div>
+);
+
 // ── Component ────────────────────────────────────────────────────────────────
 
 export const HeroCTAForm = () => {
@@ -247,38 +280,6 @@ export const HeroCTAForm = () => {
     if (trackPhone) params.set('phone', trackPhone);
     router.push(`/public/track?${params.toString()}`);
   };
-
-  // ── Pin input helper ──
-  const PinInput = ({ value, onChange, meta, placeholder }: {
-    value: string;
-    onChange: (v: string) => void;
-    meta: PincodeMeta;
-    placeholder: string;
-  }) => (
-    <div className="space-y-1">
-      <div className="relative">
-        <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" weight="bold" />
-        <Input
-          type="text"
-          inputMode="numeric"
-          maxLength={6}
-          placeholder={placeholder}
-          value={value}
-          onChange={e => onChange(e.target.value.replace(/\D/g, '').slice(0, 6))}
-          className="pl-9 h-11 rounded-xl border-border bg-background text-sm focus:border-coke-red focus:ring-coke-red/20"
-        />
-        {meta.loading && (
-          <CircleNotch className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />
-        )}
-      </div>
-      {meta.district && !meta.error && (
-        <p className="text-xs text-muted-foreground pl-1">{meta.district}, {meta.state}</p>
-      )}
-      {meta.error && (
-        <p className="text-xs text-destructive pl-1">{meta.error}</p>
-      )}
-    </div>
-  );
 
 
   return (
