@@ -74,7 +74,7 @@ export const LandingHeader = () => {
             className="flex items-center gap-1.5 ml-1 px-5 py-2.5 text-[15px] font-semibold bg-coke-red hover:bg-red-600 text-white rounded-xl transition-colors shadow-md shadow-coke-red/20"
           >
             <UserPlus className="h-4 w-4" />
-            Open Account
+            Sign Up
           </Link>
         </div>
 
@@ -147,7 +147,7 @@ export const LandingHeader = () => {
                   onClick={() => { router.push('/open-account'); setMobileMenuOpen(false); }}
                 >
                   <UserPlus className="h-3.5 w-3.5" />
-                  Open Account
+                  Sign Up
                 </button>
               </div>
             </motion.div>

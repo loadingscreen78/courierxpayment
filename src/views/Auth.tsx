@@ -190,10 +190,9 @@ const Auth = () => {
   const handleEmailAuth = async (values: EmailPasswordFormValues) => {
     setIsLoading(true);
 
-    // Block direct signup — redirect to account opening flow
+    // Redirect signup to the dedicated sign-up page
     if (mode === 'signup') {
       setIsLoading(false);
-      toast({ title: 'Sign up not available here', description: 'Please open an account to get started.', variant: 'destructive' });
       window.location.href = '/open-account';
       return;
     }
@@ -265,24 +264,7 @@ const Auth = () => {
       .single();
 
     if (!profileData || !profileData.full_name) {
-      // New user auto-created by Google — they don't have an account with us
-      // Check if user was just created (within last 60 seconds)
-      const createdAt = currentUser.created_at ? new Date(currentUser.created_at).getTime() : 0;
-      const isNewUser = Date.now() - createdAt < 60000;
-
-      if (isNewUser) {
-        // Sign out and clean up the auto-created user
-        await supabase.auth.signOut();
-        setIsLoading(false);
-        toast({
-          title: 'No account found',
-          description: 'You don\'t have an account with us. Please open an account first to get started.',
-          variant: 'destructive',
-        });
-        return;
-      }
-
-      // Existing user without completed profile — send to onboarding
+      // User without completed profile — send to onboarding
       toast({ 
         title: 'Welcome to CourierX!', 
         description: 'Please complete your profile to get started.' 
@@ -333,18 +315,6 @@ const Auth = () => {
     setIsLoading(false);
 
     if (!profileData || !profileData.full_name) {
-      const createdAt = currentUser.created_at ? new Date(currentUser.created_at).getTime() : 0;
-      const isNewUser = Date.now() - createdAt < 60000;
-      if (isNewUser) {
-        await supabase.auth.signOut();
-        setIsLoading(false);
-        toast({
-          title: 'No account found',
-          description: 'You don\'t have an account with us. Please open an account first to get started.',
-          variant: 'destructive',
-        });
-        return;
-      }
       window.location.href = '/onboarding';
     } else {
       const returnUrl = localStorage.getItem('authReturnUrl');
@@ -699,7 +669,7 @@ const Auth = () => {
                           href="/open-account"
                           className="text-coke-red hover:text-coke-red/80 font-medium transition-colors"
                         >
-                          Open Account
+                          Sign Up
                         </a>
                       </p>
                     </form>

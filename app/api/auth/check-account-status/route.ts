@@ -37,10 +37,11 @@ export async function POST(req: NextRequest) {
     const status = profile.account_status || 'active';
 
     if (status === 'pending') {
+      // Allow pending users to access the dashboard — they'll see a KYC completion banner
       return NextResponse.json({
-        allowed: false,
+        allowed: true,
         status: 'pending',
-        message: 'Your account is pending admin approval. You will receive an email once your account is activated.'
+        message: 'Complete your KYC to unlock lower shipping rates and full account features.'
       });
     }
 

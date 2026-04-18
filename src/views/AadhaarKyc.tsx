@@ -71,7 +71,7 @@ function AadhaarKycInner() {
   const [maskedAadhaar, setMaskedAadhaar] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  const from = searchParams.get('from') || '/';
+  const from = searchParams.get('from') || '/dashboard';
 
   // Handle DigiLocker callback — params injected by /auth/kyc/callback
   useEffect(() => {

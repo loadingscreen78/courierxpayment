@@ -31,6 +31,7 @@ import { Button } from '@/components/ui/button';
 import { motion, AnimatePresence } from 'framer-motion';
 import { format } from 'date-fns';
 import { useShippingMode } from '@/contexts/ShippingModeContext';
+import { KycBanner } from '@/components/dashboard/KycBanner';
 
 // Remove mock data - now using real data from database
 
@@ -289,7 +290,11 @@ const Index = () => {
 
         {/* Welcome Header - Metallic Card */}
         <motion.header variants={itemVariants}>
-          <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-border via-muted to-border p-[1px] shadow-xl">
+
+          {/* KYC Completion Banner */}
+          <KycBanner />
+
+          <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-border via-muted to-border p-[1px] shadow-xl mt-4">
             <div className="relative rounded-3xl bg-card p-5 sm:p-8 overflow-hidden">
               {/* Subtle decorative gradient */}
               <div className="absolute top-0 right-0 w-72 h-72 bg-coke-red/5 rounded-full blur-3xl" />
