@@ -71,13 +71,6 @@ export function validateDeduction(userId: string, amount: number): { valid: bool
     };
   }
   
-  if (availableBalance - amount < MIN_BALANCE_REQUIRED) {
-    return { 
-      valid: false, 
-      error: `Minimum balance of ₹${MIN_BALANCE_REQUIRED.toLocaleString('en-IN')} required` 
-    };
-  }
-  
   return { valid: true };
 }
 

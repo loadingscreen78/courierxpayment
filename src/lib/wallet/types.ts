@@ -76,7 +76,7 @@ export interface WalletState {
 
 // Constants
 export const MIN_RECHARGE_AMOUNT = 500;
-export const MIN_BALANCE_REQUIRED = 1000;
+export const MIN_BALANCE_REQUIRED = 0;
 export const GST_RATE = 0.18; // 18% GST
 
 export const COMPANY_DETAILS: CompanyDetails = {

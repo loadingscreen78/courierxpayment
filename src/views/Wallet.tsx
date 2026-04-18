@@ -478,7 +478,7 @@ const WalletPage = () => {
               <Info size={16} weight="bold" className="text-muted-foreground shrink-0 mt-0.5" />
               <div className="text-xs text-muted-foreground space-y-1">
                 <p className="font-medium text-foreground text-sm">Wallet Guidelines</p>
-                <p>Min. recharge: ₹{MIN_RECHARGE_AMOUNT} · Min. booking balance: ₹1,000</p>
+                <p>Min. recharge: ₹{MIN_RECHARGE_AMOUNT}</p>
                 <p>Refunds processed in 24–48 hrs · Withdrawals on account closure only</p>
               </div>
             </div>

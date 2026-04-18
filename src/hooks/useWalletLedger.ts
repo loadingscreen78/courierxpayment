@@ -282,8 +282,8 @@ export function useWalletLedger(): UseWalletLedgerReturn {
     }
   }, [user?.id]);
 
-  const hasMinimumBalance = useCallback((requiredAmount: number = MIN_BALANCE_REQUIRED) => {
-    return state.availableBalance >= requiredAmount && state.availableBalance >= MIN_BALANCE_REQUIRED;
+  const hasMinimumBalance = useCallback((requiredAmount: number = 0) => {
+    return state.availableBalance >= requiredAmount;
   }, [state.availableBalance]);
 
   const resetPaymentState = useCallback(() => {

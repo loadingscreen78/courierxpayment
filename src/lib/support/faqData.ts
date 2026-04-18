@@ -100,7 +100,7 @@ export const faqData: FAQCategory[] = [
     questions: [
       {
         question: 'What is the minimum wallet balance required?',
-        answer: 'A minimum balance of ₹1,000 is required to initiate any booking. The actual shipment cost will be deducted upon booking confirmation, not during draft creation.'
+        answer: 'There is no minimum wallet balance required after booking. You just need enough balance to cover the shipment cost at the time of booking.'
       },
       {
         question: 'What is the minimum recharge amount?',

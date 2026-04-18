@@ -11,7 +11,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { useAuth } from '@/contexts/AuthContext';
-import { useWallet, MIN_BALANCE_REQUIRED } from '@/contexts/WalletContext';
+import { useWallet } from '@/contexts/WalletContext';
 import { useRouter } from 'next/navigation';
 const logoMain = { src: '/lovable-uploads/logo.png' };
 import { cn } from '@/lib/utils';
@@ -29,7 +29,7 @@ export const Header = () => {
     router.replace('/auth');
   };  const displayName = profile?.full_name || user?.email?.split('@')[0] || 'User';
   const displayEmail = user?.email || profile?.phone_number || '';
-  const isLowBalance = balance < MIN_BALANCE_REQUIRED;
+  const isLowBalance = balance <= 0;
 
   return (
     <header className="sticky top-0 z-40 bg-background/80 backdrop-blur-xl border-b border-border/40">

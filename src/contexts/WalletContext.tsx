@@ -78,7 +78,7 @@ export const WalletProvider = ({ children }: { children: ReactNode }) => {
     }
   };
   
-  const hasMinimumBalance = (requiredAmount: number = MIN_BALANCE_REQUIRED): boolean => {
+  const hasMinimumBalance = (requiredAmount: number = 0): boolean => {
     return wallet.hasMinimumBalance(requiredAmount);
   };
 

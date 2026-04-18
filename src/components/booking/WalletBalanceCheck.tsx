@@ -1,4 +1,4 @@
-import { useWallet, MIN_BALANCE_REQUIRED } from '@/contexts/WalletContext';
+import { useWallet } from '@/contexts/WalletContext';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Wallet, AlertTriangle, CheckCircle2, Plus, Info } from 'lucide-react';
@@ -45,7 +45,7 @@ export const WalletBalanceCheck = ({
   const [isRecharging, setIsRecharging] = useState(false);
 
   const canProceed = hasMinimumBalance(totalAmount);
-  const shortfall = Math.max(0, totalAmount - balance, MIN_BALANCE_REQUIRED - balance);
+  const shortfall = Math.max(0, totalAmount - balance);
 
   const handleOpenRecharge = () => {
     // Pre-fill with shortfall + minimum balance buffer
@@ -111,7 +111,7 @@ export const WalletBalanceCheck = ({
               <div className="p-3 bg-background rounded-lg">
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-muted-foreground">Required Amount</span>
-                  <span className="font-typewriter font-medium">₹{Math.max(totalAmount, MIN_BALANCE_REQUIRED).toLocaleString('en-IN')}</span>
+                  <span className="font-typewriter font-medium">₹{totalAmount.toLocaleString('en-IN')}</span>
                 </div>
                 <div className="flex items-center justify-between text-sm mt-1">
                   <span className="text-muted-foreground">Shortfall</span>
@@ -127,7 +127,7 @@ export const WalletBalanceCheck = ({
                 Add Funds to Wallet
               </Button>
               <p className="text-xs text-center text-muted-foreground">
-                Minimum wallet balance of ₹{MIN_BALANCE_REQUIRED.toLocaleString('en-IN')} required
+                Ensure sufficient wallet balance to proceed
               </p>
             </div>
           )}
@@ -231,7 +231,7 @@ export const WalletBalanceCheck = ({
                 <AlertTriangle className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
                 <div className="text-sm text-amber-800">
                   <p className="font-medium">
-                    Low wallet balance. Need ₹{shortfall.toLocaleString('en-IN')} more to process order including minimum balance of ₹{MIN_BALANCE_REQUIRED.toLocaleString('en-IN')}.
+                    Low wallet balance. Need ₹{shortfall.toLocaleString('en-IN')} more to process this order.
                   </p>
                   <p className="text-amber-600 text-xs mt-0.5">
                     International Wallet needs to be recharged separately

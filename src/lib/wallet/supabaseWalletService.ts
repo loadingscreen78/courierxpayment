@@ -118,13 +118,6 @@ export async function validateDeduction(userId: string, amount: number): Promise
     };
   }
   
-  if (balance - amount < MIN_BALANCE_REQUIRED) {
-    return { 
-      valid: false, 
-      error: `Minimum balance of ₹${MIN_BALANCE_REQUIRED} required after transaction` 
-    };
-  }
-  
   return { valid: true };
 }
 
