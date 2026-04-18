@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -26,9 +26,9 @@ import { usePincodeLookup } from '@/hooks/usePincodeLookup';
 import { DomesticCourierGrid } from '@/components/domestic/DomesticCourierGrid';
 import { useAadhaarOcr } from '@/hooks/useAadhaarOcr';
 import { INDIAN_STATES } from '@/lib/pincode-lookup';
-import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { feedbackPresets } from '@/lib/haptics';
+import { LandingHeader } from '@/components/landing/LandingHeader';
 
 type FlowMode = 'international' | 'domestic';
 
@@ -311,6 +311,7 @@ const COMMON_HSN_CODES = [
 
 export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { toast } = useToast();
   const isInternational = mode === 'international';
   const countries = getAllCountriesForDropdown();
@@ -422,6 +423,23 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
       localStorage.removeItem('publicRateCalcData');
     } catch { /* ignore parse errors */ }
   }, [isInternational, domForm, intlForm]);
+
+  // ── Pre-fill from URL query params (from landing page CTA) ──
+  useEffect(() => {
+    if (!searchParams) return;
+
+    if (!isInternational) {
+      const pickupPincode = searchParams.get('pickupPincode');
+      const deliveryPincode = searchParams.get('deliveryPincode');
+      if (pickupPincode) domForm.setValue('pickupPincode', pickupPincode);
+      if (deliveryPincode) domForm.setValue('deliveryPincode', deliveryPincode);
+    }
+
+    if (isInternational) {
+      const country = searchParams.get('country');
+      if (country) intlForm.setValue('destinationCountry', country);
+    }
+  }, [searchParams, isInternational, domForm, intlForm]);
 
   // ── Pincode lookups for domestic rate form (step 1) ──
   const ratePickupPin = domForm.watch('pickupPincode');
@@ -826,22 +844,8 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="sticky top-0 z-50 bg-background/90 backdrop-blur-xl border-b border-border/50">
-        <div className="container flex items-center justify-between h-14 sm:h-16 px-3 sm:px-4">
-          <Link href="/" className="flex items-center gap-2.5 shrink-0">
-            <img alt="CourierX" src="/logo.svg" className="h-7 sm:h-9 w-auto object-contain" />
-          </Link>
-          <div className="flex items-center gap-1.5 sm:gap-2">
-            <Button variant="ghost" size="sm" onClick={() => router.push('/auth')} className="rounded-xl text-xs sm:text-sm px-2 sm:px-3">Sign In</Button>
-            <Button variant="outline" size="sm" onClick={() => router.push('/register')} className="rounded-xl text-xs sm:text-sm gap-1 sm:gap-1.5 px-2 sm:px-3 hidden xs:flex">
-              <UserPlus className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
-              <span className="hidden sm:inline">Open Account — Save 25%</span>
-              <span className="sm:hidden">Save 25%</span>
-            </Button>
-          </div>
-        </div>
-      </header>
+      {/* Header — same as landing page */}
+      <LandingHeader />
 
       <main className="container max-w-3xl lg:max-w-[48vw] py-4 sm:py-8 px-3 sm:px-4 space-y-4 sm:space-y-6 pb-28 md:pb-8">
         {/* Back + Title */}
