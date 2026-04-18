@@ -41,9 +41,7 @@ export const Header = () => {
             alt="CourierX" 
             className="h-8 w-auto object-contain"
           />
-          <span className="hidden sm:block font-typewriter text-lg font-bold text-foreground">
-            CourierX
-          </span>
+
         </div>
 
         {/* Center - Desktop Quick Actions */}

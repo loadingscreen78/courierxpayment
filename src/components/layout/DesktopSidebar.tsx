@@ -201,9 +201,6 @@ export const DesktopSidebar = () => {
             <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 rounded-full border-2 border-sidebar-background" />
           </div>
           <div>
-            <h1 className="font-typewriter text-lg font-bold text-sidebar-foreground tracking-tight leading-none">
-              CourierX
-            </h1>
             <p className="text-[11px] text-sidebar-foreground/40 mt-0.5">Premium Logistics</p>
           </div>
         </div>
