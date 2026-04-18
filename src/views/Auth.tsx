@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Envelope, Phone, ArrowRight, CircleNotch, Eye, EyeSlash, User, Gear, Briefcase, ArrowLeft, Package, Airplane, MapPin, Globe, Truck, ShieldWarning, Warning } from '@phosphor-icons/react';
+import { Envelope, Phone, ArrowRight, CircleNotch, Eye, EyeSlash, ArrowLeft, Package, Globe } from '@phosphor-icons/react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -17,7 +17,6 @@ import { supabase } from '@/integrations/supabase/client';
 const logoMain = { src: '/lovable-uploads/logo.png' };
 import { motion, AnimatePresence } from 'framer-motion';
 import { useGoogleGsi } from '@/hooks/useGoogleGsi';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 
 const emailPasswordSchema = z.object({
   email: z.string().email('Please enter a valid email address'),
@@ -36,16 +35,9 @@ type EmailPasswordFormValues = z.infer<typeof emailPasswordSchema>;
 type PhoneFormValues = z.infer<typeof phoneSchema>;
 type OtpFormValues = z.infer<typeof otpSchema>;
 
-type AuthStep = 'panel-select' | 'method' | 'otp';
+type AuthStep = 'method' | 'otp';
 type AuthMethod = 'email' | 'sms';
 type AuthMode = 'signin' | 'signup';
-type PanelType = 'customer' | 'admin' | 'cxbc';
-
-const panelOptions = [
-  { id: 'customer' as PanelType, title: 'Account Login', description: 'Your gateway to global & local delivery', icon: User, available: true },
-  { id: 'admin' as PanelType, title: 'Admin Login', description: 'Manage operations', icon: Gear, available: true },
-  { id: 'cxbc' as PanelType, title: 'CXBC Panel', description: 'Partner portal', icon: Briefcase, available: false },
-];
 
 /**
  * Dual-lookup helper for CXBC partner access.
@@ -118,8 +110,7 @@ const Auth = () => {
   const { user, signInWithEmail, signUpWithEmail, signInWithOtp, verifyOtp, signInWithGoogle, sendPhoneOtp, verifyPhoneOtp } = useAuth();
   const { toast } = useToast();
   
-  const [step, setStep] = useState<AuthStep>('panel-select');
-  const [selectedPanel, setSelectedPanel] = useState<PanelType | null>(null);
+  const [step, setStep] = useState<AuthStep>('method');
   const [method, setMethod] = useState<AuthMethod>('email');
   const [mode, setMode] = useState<AuthMode>('signin');
   const [phoneNumber, setPhoneNumber] = useState('');
@@ -130,12 +121,6 @@ const Auth = () => {
   const [forgotEmail, setForgotEmail] = useState('');
   const [forgotLoading, setForgotLoading] = useState(false);
   const [routeIndex, setRouteIndex] = useState(0);
-  const [adminPinStep, setAdminPinStep] = useState<'warning' | 'pin' | null>(null);
-  const [adminPin, setAdminPin] = useState(['', '', '', '']);
-  const [adminPinError, setAdminPinError] = useState('');
-  const [adminPinLoading, setAdminPinLoading] = useState(false);
-  const [adminPinRemaining, setAdminPinRemaining] = useState(5);
-  const pinInputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
   useSeo({
     title: 'Sign In | CourierX',
@@ -149,15 +134,7 @@ const Auth = () => {
   if (explicitLogout && typeof sessionStorage !== 'undefined') {
     sessionStorage.removeItem('explicit_logout');
   }
-  const initialPanel = searchParams.get('panel') as PanelType | null;
   const initialMode = searchParams.get('mode') as AuthMode | null;
-
-  useEffect(() => {
-    if (initialPanel && step === 'panel-select' && !selectedPanel) {
-      setSelectedPanel(initialPanel);
-      setStep('method');
-    }
-  }, [initialPanel]);
 
   useEffect(() => {
     if (initialMode && (initialMode === 'signin' || initialMode === 'signup')) {
@@ -176,140 +153,39 @@ const Auth = () => {
   // Handle redirect after sign in
   useEffect(() => {
     const handleRedirect = async () => {
-      if (!user || !selectedPanel) return;
+      if (!user) return;
       if (isLoading) return;
       
       const returnUrl = localStorage.getItem('authReturnUrl');
       
-      if (selectedPanel === 'admin') {
-        const { data: roles } = await supabase.from('user_roles').select('role').eq('user_id', user.id);
-        const hasAdminAccess = roles?.some(r => r.role === 'admin' || r.role === 'warehouse_operator');
-        if (hasAdminAccess) { 
-          router.replace('/admin'); 
-        }
-        else { 
-          toast({ title: 'Access Denied', description: 'No admin privileges.', variant: 'destructive' }); 
-          await supabase.auth.signOut(); 
-        }
-        return;
-      }
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('user_id', user.id)
+        .single();
       
-      if (selectedPanel === 'cxbc') {
-        const { partner, applicationStatus } = await cxbcDualLookup(user.id, user.email ?? undefined);
-        if (partner) { router.replace('/cxbc'); }
-        else if (applicationStatus === 'pending') {
-          toast({ title: 'Your application is Pending', description: 'Your partner application is being reviewed. We\'ll notify you once approved.' });
-        } else if (applicationStatus === 'under_review') {
-          toast({ title: 'Your application is Under Review', description: 'Your partner application is being reviewed. We\'ll notify you once approved.' });
-        } else if (applicationStatus === 'rejected') {
-          toast({ title: 'Application Rejected', description: 'Your application was rejected. You can re-apply.', variant: 'destructive' });
-          router.replace('/cxbc/apply');
-        } else {
-          router.replace('/cxbc/apply');
-        }
-        return;
-      }
-      
-      if (selectedPanel === 'customer') {
-        const { data: profileData } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('user_id', user.id)
-          .single();
-        
-        if (profileData) {
-          if (!profileData.full_name) {
-            router.replace('/onboarding');
-          } else {
-            if (returnUrl) {
-              localStorage.removeItem('authReturnUrl');
-              router.replace(returnUrl);
-            } else {
-              router.replace(safeFrom || '/dashboard');
-            }
-          }
-        } else {
+      if (profileData) {
+        if (!profileData.full_name) {
           router.replace('/onboarding');
+        } else {
+          if (returnUrl) {
+            localStorage.removeItem('authReturnUrl');
+            router.replace(returnUrl);
+          } else {
+            router.replace(safeFrom || '/dashboard');
+          }
         }
+      } else {
+        router.replace('/onboarding');
       }
     };
     
     handleRedirect();
-  }, [user, selectedPanel, router, safeFrom, toast, isLoading]);
+  }, [user, router, safeFrom, toast, isLoading]);
 
   const emailPasswordForm = useForm<EmailPasswordFormValues>({ resolver: zodResolver(emailPasswordSchema), defaultValues: { email: '', password: '' } });
   const phoneForm = useForm<PhoneFormValues>({ resolver: zodResolver(phoneSchema), defaultValues: { phone: '+91' } });
   const otpForm = useForm<OtpFormValues>({ resolver: zodResolver(otpSchema), defaultValues: { otp: '' } });
-
-  const handlePanelSelect = (panel: PanelType) => {
-    if (panel === 'admin') {
-      setAdminPinStep('warning');
-      return;
-    }
-    setSelectedPanel(panel);
-    setStep('method');
-  };
-
-  const handleAdminWarningConfirm = () => {
-    setAdminPinStep('pin');
-    setAdminPin(['', '', '', '']);
-    setAdminPinError('');
-    setTimeout(() => pinInputRefs.current[0]?.focus(), 100);
-  };
-
-  const handleAdminPinInput = (index: number, value: string) => {
-    if (!/^\d*$/.test(value)) return;
-    const newPin = [...adminPin];
-    newPin[index] = value.slice(-1);
-    setAdminPin(newPin);
-    setAdminPinError('');
-
-    if (value && index < 3) {
-      pinInputRefs.current[index + 1]?.focus();
-    }
-
-    // Auto-submit when all 4 digits entered
-    if (value && index === 3 && newPin.every(d => d !== '')) {
-      handleAdminPinSubmit(newPin.join(''));
-    }
-  };
-
-  const handleAdminPinKeyDown = (index: number, e: React.KeyboardEvent) => {
-    if (e.key === 'Backspace' && !adminPin[index] && index > 0) {
-      pinInputRefs.current[index - 1]?.focus();
-    }
-  };
-
-  const handleAdminPinSubmit = async (pin: string) => {
-    setAdminPinLoading(true);
-    setAdminPinError('');
-    try {
-      const res = await fetch('/api/admin/verify-pin', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ pin }),
-      });
-      const data = await res.json();
-
-      if (res.ok && data.success) {
-        setAdminPinStep(null);
-        setSelectedPanel('admin');
-        setMode('signin');
-        setStep('method');
-      } else if (data.locked) {
-        toast({ title: 'Access Locked', description: 'Too many failed attempts. Redirecting...', variant: 'destructive' });
-        setTimeout(() => { window.location.href = '/'; }, 1500);
-      } else {
-        setAdminPinRemaining(data.remainingAttempts ?? 0);
-        setAdminPinError(`Incorrect PIN. ${data.remainingAttempts ?? 0} attempt${(data.remainingAttempts ?? 0) === 1 ? '' : 's'} remaining.`);
-        setAdminPin(['', '', '', '']);
-        setTimeout(() => pinInputRefs.current[0]?.focus(), 100);
-      }
-    } catch {
-      setAdminPinError('Connection error. Please try again.');
-    }
-    setAdminPinLoading(false);
-  };
 
   const handleEmailAuth = async (values: EmailPasswordFormValues) => {
     setIsLoading(true);
@@ -337,47 +213,6 @@ const Auth = () => {
     if (!currentUser) {
       setIsLoading(false);
       return;
-    }
-    
-    if (selectedPanel === 'admin') {
-      const { data: roles } = await supabase.from('user_roles').select('role').eq('user_id', currentUser.id);
-      const hasAdminAccess = roles?.some(r => r.role === 'admin' || r.role === 'warehouse_operator');
-      if (hasAdminAccess) { 
-        setIsLoading(false);
-        window.location.href = '/admin';
-        return;
-      } else { 
-        toast({ title: 'Access Denied', description: 'No admin privileges.', variant: 'destructive' }); 
-        await supabase.auth.signOut(); 
-        setIsLoading(false);
-        return;
-      }
-    }
-    
-    if (selectedPanel === 'cxbc') {
-      const { partner, applicationStatus } = await cxbcDualLookup(currentUser.id, currentUser.email ?? undefined);
-      if (partner) { 
-        setIsLoading(false);
-        window.location.href = '/cxbc';
-        return;
-      } else { 
-        if (applicationStatus === 'pending') {
-          toast({ title: 'Your application is Pending', description: 'Your partner application is being reviewed. We\'ll notify you once approved.' });
-          setIsLoading(false);
-        } else if (applicationStatus === 'under_review') {
-          toast({ title: 'Your application is Under Review', description: 'Your partner application is being reviewed. We\'ll notify you once approved.' });
-          setIsLoading(false);
-        } else if (applicationStatus === 'rejected') {
-          toast({ title: 'Application Rejected', description: 'Your application was rejected. You can re-apply.', variant: 'destructive' });
-          setIsLoading(false);
-          window.location.href = '/cxbc/apply';
-        } else {
-          toast({ title: 'Welcome!', description: 'Apply to become a CXBC partner to access the portal.' });
-          setIsLoading(false);
-          window.location.href = '/cxbc/apply';
-        }
-        return;
-      }
     }
     
     const { data: profileData } = await supabase
@@ -421,29 +256,6 @@ const Auth = () => {
     if (!currentUser) { 
       setIsLoading(false); 
       return; 
-    }
-
-    if (selectedPanel === 'cxbc') {
-      const { partner, applicationStatus } = await cxbcDualLookup(currentUser.id, currentUser.email ?? undefined);
-      if (partner) {
-        setIsLoading(false);
-        window.location.href = '/cxbc';
-      } else if (applicationStatus === 'pending') {
-        toast({ title: 'Your application is Pending', description: 'Your partner application is being reviewed. We\'ll notify you once approved.' });
-        setIsLoading(false);
-      } else if (applicationStatus === 'under_review') {
-        toast({ title: 'Your application is Under Review', description: 'Your partner application is being reviewed. We\'ll notify you once approved.' });
-        setIsLoading(false);
-      } else if (applicationStatus === 'rejected') {
-        toast({ title: 'Application Rejected', description: 'Your application was rejected. You can re-apply.', variant: 'destructive' });
-        setIsLoading(false);
-        window.location.href = '/cxbc/apply';
-      } else {
-        toast({ title: 'Welcome!', description: 'Apply to become a CXBC partner to access the portal.' });
-        setIsLoading(false);
-        window.location.href = '/cxbc/apply';
-      }
-      return;
     }
 
     const { data: profileData } = await supabase
@@ -555,7 +367,7 @@ const Auth = () => {
       await fetch('/api/auth/forgot-password', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: forgotEmail, panel: selectedPanel }),
+        body: JSON.stringify({ email: forgotEmail, panel: 'customer' }),
       });
     } catch (_) { /* silent */ }
     setForgotLoading(false);
@@ -573,7 +385,7 @@ const Auth = () => {
   };
 
   useGoogleGsi({
-    enabled: selectedPanel === 'customer' || selectedPanel === 'cxbc',
+    enabled: true,
     onCredential: handleGoogleCallback,
     buttonDivRef: googleButtonRef,
     isLoading,
@@ -710,101 +522,6 @@ const Auth = () => {
         </div>
       </div>
 
-      {/* ── Admin Access Dialog (Warning + PIN) ── */}
-      <Dialog open={adminPinStep !== null} onOpenChange={(open) => { if (!open) setAdminPinStep(null); }}>
-        <DialogContent className="sm:max-w-md">
-          {adminPinStep === 'warning' && (
-            <>
-              <DialogHeader>
-                <div className="mx-auto mb-3 w-14 h-14 bg-coke-red/10 rounded-full flex items-center justify-center">
-                  <ShieldWarning size={32} weight="bold" className="text-coke-red" />
-                </div>
-                <DialogTitle className="text-center text-lg font-typewriter">Admin Authorization Only</DialogTitle>
-                <DialogDescription className="text-center space-y-2">
-                  <span className="block">This login is restricted to authorized administrators only. It is not intended for public users.</span>
-                  <span className="block text-coke-red/80 font-medium text-xs mt-2">
-                    <Warning size={14} weight="bold" className="inline mr-1 -mt-0.5" />
-                    Your location and system information will be tracked for security purposes.
-                  </span>
-                </DialogDescription>
-              </DialogHeader>
-              <DialogFooter className="flex-col gap-2 sm:flex-col">
-                <Button
-                  onClick={handleAdminWarningConfirm}
-                  className="w-full h-11 rounded-full bg-coke-red hover:bg-coke-red/90 text-white font-semibold font-typewriter"
-                >
-                  I Understand, Continue
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => setAdminPinStep(null)}
-                  className="w-full h-11 rounded-full font-typewriter"
-                >
-                  Go Back
-                </Button>
-              </DialogFooter>
-            </>
-          )}
-
-          {adminPinStep === 'pin' && (
-            <>
-              <DialogHeader>
-                <div className="mx-auto mb-3 w-12 h-12 bg-coke-red/10 rounded-full flex items-center justify-center">
-                  <ShieldWarning size={24} weight="bold" className="text-coke-red" />
-                </div>
-                <DialogTitle className="text-center text-lg font-typewriter">Enter Access PIN</DialogTitle>
-                <DialogDescription className="text-center">
-                  Enter the 4-digit admin access code to proceed.
-                </DialogDescription>
-              </DialogHeader>
-
-              <div className="flex justify-center gap-3 my-4">
-                {[0, 1, 2, 3].map((i) => (
-                  <input
-                    key={i}
-                    ref={(el) => { pinInputRefs.current[i] = el; }}
-                    type="password"
-                    inputMode="numeric"
-                    maxLength={1}
-                    value={adminPin[i]}
-                    onChange={(e) => handleAdminPinInput(i, e.target.value)}
-                    onKeyDown={(e) => handleAdminPinKeyDown(i, e)}
-                    disabled={adminPinLoading}
-                    className={`w-14 h-16 text-center text-2xl font-typewriter font-bold rounded-xl border-2 bg-background outline-none transition-all ${
-                      adminPinError
-                        ? 'border-coke-red/50 text-coke-red'
-                        : 'border-border focus:border-coke-red'
-                    } disabled:opacity-50`}
-                    aria-label={`PIN digit ${i + 1}`}
-                  />
-                ))}
-              </div>
-
-              {adminPinError && (
-                <p className="text-center text-sm text-coke-red font-medium">{adminPinError}</p>
-              )}
-
-              {adminPinLoading && (
-                <div className="flex justify-center">
-                  <CircleNotch size={24} weight="bold" className="animate-spin text-coke-red" />
-                </div>
-              )}
-
-              <DialogFooter className="flex-col gap-2 sm:flex-col mt-2">
-                <Button
-                  variant="outline"
-                  onClick={() => setAdminPinStep('warning')}
-                  className="w-full h-10 rounded-full font-typewriter text-sm"
-                >
-                  <ArrowLeft size={14} weight="bold" className="mr-1.5" />
-                  Back
-                </Button>
-              </DialogFooter>
-            </>
-          )}
-        </DialogContent>
-      </Dialog>
-
       {/* ── Right Side — Form (supports dark/light mode) ── */}
       <div className="w-full lg:w-1/2 bg-background flex flex-col min-h-screen">
         {/* Header */}
@@ -812,74 +529,15 @@ const Auth = () => {
           <a href="/" className="flex items-center gap-2">
             <img src={logoMain.src} alt="CourierX" className="h-8 w-auto rounded-lg" />
           </a>
-          <div className="flex items-center gap-3">
-            {step !== 'panel-select' && (
-              <button
-                onClick={() => { 
-                  setStep('panel-select'); 
-                  setSelectedPanel(null);
-                  router.replace('/auth');
-                }}
-                className="text-sm text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors"
-              >
-                <ArrowLeft size={16} weight="bold" />
-                Back
-              </button>
-            )}
-          </div>
+          <a href="/" className="text-sm text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors">
+            <ArrowLeft size={16} weight="bold" />
+            Home
+          </a>
         </div>
 
         {/* Form Content */}
         <div className="flex-1 flex items-center justify-center p-4 sm:p-8">
           <div className="w-full max-w-sm">
-            {/* ── Panel Selection — Card Grid ── */}
-            {step === 'panel-select' && (
-              <div className="space-y-6">
-                <div className="text-center">
-                  <h2 className="text-2xl font-bold text-foreground font-typewriter">Welcome</h2>
-                  <p className="text-muted-foreground mt-1">Select your portal to continue</p>
-                </div>
-                <div className="grid grid-cols-2 gap-2 sm:gap-3">
-                  {panelOptions.map((panel) => (
-                    <div key={panel.id} className="relative group/panel">
-                      <button
-                        onClick={() => panel.available && handlePanelSelect(panel.id)}
-                        disabled={!panel.available}
-                        className={`w-full p-3 sm:p-5 rounded-2xl border transition-all flex flex-col items-center text-center gap-2 sm:gap-3 aspect-square justify-center ${
-                          panel.available
-                            ? 'border-border hover:border-coke-red bg-card hover:bg-coke-red/5 cursor-pointer group hover:shadow-lg hover:shadow-coke-red/5'
-                            : 'border-border/50 bg-card/50 cursor-not-allowed opacity-60'
-                        }`}
-                      >
-                        <div className={`w-10 h-10 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center transition-colors ${
-                          panel.available
-                            ? 'bg-muted group-hover:bg-coke-red/10'
-                            : 'bg-muted/50'
-                        }`}>
-                          <panel.icon size={28} weight="bold" className={`transition-colors ${
-                            panel.available
-                              ? 'text-muted-foreground group-hover:text-coke-red'
-                              : 'text-muted-foreground/50'
-                          }`} />
-                        </div>
-                        <div>
-                          <p className="font-semibold text-foreground font-typewriter text-sm">{panel.title}</p>
-                          <p className="text-xs text-muted-foreground mt-0.5">{panel.description}</p>
-                        </div>
-                      </button>
-                      {!panel.available && (
-                        <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-0 group-hover/panel:opacity-100 transition-opacity">
-                          <div className="bg-charcoal text-paper-white px-4 py-2 rounded-lg text-sm font-semibold shadow-lg border border-coke-red/20">
-                            SOON AVAILABLE
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
             {/* Sign In Form */}
             {step === 'method' && (
               <div className="space-y-6">
@@ -888,32 +546,30 @@ const Auth = () => {
                     {mode === 'signin' ? 'Sign In' : 'Create Account'}
                   </h2>
                   <p className="text-muted-foreground mt-1">
-                    {panelOptions.find(p => p.id === selectedPanel)?.title}
+                    Your gateway to global & local delivery
                   </p>
                 </div>
 
-                {/* Method Tabs for Customer */}
-                {selectedPanel === 'customer' && (
-                  <div className="flex gap-2 p-1 bg-muted rounded-lg">
-                    {(['email', 'sms'] as AuthMethod[]).map((m) => (
-                      <button
-                        key={m}
-                        onClick={() => setMethod(m)}
-                        className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-md text-sm font-medium transition-all ${
-                          method === m 
-                            ? 'bg-background text-foreground shadow-sm' 
-                            : 'text-muted-foreground hover:text-foreground'
-                        }`}
-                      >
-                        {m === 'email' ? <Envelope size={16} weight="bold" /> : <Phone size={16} weight="bold" />}
-                        {m === 'email' ? 'Email' : 'SMS'}
-                      </button>
-                    ))}
-                  </div>
-                )}
+                {/* Method Tabs */}
+                <div className="flex gap-2 p-1 bg-muted rounded-lg">
+                  {(['email', 'sms'] as AuthMethod[]).map((m) => (
+                    <button
+                      key={m}
+                      onClick={() => setMethod(m)}
+                      className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-md text-sm font-medium transition-all ${
+                        method === m 
+                          ? 'bg-background text-foreground shadow-sm' 
+                          : 'text-muted-foreground hover:text-foreground'
+                      }`}
+                    >
+                      {m === 'email' ? <Envelope size={16} weight="bold" /> : <Phone size={16} weight="bold" />}
+                      {m === 'email' ? 'Email' : 'SMS'}
+                    </button>
+                  ))}
+                </div>
 
                 {/* Email Form */}
-                {(selectedPanel !== 'customer' || method === 'email') && (
+                {method === 'email' && (
                   <Form {...emailPasswordForm}>
                     <form onSubmit={emailPasswordForm.handleSubmit(handleEmailAuth)} className="space-y-4">
                       <FormField
@@ -979,8 +635,7 @@ const Auth = () => {
                           {forgotStep === 'form' ? (
                             <>
                               <p className="text-sm text-muted-foreground">
-                                Enter your email and we'll send a reset link
-                                {selectedPanel === 'customer' ? ' via email and WhatsApp' : ''}.
+                                Enter your email and we'll send a reset link via email and WhatsApp.
                               </p>
                               <input
                                 type="email"
@@ -1011,7 +666,7 @@ const Auth = () => {
                             <>
                               <p className="text-sm text-green-600 font-medium">Reset link sent!</p>
                               <p className="text-sm text-muted-foreground">
-                                Check your email{selectedPanel === 'customer' ? ' and WhatsApp' : ''} for the reset link. It expires in 1 hour.
+                                Check your email and WhatsApp for the reset link. It expires in 1 hour.
                               </p>
                               <button
                                 type="button"
@@ -1038,56 +693,40 @@ const Auth = () => {
                         )}
                       </Button>
 
-                      {(selectedPanel === 'customer' || selectedPanel === 'cxbc') && (
-                        <p className="text-center text-sm text-muted-foreground">
-                          {mode === 'signin' ? "Don't have an account? " : "Already have an account? "}
-                          {mode === 'signin' ? (
-                            <a
-                              href="/open-account"
-                              className="text-coke-red hover:text-coke-red/80 font-medium transition-colors"
-                            >
-                              Open Account
-                            </a>
-                          ) : (
-                            <button
-                              type="button"
-                              onClick={() => setMode('signin')}
-                              className="text-coke-red hover:text-coke-red/80 font-medium transition-colors"
-                            >
-                              Sign in
-                            </button>
-                          )}
-                        </p>
-                      )}
+                      <p className="text-center text-sm text-muted-foreground">
+                        Don't have an account?{' '}
+                        <a
+                          href="/open-account"
+                          className="text-coke-red hover:text-coke-red/80 font-medium transition-colors"
+                        >
+                          Open Account
+                        </a>
+                      </p>
                     </form>
                   </Form>
                 )}
 
                 {/* Google Sign-In Section */}
-                {(selectedPanel === 'customer' || selectedPanel === 'cxbc') && (
-                  <>
-                    <div className="flex items-center gap-3">
-                      <div className="flex-1 h-px bg-border" />
-                      <span className="text-sm text-muted-foreground">or continue with</span>
-                      <div className="flex-1 h-px bg-border" />
-                    </div>
-                    <div ref={googleButtonRef} className="w-full min-h-[44px]" />
-                  </>
-                )}
+                <>
+                  <div className="flex items-center gap-3">
+                    <div className="flex-1 h-px bg-border" />
+                    <span className="text-sm text-muted-foreground">or continue with</span>
+                    <div className="flex-1 h-px bg-border" />
+                  </div>
+                  <div ref={googleButtonRef} className="w-full min-h-[44px]" />
+                </>
 
                 {/* Legal Note */}
-                {(selectedPanel === 'customer' || selectedPanel === 'cxbc') && (
-                  <p className="text-center text-xs text-muted-foreground/70">
-                    By continuing, you agree to the terms of{' '}
-                    <a href="/terms-and-conditions" className="underline hover:text-coke-red transition-colors">
-                      Goldilocks Zone Private Limited
-                    </a>
-                    .
-                  </p>
-                )}
+                <p className="text-center text-xs text-muted-foreground/70">
+                  By continuing, you agree to the terms of{' '}
+                  <a href="/terms-and-conditions" className="underline hover:text-coke-red transition-colors">
+                    Goldilocks Zone Private Limited
+                  </a>
+                  .
+                </p>
 
                 {/* WhatsApp Form */}
-                {selectedPanel === 'customer' && method === 'sms' && (
+                {method === 'sms' && (
                   <Form {...phoneForm}>
                     <form onSubmit={phoneForm.handleSubmit(handleSendOtp)} className="space-y-4">
                       <FormField
