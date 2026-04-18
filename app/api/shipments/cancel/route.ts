@@ -76,7 +76,7 @@ export async function POST(request: NextRequest) {
     // 5. Fetch shipment to determine ownership
     const { data: shipment, error: fetchError } = await supabase
       .from('shipments')
-      .select('user_id, current_status')
+      .select('user_id, current_status, current_leg, created_at')
       .eq('id', shipmentId)
       .single();
 
@@ -90,7 +90,11 @@ export async function POST(request: NextRequest) {
     }
 
     // 6. Pre-check eligibility for a clear error message
-    const eligibility = getCancellationEligibility(shipment.current_status as ShipmentStatus);
+    const eligibility = getCancellationEligibility(
+      shipment.current_status as ShipmentStatus,
+      shipment.created_at,
+      shipment.current_leg
+    );
     if (!eligibility.canCancel) {
       return NextResponse.json({
         success: false,
@@ -109,6 +113,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       refundAmount: result.refundAmount,
+      deductionAmount: result.deductionAmount,
       refundStatus: result.refundStatus,
     });
   } catch (err) {

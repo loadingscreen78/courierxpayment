@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { format } from 'date-fns';
 import { AppLayout } from '@/components/layout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -37,6 +37,7 @@ import {
   CaretRight,
   CircleNotch,
   XCircle,
+  Timer,
 } from '@phosphor-icons/react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -147,6 +148,9 @@ const ShipmentCard = ({ shipment, onClick }: { shipment: UIShipment; onClick: ()
               <span className={cn("w-1.5 h-1.5 rounded-full shrink-0", statusInfo?.dotColor ?? 'bg-gray-400')} />
               <span className="text-foreground/70">{statusInfo?.label ?? shipment.currentStatus}</span>
             </div>
+            {CANCELLABLE_STATUSES.includes(shipment.currentStatus) && (
+              <FreeCancelBadge createdAt={shipment.createdAt} />
+            )}
           </div>
           <p className="text-xs text-muted-foreground truncate">
             → <span className="font-medium text-foreground/80">{shipment.recipientName}</span>, {shipment.destination}
@@ -175,6 +179,48 @@ const CANCELLABLE_STATUSES: ShipmentStatus[] = [
   'QUALITY_CHECKED', 'PACKAGED',
 ];
 
+const FREE_CANCELLATION_WINDOW_MS = 60 * 60 * 1000; // 1 hour
+
+/** Returns remaining ms in the free cancellation window, or 0 if expired */
+function getFreeWindowRemaining(createdAt: Date): number {
+  const elapsed = Date.now() - createdAt.getTime();
+  return Math.max(0, FREE_CANCELLATION_WINDOW_MS - elapsed);
+}
+
+function formatCountdown(ms: number): string {
+  if (ms <= 0) return '00:00';
+  const totalSec = Math.floor(ms / 1000);
+  const m = Math.floor(totalSec / 60);
+  const s = totalSec % 60;
+  return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+}
+
+/** Hook that ticks every second and returns remaining ms */
+function useFreeWindowCountdown(createdAt: Date) {
+  const [remaining, setRemaining] = useState(() => getFreeWindowRemaining(createdAt));
+
+  useEffect(() => {
+    const tick = () => setRemaining(getFreeWindowRemaining(createdAt));
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [createdAt]);
+
+  return remaining;
+}
+
+/** Small countdown badge shown on shipment cards */
+const FreeCancelBadge = ({ createdAt }: { createdAt: Date }) => {
+  const remaining = useFreeWindowCountdown(createdAt);
+  if (remaining <= 0) return null;
+  return (
+    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-green-500/10 text-green-600 border border-green-500/20">
+      <Timer size={10} weight="bold" />
+      {formatCountdown(remaining)}
+    </span>
+  );
+};
+
 const ShipmentDetailSheet = ({
   shipment,
   shipmentDetails,
@@ -198,6 +244,27 @@ const ShipmentDetailSheet = ({
   const [cancelling, setCancelling] = useState(false);
 
   const canCancel = CANCELLABLE_STATUSES.includes(shipment.currentStatus);
+  const freeWindowRemaining = useFreeWindowCountdown(shipment.createdAt);
+  const isInFreeWindow = freeWindowRemaining > 0;
+  const isDomestic = shipment.currentLeg === 'DOMESTIC';
+
+  // Calculate what the refund would be
+  const getRefundInfo = useCallback(() => {
+    if (!canCancel) return { refundAmount: 0, deduction: 0, label: '' };
+    const total = shipment.totalAmount;
+    if (isInFreeWindow) {
+      return { refundAmount: total, deduction: 0, label: 'Free cancellation — 100% refund' };
+    }
+    if (isDomestic) {
+      return { refundAmount: 0, deduction: total, label: 'No refund — domestic cancellation after 1 hour' };
+    }
+    // International after 1hr: 10% deduction
+    const deduction = Math.round(total * 0.1);
+    const refund = total - deduction;
+    return { refundAmount: refund, deduction, label: `90% refund — ₹${deduction.toLocaleString('en-IN')} cancellation fee (10%)` };
+  }, [canCancel, isInFreeWindow, isDomestic, shipment.totalAmount]);
+
+  const refundInfo = getRefundInfo();
 
   const handleCancelShipment = async () => {
     setCancelling(true);
@@ -226,9 +293,9 @@ const ShipmentDetailSheet = ({
       }
 
       if (json.refundAmount > 0) {
-        toast.success(`Shipment cancelled. ₹${json.refundAmount.toLocaleString('en-IN')} refunded to your wallet.`);
+        toast.success(`Shipment cancelled. ₹${json.refundAmount.toLocaleString('en-IN')} refunded to your wallet.${json.deductionAmount > 0 ? ` (₹${json.deductionAmount.toLocaleString('en-IN')} cancellation fee)` : ''}`);
       } else {
-        toast.success('Shipment cancelled successfully.');
+        toast.success('Shipment cancelled. No refund issued.');
       }
 
       onCancelled();
@@ -271,10 +338,27 @@ const ShipmentDetailSheet = ({
   return (
     <>
       <SheetHeader className="pb-4">
-        <SheetTitle className="flex items-center gap-2">
-          {TYPE_ICONS[shipment.type]}
-          <span className="font-typewriter">{shipment.trackingNumber}</span>
-        </SheetTitle>
+        <div className="flex items-center justify-between">
+          <SheetTitle className="flex items-center gap-2">
+            {TYPE_ICONS[shipment.type]}
+            <span className="font-typewriter">{shipment.trackingNumber}</span>
+          </SheetTitle>
+          {canCancel && (
+            <div className={cn(
+              "flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold",
+              isInFreeWindow
+                ? "bg-green-500/10 text-green-600 border border-green-500/20"
+                : "bg-muted text-muted-foreground border border-border"
+            )}>
+              <Timer size={14} weight="bold" />
+              {isInFreeWindow ? (
+                <span>Free cancel: {formatCountdown(freeWindowRemaining)}</span>
+              ) : (
+                <span>Free window expired</span>
+              )}
+            </div>
+          )}
+        </div>
       </SheetHeader>
 
       {loadingDetails ? (
@@ -421,10 +505,27 @@ const ShipmentDetailSheet = ({
                 <AlertDialogHeader>
                   <AlertDialogTitle>Cancel Shipment?</AlertDialogTitle>
                   <AlertDialogDescription asChild>
-                    <div className="space-y-2">
-                      <p>
-                        You will receive a 100% refund of ₹{shipment.totalAmount.toLocaleString('en-IN')} to your CourierX wallet.
-                      </p>
+                    <div className="space-y-3">
+                      {isInFreeWindow && (
+                        <div className="flex items-center gap-2 p-2 rounded-lg bg-green-500/10 border border-green-500/20">
+                          <Timer size={16} weight="bold" className="text-green-600 shrink-0" />
+                          <span className="text-sm text-green-700 font-medium">
+                            Free cancellation window: {formatCountdown(freeWindowRemaining)} remaining
+                          </span>
+                        </div>
+                      )}
+                      {refundInfo.refundAmount > 0 ? (
+                        <p>
+                          You will receive a refund of <span className="font-bold">₹{refundInfo.refundAmount.toLocaleString('en-IN')}</span> to your CourierX wallet.
+                          {refundInfo.deduction > 0 && (
+                            <span className="text-muted-foreground"> (₹{refundInfo.deduction.toLocaleString('en-IN')} cancellation fee deducted)</span>
+                          )}
+                        </p>
+                      ) : (
+                        <p className="text-amber-600 font-medium">
+                          No refund will be issued. {isDomestic ? 'Domestic shipments are non-refundable after 1 hour.' : ''}
+                        </p>
+                      )}
                       <p className="font-medium text-destructive">
                         This action cannot be undone.
                       </p>
@@ -438,7 +539,7 @@ const ShipmentDetailSheet = ({
                     disabled={cancelling}
                     className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                   >
-                    {cancelling ? 'Cancelling...' : 'Yes, Cancel & Refund'}
+                    {cancelling ? 'Cancelling...' : refundInfo.refundAmount > 0 ? 'Yes, Cancel & Refund' : 'Yes, Cancel'}
                   </AlertDialogAction>
                 </AlertDialogFooter>
               </AlertDialogContent>
