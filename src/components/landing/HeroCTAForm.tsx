@@ -1,12 +1,11 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { Truck, Globe, MagnifyingGlass, ArrowRight, CircleNotch, MapPin, Phone, ShieldCheck, Package } from '@phosphor-icons/react';
+import { Truck, Globe, MagnifyingGlass, ArrowRight, CircleNotch, MapPin, Package } from '@phosphor-icons/react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
 import { getAllCountriesForDropdown } from '@/lib/shipping/countries';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
@@ -14,7 +13,6 @@ import { cn } from '@/lib/utils';
 // ── Types ────────────────────────────────────────────────────────────────────
 
 type ShipType = 'domestic' | 'international';
-type OtpStep = 'idle' | 'phone' | 'otp' | 'verifying';
 
 interface PincodeMeta {
   state: string;
@@ -65,7 +63,7 @@ function usePinLookup(pincode: string): PincodeMeta {
   return meta;
 }
 
-// ── Country list (memoised) ──────────────────────────────────────────────────
+// ── Country list (memoised at module level) ──────────────────────────────────
 
 const countryOptions = (() => {
   try {
@@ -77,7 +75,7 @@ const countryOptions = (() => {
   }
 })();
 
-// ── Pin Input (defined outside to avoid remount on parent re-render) ─────────
+// ── Pin Input (defined outside to keep stable identity across renders) ───────
 
 const PinInput = ({ value, onChange, meta, placeholder }: {
   value: string;
@@ -110,7 +108,7 @@ const PinInput = ({ value, onChange, meta, placeholder }: {
   </div>
 );
 
-// ── Component ────────────────────────────────────────────────────────────────
+// ── Main Component ───────────────────────────────────────────────────────────
 
 export const HeroCTAForm = () => {
   const router = useRouter();
@@ -122,7 +120,6 @@ export const HeroCTAForm = () => {
   const [destCountry, setDestCountry] = useState('');
   const [countrySearch, setCountrySearch] = useState('');
   const [showCountryDropdown, setShowCountryDropdown] = useState(false);
-  const [shipLoading, setShipLoading] = useState(false);
   const countryRef = useRef<HTMLDivElement>(null);
 
   // pin lookups
@@ -145,61 +142,13 @@ export const HeroCTAForm = () => {
   const [trackAwb, setTrackAwb] = useState('');
   const [trackLoading, setTrackLoading] = useState(false);
 
-  // ── OTP state ──
-  const [otpStep, setOtpStep] = useState<OtpStep>('idle');
-  const [otp, setOtp] = useState('');
-  const [otpError, setOtpError] = useState('');
-  const [resendTimer, setResendTimer] = useState(0);
-  const [shipPhone, setShipPhone] = useState('');
-  // store pending navigation data
-  const [pendingNav, setPendingNav] = useState<{ path: string; params: URLSearchParams } | null>(null);
-
-  // Resend countdown
-  useEffect(() => {
-    if (resendTimer <= 0) return;
-    const t = setInterval(() => setResendTimer(p => (p > 0 ? p - 1 : 0)), 1000);
-    return () => clearInterval(t);
-  }, [resendTimer]);
-
-  // ── Detect domestic vs international ──
   const isDomestic = shipType === 'domestic';
 
-  // ── Filtered countries ──
   const filteredCountries = countrySearch.length > 0
     ? countryOptions.filter(c => c.name.toLowerCase().includes(countrySearch.toLowerCase()))
     : countryOptions.slice(0, 15);
 
-  // ── Send OTP ──
-  const sendOtp = useCallback(async (phone: string) => {
-    try {
-      const res = await fetch('/api/auth/phone-otp/send', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone: `+91${phone}` }),
-      });
-      const json = await res.json();
-      return json.success;
-    } catch {
-      return false;
-    }
-  }, []);
-
-  // ── Verify OTP ──
-  const verifyOtp = useCallback(async (phone: string, code: string) => {
-    try {
-      const res = await fetch('/api/auth/phone-otp/verify', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone: `+91${phone}`, code }),
-      });
-      const json = await res.json();
-      return json.success;
-    } catch {
-      return false;
-    }
-  }, []);
-
-  // ── Ship Now submit — shows phone input step ──
+  // ── Ship Now — navigate directly to guest workflow with data ──
   const handleShipNow = () => {
     const params = new URLSearchParams();
 
@@ -212,75 +161,26 @@ export const HeroCTAForm = () => {
       if (pickupMeta.district) params.set('pickupCity', pickupMeta.district);
       if (dropMeta.state) params.set('deliveryState', dropMeta.state);
       if (dropMeta.district) params.set('deliveryCity', dropMeta.district);
-      setPendingNav({ path: '/public/book/domestic', params });
+      router.push(`/public/book/domestic?${params.toString()}`);
     } else {
       if (!destCountry || pickupPin.length !== 6 || pickupMeta.error) return;
       params.set('pickupPincode', pickupPin);
       if (pickupMeta.state) params.set('pickupState', pickupMeta.state);
       if (pickupMeta.district) params.set('pickupCity', pickupMeta.district);
       params.set('country', destCountry);
-      setPendingNav({ path: '/public/book/international', params });
-    }
-
-    // Show phone input step
-    setOtpStep('phone');
-    setOtp('');
-    setOtpError('');
-  };
-
-  // Send OTP after phone is entered
-  const handleSendShipOtp = async () => {
-    if (shipPhone.length !== 10) return;
-    setShipLoading(true);
-    setOtpError('');
-    const ok = await sendOtp(shipPhone);
-    setShipLoading(false);
-    if (ok) {
-      setOtpStep('otp');
-      setResendTimer(30);
-    } else {
-      setOtpError('Failed to send OTP. Try again.');
+      router.push(`/public/book/international?${params.toString()}`);
     }
   };
 
-  // Verify OTP and navigate
-  const handleVerifyAndNavigate = async () => {
-    if (otp.length !== 6 || !pendingNav) return;
-    setOtpStep('verifying');
-    setOtpError('');
-    const ok = await verifyOtp(shipPhone, otp);
-    if (ok && pendingNav) {
-      pendingNav.params.set('phone', shipPhone);
-      pendingNav.params.set('verified', '1');
-      router.push(`${pendingNav.path}?${pendingNav.params.toString()}`);
-    } else {
-      setOtpError('Invalid OTP. Please try again.');
-      setOtpStep('otp');
-    }
-  };
-
-  // Resend OTP
-  const handleResendOtp = async () => {
-    setOtpError('');
-    const ok = await sendOtp(shipPhone);
-    if (ok) {
-      setResendTimer(30);
-    } else {
-      setOtpError('Failed to resend OTP.');
-    }
-  };
-
-  // ── Track submit ──
+  // ── Track — redirect to tracking page ──
   const handleTrack = () => {
     if (!trackAwb.trim()) return;
     setTrackLoading(true);
-    // If phone provided, could do OTP verification, but for tracking just redirect
     const params = new URLSearchParams();
     params.set('tracking', trackAwb.trim());
     if (trackPhone) params.set('phone', trackPhone);
     router.push(`/public/track?${params.toString()}`);
   };
-
 
   return (
     <div className="w-full">
@@ -335,100 +235,7 @@ export const HeroCTAForm = () => {
             </div>
 
             <AnimatePresence mode="wait">
-              {/* ── OTP verification overlay ── */}
-              {otpStep !== 'idle' && pendingNav ? (
-                <motion.div
-                  key="otp"
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                  className="space-y-4"
-                >
-                  <div className="text-center space-y-1">
-                    <ShieldCheck className="h-8 w-8 text-coke-red mx-auto" weight="bold" />
-                    <p className="text-sm font-semibold text-foreground">Verify Your Phone</p>
-                    <p className="text-xs text-muted-foreground">
-                      {otpStep === 'phone' ? 'Enter your mobile number to continue' : `OTP sent to +91 ${shipPhone.slice(0, 2)}****${shipPhone.slice(-2)}`}
-                    </p>
-                  </div>
-
-                  {/* Phone input step */}
-                  {otpStep === 'phone' && (
-                    <>
-                      <div className="flex">
-                        <span className="inline-flex items-center px-3 rounded-l-xl bg-muted border border-r-0 border-border text-xs text-muted-foreground font-medium">
-                          +91
-                        </span>
-                        <Input
-                          type="tel"
-                          inputMode="numeric"
-                          maxLength={10}
-                          placeholder="10-digit mobile"
-                          value={shipPhone}
-                          onChange={e => setShipPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
-                          className="rounded-l-none border-l-0 h-11 text-sm"
-                          autoFocus
-                        />
-                      </div>
-                      <Button
-                        className="w-full h-10 bg-coke-red hover:bg-coke-red/90 text-white text-sm font-semibold rounded-xl"
-                        onClick={handleSendShipOtp}
-                        disabled={shipPhone.length !== 10 || shipLoading}
-                      >
-                        {shipLoading ? <CircleNotch className="h-4 w-4 animate-spin" /> : <>Send OTP <ArrowRight className="h-4 w-4 ml-1" weight="bold" /></>}
-                      </Button>
-                    </>
-                  )}
-
-                  {/* OTP input step */}
-                  {(otpStep === 'otp' || otpStep === 'verifying') && (
-                    <>
-                      <div className="flex justify-center">
-                        <InputOTP maxLength={6} value={otp} onChange={setOtp}>
-                          <InputOTPGroup>
-                            {[0, 1, 2, 3, 4, 5].map(i => (
-                              <InputOTPSlot key={i} index={i} className="w-10 h-11 text-base" />
-                            ))}
-                          </InputOTPGroup>
-                        </InputOTP>
-                      </div>
-
-                      <Button
-                        className="w-full h-10 bg-coke-red hover:bg-coke-red/90 text-white text-sm font-semibold rounded-xl"
-                        onClick={handleVerifyAndNavigate}
-                        disabled={otp.length !== 6 || otpStep === 'verifying'}
-                      >
-                        {otpStep === 'verifying' ? (
-                          <CircleNotch className="h-4 w-4 animate-spin" />
-                        ) : (
-                          <>Verify & Continue <ArrowRight className="h-4 w-4 ml-1" weight="bold" /></>
-                        )}
-                      </Button>
-
-                      <p className="text-center text-xs text-muted-foreground">
-                        {resendTimer > 0 ? (
-                          <>Resend in <span className="font-semibold">{resendTimer}s</span></>
-                        ) : (
-                          <button className="text-coke-red hover:underline" onClick={handleResendOtp}>
-                            Resend OTP
-                          </button>
-                        )}
-                      </p>
-                    </>
-                  )}
-
-                  {otpError && (
-                    <p className="text-xs text-destructive text-center">{otpError}</p>
-                  )}
-
-                  <button
-                    onClick={() => { setOtpStep('idle'); setPendingNav(null); setOtp(''); setOtpError(''); setResendTimer(0); }}
-                    className="w-full text-xs text-muted-foreground hover:text-foreground text-center"
-                  >
-                    ← Back
-                  </button>
-                </motion.div>
-              ) : isDomestic ? (
+              {isDomestic ? (
                 /* ── Domestic Form ── */
                 <motion.div
                   key="domestic"
@@ -438,28 +245,17 @@ export const HeroCTAForm = () => {
                   className="space-y-3"
                 >
                   <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Pickup</p>
-                  <PinInput
-                    value={pickupPin}
-                    onChange={setPickupPin}
-                    meta={pickupMeta}
-                    placeholder="Pickup pin code"
-                  />
+                  <PinInput value={pickupPin} onChange={setPickupPin} meta={pickupMeta} placeholder="Pickup pin code" />
 
                   <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider pt-1">Drop</p>
-                  <PinInput
-                    value={dropPin}
-                    onChange={setDropPin}
-                    meta={dropMeta}
-                    placeholder="Drop pin code"
-                  />
+                  <PinInput value={dropPin} onChange={setDropPin} meta={dropMeta} placeholder="Drop pin code" />
 
                   <Button
                     className="w-full h-11 bg-coke-red hover:bg-coke-red/90 text-white font-semibold rounded-xl shadow-lg shadow-coke-red/20 text-sm gap-2 mt-2"
                     onClick={handleShipNow}
                     disabled={pickupPin.length !== 6 || dropPin.length !== 6 || !!pickupMeta.error || !!dropMeta.error || pickupMeta.loading || dropMeta.loading}
                   >
-                    Get Rates
-                    <ArrowRight className="h-4 w-4" weight="bold" />
+                    Get Rates <ArrowRight className="h-4 w-4" weight="bold" />
                   </Button>
                 </motion.div>
               ) : (
@@ -472,12 +268,7 @@ export const HeroCTAForm = () => {
                   className="space-y-3"
                 >
                   <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Pickup (India)</p>
-                  <PinInput
-                    value={pickupPin}
-                    onChange={setPickupPin}
-                    meta={pickupMeta}
-                    placeholder="Pickup pin code"
-                  />
+                  <PinInput value={pickupPin} onChange={setPickupPin} meta={pickupMeta} placeholder="Pickup pin code" />
 
                   <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider pt-1">Destination Country</p>
                   <div className="relative" ref={countryRef}>
@@ -519,16 +310,14 @@ export const HeroCTAForm = () => {
                     onClick={handleShipNow}
                     disabled={!destCountry || pickupPin.length !== 6 || !!pickupMeta.error || pickupMeta.loading}
                   >
-                    Get Rates
-                    <ArrowRight className="h-4 w-4" weight="bold" />
+                    Get Rates <ArrowRight className="h-4 w-4" weight="bold" />
                   </Button>
                 </motion.div>
               )}
             </AnimatePresence>
 
-            {/* No-account note */}
             <p className="text-[11px] text-muted-foreground text-center pt-1">
-              No account needed. Phone verification required before booking.
+              No account needed. Get instant rates and book as a guest.
             </p>
           </TabsContent>
 
