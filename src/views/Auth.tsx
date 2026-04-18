@@ -193,7 +193,7 @@ const Auth = () => {
     // Redirect signup to the dedicated sign-up page
     if (mode === 'signup') {
       setIsLoading(false);
-      window.location.href = '/open-account';
+      window.location.href = '/register';
       return;
     }
     
@@ -666,7 +666,7 @@ const Auth = () => {
                       <p className="text-center text-sm text-muted-foreground">
                         Don't have an account?{' '}
                         <a
-                          href="/open-account"
+                          href="/register"
                           className="text-coke-red hover:text-coke-red/80 font-medium transition-colors"
                         >
                           Sign Up

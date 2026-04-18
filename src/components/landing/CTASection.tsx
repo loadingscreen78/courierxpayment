@@ -128,7 +128,7 @@ export const CTASection = () => {
                     variant="outline" 
                     size="lg" 
                     className="border-border text-foreground hover:bg-accent transition-all duration-300"
-                    onClick={() => router.push('/open-account')}
+                    onClick={() => router.push('/register')}
                   >
                     Open Account — Save 25%
                   </Button>

@@ -1,16 +1,19 @@
 "use client";
 
-import { Suspense } from 'react';
-import OpenAccount from '@/views/OpenAccount';
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 
+// Redirect legacy /open-account to the new unified /register flow
 export default function OpenAccountPage() {
+  const router = useRouter();
+
+  useEffect(() => {
+    router.replace('/register');
+  }, [router]);
+
   return (
-    <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <p className="text-muted-foreground">Loading...</p>
-      </div>
-    }>
-      <OpenAccount />
-    </Suspense>
+    <div className="min-h-screen flex items-center justify-center bg-background">
+      <p className="text-muted-foreground">Redirecting...</p>
+    </div>
   );
 }
