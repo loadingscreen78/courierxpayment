@@ -21,6 +21,7 @@ import logoSymbol from '@/assets/logo-symbol.jpeg';
 import { useShipments } from '@/hooks/useShipments';
 import { motion } from 'framer-motion';
 import { useShippingMode } from '@/contexts/ShippingModeContext';
+import { useOnboardingTour } from '@/contexts/OnboardingTourContext';
 
 interface NavItemProps {
   icon: React.ReactNode;
@@ -28,9 +29,10 @@ interface NavItemProps {
   href: string;
   isActive?: boolean;
   badge?: string;
+  tourHighlight?: boolean;
 }
 
-const NavItem = ({ icon, label, href, isActive, badge }: NavItemProps) => {
+const NavItem = ({ icon, label, href, isActive, badge, tourHighlight }: NavItemProps) => {
   const { lightTap } = useHaptics();
   
   return (
@@ -39,23 +41,33 @@ const NavItem = ({ icon, label, href, isActive, badge }: NavItemProps) => {
       onClick={() => lightTap()}
       className={cn(
         "group relative flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200",
-        isActive 
-          ? "bg-sidebar-accent text-sidebar-foreground" 
-          : "text-sidebar-foreground/55 hover:text-sidebar-foreground hover:bg-sidebar-accent/50"
+        tourHighlight && !isActive
+          ? "bg-[#1A1A2E]/10 text-sidebar-foreground ring-1 ring-[#1A1A2E]/20"
+          : isActive 
+            ? "bg-sidebar-accent text-sidebar-foreground" 
+            : "text-sidebar-foreground/55 hover:text-sidebar-foreground hover:bg-sidebar-accent/50"
       )}
     >
-      {isActive && (
-        <div className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 bg-sidebar-primary rounded-r-full" />
+      {(isActive || tourHighlight) && (
+        <div className={cn(
+          "absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 rounded-r-full",
+          tourHighlight && !isActive ? "bg-[#1A1A2E]" : "bg-sidebar-primary"
+        )} />
       )}
       <div className={cn(
         "flex items-center justify-center w-8 h-8 rounded-lg transition-all duration-200 shrink-0",
-        isActive 
-          ? "bg-sidebar-primary/20 text-sidebar-primary" 
-          : "group-hover:bg-sidebar-accent/80"
+        tourHighlight && !isActive
+          ? "bg-[#1A1A2E]/15 text-[#1A1A2E]"
+          : isActive 
+            ? "bg-sidebar-primary/20 text-sidebar-primary" 
+            : "group-hover:bg-sidebar-accent/80"
       )}>
         {icon}
       </div>
-      <span className="font-medium text-sm flex-1 truncate">{label}</span>
+      <span className={cn(
+        "font-medium text-sm flex-1 truncate",
+        tourHighlight && !isActive && "text-[#1A1A2E] font-semibold"
+      )}>{label}</span>
       {badge && (
         <span className="flex items-center justify-center min-w-[20px] h-5 px-1.5 text-[10px] font-bold bg-sidebar-primary text-white rounded-full">
           {badge}
@@ -144,6 +156,7 @@ export const DesktopSidebar = () => {
   const { mediumTap, lightTap } = useHaptics();
   const { activeShipments } = useShipments();
   const { mode, toggleMode, isSwitching } = useShippingMode();
+  const { highlightedHref } = useOnboardingTour();
   const isInternational = mode === 'international';
 
   const handleSignOut = async () => {
@@ -201,7 +214,12 @@ export const DesktopSidebar = () => {
         <Link
           href="/new-shipment"
           onClick={() => mediumTap()}
-          className="group relative flex items-center justify-center gap-2 w-full py-3 bg-gradient-to-r from-coke-red to-red-600 text-white rounded-xl font-semibold text-sm transition-all duration-200 shadow-md shadow-coke-red/25 hover:shadow-lg hover:shadow-coke-red/35 hover:brightness-105 overflow-hidden"
+          className={cn(
+            "group relative flex items-center justify-center gap-2 w-full py-3 text-white rounded-xl font-semibold text-sm transition-all duration-200 shadow-md overflow-hidden",
+            highlightedHref === '/new-shipment'
+              ? "bg-gradient-to-r from-[#1A1A2E] to-[#2A2A4E] shadow-[#1A1A2E]/30 ring-2 ring-[#1A1A2E]/30 hover:shadow-lg"
+              : "bg-gradient-to-r from-coke-red to-red-600 shadow-coke-red/25 hover:shadow-lg hover:shadow-coke-red/35 hover:brightness-105"
+          )}
         >
           <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-600" />
           <PaperPlaneTilt className="h-4 w-4 relative z-10" weight="bold" />
@@ -234,6 +252,7 @@ export const DesktopSidebar = () => {
                   href={item.href}
                   isActive={pathname === item.href}
                   badge={item.badge}
+                  tourHighlight={highlightedHref === item.href}
                 />
               ))}
             </div>

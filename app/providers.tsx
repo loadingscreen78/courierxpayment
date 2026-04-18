@@ -8,6 +8,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { WalletProvider } from "@/contexts/WalletContext";
 import { ShippingModeProvider } from "@/contexts/ShippingModeContext";
+import { OnboardingTourProvider } from "@/contexts/OnboardingTourContext";
 import { useState } from "react";
 
 export function Providers({ children }: { children: React.ReactNode }) {
@@ -34,11 +35,13 @@ export function Providers({ children }: { children: React.ReactNode }) {
         <AuthProvider>
           <ShippingModeProvider>
           <WalletProvider>
+            <OnboardingTourProvider>
             <TooltipProvider>
               {children}
               <Toaster />
               <Sonner />
             </TooltipProvider>
+            </OnboardingTourProvider>
           </WalletProvider>
           </ShippingModeProvider>
         </AuthProvider>

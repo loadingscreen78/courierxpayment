@@ -5,6 +5,7 @@ import { Header } from './Header';
 import { PageTransition } from '@/components/ui/loading/PageTransition';
 import { ModeSwitchLoader } from '@/components/ui/ModeSwitchLoader';
 import { useShippingMode } from '@/contexts/ShippingModeContext';
+import { OnboardingTourPanel } from '@/components/onboarding/OnboardingTourPanel';
 
 interface AppLayoutProps {
   children: ReactNode;
@@ -42,6 +43,9 @@ export const AppLayout = ({ children }: AppLayoutProps) => {
         </main>
         <MobileNav />
       </div>
+
+      {/* Onboarding Tour Panel (desktop only, floats above content) */}
+      <OnboardingTourPanel />
     </div>
   );
 };
