@@ -45,8 +45,10 @@ export const OnboardingTourProvider = ({ children }: { children: ReactNode }) =>
     const profileDone = !!(profile as any).onboarding_tour_completed;
 
     if (!localDone && !profileDone) {
+      // Auto-skip KYC step if already verified
+      const startStep: TourStep = profile.aadhaar_verified ? 1 : 0;
       setIsOpen(true);
-      setCurrentStep(0);
+      setCurrentStep(startStep);
     }
   }, [user, profile]);
 

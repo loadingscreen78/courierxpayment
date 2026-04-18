@@ -45,10 +45,10 @@ const STEPS: {
 ];
 
 /* ─── Step Tracker ─── */
-const StepTracker = ({ current }: { current: TourStep }) => (
+const StepTracker = ({ current, kycDone }: { current: TourStep; kycDone: boolean }) => (
   <div className="flex items-center justify-center gap-0 w-full px-2">
     {STEPS.map((_, i) => {
-      const completed = i < current;
+      const completed = i < current || (i === 0 && kycDone);
       const active = i === current;
       return (
         <div key={i} className="flex items-center flex-1 last:flex-none">
@@ -58,7 +58,7 @@ const StepTracker = ({ current }: { current: TourStep }) => (
               className={cn(
                 'w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-300 z-10',
                 completed && 'bg-[#1A1A2E] text-white',
-                active && 'bg-[#1A1A2E] text-white',
+                active && !completed && 'bg-[#1A1A2E] text-white',
                 !completed && !active && 'bg-transparent border-2 border-gray-300 text-gray-400',
               )}
             >
@@ -71,7 +71,7 @@ const StepTracker = ({ current }: { current: TourStep }) => (
               )}
             </div>
             {/* Pulse ring for active */}
-            {active && (
+            {active && !completed && (
               <span className="absolute inset-0 rounded-full animate-ping bg-[#1A1A2E]/30" style={{ animationDuration: '1.8s' }} />
             )}
           </div>
@@ -81,7 +81,7 @@ const StepTracker = ({ current }: { current: TourStep }) => (
               <div
                 className={cn(
                   'h-full rounded-full transition-colors duration-300',
-                  i < current ? 'bg-[#1A1A2E]' : 'bg-gray-200',
+                  i < current || (i === 0 && kycDone) ? 'bg-[#1A1A2E]' : 'bg-gray-200',
                 )}
               />
             </div>
@@ -102,6 +102,7 @@ export const OnboardingTourPanel = () => {
   const StepIcon = step.icon;
   const displayName = profile?.full_name?.split(' ')[0] || 'there';
   const isLastStep = currentStep === 3;
+  const kycDone = !!profile?.aadhaar_verified;
 
   const handleCta = () => {
     if (isLastStep) {
@@ -152,7 +153,7 @@ export const OnboardingTourPanel = () => {
 
           {/* Step Tracker */}
           <div className="px-6 pb-5">
-            <StepTracker current={currentStep} />
+            <StepTracker current={currentStep} kycDone={kycDone} />
           </div>
 
           {/* Divider */}
