@@ -117,17 +117,37 @@ const PinInput = ({ value, onChange, meta, placeholder, showAssistance }: {
     if (query.length < 3) { setAssistResults([]); return; }
     setAssistLoading(true);
     try {
-      const res = await fetch(`https://api.postalpincode.in/postoffice/${encodeURIComponent(query)}`);
+      // If query is digits, search by pincode; otherwise search by area name
+      const isDigits = /^\d+$/.test(query);
+      const url = isDigits
+        ? `/api/public/pincode-lookup?pincode=${query.padEnd(6, '0')}`
+        : `/api/public/pincode-lookup?query=${encodeURIComponent(query)}`;
+      const res = await fetch(url);
       const data = await res.json();
-      if (data[0]?.Status === 'Success' && data[0]?.PostOffice) {
-        setAssistResults(
-          data[0].PostOffice.slice(0, 8).map((po: { Pincode: string; Name: string; District: string; State: string }) => ({
-            pincode: po.Pincode,
-            area: po.Name,
-            district: po.District,
-            state: po.State,
-          }))
-        );
+      if (data.success) {
+        if (isDigits && data.postOffices?.length) {
+          // Pincode lookup returns postOffices array
+          setAssistResults(
+            data.postOffices.slice(0, 10).map((po: { pincode: string; name: string; district: string; state: string }) => ({
+              pincode: po.pincode,
+              area: po.name,
+              district: po.district,
+              state: po.state,
+            }))
+          );
+        } else if (!isDigits && data.results?.length) {
+          // Query lookup returns results array
+          setAssistResults(
+            data.results.slice(0, 10).map((r: { pincode: string; name: string; district: string; state: string }) => ({
+              pincode: r.pincode,
+              area: r.name,
+              district: r.district,
+              state: r.state,
+            }))
+          );
+        } else {
+          setAssistResults([]);
+        }
       } else {
         setAssistResults([]);
       }
@@ -169,10 +189,10 @@ const PinInput = ({ value, onChange, meta, placeholder, showAssistance }: {
             </button>
             {assistOpen && (
               <div className="absolute z-[9999] right-0 top-full mt-1 w-72 rounded-xl border border-border bg-card shadow-xl p-3 space-y-2">
-                <p className="text-xs font-medium text-muted-foreground">Search by area or post office name</p>
+                <p className="text-xs font-medium text-muted-foreground">Search by area name or pincode</p>
                 <Input
                   type="text"
-                  placeholder="e.g. Andheri, Connaught Place..."
+                  placeholder="e.g. Andheri, 400053..."
                   value={assistQuery}
                   onChange={e => searchPincode(e.target.value)}
                   className="h-9 text-sm rounded-lg"
@@ -203,7 +223,10 @@ const PinInput = ({ value, onChange, meta, placeholder, showAssistance }: {
                   </div>
                 )}
                 {!assistLoading && assistQuery.length >= 3 && assistResults.length === 0 && (
-                  <p className="text-xs text-muted-foreground py-1">No results found</p>
+                  <div className="text-xs text-muted-foreground py-1 space-y-1">
+                    <p>No results found.</p>
+                    <p className="text-[11px]">Try searching with the exact post office name or enter the 6-digit pincode directly in the field.</p>
+                  </div>
                 )}
               </div>
             )}
