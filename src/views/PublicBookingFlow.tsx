@@ -24,6 +24,7 @@ import AadhaarKycUpload from '@/components/guest-booking/AadhaarKycUpload';
 import AddressAutocomplete from '@/components/guest-booking/AddressAutocomplete';
 import { usePincodeLookup } from '@/hooks/usePincodeLookup';
 import { DomesticCourierGrid } from '@/components/domestic/DomesticCourierGrid';
+import { DimensionAssistant } from '@/components/domestic/DimensionAssistant';
 import { useAadhaarOcr } from '@/hooks/useAadhaarOcr';
 import { INDIAN_STATES } from '@/lib/pincode-lookup';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -58,7 +59,7 @@ const domesticRateSchema = z.object({
   shipmentType: z.enum(['document', 'gift'], { required_error: 'Select shipment type' }),
   pickupPincode: z.string().regex(/^\d{6}$/, 'Enter valid 6-digit pincode'),
   deliveryPincode: z.string().regex(/^\d{6}$/, 'Enter valid 6-digit pincode'),
-  weightKg: z.coerce.number().min(0.1, 'Min 0.1 kg').max(30, 'Max 30 kg'),
+  weightKg: z.coerce.number().min(0.1, 'Min 0.1 kg').max(10, 'Max 10 kg for guest booking'),
   lengthCm: z.coerce.number().min(1, 'Required').max(150),
   widthCm: z.coerce.number().min(1, 'Required').max(150),
   heightCm: z.coerce.number().min(1, 'Required').max(150),
@@ -69,7 +70,7 @@ const domesticRateSchema = z.object({
     if (data.declaredValue > 100) ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Documents max ₹100 declared value', path: ['declaredValue'] });
   }
   if (data.shipmentType === 'gift') {
-    if (data.weightKg > 30) ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Gift/Parcel max 30 kg', path: ['weightKg'] });
+    if (data.weightKg > 10) ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Guest booking max 10 kg. Open an account for heavier shipments.', path: ['weightKg'] });
     if (data.declaredValue > 49000) ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Max declared value ₹49,000', path: ['declaredValue'] });
   }
 });
@@ -1149,14 +1150,19 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                                 <SelectItem value="0.5">Up to 500g</SelectItem>
                                 <SelectItem value="1">Up to 1 kg</SelectItem>
                                 <SelectItem value="2">Up to 2 kg</SelectItem>
+                                <SelectItem value="3">Up to 3 kg</SelectItem>
+                                <SelectItem value="4">Up to 4 kg</SelectItem>
                                 <SelectItem value="5">Up to 5 kg</SelectItem>
+                                <SelectItem value="6">Up to 6 kg</SelectItem>
+                                <SelectItem value="7">Up to 7 kg</SelectItem>
+                                <SelectItem value="8">Up to 8 kg</SelectItem>
+                                <SelectItem value="9">Up to 9 kg</SelectItem>
                                 <SelectItem value="10">Up to 10 kg</SelectItem>
-                                <SelectItem value="15">Up to 15 kg</SelectItem>
-                                <SelectItem value="20">Up to 20 kg</SelectItem>
-                                <SelectItem value="25">Up to 25 kg</SelectItem>
-                                <SelectItem value="30">Up to 30 kg</SelectItem>
                               </SelectContent>
                             </Select>
+                          )}
+                          {!isDocumentDom && (
+                            <p className="text-[11px] text-muted-foreground mt-1">Guest booking supports up to 10 kg. <button type="button" onClick={() => router.push('/register')} className="text-coke-red hover:underline font-medium">Open an account</button> for heavier shipments.</p>
                           )}
                           <FormMessage />
                         </FormItem>
@@ -1176,7 +1182,10 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
 
                     {/* Dimensions with measurement instructions */}
                     <div>
-                      <p className="text-sm font-medium mb-1">Package Dimensions (cm)</p>
+                      <div className="flex items-center justify-between mb-1">
+                        <p className="text-sm font-medium">Package Dimensions (cm)</p>
+                        <DimensionAssistant lengthCm={watchedLength || 0} widthCm={watchedWidth || 0} heightCm={watchedHeight || 0} />
+                      </div>
                       <div className="rounded-lg bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900/50 p-3 mb-3">
                         <p className="text-xs text-blue-800 dark:text-blue-300 flex items-start gap-1.5">
                           <Info className="h-3.5 w-3.5 shrink-0 mt-0.5" weight="fill" />
@@ -1351,13 +1360,19 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                   if (airOnly.length > 0) {
                     filteredDomestic = airOnly;
                   } else {
-                    // Fallback: Delhivery Surface
                     const delhiverySurface = domesticCouriers.filter((c: any) =>
                       c.courier_name?.toLowerCase().includes('delhivery') && c.mode === 'surface'
                     );
                     filteredDomestic = delhiverySurface;
                   }
                 }
+
+                // For gift/parcel: split into Surface and Air sections
+                const surfaceCouriers = filteredDomestic.filter((c: any) => c.mode === 'surface');
+                const airCouriers = filteredDomestic.filter((c: any) => c.mode === 'air');
+
+                // Weight slab info for user guidance
+                const currentWeight = rateFormData && 'weightKg' in rateFormData ? (rateFormData as DomesticRateValues).weightKg : 0;
 
                 return filteredDomestic.length === 0 ? (
                   /* ── Animated no-service component ── */
@@ -1401,21 +1416,84 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                     </motion.div>
                   </motion.div>
                 ) : (
-                  <div className="space-y-3">
+                  <div className="space-y-6">
                     {isDocType && (
                       <div className="flex items-center gap-2 text-xs text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/30 rounded-lg px-3 py-2">
                         <AirplaneTilt className="h-4 w-4 shrink-0" weight="fill" />
                         <span>Showing air service rates for document shipments</span>
                       </div>
                     )}
-                    <DomesticCourierGrid
-                      couriers={filteredDomestic}
-                      selectedId={null}
-                      onSelect={() => {}}
-                      showBookButton
-                      onBook={(courier) => { feedbackPresets.select(); handleSelectCourier(courier); }}
-                      maxItems={15}
-                    />
+
+                    {/* Weight slab info */}
+                    {!isDocType && currentWeight > 0 && (
+                      <div className="rounded-lg bg-muted/40 border border-border/60 px-4 py-3">
+                        <p className="text-xs text-muted-foreground">
+                          Showing rates for <span className="font-semibold text-foreground">{currentWeight} kg</span> shipment.
+                          {currentWeight > 2 && <span> Rates include the 2 kg base slab + additional weight charges.</span>}
+                          {currentWeight > 5 && <span> Heavy parcel surcharges may apply.</span>}
+                        </p>
+                      </div>
+                    )}
+
+                    {/* If document type, show all in one grid */}
+                    {isDocType ? (
+                      <DomesticCourierGrid
+                        couriers={filteredDomestic}
+                        selectedId={null}
+                        onSelect={() => {}}
+                        showBookButton
+                        onBook={(courier) => { feedbackPresets.select(); handleSelectCourier(courier); }}
+                        maxItems={15}
+                      />
+                    ) : (
+                      <>
+                        {/* Surface Section */}
+                        {surfaceCouriers.length > 0 && (
+                          <div className="space-y-3">
+                            <div className="flex items-center gap-2">
+                              <div className="w-8 h-8 rounded-lg bg-green-100 dark:bg-green-950/40 flex items-center justify-center">
+                                <Truck className="h-4 w-4 text-green-600" weight="bold" />
+                              </div>
+                              <div>
+                                <h3 className="font-semibold text-sm">Surface Delivery</h3>
+                                <p className="text-[11px] text-muted-foreground">Economical ground shipping · 4–7 business days</p>
+                              </div>
+                            </div>
+                            <DomesticCourierGrid
+                              couriers={surfaceCouriers}
+                              selectedId={null}
+                              onSelect={() => {}}
+                              showBookButton
+                              onBook={(courier) => { feedbackPresets.select(); handleSelectCourier(courier); }}
+                              maxItems={10}
+                            />
+                          </div>
+                        )}
+
+                        {/* Air Section */}
+                        {airCouriers.length > 0 && (
+                          <div className="space-y-3">
+                            <div className="flex items-center gap-2">
+                              <div className="w-8 h-8 rounded-lg bg-blue-100 dark:bg-blue-950/40 flex items-center justify-center">
+                                <AirplaneTilt className="h-4 w-4 text-blue-600" weight="bold" />
+                              </div>
+                              <div>
+                                <h3 className="font-semibold text-sm">Air Delivery</h3>
+                                <p className="text-[11px] text-muted-foreground">Priority air shipping · 1–3 business days</p>
+                              </div>
+                            </div>
+                            <DomesticCourierGrid
+                              couriers={airCouriers}
+                              selectedId={null}
+                              onSelect={() => {}}
+                              showBookButton
+                              onBook={(courier) => { feedbackPresets.select(); handleSelectCourier(courier); }}
+                              maxItems={10}
+                            />
+                          </div>
+                        )}
+                      </>
+                    )}
                 </div>
                 );
               })()
