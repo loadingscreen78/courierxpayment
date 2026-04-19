@@ -294,7 +294,7 @@ export default function OpenAccount() {
 
                 <p className="text-center text-xs text-muted-foreground/70">
                   By continuing, you agree to the terms of{' '}
-                  <a href="/terms-and-conditions" className="underline hover:text-coke-red transition-colors">
+                  <a href="/terms" className="underline hover:text-coke-red transition-colors">
                     Goldilocks Zone Private Limited
                   </a>
                   .
