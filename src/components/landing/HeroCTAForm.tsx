@@ -344,7 +344,14 @@ export const HeroCTAForm = () => {
           </TabsList>
 
           {/* ── Ship Now ── */}
-          <TabsContent value="ship" className="mt-0 p-5 sm:p-6 space-y-4">
+          <TabsContent value="ship" className="mt-0 p-5 sm:p-6 space-y-4 min-h-[370px]">
+            {/* Contextual separator */}
+            <div className="flex items-center gap-3">
+              <div className="flex-1 h-px bg-border/40" />
+              <span className="text-[10px] text-muted-foreground/60 uppercase tracking-widest font-medium whitespace-nowrap">Where are you shipping?</span>
+              <div className="flex-1 h-px bg-border/40" />
+            </div>
+
             {/* Mode toggle */}
             <div className="flex p-0.5 bg-muted/50 rounded-lg">
               <button
@@ -434,7 +441,14 @@ export const HeroCTAForm = () => {
           </TabsContent>
 
           {/* ── Track Order ── */}
-          <TabsContent value="track" className="mt-0 p-5 sm:p-6 space-y-4">
+          <TabsContent value="track" className="mt-0 p-5 sm:p-6 space-y-4 min-h-[370px]">
+            {/* Contextual separator */}
+            <div className="flex items-center gap-3">
+              <div className="flex-1 h-px bg-border/40" />
+              <span className="text-[10px] text-muted-foreground/60 uppercase tracking-widest font-medium whitespace-nowrap">Enter your shipment details</span>
+              <div className="flex-1 h-px bg-border/40" />
+            </div>
+
             <label className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">Tracking Number</label>
             <div className="relative">
               <Package className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/60" weight="bold" />
