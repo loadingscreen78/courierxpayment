@@ -25,6 +25,7 @@ import AddressAutocomplete from '@/components/guest-booking/AddressAutocomplete'
 import { usePincodeLookup } from '@/hooks/usePincodeLookup';
 import { DomesticCourierGrid } from '@/components/domestic/DomesticCourierGrid';
 import { DimensionAssistant } from '@/components/domestic/DimensionAssistant';
+import { PincodeFinder } from '@/components/domestic/PincodeFinder';
 import { useAadhaarOcr } from '@/hooks/useAadhaarOcr';
 import { INDIAN_STATES } from '@/lib/pincode-lookup';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -327,6 +328,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
   const [accountCouriers, setAccountCouriers] = useState<CourierOption[]>([]);
   const [domesticCouriers, setDomesticCouriers] = useState<any[]>([]);
   const [courierFilterTab, setCourierFilterTab] = useState<'express' | 'economy' | 'saver'>('express');
+  const [showReceiverPinFinder, setShowReceiverPinFinder] = useState(false);
   const [isDomesticLoading, setIsDomesticLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [senderReceiverData, setSenderReceiverData] = useState<any>(null);
@@ -508,10 +510,12 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
 
   useEffect(() => {
     if (receiverLookup.district && !isInternational) {
-      const currentCity = detailsForm.getValues('receiverCity');
-      if (!currentCity) detailsForm.setValue('receiverCity', receiverLookup.district);
+      detailsForm.setValue('receiverCity', receiverLookup.district);
     }
-  }, [receiverLookup.district, isInternational, detailsForm]);
+    if (receiverLookup.state && !isInternational) {
+      detailsForm.setValue('receiverState', receiverLookup.state);
+    }
+  }, [receiverLookup.district, receiverLookup.state, isInternational, detailsForm]);
 
   // ── International zip code lookup (zippopotam.us) ──
   const receiverZip = detailsForm.watch('receiverZipcode');
@@ -1846,44 +1850,112 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                             <FormItem>
                               <FormLabel>Full Address</FormLabel>
                               <FormControl>
-                                <AddressAutocomplete
-                                  value={field.value}
-                                  onChange={field.onChange}
-                                  countryCode={destinationCountryInfo?.code}
-                                  placeholder={getAddressGuidance()}
-                                  onAddressSelect={(parts) => {
-                                    if (parts.city) detailsForm.setValue('receiverCity', parts.city);
-                                    if (parts.state) detailsForm.setValue('receiverState', parts.state);
-                                    if (parts.zipcode) detailsForm.setValue('receiverZipcode', parts.zipcode);
-                                  }}
-                                />
+                                {isInternational ? (
+                                  <AddressAutocomplete
+                                    value={field.value}
+                                    onChange={field.onChange}
+                                    countryCode={destinationCountryInfo?.code}
+                                    placeholder={getAddressGuidance()}
+                                    onAddressSelect={(parts) => {
+                                      if (parts.city) detailsForm.setValue('receiverCity', parts.city);
+                                      if (parts.state) detailsForm.setValue('receiverState', parts.state);
+                                      if (parts.zipcode) detailsForm.setValue('receiverZipcode', parts.zipcode);
+                                    }}
+                                  />
+                                ) : (
+                                  <Input {...field} placeholder="House/Flat No, Street, Locality" className="h-11" />
+                                )}
                               </FormControl>
                               <FormMessage />
                             </FormItem>
                           )} />
-                          <div className={`grid ${isInternational ? 'grid-cols-1 xs:grid-cols-3' : 'grid-cols-1 xs:grid-cols-2'} gap-3 sm:gap-4`}>
-                            <FormField control={detailsForm.control} name="receiverCity" render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>{isInternational ? 'City' : 'City / District'}</FormLabel>
-                                {!isInternational && receiverLookup.areas.length > 0 ? (
-                                  <Select onValueChange={field.onChange} value={field.value}>
+
+                          {/* Domestic: Pincode with finder + auto-filled district/state */}
+                          {!isInternational && (
+                            <>
+                              <FormField control={detailsForm.control} name="receiverZipcode" render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Pincode</FormLabel>
+                                  <div className="flex gap-1.5">
                                     <FormControl>
-                                      <SelectTrigger><SelectValue placeholder="Select city" /></SelectTrigger>
+                                      <Input
+                                        {...field}
+                                        placeholder="400001"
+                                        maxLength={6}
+                                        readOnly={!!domesticDeliveryPincode}
+                                        className={`h-11 flex-1 ${domesticDeliveryPincode ? 'bg-muted' : ''}`}
+                                      />
                                     </FormControl>
-                                    <SelectContent>
-                                      {receiverLookup.district && <SelectItem value={receiverLookup.district}>{receiverLookup.district} (District)</SelectItem>}
-                                      {receiverLookup.areas.filter(a => a !== receiverLookup.district).map(a => (
-                                        <SelectItem key={a} value={a}>{a}</SelectItem>
-                                      ))}
-                                    </SelectContent>
-                                  </Select>
-                                ) : (
+                                    {!domesticDeliveryPincode && (
+                                      <div className="relative">
+                                        <button
+                                          type="button"
+                                          onClick={() => setShowReceiverPinFinder(v => !v)}
+                                          className={cn(
+                                            'h-11 px-2.5 rounded-xl border text-xs font-medium shrink-0 flex items-center gap-1 transition-all',
+                                            showReceiverPinFinder
+                                              ? 'border-coke-red bg-coke-red/5 text-coke-red'
+                                              : 'border-border bg-muted/30 hover:bg-muted/60 text-muted-foreground hover:text-foreground'
+                                          )}
+                                        >
+                                          <MagnifyingGlass className="h-3.5 w-3.5" weight="bold" />
+                                          <span className="hidden sm:inline">Find</span>
+                                        </button>
+                                        {showReceiverPinFinder && (
+                                          <PincodeFinder
+                                            onSelect={(pin) => {
+                                              field.onChange(pin);
+                                              setShowReceiverPinFinder(false);
+                                            }}
+                                            onClose={() => setShowReceiverPinFinder(false)}
+                                            align="right"
+                                          />
+                                        )}
+                                      </div>
+                                    )}
+                                  </div>
+                                  {receiverLookup.loading && <p className="text-xs text-muted-foreground flex items-center gap-1"><CircleNotch className="h-3 w-3 animate-spin" /> Looking up...</p>}
+                                  {receiverLookup.error && <p className="text-xs text-destructive">{receiverLookup.error}</p>}
+                                  <FormMessage />
+                                </FormItem>
+                              )} />
+                              <div className="grid grid-cols-2 gap-3 sm:gap-4">
+                                <FormField control={detailsForm.control} name="receiverCity" render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel>District</FormLabel>
+                                    <div className={`h-11 flex items-center px-3 rounded-md border text-sm ${receiverLookup.district ? 'border-border bg-muted font-medium' : 'border-border bg-muted text-muted-foreground'}`}>
+                                      {receiverLookup.loading
+                                        ? <span className="flex items-center gap-1.5 text-muted-foreground"><CircleNotch className="h-3.5 w-3.5 animate-spin" /> Fetching...</span>
+                                        : receiverLookup.district || (field.value || 'Auto-filled from pincode')}
+                                    </div>
+                                    <FormMessage />
+                                  </FormItem>
+                                )} />
+                                <FormField control={detailsForm.control} name="receiverState" render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel>State</FormLabel>
+                                    <div className={`h-11 flex items-center px-3 rounded-md border text-sm ${receiverLookup.state ? 'border-border bg-muted font-medium' : 'border-border bg-muted text-muted-foreground'}`}>
+                                      {receiverLookup.loading
+                                        ? <span className="flex items-center gap-1.5 text-muted-foreground"><CircleNotch className="h-3.5 w-3.5 animate-spin" /> Fetching...</span>
+                                        : receiverLookup.state || (field.value || 'Auto-filled from pincode')}
+                                    </div>
+                                    <FormMessage />
+                                  </FormItem>
+                                )} />
+                              </div>
+                            </>
+                          )}
+
+                          {/* International: city/state/zip grid */}
+                          {isInternational && (
+                            <div className="grid grid-cols-1 xs:grid-cols-3 gap-3 sm:gap-4">
+                              <FormField control={detailsForm.control} name="receiverCity" render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>City</FormLabel>
                                   <FormControl><Input {...field} placeholder="City" className="h-11" /></FormControl>
-                                )}
-                                <FormMessage />
-                              </FormItem>
-                            )} />
-                            {isInternational && (
+                                  <FormMessage />
+                                </FormItem>
+                              )} />
                               <FormField control={detailsForm.control} name="receiverState" render={({ field }) => (
                                 <FormItem>
                                   <FormLabel>State / Province</FormLabel>
@@ -1891,22 +1963,17 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                                   <FormMessage />
                                 </FormItem>
                               )} />
-                            )}
-                            <FormField control={detailsForm.control} name="receiverZipcode" render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>{isInternational ? 'Zip / Postal Code' : 'Pincode'}</FormLabel>
-                                <FormControl>
-                                  <Input {...field} placeholder={isInternational ? 'Zipcode' : '400001'} maxLength={isInternational ? 10 : 6} readOnly={!isInternational && !!domesticDeliveryPincode} className={`h-11 ${!isInternational && domesticDeliveryPincode ? 'bg-muted' : ''}`} />
-                                </FormControl>
-                                {isInternational && intlZipLookup.loading && <p className="text-xs text-muted-foreground flex items-center gap-1"><CircleNotch className="h-3 w-3 animate-spin" /> Looking up...</p>}
-                                {isInternational && intlZipLookup.city && <p className="text-xs text-candlestick-green">{intlZipLookup.city}{intlZipLookup.state ? `, ${intlZipLookup.state}` : ''}</p>}
-                                {!isInternational && receiverLookup.loading && <p className="text-xs text-muted-foreground flex items-center gap-1"><CircleNotch className="h-3 w-3 animate-spin" /> Looking up...</p>}
-                                {!isInternational && receiverLookup.state && <p className="text-xs text-candlestick-green">{receiverLookup.district}, {receiverLookup.state}</p>}
-                                {!isInternational && receiverLookup.error && <p className="text-xs text-destructive">{receiverLookup.error}</p>}
-                                <FormMessage />
-                              </FormItem>
-                            )} />
-                          </div>
+                              <FormField control={detailsForm.control} name="receiverZipcode" render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Zip / Postal Code</FormLabel>
+                                  <FormControl><Input {...field} placeholder="Zipcode" maxLength={10} className="h-11" /></FormControl>
+                                  {intlZipLookup.loading && <p className="text-xs text-muted-foreground flex items-center gap-1"><CircleNotch className="h-3 w-3 animate-spin" /> Looking up...</p>}
+                                  {intlZipLookup.city && <p className="text-xs text-candlestick-green">{intlZipLookup.city}{intlZipLookup.state ? `, ${intlZipLookup.state}` : ''}</p>}
+                                  <FormMessage />
+                                </FormItem>
+                              )} />
+                            </div>
+                          )}
 
                           {/* Passport Upload - Medicine only */}
                           {isMedicineFlow && (
