@@ -93,7 +93,7 @@ const PinInput = ({ value, onChange, meta, placeholder }: {
         placeholder={placeholder}
         value={value}
         onChange={e => onChange(e.target.value.replace(/\D/g, '').slice(0, 6))}
-        className="pl-9 h-11 rounded-xl border-border bg-background text-sm focus:border-coke-red focus:ring-coke-red/20"
+        className="pl-9 h-12 rounded-xl border-border bg-background text-sm focus:border-coke-red focus:ring-coke-red/20"
       />
       {meta.loading && (
         <CircleNotch className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />
@@ -146,7 +146,7 @@ export const HeroCTAForm = () => {
 
   const filteredCountries = countrySearch.length > 0
     ? countryOptions.filter(c => c.name.toLowerCase().includes(countrySearch.toLowerCase()))
-    : countryOptions.slice(0, 15);
+    : countryOptions.slice(0, 30);
 
   // ── Ship Now — navigate directly to guest workflow with data ──
   const handleShipNow = () => {
@@ -184,52 +184,52 @@ export const HeroCTAForm = () => {
 
   return (
     <div className="w-full">
-      <div className="rounded-2xl border border-border bg-card/95 backdrop-blur-sm shadow-2xl shadow-black/10 overflow-hidden">
+      <div className="rounded-2xl border border-border bg-card/95 backdrop-blur-sm shadow-2xl shadow-black/10 overflow-visible">
         <Tabs defaultValue="ship" className="w-full">
           {/* Tab Headers */}
-          <TabsList className="w-full h-auto p-0 bg-muted/50 rounded-none border-b border-border grid grid-cols-2">
+          <TabsList className="w-full h-auto p-0 bg-muted/50 rounded-none rounded-t-2xl overflow-hidden border-b border-border grid grid-cols-2">
             <TabsTrigger
               value="ship"
-              className="rounded-none border-b-2 border-transparent data-[state=active]:border-coke-red data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none py-3.5 text-sm font-semibold gap-2"
+              className="rounded-none border-b-2 border-transparent data-[state=active]:border-coke-red data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none py-4 text-base font-semibold gap-2"
             >
-              <Package className="h-4 w-4" weight="bold" />
+              <Package className="h-5 w-5" weight="bold" />
               Ship Now
             </TabsTrigger>
             <TabsTrigger
               value="track"
-              className="rounded-none border-b-2 border-transparent data-[state=active]:border-coke-red data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none py-3.5 text-sm font-semibold gap-2"
+              className="rounded-none border-b-2 border-transparent data-[state=active]:border-coke-red data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none py-4 text-base font-semibold gap-2"
             >
-              <MagnifyingGlass className="h-4 w-4" weight="bold" />
+              <MagnifyingGlass className="h-5 w-5" weight="bold" />
               Track Order
             </TabsTrigger>
           </TabsList>
 
           {/* ── Ship Now Tab ── */}
-          <TabsContent value="ship" className="mt-0 p-5 space-y-4">
+          <TabsContent value="ship" className="mt-0 p-6 sm:p-7 space-y-5">
             {/* Domestic / International toggle */}
             <div className="flex gap-2 p-1 bg-muted rounded-xl">
               <button
                 onClick={() => setShipType('domestic')}
                 className={cn(
-                  "flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-semibold transition-all",
+                  "flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-sm font-semibold transition-all",
                   isDomestic
                     ? "bg-background text-foreground shadow-sm"
                     : "text-muted-foreground hover:text-foreground"
                 )}
               >
-                <Truck className="h-3.5 w-3.5" weight="bold" />
+                <Truck className="h-4 w-4" weight="bold" />
                 Domestic
               </button>
               <button
                 onClick={() => setShipType('international')}
                 className={cn(
-                  "flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-semibold transition-all",
+                  "flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-sm font-semibold transition-all",
                   !isDomestic
                     ? "bg-background text-foreground shadow-sm"
                     : "text-muted-foreground hover:text-foreground"
                 )}
               >
-                <Globe className="h-3.5 w-3.5" weight="bold" />
+                <Globe className="h-4 w-4" weight="bold" />
                 International
               </button>
             </div>
@@ -244,18 +244,18 @@ export const HeroCTAForm = () => {
                   exit={{ opacity: 0, x: 10 }}
                   className="space-y-3"
                 >
-                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Pickup</p>
+                  <p className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Pickup</p>
                   <PinInput value={pickupPin} onChange={setPickupPin} meta={pickupMeta} placeholder="Pickup pin code" />
 
-                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider pt-1">Drop</p>
+                  <p className="text-sm font-medium text-muted-foreground uppercase tracking-wider pt-1">Drop</p>
                   <PinInput value={dropPin} onChange={setDropPin} meta={dropMeta} placeholder="Drop pin code" />
 
                   <Button
-                    className="w-full h-11 bg-coke-red hover:bg-coke-red/90 text-white font-semibold rounded-xl shadow-lg shadow-coke-red/20 text-sm gap-2 mt-2"
+                    className="w-full h-12 bg-coke-red hover:bg-coke-red/90 text-white font-semibold rounded-xl shadow-lg shadow-coke-red/20 text-base gap-2 mt-2"
                     onClick={handleShipNow}
                     disabled={pickupPin.length !== 6 || dropPin.length !== 6 || !!pickupMeta.error || !!dropMeta.error || pickupMeta.loading || dropMeta.loading}
                   >
-                    Get Rates <ArrowRight className="h-4 w-4" weight="bold" />
+                    Ship Now <ArrowRight className="h-4 w-4" weight="bold" />
                   </Button>
                 </motion.div>
               ) : (
@@ -267,10 +267,10 @@ export const HeroCTAForm = () => {
                   exit={{ opacity: 0, x: -10 }}
                   className="space-y-3"
                 >
-                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Pickup (India)</p>
+                  <p className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Pickup (India)</p>
                   <PinInput value={pickupPin} onChange={setPickupPin} meta={pickupMeta} placeholder="Pickup pin code" />
 
-                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider pt-1">Destination Country</p>
+                  <p className="text-sm font-medium text-muted-foreground uppercase tracking-wider pt-1">Destination Country</p>
                   <div className="relative" ref={countryRef}>
                     <Globe className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" weight="bold" />
                     <Input
@@ -283,10 +283,10 @@ export const HeroCTAForm = () => {
                         setShowCountryDropdown(true);
                       }}
                       onFocus={() => setShowCountryDropdown(true)}
-                      className="pl-9 h-11 rounded-xl border-border bg-background text-sm focus:border-coke-red focus:ring-coke-red/20"
+                      className="pl-9 h-12 rounded-xl border-border bg-background text-sm focus:border-coke-red focus:ring-coke-red/20"
                     />
                     {showCountryDropdown && filteredCountries.length > 0 && (
-                      <div className="absolute z-50 top-full mt-1 w-full max-h-48 overflow-y-auto rounded-xl border border-border bg-card shadow-xl">
+                      <div className="absolute z-[9999] top-full mt-1 w-full max-h-72 overflow-y-auto rounded-xl border border-border bg-card shadow-xl">
                         {filteredCountries.map(c => (
                           <button
                             key={c.code}
@@ -306,25 +306,25 @@ export const HeroCTAForm = () => {
                   </div>
 
                   <Button
-                    className="w-full h-11 bg-coke-red hover:bg-coke-red/90 text-white font-semibold rounded-xl shadow-lg shadow-coke-red/20 text-sm gap-2 mt-2"
+                    className="w-full h-12 bg-coke-red hover:bg-coke-red/90 text-white font-semibold rounded-xl shadow-lg shadow-coke-red/20 text-base gap-2 mt-2"
                     onClick={handleShipNow}
                     disabled={!destCountry || pickupPin.length !== 6 || !!pickupMeta.error || pickupMeta.loading}
                   >
-                    Get Rates <ArrowRight className="h-4 w-4" weight="bold" />
+                    Ship Now <ArrowRight className="h-4 w-4" weight="bold" />
                   </Button>
                 </motion.div>
               )}
             </AnimatePresence>
 
-            <p className="text-[11px] text-muted-foreground text-center pt-1">
+            <p className="text-xs text-muted-foreground text-center pt-1">
               No account needed. Get instant rates and book as a guest.
             </p>
           </TabsContent>
 
           {/* ── Track Order Tab ── */}
-          <TabsContent value="track" className="mt-0 p-5 space-y-4">
-            <div className="space-y-3">
-              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Tracking Number</p>
+          <TabsContent value="track" className="mt-0 p-6 sm:p-7 space-y-5">
+            <div className="space-y-4">
+              <p className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Tracking Number</p>
               <div className="relative">
                 <Package className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" weight="bold" />
                 <Input
@@ -333,11 +333,11 @@ export const HeroCTAForm = () => {
                   value={trackAwb}
                   onChange={e => setTrackAwb(e.target.value)}
                   onKeyDown={e => e.key === 'Enter' && handleTrack()}
-                  className="pl-9 h-11 rounded-xl border-border bg-background text-sm focus:border-coke-red focus:ring-coke-red/20"
+                  className="pl-9 h-12 rounded-xl border-border bg-background text-sm focus:border-coke-red focus:ring-coke-red/20"
                 />
               </div>
 
-              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider pt-1">Mobile Number <span className="text-muted-foreground/60">(optional)</span></p>
+              <p className="text-sm font-medium text-muted-foreground uppercase tracking-wider pt-1">Mobile Number <span className="text-muted-foreground/60">(optional)</span></p>
               <div className="flex">
                 <span className="inline-flex items-center px-3 rounded-l-xl bg-muted border border-r-0 border-border text-xs text-muted-foreground font-medium">
                   +91
@@ -349,12 +349,12 @@ export const HeroCTAForm = () => {
                   placeholder="10-digit mobile"
                   value={trackPhone}
                   onChange={e => setTrackPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
-                  className="rounded-l-none border-l-0 h-11 text-sm"
+                  className="rounded-l-none border-l-0 h-12 text-sm"
                 />
               </div>
 
               <Button
-                className="w-full h-11 bg-coke-red hover:bg-coke-red/90 text-white font-semibold rounded-xl shadow-lg shadow-coke-red/20 text-sm gap-2 mt-1"
+                className="w-full h-12 bg-coke-red hover:bg-coke-red/90 text-white font-semibold rounded-xl shadow-lg shadow-coke-red/20 text-base gap-2 mt-1"
                 onClick={handleTrack}
                 disabled={!trackAwb.trim() || trackLoading}
               >

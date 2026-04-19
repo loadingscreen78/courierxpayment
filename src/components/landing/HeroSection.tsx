@@ -118,21 +118,6 @@ export const HeroSection = () => {
               <span className="hidden sm:inline">India&apos;s only person to person courier booking platform. Book domestic and international courier online — send medicines, documents, gifts and personal parcels door-to-door across India and to 150+ countries.</span>
             </motion.p>
 
-            {/* Trust Badges — hidden on mobile, shown on sm+ */}
-
-            {/* Account Benefit Note — hidden on mobile */}
-            <motion.p
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.6, delay: 0.9 }}
-              className="hidden sm:block text-sm text-muted-foreground"
-            >
-              Account holders save up to <span className="font-semibold text-candlestick-green">25%</span> on every shipment.{' '}
-              <button onClick={() => router.push('/register')} className="text-coke-red hover:underline font-medium">
-                Open a free account →
-              </button>
-            </motion.p>
-
             {/* Carrier Logos — hidden on mobile */}
             <motion.div
               initial={{ opacity: 0 }}
