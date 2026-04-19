@@ -833,6 +833,8 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
             </>
           )}
         </div>
+      </div>
+
       {/* ── Coupon Code ── */}
       {!couponApplied && (
         <PublicCouponBanner
