@@ -65,11 +65,10 @@ const domesticRateSchema = z.object({
   lengthCm: z.coerce.number().min(1, 'Required').max(150),
   widthCm: z.coerce.number().min(1, 'Required').max(150),
   heightCm: z.coerce.number().min(1, 'Required').max(150),
-  declaredValue: z.coerce.number().min(0).max(49000, 'Max ₹49,000'),
+  declaredValue: z.coerce.number().min(0).max(49000).optional().default(0),
 }).superRefine((data, ctx) => {
   if (data.shipmentType === 'document') {
     if (data.weightKg > 1) ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Documents max 1 kg', path: ['weightKg'] });
-    if (data.declaredValue > 100) ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Documents max ₹100 declared value', path: ['declaredValue'] });
   }
   if (data.shipmentType === 'gift') {
     if (data.weightKg > 10) ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Guest booking max 10 kg. Open an account for heavier shipments.', path: ['weightKg'] });
@@ -376,7 +375,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
   // ── Domestic rate form ──
   const domForm = useForm<DomesticRateValues>({
     resolver: zodResolver(domesticRateSchema),
-    defaultValues: { shipmentType: undefined, pickupPincode: '', deliveryPincode: '', weightKg: undefined as any, lengthCm: undefined as any, widthCm: undefined as any, heightCm: undefined as any, declaredValue: undefined as any },
+    defaultValues: { shipmentType: undefined, pickupPincode: '', deliveryPincode: '', weightKg: undefined as any, lengthCm: undefined as any, widthCm: undefined as any, heightCm: undefined as any, declaredValue: 0 },
   });
 
   // ── Sender/Receiver form ──
