@@ -127,7 +127,7 @@ export const HeroSection = () => {
             >
               <p className="text-xs text-muted-foreground mb-4 uppercase tracking-wider">Trusted Carrier Partners — Domestic &amp; International</p>
               <div className="flex flex-wrap items-center gap-6 sm:gap-8">
-                {['DHL', 'FedEx', 'Aramex', 'BlueDart', 'DTDC', 'ShipGlobal'].map((carrier) => (
+                {['DHL', 'FedEx', 'Aramex', 'BlueDart', 'DTDC', 'Delhivery', 'ShipGlobal'].map((carrier) => (
                   <span
                     key={carrier}
                     className="font-bold text-lg tracking-tight cursor-default opacity-50 hover:opacity-100 hover:scale-105 transition-all duration-75"
