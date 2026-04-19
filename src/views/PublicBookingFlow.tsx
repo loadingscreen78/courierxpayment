@@ -87,7 +87,7 @@ const senderReceiverSchema = z.object({
   senderPincode: z.string().regex(/^\d{6}$/, 'Valid 6-digit pincode'),
   receiverName: z.string().min(2, 'Required'),
   receiverPhone: z.string().min(5, 'Required'),
-  receiverEmail: z.string().email('Valid email required'),
+  receiverEmail: z.string().email('Valid email required').or(z.literal('')),
   receiverAddress: z.string().min(5, 'Required'),
   receiverCity: z.string().min(2, 'Required'),
   receiverState: z.string().min(1, 'Required').or(z.literal('')),
@@ -826,7 +826,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
     // For domestic, receiverState is auto-filled from pincode lookup — skip validating it
     const receiverFields = isInternational
       ? ['receiverName', 'receiverPhone', 'receiverEmail', 'receiverAddress', 'receiverCity', 'receiverState', 'receiverZipcode'] as const
-      : ['receiverName', 'receiverPhone', 'receiverEmail', 'receiverAddress', 'receiverCity', 'receiverZipcode'] as const;
+      : ['receiverName', 'receiverPhone', 'receiverAddress', 'receiverCity', 'receiverZipcode'] as const;
     const result = await detailsForm.trigger(receiverFields);
     if (!result) return;
     // For domestic, auto-set receiverState from pincode lookup if available
@@ -1845,7 +1845,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                             )} />
                           </div>
                           <FormField control={detailsForm.control} name="receiverEmail" render={({ field }) => (
-                            <FormItem><FormLabel>Email</FormLabel><FormControl><Input {...field} type="email" placeholder="receiver@email.com" className="h-11" /></FormControl><FormMessage /></FormItem>
+                            <FormItem><FormLabel>Email <span className="text-muted-foreground font-normal">(optional)</span></FormLabel><FormControl><Input {...field} type="email" placeholder="receiver@email.com" className="h-11" /></FormControl><FormMessage /></FormItem>
                           )} />
                           <FormField control={detailsForm.control} name="receiverAddress" render={({ field }) => (
                             <FormItem>
