@@ -1381,7 +1381,8 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                 const expressCouriers = filteredDomestic.filter((c: any) => c.mode === 'air');
                 const surfaceOnly = filteredDomestic.filter((c: any) => c.mode === 'surface');
                 const saverCouriers = allSorted.slice(0, 3); // top 3 cheapest
-                const economyCouriers = surfaceOnly; // all surface options
+                const saverIds = new Set(saverCouriers.map((c: any) => c.courier_company_id));
+                const economyCouriers = surfaceOnly.filter((c: any) => !saverIds.has(c.courier_company_id)); // surface minus saver
 
                 const currentWeight = rateFormData && 'weightKg' in rateFormData ? (rateFormData as DomesticRateValues).weightKg : 0;
 
