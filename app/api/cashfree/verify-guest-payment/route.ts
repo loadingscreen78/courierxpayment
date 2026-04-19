@@ -27,18 +27,29 @@ export async function POST(request: NextRequest) {
     let isPaid = devMode;
 
     if (!devMode) {
-      const cfRes = await fetch(`${CASHFREE_API_BASE}/orders/${orderId}`, {
-        headers: {
-          'x-api-version': CASHFREE_API_VERSION,
-          'x-client-id': appId!,
-          'x-client-secret': secretKey!,
-        },
-      });
-      if (!cfRes.ok) {
-        return NextResponse.json({ success: false, error: 'Failed to verify payment' }, { status: 500 });
+      // If booking is already marked paid in DB (e.g. ₹0 coupon order), trust the DB
+      const { data: preCheck } = await supabase
+        .from('guest_bookings')
+        .select('status, amount')
+        .eq('order_id', orderId)
+        .maybeSingle();
+
+      if (preCheck?.status === 'paid' || preCheck?.status === 'shipped' || Number(preCheck?.amount) === 0) {
+        isPaid = true;
+      } else {
+        const cfRes = await fetch(`${CASHFREE_API_BASE}/orders/${orderId}`, {
+          headers: {
+            'x-api-version': CASHFREE_API_VERSION,
+            'x-client-id': appId!,
+            'x-client-secret': secretKey!,
+          },
+        });
+        if (!cfRes.ok) {
+          return NextResponse.json({ success: false, error: 'Failed to verify payment' }, { status: 500 });
+        }
+        const order = await cfRes.json();
+        isPaid = order.order_status === 'PAID';
       }
-      const order = await cfRes.json();
-      isPaid = order.order_status === 'PAID';
     }
 
     if (!isPaid) {
@@ -67,14 +78,14 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Already failed NimbusPost — don't retry automatically
+    // Already failed NimbusPost — allow one retry
     if (booking.status === 'paid_nimbus_failed') {
-      return NextResponse.json({
-        success: true,
-        awbUrl: '',
-        trackingNumber: booking.tracking_number,
-        error: 'Shipment creation previously failed — our team will process manually',
-      });
+      console.log('[verify-guest-payment] Retrying previously failed NimbusPost shipment for:', orderId);
+      // Reset status to paid so we retry below
+      await supabase
+        .from('guest_bookings')
+        .update({ status: 'paid' })
+        .eq('order_id', orderId);
     }
 
     // Mark as paid if still pending
@@ -276,7 +287,7 @@ export async function POST(request: NextRequest) {
               state: receiverState,
               pincode: receiverPincode,
             },
-            order_amount: Number(rateFormData?.declaredValue) || Number(booking.amount) || 100,
+            order_amount: Math.max(100, Number(rateFormData?.declaredValue) || Number(booking.amount) || 100),
             weight: weightKg,
             length: Number(rateFormData?.lengthCm) || 20,
             breadth: Number(rateFormData?.widthCm) || 15,

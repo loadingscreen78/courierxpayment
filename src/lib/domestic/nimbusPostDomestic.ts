@@ -60,6 +60,43 @@ async function getToken(): Promise<string> {
 }
 
 // ---------------------------------------------------------------------------
+// Get registered warehouse name — fetches from NimbusPost and caches first result
+// ---------------------------------------------------------------------------
+
+let warehouseNameCache: string | null = null;
+
+async function getWarehouseName(): Promise<string> {
+  // Use env override if set
+  const envName = process.env.NIMBUS_WAREHOUSE_NAME?.trim();
+  if (envName && envName !== 'default' && envName !== 'Primary') return envName;
+
+  if (warehouseNameCache) return warehouseNameCache;
+
+  try {
+    const token = await getToken();
+    const res = await fetch(`${NIMBUS_API_BASE}/warehouses`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (res.ok) {
+      const data = await res.json();
+      const warehouses = Array.isArray(data?.data) ? data.data : [];
+      if (warehouses.length > 0) {
+        // Use the first/primary warehouse name
+        const name = warehouses[0]?.name || warehouses[0]?.warehouse_name || 'Primary';
+        warehouseNameCache = name;
+        console.log('[nimbusPostDomestic] Using warehouse:', name);
+        return name;
+      }
+    }
+  } catch (e) {
+    console.warn('[nimbusPostDomestic] Could not fetch warehouse list:', e);
+  }
+
+  // Fallback
+  return envName || 'Primary';
+}
+
+// ---------------------------------------------------------------------------
 // Rate Check — fetch available couriers for a domestic route
 // ---------------------------------------------------------------------------
 
@@ -226,6 +263,7 @@ export async function createDomesticShipment(
   params: CreateDomesticShipmentParams,
 ): Promise<CreateDomesticShipmentResponse> {
   const token = await getToken();
+  const warehouseName = await getWarehouseName();
 
   const orderNumber = params.order_number || `CXD-${Date.now()}`;
   const weightGrams = Math.max(1, Math.round(params.weight * 1000));
@@ -236,7 +274,7 @@ export async function createDomesticShipment(
     discount: 0,
     cod_charges: 0,
     payment_type: params.payment_type,
-    order_amount: params.order_amount,
+    order_amount: Math.max(100, params.order_amount),
     package_weight: weightGrams,
     package_length: Math.max(1, Math.round(params.length)),
     package_breadth: Math.max(1, Math.round(params.breadth)),
@@ -251,7 +289,7 @@ export async function createDomesticShipment(
       phone: String(params.delivery.phone),
     },
     pickup: {
-      warehouse_name: params.warehouse_name || process.env.NIMBUS_WAREHOUSE_NAME || 'default',
+      warehouse_name: params.warehouse_name || warehouseName,
       name: params.pickup.name,
       address: params.pickup.address,
       address_2: '',
@@ -278,7 +316,7 @@ export async function createDomesticShipment(
     delivery_pin: params.delivery.pincode,
     pickup_state: params.pickup.state,
     delivery_state: params.delivery.state,
-    warehouse_name: params.warehouse_name || process.env.NIMBUS_WAREHOUSE_NAME || 'default',
+    warehouse_name: params.warehouse_name || warehouseName,
   }));
 
   console.log('[nimbusPostDomestic] Full payload:', JSON.stringify(payload));

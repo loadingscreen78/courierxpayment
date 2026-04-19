@@ -385,11 +385,26 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
           setPhase('success');
         }
       } else {
-        // Dev mode — no Cashfree configured, simulate success
-        setTrackingNumber(serverTracking);
-        setAwbUrl(data.awbUrl || '');
-        setPhase('success');
-        toast({ title: 'Booking Confirmed', description: 'Your shipment has been booked successfully.' });
+        // No Cashfree session (dev mode OR amount=0 fully covered by coupon)
+        // Must still call verify-guest-payment to trigger NimbusPost shipment creation
+        try {
+          const verifyRes = await fetch('/api/cashfree/verify-guest-payment', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ orderId: data.orderId }),
+          });
+          const verifyData = await verifyRes.json();
+          setTrackingNumber(verifyData.trackingNumber || serverTracking);
+          setAwbUrl(verifyData.awbUrl || '');
+          setPhase('success');
+          toast({ title: 'Booking Confirmed', description: 'Your shipment has been booked successfully.' });
+        } catch {
+          // Fallback — still show success, shipment will be processed
+          setTrackingNumber(serverTracking);
+          setAwbUrl('');
+          setPhase('success');
+          toast({ title: 'Booking Confirmed', description: 'Your shipment has been booked successfully.' });
+        }
       }
     } catch {
       toast({ title: 'Error', description: 'Payment failed. Please try again.', variant: 'destructive' });
