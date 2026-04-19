@@ -182,12 +182,42 @@ function AadhaarKycInner() {
     );
   }
 
+  // Map KYC step to progress step number (1-3)
+  const progressStep = step === 'aadhaar' ? 1 : step === 'redirect' ? 2 : step === 'verifying' ? 2 : 3;
+  const KYC_STEPS = ['Aadhaar Number', 'DigiLocker Verify', 'Confirmation'];
+
   return (
     <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
       <div className="w-full max-w-md space-y-6">
         <div className="flex flex-col items-center gap-3">
           <img src={logoMain.src} alt="CourierX" className="h-16 w-auto rounded-lg" />
-          <h1 className="font-typewriter text-2xl font-bold text-foreground">CourierX</h1>
+          <h1 className="font-typewriter text-2xl font-bold text-foreground">KYC Verification</h1>
+        </div>
+
+        {/* 3-step progress bar */}
+        <div className="flex items-center justify-between px-2">
+          {KYC_STEPS.map((label, i) => {
+            const stepNum = i + 1;
+            const isCompleted = progressStep > stepNum;
+            const isActive = progressStep === stepNum;
+            return (
+              <div key={label} className="flex items-center flex-1 last:flex-none">
+                <div className="flex flex-col items-center">
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold transition-all ${
+                    isCompleted ? 'bg-green-600 text-white' : isActive ? 'bg-primary text-primary-foreground ring-4 ring-primary/20' : 'bg-muted text-muted-foreground'
+                  }`}>
+                    {isCompleted ? <CheckCircle2 className="h-4 w-4" /> : stepNum}
+                  </div>
+                  <span className={`mt-1.5 text-[11px] font-medium whitespace-nowrap ${isActive ? 'text-foreground' : 'text-muted-foreground'}`}>
+                    {label}
+                  </span>
+                </div>
+                {i < KYC_STEPS.length - 1 && (
+                  <div className={`flex-1 h-0.5 mx-2 mt-[-18px] ${progressStep > stepNum ? 'bg-green-600' : 'bg-border'}`} />
+                )}
+              </div>
+            );
+          })}
         </div>
 
         <Card className="border-border/50 shadow-lg">
