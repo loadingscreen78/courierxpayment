@@ -32,6 +32,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { feedbackPresets } from '@/lib/haptics';
 import { LandingHeader } from '@/components/landing/LandingHeader';
 import { CameraCapture, type CameraDocumentType } from '@/components/ui/CameraCapture';
+import { cn } from '@/lib/utils';
 
 type FlowMode = 'international' | 'domestic';
 
