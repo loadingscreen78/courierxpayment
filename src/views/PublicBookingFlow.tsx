@@ -845,7 +845,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
   };
 
   const handleBack = () => {
-    if (step === 1) router.push('/public/book');
+    if (step === 1) router.push('/');
     else setStep(step - 1);
   };
 
