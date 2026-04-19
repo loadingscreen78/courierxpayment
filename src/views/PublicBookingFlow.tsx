@@ -1131,8 +1131,8 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                       )} />
                     </div>
 
-                    {/* Weight + Value */}
-                    <div className="grid grid-cols-1 xs:grid-cols-2 gap-4">
+                    {/* Weight only — no declared value in step 1 */}
+                    <div>
                       <FormField control={domForm.control} name="weightKg" render={({ field }) => (
                         <FormItem>
                           <FormLabel>Weight</FormLabel>
@@ -1169,17 +1169,6 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                           {!isDocumentDom && (
                             <p className="text-[11px] text-muted-foreground mt-1">Guest booking supports up to 10 kg. <button type="button" onClick={() => router.push('/register')} className="text-coke-red hover:underline font-medium">Open an account</button> for heavier shipments.</p>
                           )}
-                          <FormMessage />
-                        </FormItem>
-                      )} />
-                      <FormField control={domForm.control} name="declaredValue" render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Declared Value (₹)</FormLabel>
-                          <FormControl>
-                            <Input {...field} type="number" placeholder={isDocumentDom ? 'Max ₹100' : 'Max ₹49,000'} max={isDocumentDom ? 100 : 49000} />
-                          </FormControl>
-                          {isDocumentDom && <p className="text-xs text-muted-foreground">Documents cannot exceed ₹100 declared value</p>}
-                          {!isDocumentDom && <p className="text-xs text-muted-foreground">Maximum ₹49,000 for gift/parcel shipments</p>}
                           <FormMessage />
                         </FormItem>
                       )} />
@@ -1397,7 +1386,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                   : saverCouriers;
 
                 const tabDescriptions: Record<string, { icon: typeof AirplaneTilt; label: string; desc: string; color: string; bg: string }> = {
-                  express: { icon: AirplaneTilt, label: 'Express', desc: 'Priority air delivery · 1–3 business days', color: 'text-blue-600', bg: 'bg-blue-50 dark:bg-blue-950/30' },
+                  express: { icon: AirplaneTilt, label: 'Express', desc: 'Priority air delivery · 1–3 business days · Note: liquid items cannot be transported by air', color: 'text-blue-600', bg: 'bg-blue-50 dark:bg-blue-950/30' },
                   economy: { icon: Truck, label: 'Economy', desc: 'Standard ground shipping · 4–7 business days', color: 'text-green-600', bg: 'bg-green-50 dark:bg-green-950/30' },
                   saver: { icon: Package, label: 'Saver', desc: 'Top 3 cheapest options across all services', color: 'text-amber-600', bg: 'bg-amber-50 dark:bg-amber-950/30' },
                 };
@@ -1466,9 +1455,16 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
 
                     {/* Tab description */}
                     {!isDocType && tabDescriptions[courierFilterTab] && (
-                      <div className={`flex items-center gap-2 text-xs rounded-lg px-3 py-2 ${tabDescriptions[courierFilterTab].bg} ${tabDescriptions[courierFilterTab].color}`}>
-                        {(() => { const I = tabDescriptions[courierFilterTab].icon; return <I className="h-4 w-4 shrink-0" weight="fill" />; })()}
-                        <span>{tabDescriptions[courierFilterTab].desc}</span>
+                      <div className={`flex items-start gap-2 text-xs rounded-lg px-3 py-2 ${tabDescriptions[courierFilterTab].bg} ${tabDescriptions[courierFilterTab].color}`}>
+                        {(() => { const I = tabDescriptions[courierFilterTab].icon; return <I className="h-4 w-4 shrink-0 mt-0.5" weight="fill" />; })()}
+                        <div className="space-y-1">
+                          <span>{courierFilterTab === 'express' ? 'Priority air delivery · 1–3 business days' : tabDescriptions[courierFilterTab].desc}</span>
+                          {courierFilterTab === 'express' && (
+                            <p className="text-blue-700 dark:text-blue-300 opacity-80">
+                              Please note: If your shipment contains any liquid items, we kindly request that you choose a surface delivery option instead. Liquids are not permitted on passenger or cargo aircraft as per aviation safety regulations.
+                            </p>
+                          )}
+                        </div>
                       </div>
                     )}
 
@@ -1582,7 +1578,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                           <FormField control={detailsForm.control} name="senderPincode" render={({ field }) => (
                             <FormItem>
                               <FormLabel>Pincode</FormLabel>
-                              <FormControl><Input {...field} placeholder="110001" maxLength={6} readOnly={!isInternational && !!domesticPickupPincode} className={`h-11 ${!isInternational && domesticPickupPincode ? 'bg-muted' : ''}`} /></FormControl>
+                              <FormControl><Input {...field} placeholder="110001" maxLength={6} className="h-11" /></FormControl>
                               {senderLookup.loading && <p className="text-xs text-muted-foreground flex items-center gap-1"><CircleNotch className="h-3 w-3 animate-spin" /> Looking up...</p>}
                               {senderLookup.error && <p className="text-xs text-destructive">{senderLookup.error}</p>}
                               <FormMessage />
@@ -1615,6 +1611,16 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                               </FormItem>
                             )} />
                           </div>
+                          {/* Optional email for domestic */}
+                          {!isInternational && (
+                            <FormField control={detailsForm.control} name="senderEmail" render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Email <span className="text-muted-foreground font-normal">(optional)</span></FormLabel>
+                                <FormControl><Input {...field} type="email" placeholder="sender@email.com" className="h-11" /></FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )} />
+                          )}
                           {senderLookup.state && senderLookup.district && (
                             <p className="text-xs text-candlestick-green flex items-center gap-1">{senderLookup.district}, {senderLookup.state}</p>
                           )}

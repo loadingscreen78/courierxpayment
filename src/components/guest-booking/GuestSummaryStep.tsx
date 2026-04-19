@@ -774,244 +774,65 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
         mode={mode}
       />
 
-      {/* ── Identity Verification ── */}
-      {isDomestic ? (
-        /* ── Domestic: Government ID Upload ── */
-        <div className="bg-card rounded-xl border border-border overflow-hidden">
-          <div className="bg-muted/50 px-5 py-3 border-b border-border">
-            <h2 className="font-semibold text-base flex items-center gap-2">
-              <IdentificationCard className="h-4.5 w-4.5 text-blue-600" weight="duotone" />
-              Sender Identity Verification
-            </h2>
-          </div>
-          <div className="p-5 space-y-4">
-            {/* Legal explanation */}
-            <div className="rounded-lg border border-amber-200 dark:border-amber-800/40 bg-amber-50 dark:bg-amber-950/20 p-3.5 text-xs space-y-2">
-              <p className="font-semibold text-amber-900 dark:text-amber-200 flex items-center gap-1.5">
-                <Info className="h-4 w-4 shrink-0" weight="fill" /> Why is this required?
-              </p>
-              <p className="text-amber-800 dark:text-amber-300 leading-relaxed">
-                As per the <span className="font-medium">Indian Post Office Act, 1898 (Section 9)</span> and <span className="font-medium">Information Technology Act, 2000</span>, all courier and logistics service providers are required to verify the identity of the sender (consignor) for every shipment. This is mandated under KYC (Know Your Customer) norms issued by the <span className="font-medium">Department of Posts &amp; Ministry of Communications</span>.
-              </p>
-              <p className="text-amber-800 dark:text-amber-300 leading-relaxed">
-                Your ID is collected as proof of sender identity and will only be used in case of investigation into illegal, prohibited, or inaccurate shipment contents. It is stored securely and never shared with third parties.
-              </p>
-            </div>
-
-            {/* Document type selector */}
-            <div>
-              <label className="text-sm font-medium mb-1.5 block">Select ID Type</label>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                {[
-                  { value: 'aadhaar', label: 'Aadhaar Card' },
-                  { value: 'driving_license', label: 'Driving License' },
-                  { value: 'passport', label: 'Passport' },
-                  { value: 'voter_id', label: 'Voter ID Card' },
-                ].map((doc) => (
-                  <button
-                    key={doc.value}
-                    type="button"
-                    onClick={() => { feedbackPresets.select(); setKycDocType(doc.value); }}
-                    className={`rounded-lg border-2 px-3 py-2.5 text-xs font-medium text-center transition-all ${
-                      kycDocType === doc.value
-                        ? 'border-coke-red bg-coke-red/5 text-coke-red'
-                        : 'border-border hover:border-muted-foreground/30 text-muted-foreground'
-                    }`}
-                  >
-                    {doc.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Upload area */}
-            {kycDocType && (
-              <div className="space-y-3">
-                {kycDocFile ? (
-                  /* ── Uploaded: Thumbnail + actions ── */
-                  <div className="space-y-3">
-                    <div className="rounded-xl border border-candlestick-green/30 bg-candlestick-green/5 p-4 space-y-3">
-                      <div className="flex items-center gap-2">
-                        <CheckCircle className="h-4 w-4 text-candlestick-green" weight="fill" />
-                        <p className="text-sm font-medium text-candlestick-green">{kycDocLabel} Uploaded</p>
-                      </div>
-                      {/* Thumbnail */}
-                      {kycDocPreviewUrl ? (
-                        <button
-                          type="button"
-                          onClick={() => setShowDocPreview(true)}
-                          className="relative group w-full rounded-lg overflow-hidden border border-border bg-muted aspect-[16/10]"
-                        >
-                          <img
-                            src={kycDocPreviewUrl}
-                            alt={kycDocLabel}
-                            className="w-full h-full object-contain bg-white"
-                          />
-                          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 group-active:bg-black/30 transition-colors flex items-center justify-center">
-                            <div className="opacity-0 group-hover:opacity-100 group-active:opacity-100 transition-opacity bg-white/90 rounded-full p-2.5 shadow-lg">
-                              <Eye className="h-5 w-5 text-foreground" weight="bold" />
-                            </div>
-                          </div>
-                        </button>
-                      ) : (
-                        <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50 border border-border">
-                          <FileText className="h-8 w-8 text-coke-red shrink-0" weight="duotone" />
-                          <div className="min-w-0">
-                            <p className="text-sm font-medium truncate">{kycDocFile.name}</p>
-                            <p className="text-xs text-muted-foreground">PDF Document · {(kycDocFile.size / 1024).toFixed(0)} KB</p>
-                          </div>
-                        </div>
-                      )}
-                      {/* Actions */}
-                      <div className="flex gap-2">
-                        <button
-                          type="button"
-                          onClick={() => { clearKycDoc(); if (cameraInputRef.current) cameraInputRef.current.value = ''; }}
-                          className="flex-1 text-xs font-medium text-coke-red hover:text-red-700 py-2 rounded-lg border border-coke-red/20 hover:bg-coke-red/5 transition-colors text-center"
-                        >
-                          Retake / Change
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                ) : (
-                  /* ── Not uploaded: Camera + Gallery options ── */
-                  <div className="space-y-3">
-                    {/* Capture tips */}
-                    <div className="rounded-lg border border-blue-200 dark:border-blue-800/40 bg-blue-50 dark:bg-blue-950/20 p-3 text-xs space-y-1.5">
-                      <p className="font-semibold text-blue-900 dark:text-blue-200 flex items-center gap-1.5">
-                        <Camera className="h-3.5 w-3.5 shrink-0" weight="fill" /> Tips for a clear capture
-                      </p>
-                      <ul className="list-disc list-inside text-blue-800 dark:text-blue-300 space-y-0.5">
-                        <li>Place the document on a dark, flat surface</li>
-                        <li>Ensure all four corners are visible in the frame</li>
-                        <li>Avoid glare — tilt slightly if you see reflections</li>
-                        <li>Use natural light, avoid flash for zero reflection</li>
-                        <li>Name, photo, and ID number must be clearly readable</li>
-                      </ul>
-                    </div>
-
-                    {/* Camera capture button (primary on mobile) */}
-                    <button
-                      type="button"
-                      onClick={() => cameraInputRef.current?.click()}
-                      className="w-full flex items-center justify-center gap-2.5 rounded-xl border-2 border-coke-red bg-coke-red/5 hover:bg-coke-red/10 active:bg-coke-red/15 p-4 transition-colors"
-                    >
-                      <div className="w-10 h-10 rounded-full bg-coke-red/10 flex items-center justify-center">
-                        <Camera className="h-5 w-5 text-coke-red" weight="fill" />
-                      </div>
-                      <div className="text-left">
-                        <p className="text-sm font-semibold text-coke-red">Capture with Camera</p>
-                        <p className="text-[11px] text-muted-foreground">Take a photo of your {kycDocLabel}</p>
-                      </div>
-                    </button>
-                    <input
-                      ref={cameraInputRef}
-                      type="file"
-                      accept="image/*"
-                      capture="environment"
-                      className="hidden"
-                      onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (file) handleKycFile(file);
-                      }}
-                    />
-
-                    {/* Divider */}
-                    <div className="flex items-center gap-3">
-                      <div className="flex-1 h-px bg-border" />
-                      <span className="text-xs text-muted-foreground">or</span>
-                      <div className="flex-1 h-px bg-border" />
-                    </div>
-
-                    {/* Upload from gallery/files */}
-                    <button
-                      type="button"
-                      onClick={() => fileInputRef.current?.click()}
-                      className="w-full flex items-center justify-center gap-2.5 rounded-xl border-2 border-dashed border-border hover:border-muted-foreground/40 bg-muted/30 hover:bg-muted/50 active:bg-muted/70 p-4 transition-colors"
-                    >
-                      <Upload className="h-5 w-5 text-muted-foreground" weight="duotone" />
-                      <div className="text-left">
-                        <p className="text-sm font-medium text-foreground">Upload from Gallery / Files</p>
-                        <p className="text-[11px] text-muted-foreground">JPG, PNG or PDF — max 5 MB</p>
-                      </div>
-                    </button>
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      accept="image/*,.pdf"
-                      className="hidden"
-                      onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (file) handleKycFile(file);
-                      }}
-                    />
-                  </div>
-                )}
-              </div>
-            )}
-
-            {!kycDocType && (
-              <p className="text-xs text-muted-foreground text-center py-2">Please select an ID type above to upload your document.</p>
-            )}
-          </div>
+      {/* ── Identity Verification — Aadhaar OTP for all shipments ── */}
+      <div className="bg-card rounded-xl border border-border overflow-hidden">
+        <div className="bg-muted/50 px-5 py-3 border-b border-border">
+          <h2 className="font-semibold text-base flex items-center gap-2">
+            <ShieldCheck className="h-4.5 w-4.5 text-blue-600" weight="duotone" />
+            Sender Identity Verification
+          </h2>
         </div>
-      ) : (
-        /* ── International: Aadhaar Verification ── */
-        <div className="bg-card rounded-xl border border-border overflow-hidden">
-          <div className="bg-muted/50 px-5 py-3 border-b border-border">
-            <h2 className="font-semibold text-base flex items-center gap-2">
-              <ShieldCheck className="h-4.5 w-4.5 text-blue-600" weight="duotone" />
-              Aadhaar Verification
-            </h2>
+        <div className="p-5 space-y-3">
+          <div className="rounded-lg border border-amber-200 dark:border-amber-800/40 bg-amber-50 dark:bg-amber-950/20 p-3 text-xs">
+            <p className="font-semibold text-amber-900 dark:text-amber-200 flex items-center gap-1.5 mb-1">
+              <Info className="h-3.5 w-3.5 shrink-0" weight="fill" /> Why is this required?
+            </p>
+            <p className="text-amber-800 dark:text-amber-300 leading-relaxed">
+              As per KYC norms under the Indian Post Office Act, all courier providers must verify sender identity. Your Aadhaar number is verified via UIDAI and never stored in full.
+            </p>
           </div>
-          <div className="p-5 space-y-3">
-            {aadhaarVerified ? (
-              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex items-center gap-3 p-3 rounded-lg bg-candlestick-green/5 border border-candlestick-green/20">
-                <CheckCircle className="h-5 w-5 text-candlestick-green" weight="fill" />
-                <div>
-                  <p className="text-sm font-medium text-candlestick-green">Aadhaar Verified</p>
-                  <p className="text-xs text-muted-foreground font-mono">XXXX XXXX {aadhaarInput.slice(-4)}</p>
-                </div>
-              </motion.div>
-            ) : (
-              <>
-                <p className="text-sm text-muted-foreground">
-                  {extractedAadhaarNumber
-                    ? 'Aadhaar number auto-filled from your uploaded document. Click Verify to confirm.'
-                    : 'Enter your 12-digit Aadhaar number for identity verification (required for customs clearance).'
-                  }
+          {aadhaarVerified ? (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex items-center gap-3 p-3 rounded-lg bg-candlestick-green/5 border border-candlestick-green/20">
+              <CheckCircle className="h-5 w-5 text-candlestick-green" weight="fill" />
+              <div>
+                <p className="text-sm font-medium text-candlestick-green">Aadhaar Verified</p>
+                <p className="text-xs text-muted-foreground font-mono">XXXX XXXX {aadhaarInput.slice(-4)}</p>
+              </div>
+            </motion.div>
+          ) : (
+            <>
+              <p className="text-sm text-muted-foreground">
+                {extractedAadhaarNumber
+                  ? 'Aadhaar number auto-filled. Click Verify to confirm.'
+                  : 'Enter your 12-digit Aadhaar number to verify your identity.'}
+              </p>
+              <div className="flex gap-2">
+                <Input
+                  type="text"
+                  inputMode="numeric"
+                  maxLength={14}
+                  placeholder="XXXX XXXX XXXX"
+                  className="font-mono tracking-widest text-center flex-1"
+                  value={formattedAadhaar}
+                  onChange={handleAadhaarChange}
+                />
+                <Button
+                  onClick={() => { feedbackPresets.tap(); handleVerifyAadhaar(); }}
+                  disabled={aadhaarLoading || aadhaarInput.length !== 12}
+                  className="bg-blue-600 hover:bg-blue-700 text-white shrink-0"
+                >
+                  {aadhaarLoading ? <CircleNotch className="h-4 w-4 animate-spin" /> : 'Verify'}
+                </Button>
+              </div>
+              {aadhaarError && (
+                <p className="text-xs text-destructive flex items-center gap-1">
+                  <Warning className="h-3 w-3" weight="fill" /> {aadhaarError}
                 </p>
-                <div className="flex gap-2">
-                  <Input
-                    type="text"
-                    inputMode="numeric"
-                    maxLength={14}
-                    placeholder="XXXX XXXX XXXX"
-                    className="font-mono tracking-widest text-center flex-1"
-                    value={formattedAadhaar}
-                    onChange={handleAadhaarChange}
-                  />
-                  <Button
-                    onClick={() => { feedbackPresets.tap(); handleVerifyAadhaar(); }}
-                    disabled={aadhaarLoading || aadhaarInput.length !== 12}
-                    className="bg-blue-600 hover:bg-blue-700 text-white shrink-0"
-                  >
-                    {aadhaarLoading ? <CircleNotch className="h-4 w-4 animate-spin" /> : 'Verify'}
-                  </Button>
-                </div>
-                {aadhaarError && (
-                  <p className="text-xs text-destructive flex items-center gap-1">
-                    <Warning className="h-3 w-3" weight="fill" /> {aadhaarError}
-                  </p>
-                )}
-                <p className="text-xs text-muted-foreground">Verified via UIDAI. We never store your full Aadhaar number.</p>
-              </>
-            )}
-          </div>
+              )}
+              <p className="text-xs text-muted-foreground">Verified via UIDAI. We never store your full Aadhaar number.</p>
+            </>
+          )}
         </div>
-      )}
-
       {/* ── Coupon Code ── */}
       {!couponApplied && (
         <PublicCouponBanner
@@ -1091,21 +912,11 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
           </>
         )}
         {/* Domestic breakdown from courier data */}
-        {mode === 'domestic' && selectedCourier?.shipping_charge && (
+        {mode === 'domestic' && selectedCourier?.customer_price && (
           <>
             <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Base shipping</span>
-              <span>₹{selectedCourier.shipping_charge?.toLocaleString('en-IN')}</span>
-            </div>
-            {selectedCourier.cod_charges > 0 && (
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">COD charges</span>
-                <span>₹{selectedCourier.cod_charges?.toLocaleString('en-IN')}</span>
-              </div>
-            )}
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">GST (18%)</span>
-              <span>₹{selectedCourier.gst_amount?.toLocaleString('en-IN')}</span>
+              <span className="text-muted-foreground">Shipping ({courierName})</span>
+              <span>₹{selectedCourier.customer_price?.toLocaleString('en-IN')}</span>
             </div>
           </>
         )}
@@ -1141,23 +952,20 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
       {/* ── Pay Button ── */}
       <Button
         onClick={() => { feedbackPresets.tap(); handlePayNow(); }}
-        disabled={paymentLoading || (isDomestic ? !kycDocFile : !aadhaarVerified) || !termsAccepted}
+        disabled={paymentLoading || !aadhaarVerified || !termsAccepted}
         className="w-full bg-coke-red hover:bg-red-600 text-white gap-2 py-5 sm:py-6 text-sm sm:text-base shadow-lg shadow-coke-red/20"
       >
         {paymentLoading ? (
           <><CircleNotch className="h-5 w-5 animate-spin" /> Processing Payment...</>
         ) : (
           <>
-            <CurrencyInr className="h-5 w-5" weight="bold" />
-            Ship Now — Pay ₹{finalPrice.toLocaleString('en-IN')}
+            <ShieldCheck className="h-5 w-5" weight="bold" />
+            Complete Booking — ₹{finalPrice.toLocaleString('en-IN')}
           </>
         )}
       </Button>
 
-      {isDomestic && !kycDocFile && (
-        <p className="text-xs text-center text-muted-foreground">Please upload a valid government-issued ID to proceed with payment.</p>
-      )}
-      {!isDomestic && !aadhaarVerified && (
+      {!aadhaarVerified && (
         <p className="text-xs text-center text-muted-foreground">Please verify your Aadhaar number to proceed with payment.</p>
       )}
 
