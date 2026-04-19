@@ -657,7 +657,7 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
             </div>
             <div className="sm:text-right shrink-0">
               <p className="text-xl sm:text-2xl font-bold">₹{basePrice.toLocaleString('en-IN')}</p>
-              <p className="text-xs text-muted-foreground">incl. GST</p>
+              <p className="text-xs text-muted-foreground">all-inclusive</p>
             </div>
           </div>
 
@@ -894,33 +894,12 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
 
       {/* ── Price Breakdown ── */}
       <div className="bg-card rounded-xl border border-border p-5 space-y-2">
-        {rateBreakdown?.breakdown ? (
-          <>
-            {rateBreakdown.breakdown.filter(b => b.amount > 0 || b.label.includes('save')).map((item, i) => (
-              <div key={i} className="flex justify-between text-sm">
-                <span className="text-muted-foreground">{item.label}</span>
-                <span className={item.amount < 0 ? 'text-candlestick-green' : ''}>
-                  {item.amount < 0 ? '-' : ''}₹{Math.abs(item.amount).toLocaleString('en-IN')}
-                </span>
-              </div>
-            ))}
-          </>
-        ) : (
-          <>
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Shipping ({courierName})</span>
-              <span>₹{basePrice.toLocaleString('en-IN')}</span>
-            </div>
-          </>
-        )}
-        {/* Domestic breakdown from courier data */}
-        {mode === 'domestic' && selectedCourier?.customer_price && (
-          <>
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Shipping ({courierName})</span>
-              <span>₹{selectedCourier.customer_price?.toLocaleString('en-IN')}</span>
-            </div>
-          </>
+        {/* Single shipping line — covers both international and domestic */}
+        {!(rateBreakdown?.breakdown) && (
+          <div className="flex justify-between text-sm">
+            <span className="text-muted-foreground">Shipping ({courierName})</span>
+            <span>₹{basePrice.toLocaleString('en-IN')}</span>
+          </div>
         )}
         {couponDiscount > 0 && (
           <div className="flex justify-between text-sm text-candlestick-green">

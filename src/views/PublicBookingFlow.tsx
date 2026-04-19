@@ -1231,7 +1231,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
             </div>
 
             <h2 className="font-semibold text-lg">Available Rates</h2>
-            <p className="text-sm text-muted-foreground">Select a courier to proceed with booking. Prices include GST.</p>
+            <p className="text-sm text-muted-foreground">Select a courier to proceed with booking.</p>
 
             {isInternational ? (
               guestCouriers.length === 0 ? (
