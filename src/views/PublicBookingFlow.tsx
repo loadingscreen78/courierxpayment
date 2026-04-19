@@ -326,6 +326,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
   const [guestCouriers, setGuestCouriers] = useState<CourierOption[]>([]);
   const [accountCouriers, setAccountCouriers] = useState<CourierOption[]>([]);
   const [domesticCouriers, setDomesticCouriers] = useState<any[]>([]);
+  const [courierFilterTab, setCourierFilterTab] = useState<'express' | 'economy' | 'saver'>('express');
   const [isDomesticLoading, setIsDomesticLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [senderReceiverData, setSenderReceiverData] = useState<any>(null);
@@ -1367,15 +1368,28 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                   }
                 }
 
-                // For gift/parcel: split into Surface and Air sections
-                const surfaceCouriers = filteredDomestic.filter((c: any) => c.mode === 'surface');
-                const airCouriers = filteredDomestic.filter((c: any) => c.mode === 'air');
+                // For gift/parcel: categorize into Express, Economy, Saver
+                const allSorted = [...filteredDomestic].sort((a: any, b: any) => a.customer_price - b.customer_price);
+                const expressCouriers = filteredDomestic.filter((c: any) => c.mode === 'air');
+                const surfaceOnly = filteredDomestic.filter((c: any) => c.mode === 'surface');
+                const saverCouriers = allSorted.slice(0, 3); // top 3 cheapest
+                const economyCouriers = surfaceOnly; // all surface options
 
-                // Weight slab info for user guidance
                 const currentWeight = rateFormData && 'weightKg' in rateFormData ? (rateFormData as DomesticRateValues).weightKg : 0;
 
+                // Determine which couriers to show based on active tab
+                const tabCouriers = isDocType ? filteredDomestic
+                  : courierFilterTab === 'express' ? expressCouriers
+                  : courierFilterTab === 'economy' ? economyCouriers
+                  : saverCouriers;
+
+                const tabDescriptions: Record<string, { icon: typeof AirplaneTilt; label: string; desc: string; color: string; bg: string }> = {
+                  express: { icon: AirplaneTilt, label: 'Express', desc: 'Priority air delivery · 1–3 business days', color: 'text-blue-600', bg: 'bg-blue-50 dark:bg-blue-950/30' },
+                  economy: { icon: Truck, label: 'Economy', desc: 'Standard ground shipping · 4–7 business days', color: 'text-green-600', bg: 'bg-green-50 dark:bg-green-950/30' },
+                  saver: { icon: Package, label: 'Saver', desc: 'Top 3 cheapest options across all services', color: 'text-amber-600', bg: 'bg-amber-50 dark:bg-amber-950/30' },
+                };
+
                 return filteredDomestic.length === 0 ? (
-                  /* ── Animated no-service component ── */
                   <motion.div
                     initial={{ opacity: 0, scale: 0.9 }}
                     animate={{ opacity: 1, scale: 1 }}
@@ -1389,34 +1403,19 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                     >
                       <AirplaneTilt className="h-8 w-8 text-amber-500" weight="duotone" />
                     </motion.div>
-                    <motion.div
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.2 }}
-                    >
+                    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
                       <h3 className="font-semibold text-lg">No Service Available</h3>
                       <p className="text-muted-foreground text-sm mt-1 max-w-sm mx-auto">
-                        {isDocType
-                          ? 'No air courier services are available for document shipments on this route right now.'
-                          : 'No couriers available for this route.'}
+                        {isDocType ? 'No air courier services are available for document shipments on this route.' : 'No couriers available for this route.'}
                       </p>
                     </motion.div>
-                    <motion.div
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      transition={{ delay: 0.4 }}
-                      className="flex flex-col sm:flex-row gap-2 justify-center pt-2"
-                    >
-                      <Button variant="outline" size="sm" onClick={() => setStep(1)}>
-                        <ArrowLeft className="h-3.5 w-3.5 mr-1.5" /> Try Different Route
-                      </Button>
-                      <Button variant="outline" size="sm" onClick={() => router.push('/contact')}>
-                        Contact Support
-                      </Button>
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.4 }} className="flex flex-col sm:flex-row gap-2 justify-center pt-2">
+                      <Button variant="outline" size="sm" onClick={() => setStep(1)}><ArrowLeft className="h-3.5 w-3.5 mr-1.5" /> Try Different Route</Button>
+                      <Button variant="outline" size="sm" onClick={() => router.push('/contact')}>Contact Support</Button>
                     </motion.div>
                   </motion.div>
                 ) : (
-                  <div className="space-y-6">
+                  <div className="space-y-4">
                     {isDocType && (
                       <div className="flex items-center gap-2 text-xs text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/30 rounded-lg px-3 py-2">
                         <AirplaneTilt className="h-4 w-4 shrink-0" weight="fill" />
@@ -1424,21 +1423,55 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                       </div>
                     )}
 
+                    {/* Filter tabs — only for gift/parcel */}
+                    {!isDocType && (
+                      <div className="flex p-1 bg-muted/50 rounded-xl gap-1">
+                        {(['express', 'economy', 'saver'] as const).map(tab => {
+                          const info = tabDescriptions[tab];
+                          const count = tab === 'express' ? expressCouriers.length : tab === 'economy' ? economyCouriers.length : saverCouriers.length;
+                          const TabIcon = info.icon;
+                          return (
+                            <button
+                              key={tab}
+                              onClick={() => setCourierFilterTab(tab)}
+                              className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-xs font-semibold transition-all ${
+                                courierFilterTab === tab
+                                  ? 'bg-white dark:bg-card text-foreground shadow-sm'
+                                  : 'text-muted-foreground hover:text-foreground'
+                              }`}
+                            >
+                              <TabIcon className="h-3.5 w-3.5" weight="bold" />
+                              {info.label}
+                              <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${
+                                courierFilterTab === tab ? 'bg-coke-red/10 text-coke-red' : 'bg-muted text-muted-foreground'
+                              }`}>{count}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+
+                    {/* Tab description */}
+                    {!isDocType && tabDescriptions[courierFilterTab] && (
+                      <div className={`flex items-center gap-2 text-xs rounded-lg px-3 py-2 ${tabDescriptions[courierFilterTab].bg} ${tabDescriptions[courierFilterTab].color}`}>
+                        {(() => { const I = tabDescriptions[courierFilterTab].icon; return <I className="h-4 w-4 shrink-0" weight="fill" />; })()}
+                        <span>{tabDescriptions[courierFilterTab].desc}</span>
+                      </div>
+                    )}
+
                     {/* Weight slab info */}
-                    {!isDocType && currentWeight > 0 && (
-                      <div className="rounded-lg bg-muted/40 border border-border/60 px-4 py-3">
+                    {!isDocType && currentWeight > 2 && (
+                      <div className="rounded-lg bg-muted/40 border border-border/60 px-4 py-2.5">
                         <p className="text-xs text-muted-foreground">
-                          Showing rates for <span className="font-semibold text-foreground">{currentWeight} kg</span> shipment.
-                          {currentWeight > 2 && <span> Rates include the 2 kg base slab + additional weight charges.</span>}
-                          {currentWeight > 5 && <span> Heavy parcel surcharges may apply.</span>}
+                          Rates for <span className="font-semibold text-foreground">{currentWeight} kg</span>.
+                          {currentWeight > 2 && <span> Includes 2 kg base slab + additional weight.</span>}
                         </p>
                       </div>
                     )}
 
-                    {/* If document type, show all in one grid */}
-                    {isDocType ? (
+                    {tabCouriers.length > 0 ? (
                       <DomesticCourierGrid
-                        couriers={filteredDomestic}
+                        couriers={tabCouriers}
                         selectedId={null}
                         onSelect={() => {}}
                         showBookButton
@@ -1446,53 +1479,10 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                         maxItems={15}
                       />
                     ) : (
-                      <>
-                        {/* Surface Section */}
-                        {surfaceCouriers.length > 0 && (
-                          <div className="space-y-3">
-                            <div className="flex items-center gap-2">
-                              <div className="w-8 h-8 rounded-lg bg-green-100 dark:bg-green-950/40 flex items-center justify-center">
-                                <Truck className="h-4 w-4 text-green-600" weight="bold" />
-                              </div>
-                              <div>
-                                <h3 className="font-semibold text-sm">Surface Delivery</h3>
-                                <p className="text-[11px] text-muted-foreground">Economical ground shipping · 4–7 business days</p>
-                              </div>
-                            </div>
-                            <DomesticCourierGrid
-                              couriers={surfaceCouriers}
-                              selectedId={null}
-                              onSelect={() => {}}
-                              showBookButton
-                              onBook={(courier) => { feedbackPresets.select(); handleSelectCourier(courier); }}
-                              maxItems={10}
-                            />
-                          </div>
-                        )}
-
-                        {/* Air Section */}
-                        {airCouriers.length > 0 && (
-                          <div className="space-y-3">
-                            <div className="flex items-center gap-2">
-                              <div className="w-8 h-8 rounded-lg bg-blue-100 dark:bg-blue-950/40 flex items-center justify-center">
-                                <AirplaneTilt className="h-4 w-4 text-blue-600" weight="bold" />
-                              </div>
-                              <div>
-                                <h3 className="font-semibold text-sm">Air Delivery</h3>
-                                <p className="text-[11px] text-muted-foreground">Priority air shipping · 1–3 business days</p>
-                              </div>
-                            </div>
-                            <DomesticCourierGrid
-                              couriers={airCouriers}
-                              selectedId={null}
-                              onSelect={() => {}}
-                              showBookButton
-                              onBook={(courier) => { feedbackPresets.select(); handleSelectCourier(courier); }}
-                              maxItems={10}
-                            />
-                          </div>
-                        )}
-                      </>
+                      <div className="text-center py-8 text-sm text-muted-foreground">
+                        <p>No {courierFilterTab} options available for this route.</p>
+                        <p className="text-xs mt-1">Try a different delivery speed.</p>
+                      </div>
                     )}
                 </div>
                 );

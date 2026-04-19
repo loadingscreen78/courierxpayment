@@ -134,9 +134,9 @@ function mapCourierResponse(data: any): CourierOption[] {
     const gstAmount = Math.round(shippingCharge * 0.18);
     const customerPrice = shippingCharge + gstAmount;
 
-    // Infer mode from courier name — "Air" in name = air, otherwise surface
+    // Infer mode from courier name — "Air" in name = air, BlueDart is always air, otherwise surface
     const nameUpper = (c.name || '').toUpperCase();
-    const mode: CourierMode = nameUpper.includes('AIR') ? 'air' : 'surface';
+    const mode: CourierMode = (nameUpper.includes('AIR') || nameUpper.includes('BLUEDART') || nameUpper.includes('BLUE DART')) ? 'air' : 'surface';
 
     // Parse EDD to get estimated delivery days
     let estimatedDays = 3;
