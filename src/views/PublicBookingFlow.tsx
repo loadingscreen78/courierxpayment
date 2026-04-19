@@ -2114,16 +2114,22 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                           <>
                             {/* Assistive example — shown when no items filled yet */}
                             {contentItems.length === 1 && !contentItems[0].name && (
-                              <div className="rounded-lg border border-dashed border-border bg-muted/20 p-3 text-xs text-muted-foreground space-y-1.5">
-                                <p className="font-medium text-foreground">Example: How to fill item details</p>
-                                <div className="grid grid-cols-4 gap-2 text-[11px] font-medium text-muted-foreground border-b border-border/50 pb-1">
-                                  <span>Item Name</span><span>Type</span><span>Qty × Price</span><span className="text-right">Total</span>
+                              <div className="rounded-xl border-2 border-dashed border-coke-red/20 bg-coke-red/[0.03] overflow-hidden">
+                                {/* Example header badge */}
+                                <div className="flex items-center gap-2 px-4 py-2.5 bg-coke-red/5 border-b border-coke-red/10">
+                                  <span className="text-[10px] font-bold tracking-widest uppercase px-2 py-0.5 rounded-full bg-coke-red/10 text-coke-red">Example</span>
+                                  <span className="text-xs text-muted-foreground">This is just a preview — fill in your actual items below</span>
                                 </div>
-                                <div className="grid grid-cols-4 gap-2 text-[11px]">
-                                  <span className="text-foreground">Cotton T-Shirt</span><span>Clothing</span><span>2 × ₹500</span><span className="text-right text-foreground font-medium">₹1,000</span>
-                                </div>
-                                <div className="grid grid-cols-4 gap-2 text-[11px]">
-                                  <span className="text-foreground">Chocolate Box</span><span>Food</span><span>1 × ₹800</span><span className="text-right text-foreground font-medium">₹800</span>
+                                <div className="p-3 space-y-1.5 opacity-60 pointer-events-none select-none">
+                                  <div className="grid grid-cols-4 gap-2 text-[10px] font-semibold text-muted-foreground uppercase tracking-wide border-b border-border/40 pb-1.5">
+                                    <span>Item Name</span><span>Type</span><span>Qty × Price</span><span className="text-right">Total</span>
+                                  </div>
+                                  <div className="grid grid-cols-4 gap-2 text-[11px] italic text-muted-foreground py-1">
+                                    <span>Cotton T-Shirt</span><span>Clothing</span><span>2 × ₹500</span><span className="text-right">₹1,000</span>
+                                  </div>
+                                  <div className="grid grid-cols-4 gap-2 text-[11px] italic text-muted-foreground py-1 border-t border-border/30">
+                                    <span>Chocolate Box</span><span>Food</span><span>1 × ₹800</span><span className="text-right">₹800</span>
+                                  </div>
                                 </div>
                               </div>
                             )}
@@ -2141,14 +2147,18 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                                       <span className="font-medium truncate">{item.name}</span>
                                       <span className="text-muted-foreground truncate capitalize">{item.type || '—'}</span>
                                       <span className="text-center text-muted-foreground">{item.qty} × ₹{item.unitPrice.toLocaleString('en-IN')}</span>
-                                      <div className="flex items-center justify-end gap-1">
+                                      <div className="flex items-center justify-end gap-1.5">
                                         <span className="font-semibold">₹{rowTotal.toLocaleString('en-IN')}</span>
-                                        <button type="button" onClick={() => setExpandedItemIndex(idx)} className="text-blue-500/70 hover:text-blue-600 p-0.5 ml-1">
-                                          <PencilSimple className="h-3 w-3" weight="bold" />
+                                        <button
+                                          type="button"
+                                          onClick={() => setExpandedItemIndex(idx)}
+                                          className="flex items-center gap-1 px-2 py-1 rounded-md bg-coke-red/10 hover:bg-coke-red/20 text-coke-red text-[11px] font-semibold transition-colors"
+                                        >
+                                          <PencilSimple className="h-3.5 w-3.5" weight="bold" /> Edit
                                         </button>
                                         {contentItems.length > 1 && (
-                                          <button type="button" onClick={() => { setContentItems(prev => prev.filter((_, i) => i !== idx)); if (expandedItemIndex >= contentItems.length - 1) setExpandedItemIndex(Math.max(0, contentItems.length - 2)); }} className="text-destructive/60 hover:text-destructive p-0.5">
-                                            <Trash className="h-3 w-3" weight="bold" />
+                                          <button type="button" onClick={() => { setContentItems(prev => prev.filter((_, i) => i !== idx)); if (expandedItemIndex >= contentItems.length - 1) setExpandedItemIndex(Math.max(0, contentItems.length - 2)); }} className="flex items-center gap-1 px-2 py-1 rounded-md bg-destructive/10 hover:bg-destructive/20 text-destructive text-[11px] font-semibold transition-colors">
+                                            <Trash className="h-3.5 w-3.5" weight="bold" />
                                           </button>
                                         )}
                                       </div>
@@ -2216,8 +2226,12 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                                 </div>
                               )}
                               {item.name.trim() && (
-                                <button type="button" onClick={() => setExpandedItemIndex(-1)} className="text-xs text-blue-600 hover:underline">
-                                  Done editing
+                                <button
+                                  type="button"
+                                  onClick={() => setExpandedItemIndex(-1)}
+                                  className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-coke-red text-white text-xs font-semibold hover:bg-red-600 transition-colors w-full justify-center"
+                                >
+                                  <Check className="h-3.5 w-3.5" weight="bold" /> Done Editing
                                 </button>
                               )}
                             </div>
