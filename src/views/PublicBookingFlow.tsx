@@ -499,8 +499,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
   // Auto-fill city/state from lookup results
   useEffect(() => {
     if (senderLookup.district) {
-      const currentCity = detailsForm.getValues('senderCity');
-      if (!currentCity) detailsForm.setValue('senderCity', senderLookup.district);
+      detailsForm.setValue('senderCity', senderLookup.district);
     }
     if (senderLookup.state) {
       detailsForm.setValue('senderState', senderLookup.state);
@@ -1555,7 +1554,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                             <House className="h-4 w-4 sm:h-5 sm:w-5 text-orange-600" weight="duotone" />
                           </div>
                           <div className="min-w-0">
-                            <h3 className="font-semibold text-sm sm:text-base">Indian Pickup Address</h3>
+                            <h3 className="font-semibold text-sm sm:text-base">Pickup Address</h3>
                             <p className="text-[11px] sm:text-xs text-muted-foreground">Where should we collect the shipment from?</p>
                           </div>
                         </div>
@@ -1587,18 +1586,12 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                           <div className="grid grid-cols-1 xs:grid-cols-2 gap-3 sm:gap-4">
                             <FormField control={detailsForm.control} name="senderCity" render={({ field }) => (
                               <FormItem>
-                                <FormLabel>City / District</FormLabel>
-                                {senderLookup.areas.length > 0 ? (
-                                  <Select onValueChange={field.onChange} value={field.value}>
-                                    <FormControl><SelectTrigger className="h-11"><SelectValue placeholder="Select city" /></SelectTrigger></FormControl>
-                                    <SelectContent>
-                                      {senderLookup.district && <SelectItem value={senderLookup.district}>{senderLookup.district} (District)</SelectItem>}
-                                      {senderLookup.areas.filter(a => a !== senderLookup.district).map(a => <SelectItem key={a} value={a}>{a}</SelectItem>)}
-                                    </SelectContent>
-                                  </Select>
-                                ) : (
-                                  <FormControl><Input {...field} placeholder="City" className="h-11" /></FormControl>
-                                )}
+                                <FormLabel>District</FormLabel>
+                                <div className={`h-11 flex items-center px-3 rounded-md border text-sm ${senderLookup.district ? 'border-border bg-muted font-medium' : 'border-border bg-muted text-muted-foreground'}`}>
+                                  {senderLookup.loading
+                                    ? <span className="flex items-center gap-1.5 text-muted-foreground"><CircleNotch className="h-3.5 w-3.5 animate-spin" /> Fetching district...</span>
+                                    : senderLookup.district || (field.value || 'Auto-filled from pincode')}
+                                </div>
                                 <FormMessage />
                               </FormItem>
                             )} />
