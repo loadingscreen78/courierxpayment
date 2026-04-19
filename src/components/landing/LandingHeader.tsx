@@ -168,18 +168,17 @@ export const LandingHeader = () => {
           ) : (
             <>
               <Link
-                href="/auth"
+                href="/register"
                 className="px-4 py-2 text-[15px] font-medium text-muted-foreground hover:text-foreground transition-colors rounded-xl hover:bg-muted/60"
               >
-                Sign In
+                Open Account
               </Link>
 
               <Link
-                href="/register"
+                href="/auth"
                 className="flex items-center gap-1.5 ml-1 px-5 py-2.5 text-[15px] font-semibold bg-coke-red hover:bg-red-600 text-white rounded-xl transition-colors shadow-md shadow-coke-red/20"
               >
-                <UserPlus className="h-4 w-4" />
-                Open Account
+                Sign In
               </Link>
             </>
           )}
@@ -256,16 +255,15 @@ export const LandingHeader = () => {
                 <div className="flex gap-2">
                   <button
                     className="flex-1 h-11 rounded-xl text-sm font-medium border border-border hover:bg-muted/60 transition-colors"
-                    onClick={() => { router.push('/auth'); setMobileMenuOpen(false); }}
+                    onClick={() => { router.push('/register'); setMobileMenuOpen(false); }}
                   >
-                    Sign In
+                    Open Account
                   </button>
                   <button
                     className="flex-1 h-11 rounded-xl text-sm font-semibold bg-coke-red hover:bg-red-600 text-white transition-colors flex items-center justify-center gap-1.5"
-                    onClick={() => { router.push('/register'); setMobileMenuOpen(false); }}
+                    onClick={() => { router.push('/auth'); setMobileMenuOpen(false); }}
                   >
-                    <UserPlus className="h-3.5 w-3.5" />
-                    Open Account
+                    Sign In
                   </button>
                 </div>
               )}

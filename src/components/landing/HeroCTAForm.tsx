@@ -63,13 +63,25 @@ function usePinLookup(pincode: string): PincodeMeta {
   return meta;
 }
 
+// ── Sanctioned / restricted country codes ────────────────────────────────────
+
+const SANCTIONED_CODES = new Set([
+  'CU', 'IR', 'KP', 'SY', 'SD', 'BY', 'RU',
+]);
+
 // ── Country list (memoised at module level) ──────────────────────────────────
 
 const countryOptions = (() => {
   try {
     return getAllCountriesForDropdown()
-      .filter(c => c.isServed)
-      .map(c => ({ code: c.code, name: c.name, flag: c.flag }));
+      .map(c => ({
+        code: c.code,
+        name: c.name,
+        flag: c.flag,
+        isServed: c.isServed,
+        isSanctioned: SANCTIONED_CODES.has(c.code),
+        notServedReason: c.notServedReason,
+      }));
   } catch {
     return [];
   }
@@ -77,36 +89,136 @@ const countryOptions = (() => {
 
 // ── Pin Input (defined outside to keep stable identity across renders) ───────
 
-const PinInput = ({ value, onChange, meta, placeholder }: {
+const PinInput = ({ value, onChange, meta, placeholder, showAssistance }: {
   value: string;
   onChange: (v: string) => void;
   meta: PincodeMeta;
   placeholder: string;
-}) => (
-  <div className="space-y-1">
-    <div className="relative">
-      <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" weight="bold" />
-      <Input
-        type="text"
-        inputMode="numeric"
-        maxLength={6}
-        placeholder={placeholder}
-        value={value}
-        onChange={e => onChange(e.target.value.replace(/\D/g, '').slice(0, 6))}
-        className="pl-9 h-12 rounded-xl border-border bg-background text-sm focus:border-coke-red focus:ring-coke-red/20"
-      />
-      {meta.loading && (
-        <CircleNotch className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />
+  showAssistance?: boolean;
+}) => {
+  const [assistOpen, setAssistOpen] = useState(false);
+  const [assistQuery, setAssistQuery] = useState('');
+  const [assistResults, setAssistResults] = useState<{ pincode: string; area: string; district: string; state: string }[]>([]);
+  const [assistLoading, setAssistLoading] = useState(false);
+  const assistRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (assistRef.current && !assistRef.current.contains(e.target as Node)) {
+        setAssistOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  const searchPincode = async (query: string) => {
+    setAssistQuery(query);
+    if (query.length < 3) { setAssistResults([]); return; }
+    setAssistLoading(true);
+    try {
+      const res = await fetch(`https://api.postalpincode.in/postoffice/${encodeURIComponent(query)}`);
+      const data = await res.json();
+      if (data[0]?.Status === 'Success' && data[0]?.PostOffice) {
+        setAssistResults(
+          data[0].PostOffice.slice(0, 8).map((po: { Pincode: string; Name: string; District: string; State: string }) => ({
+            pincode: po.Pincode,
+            area: po.Name,
+            district: po.District,
+            state: po.State,
+          }))
+        );
+      } else {
+        setAssistResults([]);
+      }
+    } catch {
+      setAssistResults([]);
+    } finally {
+      setAssistLoading(false);
+    }
+  };
+
+  return (
+    <div className="space-y-1">
+      <div className="relative flex gap-1.5">
+        <div className="relative flex-1">
+          <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" weight="bold" />
+          <Input
+            type="text"
+            inputMode="numeric"
+            maxLength={6}
+            placeholder={placeholder}
+            value={value}
+            onChange={e => onChange(e.target.value.replace(/\D/g, '').slice(0, 6))}
+            className="pl-9 h-12 rounded-xl border-border bg-background text-sm focus:border-coke-red focus:ring-coke-red/20"
+          />
+          {meta.loading && (
+            <CircleNotch className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />
+          )}
+        </div>
+        {showAssistance && (
+          <div className="relative" ref={assistRef}>
+            <button
+              type="button"
+              onClick={() => setAssistOpen(!assistOpen)}
+              className="h-12 px-2.5 rounded-xl border border-border bg-muted/50 hover:bg-muted text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1 text-xs font-medium shrink-0"
+              title="Find pincode by area name"
+            >
+              <MagnifyingGlass className="h-3.5 w-3.5" weight="bold" />
+              <span className="hidden sm:inline">Pincode?</span>
+            </button>
+            {assistOpen && (
+              <div className="absolute z-[9999] right-0 top-full mt-1 w-72 rounded-xl border border-border bg-card shadow-xl p-3 space-y-2">
+                <p className="text-xs font-medium text-muted-foreground">Search by area or post office name</p>
+                <Input
+                  type="text"
+                  placeholder="e.g. Andheri, Connaught Place..."
+                  value={assistQuery}
+                  onChange={e => searchPincode(e.target.value)}
+                  className="h-9 text-sm rounded-lg"
+                  autoFocus
+                />
+                {assistLoading && (
+                  <div className="flex items-center gap-2 py-2 text-xs text-muted-foreground">
+                    <CircleNotch className="h-3 w-3 animate-spin" /> Searching...
+                  </div>
+                )}
+                {assistResults.length > 0 && (
+                  <div className="max-h-48 overflow-y-auto space-y-0.5">
+                    {assistResults.map((r, i) => (
+                      <button
+                        key={i}
+                        onClick={() => {
+                          onChange(r.pincode);
+                          setAssistOpen(false);
+                          setAssistQuery('');
+                          setAssistResults([]);
+                        }}
+                        className="w-full text-left px-2.5 py-2 rounded-lg hover:bg-muted/60 transition-colors"
+                      >
+                        <span className="text-sm font-medium text-foreground">{r.pincode}</span>
+                        <span className="text-xs text-muted-foreground ml-1.5">{r.area}, {r.district}, {r.state}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+                {!assistLoading && assistQuery.length >= 3 && assistResults.length === 0 && (
+                  <p className="text-xs text-muted-foreground py-1">No results found</p>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+      {meta.district && !meta.error && (
+        <p className="text-xs text-muted-foreground pl-1">{meta.district}, {meta.state}</p>
+      )}
+      {meta.error && (
+        <p className="text-xs text-destructive pl-1">{meta.error}</p>
       )}
     </div>
-    {meta.district && !meta.error && (
-      <p className="text-xs text-muted-foreground pl-1">{meta.district}, {meta.state}</p>
-    )}
-    {meta.error && (
-      <p className="text-xs text-destructive pl-1">{meta.error}</p>
-    )}
-  </div>
-);
+  );
+};
 
 // ── Main Component ───────────────────────────────────────────────────────────
 
@@ -152,7 +264,7 @@ export const HeroCTAForm = () => {
 
   const filteredCountries = countrySearch.length > 0
     ? countryOptions.filter(c => c.name.toLowerCase().includes(countrySearch.toLowerCase()))
-    : countryOptions.slice(0, 30);
+    : countryOptions;
 
   // ── Ship Now — navigate directly to guest workflow with data ──
   const handleShipNow = () => {
@@ -212,20 +324,8 @@ export const HeroCTAForm = () => {
 
           {/* ── Ship Now Tab ── */}
           <TabsContent value="ship" className="mt-0 p-6 sm:p-7 space-y-5">
-            {/* Domestic / International toggle */}
+            {/* International / Domestic toggle */}
             <div className="flex gap-2 p-1 bg-muted rounded-xl">
-              <button
-                onClick={() => setShipType('domestic')}
-                className={cn(
-                  "flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-sm font-semibold transition-all",
-                  isDomestic
-                    ? "bg-background text-foreground shadow-sm"
-                    : "text-muted-foreground hover:text-foreground"
-                )}
-              >
-                <Truck className="h-4 w-4" weight="bold" />
-                Domestic
-              </button>
               <button
                 onClick={() => setShipType('international')}
                 className={cn(
@@ -237,6 +337,18 @@ export const HeroCTAForm = () => {
               >
                 <Globe className="h-4 w-4" weight="bold" />
                 International
+              </button>
+              <button
+                onClick={() => setShipType('domestic')}
+                className={cn(
+                  "flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-sm font-semibold transition-all",
+                  isDomestic
+                    ? "bg-background text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                <Truck className="h-4 w-4" weight="bold" />
+                Domestic
               </button>
             </div>
 
@@ -250,11 +362,11 @@ export const HeroCTAForm = () => {
                   exit={{ opacity: 0, x: 10 }}
                   className="space-y-3"
                 >
-                  <p className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Pickup</p>
-                  <PinInput value={pickupPin} onChange={setPickupPin} meta={pickupMeta} placeholder="Pickup pin code" />
+                  <p className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Pickup Postal Pincode</p>
+                  <PinInput value={pickupPin} onChange={setPickupPin} meta={pickupMeta} placeholder="Pickup postal pincode" showAssistance />
 
-                  <p className="text-sm font-medium text-muted-foreground uppercase tracking-wider pt-1">Drop</p>
-                  <PinInput value={dropPin} onChange={setDropPin} meta={dropMeta} placeholder="Drop pin code" />
+                  <p className="text-sm font-medium text-muted-foreground uppercase tracking-wider pt-1">Delivery Postal Pincode</p>
+                  <PinInput value={dropPin} onChange={setDropPin} meta={dropMeta} placeholder="Delivery postal pincode" showAssistance />
 
                   <Button
                     className="w-full h-12 bg-coke-red hover:bg-coke-red/90 text-white font-semibold rounded-xl shadow-lg shadow-coke-red/20 text-base gap-2 mt-2"
@@ -297,14 +409,31 @@ export const HeroCTAForm = () => {
                           <button
                             key={c.code}
                             onClick={() => {
+                              if (!c.isServed || c.isSanctioned) return;
                               setDestCountry(c.code);
                               setCountrySearch(c.name);
                               setShowCountryDropdown(false);
                             }}
-                            className="w-full flex items-center gap-2 px-3 py-2.5 text-sm hover:bg-muted/60 transition-colors text-left"
+                            disabled={!c.isServed || c.isSanctioned}
+                            className={cn(
+                              "w-full flex items-center gap-2 px-3 py-2.5 text-sm transition-colors text-left",
+                              (!c.isServed || c.isSanctioned)
+                                ? "opacity-50 cursor-not-allowed bg-muted/30"
+                                : "hover:bg-muted/60 cursor-pointer"
+                            )}
                           >
-                            <span className="text-base">{c.flag}</span>
-                            <span className="text-foreground">{c.name}</span>
+                            <span className="text-base shrink-0">{c.flag}</span>
+                            <span className="text-foreground truncate flex-1 min-w-0">{c.name}</span>
+                            {c.isSanctioned && (
+                              <span className="shrink-0 text-[10px] font-semibold px-1.5 py-0.5 rounded bg-destructive/10 text-destructive border border-destructive/20">
+                                Sanctioned
+                              </span>
+                            )}
+                            {!c.isServed && !c.isSanctioned && (
+                              <span className="shrink-0 text-[10px] font-medium px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
+                                Unavailable
+                              </span>
+                            )}
                           </button>
                         ))}
                       </div>
