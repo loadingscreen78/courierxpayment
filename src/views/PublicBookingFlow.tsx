@@ -1564,9 +1564,19 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                               <FormItem><FormLabel>Full Name</FormLabel><FormControl><Input {...field} placeholder="Sender name" className="h-11" /></FormControl><FormMessage /></FormItem>
                             )} />
                             <FormField control={detailsForm.control} name="senderPhone" render={({ field }) => (
-                              <FormItem><FormLabel>Phone</FormLabel><FormControl><Input {...field} placeholder="+91 98765 43210" className="h-11" /></FormControl><FormMessage /></FormItem>
+                              <FormItem><FormLabel>Mobile Number</FormLabel><FormControl><Input {...field} placeholder="+91 98765 43210" className="h-11" /></FormControl><FormMessage /></FormItem>
                             )} />
                           </div>
+                          {/* Optional email for domestic */}
+                          {!isInternational && (
+                            <FormField control={detailsForm.control} name="senderEmail" render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Email <span className="text-muted-foreground font-normal">(optional)</span></FormLabel>
+                                <FormControl><Input {...field} type="email" placeholder="sender@email.com" className="h-11" /></FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )} />
+                          )}
                           <FormField control={detailsForm.control} name="senderAddress" render={({ field }) => (
                             <FormItem>
                               <FormLabel>Full Address (House/Flat No, Street, Locality)</FormLabel>
@@ -1610,16 +1620,6 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                               </FormItem>
                             )} />
                           </div>
-                          {/* Optional email for domestic */}
-                          {!isInternational && (
-                            <FormField control={detailsForm.control} name="senderEmail" render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Email <span className="text-muted-foreground font-normal">(optional)</span></FormLabel>
-                                <FormControl><Input {...field} type="email" placeholder="sender@email.com" className="h-11" /></FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )} />
-                          )}
                           {senderLookup.state && senderLookup.district && (
                             <p className="text-xs text-candlestick-green flex items-center gap-1">{senderLookup.district}, {senderLookup.state}</p>
                           )}
@@ -1843,7 +1843,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                             )} />
                             <FormField control={detailsForm.control} name="receiverPhone" render={({ field }) => (
                               <FormItem>
-                                <FormLabel>Phone (with country code)</FormLabel>
+                                <FormLabel>Mobile Number</FormLabel>
                                 <FormControl><Input {...field} placeholder={destinationCountryInfo?.phoneCode ? `${destinationCountryInfo.phoneCode} ...` : 'Phone number'} className="h-11" /></FormControl>
                                 <FormMessage />
                               </FormItem>
