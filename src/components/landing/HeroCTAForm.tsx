@@ -137,6 +137,12 @@ export const HeroCTAForm = () => {
     return () => document.removeEventListener('mousedown', handler);
   }, []);
 
+  // Prefetch booking pages so Ship Now navigates instantly
+  useEffect(() => {
+    router.prefetch('/public/book/domestic');
+    router.prefetch('/public/book/international');
+  }, [router]);
+
   // ── Track state ──
   const [trackPhone, setTrackPhone] = useState('');
   const [trackAwb, setTrackAwb] = useState('');

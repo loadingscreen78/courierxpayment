@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect } from 'react';
-import { List, X, CaretRight, UserPlus, User } from '@phosphor-icons/react';
+import { useState, useEffect, useRef } from 'react';
+import { List, X, CaretRight, UserPlus, User, SignOut, Gauge, UserCircle } from '@phosphor-icons/react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -12,16 +12,47 @@ export const LandingHeader = () => {
   const router = useRouter();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
-  const { user, profile } = useAuth();
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const dropdownTimeout = useRef<NodeJS.Timeout | null>(null);
+  const { user, profile, signOut } = useAuth();
 
   const isSignedIn = !!user;
   const displayName = profile?.full_name?.split(' ')[0] || user?.email?.split('@')[0] || 'Account';
+  const avatarUrl = profile?.avatar_url;
+  const initials = displayName.charAt(0).toUpperCase();
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 20);
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  const openDropdown = () => {
+    if (dropdownTimeout.current) clearTimeout(dropdownTimeout.current);
+    setDropdownOpen(true);
+  };
+
+  const closeDropdown = () => {
+    dropdownTimeout.current = setTimeout(() => setDropdownOpen(false), 150);
+  };
+
+  const handleSignOut = async () => {
+    setDropdownOpen(false);
+    await signOut();
+    router.push('/');
+  };
 
   const navLinks = [
     { label: 'Track', href: '/public/track' },
@@ -68,15 +99,72 @@ export const LandingHeader = () => {
 
           {/* Auth buttons - show profile if signed in */}
           {isSignedIn ? (
-            <Link
-              href="/dashboard"
-              className="flex items-center gap-2 px-4 py-2 text-[15px] font-semibold bg-coke-red hover:bg-red-600 text-white rounded-xl transition-colors shadow-md shadow-coke-red/20"
+            <div
+              ref={dropdownRef}
+              className="relative"
+              onMouseEnter={openDropdown}
+              onMouseLeave={closeDropdown}
             >
-              <div className="h-6 w-6 rounded-md bg-white/20 flex items-center justify-center text-white text-xs font-bold shrink-0">
-                {displayName.charAt(0).toUpperCase()}
-              </div>
-              {displayName}
-            </Link>
+              <button
+                onClick={() => setDropdownOpen(prev => !prev)}
+                className="flex items-center gap-2 px-3 py-1.5 rounded-xl hover:bg-muted/60 transition-colors"
+              >
+                {avatarUrl ? (
+                  <img
+                    src={avatarUrl}
+                    alt={displayName}
+                    className="h-8 w-8 rounded-full object-cover border-2 border-coke-red/30"
+                  />
+                ) : (
+                  <div className="h-8 w-8 rounded-full bg-coke-red flex items-center justify-center text-white text-sm font-bold shrink-0">
+                    {initials}
+                  </div>
+                )}
+                <span className="text-[15px] font-semibold text-foreground">{displayName}</span>
+              </button>
+
+              <AnimatePresence>
+                {dropdownOpen && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 6, scale: 0.97 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: 6, scale: 0.97 }}
+                    transition={{ duration: 0.15 }}
+                    className="absolute right-0 top-full mt-2 w-52 rounded-xl border border-border bg-card shadow-xl shadow-black/10 overflow-hidden z-50"
+                  >
+                    <div className="px-4 py-3 border-b border-border/50">
+                      <p className="text-sm font-semibold text-foreground truncate">{profile?.full_name || displayName}</p>
+                      <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
+                    </div>
+                    <div className="py-1">
+                      <button
+                        onClick={() => { setDropdownOpen(false); router.push('/dashboard'); }}
+                        className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-foreground hover:bg-muted/60 transition-colors"
+                      >
+                        <Gauge className="h-4 w-4 text-muted-foreground" weight="bold" />
+                        Dashboard
+                      </button>
+                      <button
+                        onClick={() => { setDropdownOpen(false); router.push('/profile'); }}
+                        className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-foreground hover:bg-muted/60 transition-colors"
+                      >
+                        <UserCircle className="h-4 w-4 text-muted-foreground" weight="bold" />
+                        Profile
+                      </button>
+                    </div>
+                    <div className="border-t border-border/50 py-1">
+                      <button
+                        onClick={handleSignOut}
+                        className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-destructive hover:bg-destructive/10 transition-colors"
+                      >
+                        <SignOut className="h-4 w-4" weight="bold" />
+                        Sign Out
+                      </button>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
           ) : (
             <>
               <Link
