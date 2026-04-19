@@ -6,7 +6,6 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
   Truck, AirplaneTilt, Clock, Star, Check, CaretRight, Package,
-  CheckCircle,
 } from '@phosphor-icons/react';
 
 export interface DomesticCourierData {
@@ -95,13 +94,21 @@ export function DomesticCourierCard({
           <p className="text-[11px] text-muted-foreground mt-0.5">incl. all taxes</p>
         </div>
 
-        {/* Delivery time */}
+        {/* Delivery date */}
         <div className="flex items-center justify-center gap-1.5 text-sm">
           <Clock size={14} weight="bold" className="text-muted-foreground" />
-          <span>{courier.estimated_delivery_days} business day{courier.estimated_delivery_days !== 1 ? 's' : ''}</span>
+          <span>
+            {(() => {
+              const d = new Date();
+              d.setDate(d.getDate() + courier.estimated_delivery_days);
+              // Skip weekends
+              while (d.getDay() === 0 || d.getDay() === 6) d.setDate(d.getDate() + 1);
+              return `By ${d.toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' })}`;
+            })()}
+          </span>
         </div>
 
-        {/* Key info only */}
+        {/* Rating */}
         <div className="space-y-1.5 pt-1 text-left">
           {courier.rating > 0 && (
             <div className="flex items-center gap-2 text-xs text-foreground">
@@ -109,10 +116,6 @@ export function DomesticCourierCard({
               <span>{courier.rating.toFixed(1)} customer rating</span>
             </div>
           )}
-          <div className="flex items-center gap-2 text-xs text-foreground">
-            <CheckCircle size={12} weight="fill" className="text-coke-red shrink-0" />
-            <span>{courier.is_recommended ? '95%' : courier.rating >= 4 ? '85%' : '75%'} recommended by CourierX</span>
-          </div>
         </div>
 
         {/* Spacer */}
