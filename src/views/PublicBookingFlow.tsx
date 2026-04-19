@@ -29,6 +29,7 @@ import { INDIAN_STATES } from '@/lib/pincode-lookup';
 import { motion, AnimatePresence } from 'framer-motion';
 import { feedbackPresets } from '@/lib/haptics';
 import { LandingHeader } from '@/components/landing/LandingHeader';
+import { CameraCapture, type CameraDocumentType } from '@/components/ui/CameraCapture';
 
 type FlowMode = 'international' | 'domestic';
 
@@ -332,6 +333,8 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
   const [aadhaarBack, setAadhaarBack] = useState<File | null>(null);
   const [passportIdentity, setPassportIdentity] = useState<File | null>(null);
   const [passportAddress, setPassportAddress] = useState<File | null>(null);
+  const [isMobilePBF, setIsMobilePBF] = useState(false);
+  const [passportCameraOpen, setPassportCameraOpen] = useState<'identity' | 'address' | null>(null);
   const [contentItems, setContentItems] = useState<Array<{ name: string; type: string; hsnCode: string; qty: number; unitPrice: number }>>([
     { name: '', type: '', hsnCode: '', qty: 1, unitPrice: 0 },
   ]);
@@ -344,6 +347,11 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
   // ── Aadhaar OCR state ──
   const { ocrResult, isProcessing: ocrProcessing, ocrError, processAadhaar, clearOcr } = useAadhaarOcr();
   const [extractedAadhaarNumber, setExtractedAadhaarNumber] = useState('');
+
+  // ── Detect mobile ──
+  useEffect(() => {
+    setIsMobilePBF(/Android|iPhone|iPad|iPod/i.test(navigator.userAgent));
+  }, []);
   const [isUnderAge, setIsUnderAge] = useState(false);
 
   // ── Email OTP verification state ──
@@ -1857,6 +1865,11 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                                       <div className="text-center"><Upload className="h-6 w-6 text-blue-500 mx-auto" weight="duotone" /><p className="text-xs font-medium text-blue-600">Upload Identity</p><p className="text-[10px] text-muted-foreground">JPG, PNG or PDF</p></div>
                                     )}
                                   </label>
+                                  {isMobilePBF && !passportIdentity && (
+                                    <button type="button" onClick={() => setPassportCameraOpen('identity')} className="w-full flex items-center justify-center gap-1.5 text-xs py-2.5 rounded-xl border border-coke-red/30 bg-coke-red/5 text-coke-red hover:bg-coke-red/10 transition-colors">
+                                      <Camera className="h-4 w-4" weight="duotone" /> Take Photo
+                                    </button>
+                                  )}
                                 </div>
                                 <div className="space-y-2">
                                   <label className="text-sm font-medium">Address Page</label>
@@ -1868,8 +1881,26 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                                       <div className="text-center"><Upload className="h-6 w-6 text-blue-500 mx-auto" weight="duotone" /><p className="text-xs font-medium text-blue-600">Upload Address</p><p className="text-[10px] text-muted-foreground">JPG, PNG or PDF</p></div>
                                     )}
                                   </label>
+                                  {isMobilePBF && !passportAddress && (
+                                    <button type="button" onClick={() => setPassportCameraOpen('address')} className="w-full flex items-center justify-center gap-1.5 text-xs py-2.5 rounded-xl border border-coke-red/30 bg-coke-red/5 text-coke-red hover:bg-coke-red/10 transition-colors">
+                                      <Camera className="h-4 w-4" weight="duotone" /> Take Photo
+                                    </button>
+                                  )}
                                 </div>
                               </div>
+                              {/* Passport Camera Capture for mobile */}
+                              {isMobilePBF && (
+                                <CameraCapture
+                                  open={passportCameraOpen !== null}
+                                  onOpenChange={(open) => { if (!open) setPassportCameraOpen(null); }}
+                                  onCapture={(file) => {
+                                    if (passportCameraOpen === 'identity') setPassportIdentity(file);
+                                    else if (passportCameraOpen === 'address') setPassportAddress(file);
+                                    setPassportCameraOpen(null);
+                                  }}
+                                  documentType={passportCameraOpen === 'identity' ? 'passport-identity' : 'passport-address'}
+                                />
+                              )}
                             </div>
                           )}
                         </div>

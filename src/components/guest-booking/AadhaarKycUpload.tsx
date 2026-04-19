@@ -5,6 +5,7 @@ import { Upload, X, CircleNotch, Warning, CheckCircle, ShieldCheck, Camera, Eye,
 import { Button } from '@/components/ui/button';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { AadhaarOcrResult } from '@/hooks/useAadhaarOcr';
+import { CameraCapture } from '@/components/ui/CameraCapture';
 
 interface AadhaarKycUploadProps {
   aadhaarFront: File | null;
@@ -378,9 +379,16 @@ export default function AadhaarKycUpload({
         )}
       </AnimatePresence>
       {/* Mobile camera */}
-      <AnimatePresence>
-        {cameraOpen && <AadhaarCameraCapture side={cameraOpen} onCapture={handleCameraCapture} onClose={() => { setCameraOpen(null); }} />}
-      </AnimatePresence>
+      <CameraCapture
+        open={cameraOpen !== null}
+        onOpenChange={(open) => { if (!open) setCameraOpen(null); }}
+        onCapture={(file) => {
+          if (cameraOpen === 'front') onFrontChange(file);
+          else if (cameraOpen === 'back') onBackChange(file);
+          setCameraOpen(null);
+        }}
+        documentType={cameraOpen === 'front' ? 'aadhaar-front' : 'aadhaar-back'}
+      />
     </div>
   );
 }
