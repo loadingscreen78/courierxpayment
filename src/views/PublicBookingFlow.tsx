@@ -1130,8 +1130,10 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                       )} />
                     </div>
 
-                    {/* Weight only — no declared value in step 1 */}
-                    <div>
+                    {/* Weight + Dimensions — side by side on desktop */}
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                      {/* Left: Weight */}
+                      <div>
                       <FormField control={domForm.control} name="weightKg" render={({ field }) => (
                         <FormItem>
                           <FormLabel>Weight</FormLabel>
@@ -1171,10 +1173,10 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                           <FormMessage />
                         </FormItem>
                       )} />
-                    </div>
+                      </div>
 
-                    {/* Dimensions with measurement instructions */}
-                    <div>
+                      {/* Right: Dimensions */}
+                      <div>
                       <div className="flex items-center justify-between mb-1">
                         <p className="text-sm font-medium">Package Dimensions (cm)</p>
                         <DimensionAssistant lengthCm={watchedLength || 0} widthCm={watchedWidth || 0} heightCm={watchedHeight || 0} />
@@ -1182,7 +1184,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                       <div className="rounded-lg bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900/50 p-3 mb-3">
                         <p className="text-xs text-blue-800 dark:text-blue-300 flex items-start gap-1.5">
                           <Info className="h-3.5 w-3.5 shrink-0 mt-0.5" weight="fill" />
-                          <span>Measure the outer dimensions of your packed box using a measuring tape. Enter the longest side as Length, the next as Width, and the shortest as Height. Courier charges are based on the higher of actual weight or volumetric weight (L×W×H ÷ 5000).</span>
+                          <span>Measure the outer dimensions of your packed box. Courier charges are based on the higher of actual weight or volumetric weight (L×W×H ÷ 5000).</span>
                         </p>
                       </div>
                       <div className="grid grid-cols-3 gap-3">
@@ -1207,7 +1209,8 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                           )}
                         </div>
                       )}
-                    </div>
+                      </div>{/* end right column */}
+                    </div>{/* end grid */}
 
                     <Button type="submit" className="w-full bg-coke-red hover:bg-red-600 text-white gap-2 py-5" disabled={isDomesticLoading} onClick={() => feedbackPresets.tap()}>
                       {isDomesticLoading ? <><CircleNotch className="h-4 w-4 animate-spin" /> Fetching Rates...</> : <>Calculate Rates <ArrowRight className="h-4 w-4" /></>}
@@ -1888,8 +1891,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                                         {...field}
                                         placeholder="400001"
                                         maxLength={6}
-                                        readOnly={!!domesticDeliveryPincode}
-                                        className={`h-11 flex-1 ${domesticDeliveryPincode ? 'bg-muted' : ''}`}
+                                        className="h-11 flex-1"
                                       />
                                     </FormControl>
                                     {!domesticDeliveryPincode && (
@@ -2144,8 +2146,11 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                                       <span className="text-center text-muted-foreground">{item.qty} × ₹{item.unitPrice.toLocaleString('en-IN')}</span>
                                       <div className="flex items-center justify-end gap-1">
                                         <span className="font-semibold">₹{rowTotal.toLocaleString('en-IN')}</span>
+                                        <button type="button" onClick={() => setExpandedItemIndex(idx)} className="text-blue-500/70 hover:text-blue-600 p-0.5 ml-1">
+                                          <PencilSimple className="h-3 w-3" weight="bold" />
+                                        </button>
                                         {contentItems.length > 1 && (
-                                          <button type="button" onClick={() => { setContentItems(prev => prev.filter((_, i) => i !== idx)); if (expandedItemIndex >= contentItems.length - 1) setExpandedItemIndex(Math.max(0, contentItems.length - 2)); }} className="text-destructive/60 hover:text-destructive p-0.5 ml-1">
+                                          <button type="button" onClick={() => { setContentItems(prev => prev.filter((_, i) => i !== idx)); if (expandedItemIndex >= contentItems.length - 1) setExpandedItemIndex(Math.max(0, contentItems.length - 2)); }} className="text-destructive/60 hover:text-destructive p-0.5">
                                             <Trash className="h-3 w-3" weight="bold" />
                                           </button>
                                         )}
@@ -2200,7 +2205,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                               <div className="grid grid-cols-2 gap-3">
                                 <div>
                                   <label className="text-xs font-medium">Quantity</label>
-                                  <Input type="number" min={1} value={item.qty} onChange={(e) => { const arr = [...contentItems]; arr[idx].qty = Number(e.target.value) || 1; setContentItems(arr); }} className="h-10 mt-1" />
+                                  <Input type="number" value={item.qty} onChange={(e) => { const arr = [...contentItems]; arr[idx].qty = Number(e.target.value) || 0; setContentItems(arr); }} className="h-10 mt-1" />
                                 </div>
                                 <div>
                                   <label className="text-xs font-medium">Unit Price (₹)</label>

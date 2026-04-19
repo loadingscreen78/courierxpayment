@@ -263,12 +263,7 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
   // ── Payment handler ──
 
   const handlePayNow = async () => {
-    if (isDomestic) {
-      if (!kycDocFile) {
-        toast({ title: 'ID Document Required', description: 'Please upload a valid government-issued ID to proceed.', variant: 'destructive' });
-        return;
-      }
-    } else if (!aadhaarVerified) {
+    if (!isDomestic && !aadhaarVerified) {
       toast({ title: 'Aadhaar Required', description: 'Please verify your Aadhaar number first.', variant: 'destructive' });
       return;
     }
@@ -289,7 +284,7 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
       if (isDomestic && kycDocFile) {
         formData.append('kycDocument', kycDocFile);
         formData.append('kycDocType', kycDocType);
-      } else {
+      } else if (!isDomestic) {
         formData.append('aadhaarNumber', aadhaarInput);
       }
 
@@ -723,7 +718,7 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <p className="text-xs text-muted-foreground mb-1 flex items-center gap-1"><Package className="h-3 w-3" /> Package</p>
-              <p className="text-sm">{senderReceiver.contentDescription}</p>
+              <p className="text-sm">{senderReceiver.contentDescription.replace(/\s*\[HSN:[^\]]*\]/g, '')}</p>
               {weight && <p className="text-xs text-muted-foreground mt-0.5">Weight: {weight}</p>}
             </div>
             {dims && (
@@ -774,7 +769,8 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
         mode={mode}
       />
 
-      {/* ── Identity Verification — Aadhaar OTP for all shipments ── */}
+      {/* ── Identity Verification — Aadhaar OTP for international shipments only ── */}
+      {!isDomestic && (
       <div className="bg-card rounded-xl border border-border overflow-hidden">
         <div className="bg-muted/50 px-5 py-3 border-b border-border">
           <h2 className="font-semibold text-base flex items-center gap-2">
@@ -834,6 +830,7 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
           )}
         </div>
       </div>
+      )}
 
       {/* ── Coupon Code ── */}
       {!couponApplied && (
@@ -933,7 +930,7 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
       {/* ── Pay Button ── */}
       <Button
         onClick={() => { feedbackPresets.tap(); handlePayNow(); }}
-        disabled={paymentLoading || !aadhaarVerified || !termsAccepted}
+        disabled={paymentLoading || (!isDomestic && !aadhaarVerified) || !termsAccepted}
         className="w-full bg-coke-red hover:bg-red-600 text-white gap-2 py-5 sm:py-6 text-sm sm:text-base shadow-lg shadow-coke-red/20"
       >
         {paymentLoading ? (
@@ -946,7 +943,7 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
         )}
       </Button>
 
-      {!aadhaarVerified && (
+      {!isDomestic && !aadhaarVerified && (
         <p className="text-xs text-center text-muted-foreground">Please verify your Aadhaar number to proceed with payment.</p>
       )}
 

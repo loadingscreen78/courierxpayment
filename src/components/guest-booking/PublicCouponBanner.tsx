@@ -54,17 +54,7 @@ export function PublicCouponBanner({ onApply, isApplied, isLoading }: PublicCoup
           />
         </div>
 
-        {/* Close button */}
-        <button
-          onClick={() => {
-            feedbackPresets.tap();
-            setIsDismissed(true);
-          }}
-          className="absolute top-3 right-3 p-1.5 rounded-full hover:bg-white/10 transition-colors z-10"
-          aria-label="Dismiss"
-        >
-          <X className="h-4 w-4 text-muted-foreground" weight="bold" />
-        </button>
+        {/* Close button removed */}
 
         <div className="relative flex items-center gap-4">
           {/* Animated coupon icon */}
