@@ -305,17 +305,17 @@ export const HeroCTAForm = () => {
       <div className="rounded-2xl border border-border bg-card/95 backdrop-blur-sm shadow-2xl shadow-black/10 overflow-visible">
         <Tabs defaultValue="ship" className="w-full">
           {/* Tab Headers */}
-          <TabsList className="w-full h-auto p-0 bg-muted/50 rounded-none rounded-t-2xl overflow-hidden border-b border-border grid grid-cols-2">
+          <TabsList className="w-full h-auto p-0 bg-transparent rounded-none rounded-t-2xl overflow-hidden border-b border-border grid grid-cols-2">
             <TabsTrigger
               value="ship"
-              className="rounded-none border-b-2 border-transparent data-[state=active]:border-coke-red data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none py-4 text-base font-semibold gap-2"
+              className="rounded-none rounded-tl-2xl border-b-2 border-transparent py-4 text-base font-semibold gap-2 transition-all data-[state=active]:border-transparent data-[state=active]:bg-coke-red data-[state=active]:text-white data-[state=active]:shadow-none data-[state=inactive]:bg-muted/50 data-[state=inactive]:text-muted-foreground"
             >
               <Package className="h-5 w-5" weight="bold" />
               Ship Now
             </TabsTrigger>
             <TabsTrigger
               value="track"
-              className="rounded-none border-b-2 border-transparent data-[state=active]:border-coke-red data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none py-4 text-base font-semibold gap-2"
+              className="rounded-none rounded-tr-2xl border-b-2 border-transparent py-4 text-base font-semibold gap-2 transition-all data-[state=active]:border-transparent data-[state=active]:bg-coke-red data-[state=active]:text-white data-[state=active]:shadow-none data-[state=inactive]:bg-muted/50 data-[state=inactive]:text-muted-foreground"
             >
               <MagnifyingGlass className="h-5 w-5" weight="bold" />
               Track Order
@@ -362,11 +362,11 @@ export const HeroCTAForm = () => {
                   exit={{ opacity: 0, x: 10 }}
                   className="space-y-3"
                 >
-                  <p className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Pickup Postal Pincode</p>
-                  <PinInput value={pickupPin} onChange={setPickupPin} meta={pickupMeta} placeholder="Pickup postal pincode" showAssistance />
+                  <p className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Pickup</p>
+                  <PinInput value={pickupPin} onChange={setPickupPin} meta={pickupMeta} placeholder="Pincode" showAssistance />
 
-                  <p className="text-sm font-medium text-muted-foreground uppercase tracking-wider pt-1">Delivery Postal Pincode</p>
-                  <PinInput value={dropPin} onChange={setDropPin} meta={dropMeta} placeholder="Delivery postal pincode" showAssistance />
+                  <p className="text-sm font-medium text-muted-foreground uppercase tracking-wider pt-1">Delivery</p>
+                  <PinInput value={dropPin} onChange={setDropPin} meta={dropMeta} placeholder="Pincode" showAssistance />
 
                   <Button
                     className="w-full h-12 bg-coke-red hover:bg-coke-red/90 text-white font-semibold rounded-xl shadow-lg shadow-coke-red/20 text-base gap-2 mt-2"
@@ -386,7 +386,7 @@ export const HeroCTAForm = () => {
                   className="space-y-3"
                 >
                   <p className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Pickup (India)</p>
-                  <PinInput value={pickupPin} onChange={setPickupPin} meta={pickupMeta} placeholder="Pickup pin code" />
+                  <PinInput value={pickupPin} onChange={setPickupPin} meta={pickupMeta} placeholder="Pincode" showAssistance />
 
                   <p className="text-sm font-medium text-muted-foreground uppercase tracking-wider pt-1">Destination Country</p>
                   <div className="relative" ref={countryRef}>
