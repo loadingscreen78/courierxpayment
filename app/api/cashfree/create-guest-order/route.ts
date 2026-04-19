@@ -20,7 +20,16 @@ export async function POST(request: NextRequest) {
     const aadhaarNumber = formData.get('aadhaarNumber') as string || '';
     const couponCode = formData.get('couponCode') as string || '';
 
-    if (!amount || !senderReceiver?.senderEmail) {
+    // For domestic, senderEmail is optional. For international it's required.
+    // Also allow amount=0 when a coupon covers the full cost.
+    const isInternationalBooking = !!rateFormData?.destinationCountry;
+    if (!senderReceiver?.senderName || !senderReceiver?.senderPhone) {
+      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+    }
+    if (isInternationalBooking && !senderReceiver?.senderEmail) {
+      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+    }
+    if (amount == null || isNaN(amount) || amount < 0) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
@@ -54,8 +63,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: `Booking failed: ${insertError.message}` }, { status: 500 });
     }
 
-    if (!appId || !secretKey) {
-      // Dev mode — return mock response
+    if (!appId || !secretKey || amount === 0) {
+      // Dev mode or fully-discounted order (₹0) — skip Cashfree, mark as paid immediately
+      if (amount === 0) {
+        await supabase
+          .from('guest_bookings')
+          .update({ status: 'paid', paid_at: new Date().toISOString() })
+          .eq('order_id', orderId);
+      }
       return NextResponse.json({
         orderId: orderId,
         trackingNumber,
@@ -73,7 +88,7 @@ export async function POST(request: NextRequest) {
       customer_details: {
         customer_id: `guest_${Date.now()}`,
         customer_name: senderReceiver.senderName,
-        customer_email: senderReceiver.senderEmail,
+        customer_email: senderReceiver.senderEmail || `guest_${Date.now()}@courierx.in`,
         customer_phone: senderReceiver.senderPhone?.replace(/\D/g, '').slice(-10) || '9999999999',
       },
       order_meta: {

@@ -2383,11 +2383,13 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                             const hasItems = contentItems.some(i => i.name.trim());
                             if (!hasItems) { return; }
                             const totalValue = contentItems.reduce((sum, i) => sum + (i.qty * i.unitPrice), 0);
-                            if (totalValue > 25000) {
-                              toast({ title: 'Value limit exceeded', description: 'Total declared value cannot exceed ₹25,000 for guest international shipments.', variant: 'destructive' });
+                            // International limit: ₹25,000 | Domestic limit: ₹49,000
+                            const valueLimit = isInternational ? 25000 : 49000;
+                            if (totalValue > valueLimit) {
+                              toast({ title: 'Value limit exceeded', description: `Total declared value cannot exceed ₹${valueLimit.toLocaleString('en-IN')} for this shipment.`, variant: 'destructive' });
                               return;
                             }
-                            const desc = contentItems.filter(i => i.name.trim()).map(i => `${i.name} (${i.type || 'other'}) x${i.qty} @ ₹${i.unitPrice} [HSN: ${i.hsnCode || 'N/A'}]`).join('; ');
+                            const desc = contentItems.filter(i => i.name.trim()).map(i => `${i.name} (${i.type || 'other'}) x${i.qty} @ ₹${i.unitPrice}`).join('; ');
                             detailsForm.setValue('contentDescription', desc);
                             detailsForm.handleSubmit(handleFinalSubmit)();
                           }} className="flex-1 bg-coke-red hover:bg-red-600 text-white gap-2">
