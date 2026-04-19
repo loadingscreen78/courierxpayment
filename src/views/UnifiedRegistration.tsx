@@ -1,7 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useState, useEffect, useRef } from 'react';import { useRouter, useSearchParams } from 'next/navigation';
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -19,6 +18,7 @@ import { useSeo } from '@/hooks/useSeo';
 import { supabase } from '@/integrations/supabase/client';
 const logoMain = { src: '/lovable-uploads/logo.png' };
 import { motion, AnimatePresence } from 'framer-motion';
+import { useGoogleGsi } from '@/hooks/useGoogleGsi';
 
 // ─── Schemas ─────────────────────────────────────────────────────────
 const signupSchema = z.object({
@@ -83,7 +83,7 @@ const guideSteps = [
 export default function UnifiedRegistration() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { user, signUpWithEmail } = useAuth();
+  const { user, signUpWithEmail, signInWithGoogle } = useAuth();
   const { toast } = useToast();
 
   useSeo({
@@ -98,6 +98,7 @@ export default function UnifiedRegistration() {
   const [showConfirm, setShowConfirm] = useState(false);
   const [routeIndex, setRouteIndex] = useState(0);
   const [firstName, setFirstName] = useState('');
+  const googleButtonRef = useRef<HTMLDivElement>(null);
 
   // Redirect if already logged in (but not during post-signup steps)
   useEffect(() => {
@@ -154,9 +155,38 @@ export default function UnifiedRegistration() {
     }
   };
 
-  const currentRoute = shippingRoutes[routeIndex];
+  // ── Google sign-in/up ──
+  const handleGoogleCallback = async (idToken: string, nonce?: string) => {
+    setIsLoading(true);
+    const { error } = await signInWithGoogle(idToken, nonce);
+    if (error) {
+      setIsLoading(false);
+      toast({ title: 'Google sign-in failed', description: error.message, variant: 'destructive' });
+      return;
+    }
+    const { data: { user: currentUser } } = await supabase.auth.getUser();
+    if (!currentUser) { setIsLoading(false); return; }
 
-  // ── Left panel (shared with Auth.tsx) ──
+    const { data: profileData } = await supabase
+      .from('profiles').select('full_name').eq('user_id', currentUser.id).single();
+
+    setIsLoading(false);
+    if (!profileData?.full_name) {
+      setFlowStep('name');
+    } else {
+      setFirstName(profileData.full_name.split(' ')[0]);
+      router.replace('/dashboard');
+    }
+  };
+
+  useGoogleGsi({
+    enabled: flowStep === 'signup',
+    onCredential: handleGoogleCallback,
+    buttonDivRef: googleButtonRef,
+    isLoading,
+  });
+
+  const currentRoute = shippingRoutes[routeIndex];
   const LeftPanel = (
     <div className="hidden lg:flex lg:w-1/2 bg-charcoal relative overflow-hidden flex-col justify-between">
       <div className="absolute inset-0">
@@ -323,6 +353,13 @@ export default function UnifiedRegistration() {
                           <><ArrowRight size={20} weight="bold" className="mr-2" />Create Account</>
                         )}
                       </Button>
+
+                      <div className="flex items-center gap-3">
+                        <div className="flex-1 h-px bg-border" />
+                        <span className="text-sm text-muted-foreground">or continue with</span>
+                        <div className="flex-1 h-px bg-border" />
+                      </div>
+                      <div ref={googleButtonRef} className="w-full min-h-[44px]" />
 
                       <p className="text-center text-sm text-muted-foreground">
                         Already have an account?{' '}
