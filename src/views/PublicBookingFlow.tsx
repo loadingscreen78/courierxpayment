@@ -2106,46 +2106,62 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                               </div>
                             </div>
                           ) : (
-                          /* ── Medicine / Gift flow: multi-item view with collapsible items ── */
-                          contentItems.map((item, idx) => {
+                          /* ── Gift flow: multi-item view ── */
+                          <>
+                            {/* Assistive example — shown when no items filled yet */}
+                            {contentItems.length === 1 && !contentItems[0].name && (
+                              <div className="rounded-lg border border-dashed border-border bg-muted/20 p-3 text-xs text-muted-foreground space-y-1.5">
+                                <p className="font-medium text-foreground">Example: How to fill item details</p>
+                                <div className="grid grid-cols-4 gap-2 text-[11px] font-medium text-muted-foreground border-b border-border/50 pb-1">
+                                  <span>Item Name</span><span>Type</span><span>Qty × Price</span><span className="text-right">Total</span>
+                                </div>
+                                <div className="grid grid-cols-4 gap-2 text-[11px]">
+                                  <span className="text-foreground">Cotton T-Shirt</span><span>Clothing</span><span>2 × ₹500</span><span className="text-right text-foreground font-medium">₹1,000</span>
+                                </div>
+                                <div className="grid grid-cols-4 gap-2 text-[11px]">
+                                  <span className="text-foreground">Chocolate Box</span><span>Food</span><span>1 × ₹800</span><span className="text-right text-foreground font-medium">₹800</span>
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Items summary table — shown when 2+ items or first item is filled */}
+                            {(contentItems.length > 1 || contentItems[0]?.name) && (
+                              <div className="rounded-lg border border-border overflow-hidden">
+                                <div className="grid grid-cols-4 gap-2 px-3 py-2 bg-muted/50 text-[11px] font-semibold text-muted-foreground uppercase tracking-wide">
+                                  <span>Item</span><span>Type</span><span className="text-center">Qty × Price</span><span className="text-right">Total</span>
+                                </div>
+                                {contentItems.map((item, idx) => {
+                                  const rowTotal = item.qty * item.unitPrice;
+                                  return item.name ? (
+                                    <div key={idx} className="grid grid-cols-4 gap-2 px-3 py-2 text-xs border-t border-border/40 items-center">
+                                      <span className="font-medium truncate">{item.name}</span>
+                                      <span className="text-muted-foreground truncate capitalize">{item.type || '—'}</span>
+                                      <span className="text-center text-muted-foreground">{item.qty} × ₹{item.unitPrice.toLocaleString('en-IN')}</span>
+                                      <div className="flex items-center justify-end gap-1">
+                                        <span className="font-semibold">₹{rowTotal.toLocaleString('en-IN')}</span>
+                                        {contentItems.length > 1 && (
+                                          <button type="button" onClick={() => { setContentItems(prev => prev.filter((_, i) => i !== idx)); if (expandedItemIndex >= contentItems.length - 1) setExpandedItemIndex(Math.max(0, contentItems.length - 2)); }} className="text-destructive/60 hover:text-destructive p-0.5 ml-1">
+                                            <Trash className="h-3 w-3" weight="bold" />
+                                          </button>
+                                        )}
+                                      </div>
+                                    </div>
+                                  ) : null;
+                                })}
+                              </div>
+                            )}
+
+                            {/* Item edit forms */}
+                            {contentItems.map((item, idx) => {
                             const isExpanded = expandedItemIndex === idx;
                             const itemTotal = item.qty * item.unitPrice;
-                            
-                            // Collapsed view for items that aren't being edited
-                            if (!isExpanded && item.name.trim()) {
-                              return (
-                                <div key={idx} className="rounded-lg border border-border bg-muted/30 px-4 py-3 flex items-center justify-between gap-3">
-                                  <div className="flex items-center gap-3 min-w-0 flex-1">
-                                    <CaretRight className="h-4 w-4 text-muted-foreground shrink-0" weight="bold" />
-                                    <div className="min-w-0 flex-1">
-                                      <p className="text-sm font-medium truncate">{item.name}</p>
-                                      <p className="text-xs text-muted-foreground">
-                                        {item.type && `${item.type} · `}Qty: {item.qty}{item.unitPrice > 0 && ` · ₹${itemTotal.toLocaleString('en-IN')}`}
-                                      </p>
-                                    </div>
-                                  </div>
-                                  <div className="flex items-center gap-1 shrink-0">
-                                    <button type="button" onClick={() => setExpandedItemIndex(idx)} className="text-blue-600 hover:text-blue-700 p-1.5 rounded-md hover:bg-blue-50 dark:hover:bg-blue-950/30 transition-colors" title="Edit">
-                                      <PencilSimple className="h-4 w-4" weight="bold" />
-                                    </button>
-                                    {contentItems.length > 1 && (
-                                      <button type="button" onClick={() => { setContentItems(prev => prev.filter((_, i) => i !== idx)); if (expandedItemIndex >= contentItems.length - 1) setExpandedItemIndex(Math.max(0, contentItems.length - 2)); }} className="text-destructive hover:text-destructive/80 p-1.5 rounded-md hover:bg-destructive/10 transition-colors" title="Delete">
-                                        <Trash className="h-4 w-4" weight="bold" />
-                                      </button>
-                                    )}
-                                  </div>
-                                </div>
-                              );
-                            }
-                            
-                            // Expanded view (editing form)
+
+                            if (!isExpanded && item.name.trim()) return null; // shown in table above
+
                             return (
                             <div key={idx} className="rounded-lg border border-border p-4 space-y-3 relative">
                               <div className="flex items-center justify-between">
-                                <button type="button" onClick={() => item.name.trim() ? setExpandedItemIndex(-1) : undefined} className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors">
-                                  <CaretDown className="h-3.5 w-3.5" weight="bold" />
-                                  {isMedicineFlow ? `Medicine ${idx + 1}` : `Item ${idx + 1}`}
-                                </button>
+                                <span className="text-xs font-semibold text-muted-foreground">Item {idx + 1}</span>
                                 {contentItems.length > 1 && (
                                   <button type="button" onClick={() => { setContentItems(prev => prev.filter((_, i) => i !== idx)); if (expandedItemIndex >= contentItems.length - 1) setExpandedItemIndex(Math.max(0, contentItems.length - 2)); }} className="text-destructive hover:text-destructive/80 p-1">
                                     <Trash className="h-4 w-4" weight="bold" />
@@ -2154,126 +2170,75 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                               </div>
                               <div className="grid grid-cols-1 xs:grid-cols-2 gap-3">
                                 <div>
-                                  <label className="text-xs font-medium">{isMedicineFlow ? 'Medicine Name' : 'Item Name'}</label>
-                                  {isMedicineFlow ? (
-                                    <div className="mt-1">
-                                      <MedicineNameSearch
-                                        value={item.name}
-                                        onChange={(name) => { const arr = [...contentItems]; arr[idx].name = name; setContentItems(arr); }}
-                                        onSelect={(suggestion) => {
-                                          const arr = [...contentItems];
-                                          arr[idx].name = suggestion.name;
-                                          if (suggestion.form) arr[idx].type = suggestion.form;
-                                          arr[idx].hsnCode = suggestion.hsnCode;
-                                          setContentItems(arr);
-                                        }}
-                                      />
-                                    </div>
-                                  ) : (
-                                    <Input value={item.name} onChange={(e) => { const arr = [...contentItems]; arr[idx].name = e.target.value; setContentItems(arr); }} placeholder="e.g. Cotton T-Shirt" className="h-10 mt-1" />
-                                  )}
+                                  <label className="text-xs font-medium">Item Name</label>
+                                  <Input value={item.name} onChange={(e) => { const arr = [...contentItems]; arr[idx].name = e.target.value; setContentItems(arr); }} placeholder="e.g. Cotton T-Shirt" className="h-10 mt-1" />
                                 </div>
                                 <div>
-                                  <label className="text-xs font-medium">{isMedicineFlow ? 'Medicine Type' : 'Type of Item'}</label>
-                                  {isMedicineFlow ? (
-                                    <Select value={item.type} onValueChange={(v) => { const arr = [...contentItems]; arr[idx].type = v; setContentItems(arr); }}>
-                                      <SelectTrigger className="h-10 mt-1"><SelectValue placeholder="Select type" /></SelectTrigger>
-                                      <SelectContent>
-                                        <SelectItem value="tablet">Tablet</SelectItem>
-                                        <SelectItem value="capsule">Capsule</SelectItem>
-                                        <SelectItem value="powder">Powder</SelectItem>
-                                        <SelectItem value="liquid">Liquid</SelectItem>
-                                        <SelectItem value="semi-liquid">Semi-Liquid / Gel</SelectItem>
-                                        <SelectItem value="cream">Cream / Ointment</SelectItem>
-                                        <SelectItem value="injection">Injection / Vial</SelectItem>
-                                        <SelectItem value="inhaler">Inhaler</SelectItem>
-                                        <SelectItem value="drops">Drops (Eye/Ear/Nasal)</SelectItem>
-                                        <SelectItem value="syrup">Syrup</SelectItem>
-                                        <SelectItem value="other">Other</SelectItem>
-                                      </SelectContent>
-                                    </Select>
-                                  ) : (
-                                    <Select value={item.type} onValueChange={(v) => { const arr = [...contentItems]; arr[idx].type = v; arr[idx].hsnCode = ''; setContentItems(arr); }}>
-                                      <SelectTrigger className="h-10 mt-1"><SelectValue placeholder="Select type" /></SelectTrigger>
-                                      <SelectContent>
-                                        <SelectItem value="clothing">Clothing & Apparel</SelectItem>
-                                        <SelectItem value="electronics">Electronics</SelectItem>
-                                        <SelectItem value="food">Branded Packaged Food</SelectItem>
-                                        <SelectItem value="cosmetics">Cosmetics & Personal Care</SelectItem>
-                                        <SelectItem value="handicraft">Handicraft & Art</SelectItem>
-                                        <SelectItem value="books">Books & Stationery</SelectItem>
-                                        <SelectItem value="toys">Toys & Games</SelectItem>
-                                        <SelectItem value="jewelry">Imitation Jewelry</SelectItem>
-                                        <SelectItem value="household">Household Items</SelectItem>
-                                        <SelectItem value="other">Other</SelectItem>
-                                      </SelectContent>
-                                    </Select>
-                                  )}
-                                </div>
-                              </div>
-                              {/* Conditional Subtype dropdown — appears when a type is selected */}
-                              {!isMedicineFlow && item.type && GIFT_ITEM_SUBTYPES[item.type] && (
-                                <div>
-                                  <label className="text-xs font-medium">Sub Type</label>
-                                  <Select value={GIFT_ITEM_SUBTYPES[item.type]?.find(s => s.hsn === item.hsnCode)?.value || ''} onValueChange={(v) => { const sub = GIFT_ITEM_SUBTYPES[item.type]?.find(s => s.value === v); if (sub) { const arr = [...contentItems]; arr[idx].hsnCode = sub.hsn; setContentItems(arr); } }}>
-                                    <SelectTrigger className="h-10 mt-1"><SelectValue placeholder="Select sub type" /></SelectTrigger>
+                                  <label className="text-xs font-medium">Type of Item</label>
+                                  <Select value={item.type} onValueChange={(v) => { const arr = [...contentItems]; arr[idx].type = v; setContentItems(arr); }}>
+                                    <SelectTrigger className="h-10 mt-1"><SelectValue placeholder="Select type" /></SelectTrigger>
                                     <SelectContent>
-                                      {GIFT_ITEM_SUBTYPES[item.type].map(sub => (
-                                        <SelectItem key={sub.value} value={sub.value}>{sub.label}</SelectItem>
-                                      ))}
+                                      <SelectItem value="clothing">Clothing & Apparel</SelectItem>
+                                      <SelectItem value="electronics">Electronics</SelectItem>
+                                      <SelectItem value="food">Branded Packaged Food</SelectItem>
+                                      <SelectItem value="cosmetics">Cosmetics & Personal Care</SelectItem>
+                                      <SelectItem value="handicraft">Handicraft & Art</SelectItem>
+                                      <SelectItem value="books">Books & Stationery</SelectItem>
+                                      <SelectItem value="toys">Toys & Games</SelectItem>
+                                      <SelectItem value="jewelry">Imitation Jewelry</SelectItem>
+                                      <SelectItem value="household">Household Items</SelectItem>
+                                      <SelectItem value="other">Other</SelectItem>
                                     </SelectContent>
                                   </Select>
                                 </div>
-                              )}
-                              <div className="grid grid-cols-3 gap-2 sm:gap-3">
-                                <div>
-                                  <label className="text-[11px] sm:text-xs font-medium">HSN Code</label>
-                                  <div className="relative">
-                                    <Input list={`hsn-list-${idx}`} value={item.hsnCode} onChange={(e) => { const arr = [...contentItems]; arr[idx].hsnCode = e.target.value; setContentItems(arr); }} placeholder="Search or type HSN" className="h-10 mt-1" />
-                                    <datalist id={`hsn-list-${idx}`}>
-                                      {COMMON_HSN_CODES.map(h => (
-                                        <option key={h.code} value={h.code}>{h.code} - {h.desc}</option>
-                                      ))}
-                                    </datalist>
-                                  </div>
-                                  {item.hsnCode && COMMON_HSN_CODES.find(h => h.code === item.hsnCode) && (
-                                    <p className="text-[10px] text-muted-foreground mt-0.5">{COMMON_HSN_CODES.find(h => h.code === item.hsnCode)?.desc}</p>
-                                  )}
-                                </div>
+                              </div>
+                              <div className="grid grid-cols-2 gap-3">
                                 <div>
                                   <label className="text-xs font-medium">Quantity</label>
                                   <Input type="number" min={1} value={item.qty} onChange={(e) => { const arr = [...contentItems]; arr[idx].qty = Number(e.target.value) || 1; setContentItems(arr); }} className="h-10 mt-1" />
                                 </div>
                                 <div>
-                                  <label className="text-xs font-medium">{isMedicineFlow ? 'Price per Unit (₹)' : 'Unit Price (₹)'}</label>
-                                  <Input type="number" min={0} value={item.unitPrice || ''} onChange={(e) => { const arr = [...contentItems]; arr[idx].unitPrice = Number(e.target.value) || 0; setContentItems(arr); }} placeholder={isMedicineFlow ? 'MRP per unit' : '500'} className="h-10 mt-1" />
+                                  <label className="text-xs font-medium">Unit Price (₹)</label>
+                                  <Input type="number" min={0} value={item.unitPrice || ''} onChange={(e) => { const arr = [...contentItems]; arr[idx].unitPrice = Number(e.target.value) || 0; setContentItems(arr); }} placeholder="500" className="h-10 mt-1" />
                                 </div>
                               </div>
+                              {item.name && item.unitPrice > 0 && (
+                                <div className="flex justify-between items-center text-xs bg-muted/40 rounded-lg px-3 py-2">
+                                  <span className="text-muted-foreground">Item total</span>
+                                  <span className="font-semibold">₹{itemTotal.toLocaleString('en-IN')}</span>
+                                </div>
+                              )}
+                              {item.name.trim() && (
+                                <button type="button" onClick={() => setExpandedItemIndex(-1)} className="text-xs text-blue-600 hover:underline">
+                                  Done editing
+                                </button>
+                              )}
                             </div>
                             );
-                          })
+                          })}
+                          </>
                           )}
                         </div>
 
                         {/* Add item button — hidden for document flow */}
                         {!isDocumentFlow && (() => {
                           const totalValue = contentItems.reduce((sum, i) => sum + (i.qty * i.unitPrice), 0);
-                          const isOverLimit = totalValue > 25000;
+                          const isOverLimit = totalValue > 49000;
                           return (
                           <Button type="button" variant="outline" onClick={() => {
                             const newIdx = contentItems.length;
                             setContentItems(prev => [...prev, { name: '', type: '', hsnCode: '', qty: 1, unitPrice: 0 }]);
                             setExpandedItemIndex(newIdx);
-                          }} className="w-full gap-2 border-dashed">
+                          }} className="w-full gap-2 border-dashed" disabled={isOverLimit}>
                             <Plus className="h-4 w-4" /> {isMedicineFlow ? 'Add Another Medicine' : 'Add Another Item'}
                           </Button>
                           );
                         })()}
 
-                        {/* Total value display with ₹25,000 limit — hidden for document flow */}
+                        {/* Total value display — hidden for document flow */}
                         {!isDocumentFlow && (() => {
                           const totalValue = contentItems.reduce((sum, i) => sum + (i.qty * i.unitPrice), 0);
-                          const isOverLimit = totalValue > 25000;
+                          const isOverLimit = totalValue > 49000;
                           return (
                           <div className="space-y-2">
                             <div className={`flex justify-between items-center text-sm rounded-lg px-4 py-2.5 ${isOverLimit ? 'bg-destructive/10 border border-destructive/30' : 'bg-muted/50'}`}>
@@ -2283,10 +2248,10 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                             {isOverLimit && (
                               <div className="flex items-start gap-2 text-xs text-destructive px-1">
                                 <Warning className="h-4 w-4 shrink-0 mt-0.5" weight="fill" />
-                                <span>Total declared value cannot exceed ₹25,000 for guest international shipments. Please reduce item quantities or prices.</span>
+                                <span>Total declared value cannot exceed ₹49,000 for guest shipments. Please reduce item quantities or prices.</span>
                               </div>
                             )}
-                            <p className="text-[10px] text-muted-foreground text-right px-1">Maximum allowed: ₹25,000</p>
+                            <p className="text-[10px] text-muted-foreground text-right px-1">Maximum allowed: ₹49,000</p>
                           </div>
                           );
                         })()}
