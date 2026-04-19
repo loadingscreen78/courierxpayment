@@ -1368,6 +1368,14 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                   }
                 }
 
+                // Filter out weight slabs > 10kg (guest booking max)
+                filteredDomestic = filteredDomestic.filter((c: any) => {
+                  const name = (c.courier_name || '').toUpperCase();
+                  // Remove 15kg, 20kg, 25kg, 30kg slabs
+                  if (/\b(15|20|25|30)\s*(K\.?G|KG)\b/.test(name)) return false;
+                  return true;
+                });
+
                 // For gift/parcel: categorize into Express, Economy, Saver
                 const allSorted = [...filteredDomestic].sort((a: any, b: any) => a.customer_price - b.customer_price);
                 const expressCouriers = filteredDomestic.filter((c: any) => c.mode === 'air');
@@ -1436,14 +1444,14 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                               onClick={() => setCourierFilterTab(tab)}
                               className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-xs font-semibold transition-all ${
                                 courierFilterTab === tab
-                                  ? 'bg-white dark:bg-card text-foreground shadow-sm'
-                                  : 'text-muted-foreground hover:text-foreground'
+                                  ? 'bg-coke-red text-white shadow-sm'
+                                  : 'text-muted-foreground hover:text-foreground hover:bg-muted/60'
                               }`}
                             >
                               <TabIcon className="h-3.5 w-3.5" weight="bold" />
                               {info.label}
                               <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${
-                                courierFilterTab === tab ? 'bg-coke-red/10 text-coke-red' : 'bg-muted text-muted-foreground'
+                                courierFilterTab === tab ? 'bg-white/20 text-white' : 'bg-muted text-muted-foreground'
                               }`}>{count}</span>
                             </button>
                           );
