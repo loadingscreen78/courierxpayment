@@ -138,7 +138,7 @@ export default function AddressAutocomplete({
           placeholder={placeholder}
           rows={rows}
           className={`resize-none pr-9 ${className || ''}`}
-          autoComplete="off"
+          autoComplete="on"
         />
         <div className="absolute right-2.5 top-2.5 text-muted-foreground">
           {isLoading ? (

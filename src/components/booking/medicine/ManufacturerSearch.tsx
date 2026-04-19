@@ -120,7 +120,7 @@ export const ManufacturerSearch = ({ value, onSelect, className }: ManufacturerS
                         'pl-9 input-premium transition-colors',
                         selected && 'border-emerald-500/50 pr-8'
                     )}
-                    autoComplete="off"
+                    autoComplete="on"
                 />
                 {selected && (
                     <Check className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-emerald-500" />

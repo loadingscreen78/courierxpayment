@@ -194,7 +194,7 @@ export default function InboundStation() {
                   onKeyDown={handleKeyDown}
                   placeholder="Scan barcode or enter AWB number..."
                   className="w-full bg-white/5 border border-white/10 text-white placeholder:text-gray-500 focus:border-red-500 focus:ring-1 focus:ring-red-500/20 focus:outline-none pl-12 h-14 text-lg text-center rounded-lg font-typewriter"
-                  autoComplete="off"
+                  autoComplete="on"
                 />
               </div>
               

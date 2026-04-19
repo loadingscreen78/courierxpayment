@@ -1,8 +1,10 @@
-import { useRef, useState } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import { Button } from './button';
 import { Progress } from './progress';
 import { Upload, X, FileText, Image as ImageIcon, CheckCircle2 } from 'lucide-react';
+import { Camera } from '@phosphor-icons/react';
 import { cn } from '@/lib/utils';
+import { CameraCapture, type CameraDocumentType } from './CameraCapture';
 
 interface FileUploadProps {
   onFileSelect: (file: File) => void;
@@ -15,6 +17,7 @@ interface FileUploadProps {
   label?: string;
   description?: string;
   className?: string;
+  documentType?: CameraDocumentType;
 }
 
 export function FileUpload({
@@ -28,10 +31,17 @@ export function FileUpload({
   label = 'Upload File',
   description = `Max ${maxSizeMB}MB`,
   className,
+  documentType,
 }: FileUploadProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [fileName, setFileName] = useState<string | null>(null);
+  const [isMobile, setIsMobile] = useState(false);
+  const [cameraOpen, setCameraOpen] = useState(false);
+
+  useEffect(() => {
+    setIsMobile(/Android|iPhone|iPad|iPod/i.test(navigator.userAgent));
+  }, []);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -161,20 +171,45 @@ export function FileUpload({
         onChange={handleFileChange}
         className="hidden"
       />
-      <div
-        onClick={handleClick}
-        className="relative rounded-xl border-2 border-dashed border-border hover:border-primary/50 bg-muted/20 hover:bg-primary/5 transition-all cursor-pointer p-6"
-      >
-        <div className="flex flex-col items-center justify-center gap-3">
-          <div className="w-12 h-12 rounded-lg bg-muted flex items-center justify-center">
-            <Upload className="h-6 w-6 text-muted-foreground" />
-          </div>
-          <div className="text-center">
-            <p className="font-medium text-sm">{label}</p>
-            <p className="text-xs text-muted-foreground mt-1">{description}</p>
+      <div className="space-y-2">
+        <div
+          onClick={handleClick}
+          className="relative rounded-xl border-2 border-dashed border-border hover:border-primary/50 bg-muted/20 hover:bg-primary/5 transition-all cursor-pointer p-6"
+        >
+          <div className="flex flex-col items-center justify-center gap-3">
+            <div className="w-12 h-12 rounded-lg bg-muted flex items-center justify-center">
+              <Upload className="h-6 w-6 text-muted-foreground" />
+            </div>
+            <div className="text-center">
+              <p className="font-medium text-sm">{label}</p>
+              <p className="text-xs text-muted-foreground mt-1">{description}</p>
+            </div>
           </div>
         </div>
+        {isMobile && (
+          <button
+            type="button"
+            onClick={() => setCameraOpen(true)}
+            className="w-full flex items-center justify-center gap-1.5 text-xs py-2.5 rounded-xl border border-coke-red/30 bg-coke-red/5 text-coke-red hover:bg-coke-red/10 transition-colors"
+          >
+            <Camera className="h-4 w-4" weight="duotone" /> Take Photo
+          </button>
+        )}
       </div>
+      {isMobile && (
+        <CameraCapture
+          open={cameraOpen}
+          onOpenChange={setCameraOpen}
+          onCapture={(file) => {
+            setFileName(file.name);
+            const reader = new FileReader();
+            reader.onloadend = () => setPreview(reader.result as string);
+            reader.readAsDataURL(file);
+            onFileSelect(file);
+          }}
+          documentType={documentType ?? 'general'}
+        />
+      )}
     </div>
   );
 }

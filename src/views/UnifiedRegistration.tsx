@@ -9,7 +9,7 @@ import {
   Envelope, Lock, Eye, EyeSlash, ArrowRight, CircleNotch,
   User, Phone, ShieldCheck, FileText, IdentificationCard,
   CheckCircle, WarningCircle, CloudArrowUp, CaretDown,
-  MapPin, Calendar, GenderIntersex,
+  MapPin, Calendar, GenderIntersex, Camera,
 } from '@phosphor-icons/react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -19,6 +19,7 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { motion, AnimatePresence } from 'framer-motion';
 import Image from 'next/image';
+import { CameraCapture, type CameraDocumentType } from '@/components/ui/CameraCapture';
 
 // ─── Types ───────────────────────────────────────────────────────────
 type FlowStep = 'email-check' | 'signin' | 'credentials' | 'otp' | 'documents' | 'personal' | 'agreement';
@@ -168,6 +169,8 @@ export default function UnifiedRegistration() {
   const [aadhaarBackPreview, setAadhaarBackPreview] = useState<string | null>(null);
   const [aadhaarDigits, setAadhaarDigits] = useState<string[]>(persisted?.aadhaarDigits || ['', '', '']);
   const [showGuidelines, setShowGuidelines] = useState(false);
+  const [isMobileReg, setIsMobileReg] = useState(false);
+  const [cameraOpenReg, setCameraOpenReg] = useState<'front' | 'back' | null>(null);
 
   // Extracted from Aadhaar API (Step 2 → Step 4)
   const [extractedName, setExtractedName] = useState(persisted?.extractedName || '');
@@ -180,6 +183,11 @@ export default function UnifiedRegistration() {
   useEffect(() => {
     if (user) router.replace('/dashboard');
   }, [user, router]);
+
+  // ── Detect mobile ──
+  useEffect(() => {
+    setIsMobileReg(/Android|iPhone|iPad|iPod/i.test(navigator.userAgent));
+  }, []);
 
   // ── Persist state on changes ──
   useEffect(() => {
@@ -1136,22 +1144,33 @@ export default function UnifiedRegistration() {
                             </div>
                           </div>
                         ) : (
-                          <div
-                            onDrop={handleDrop('front')}
-                            onDragOver={handleDragOver}
-                            onClick={() => document.getElementById('aadhaar-front-input')?.click()}
-                            className="rounded-xl border-2 border-dashed border-[#D1D5DB] bg-[#F9FAFB] hover:border-[#1A1A2E] hover:bg-[#1A1A2E]/5 transition-all cursor-pointer p-6 text-center"
-                          >
-                            <CloudArrowUp size={32} weight="bold" className="text-[#6B7280] mx-auto mb-2" />
-                            <p className="text-sm font-medium text-[#1A1A2E]">Click or drag to upload</p>
-                            <p className="text-xs text-[#6B7280] mt-1">JPG, PNG, or PDF — Max 5MB</p>
-                            <input
-                              id="aadhaar-front-input"
-                              type="file"
-                              accept=".jpg,.jpeg,.png,.pdf"
-                              className="hidden"
-                              onChange={(e) => e.target.files?.[0] && handleFileSelect('front', e.target.files[0])}
-                            />
+                          <div className="space-y-2">
+                            <div
+                              onDrop={handleDrop('front')}
+                              onDragOver={handleDragOver}
+                              onClick={() => document.getElementById('aadhaar-front-input')?.click()}
+                              className="rounded-xl border-2 border-dashed border-[#D1D5DB] bg-[#F9FAFB] hover:border-[#1A1A2E] hover:bg-[#1A1A2E]/5 transition-all cursor-pointer p-6 text-center"
+                            >
+                              <CloudArrowUp size={32} weight="bold" className="text-[#6B7280] mx-auto mb-2" />
+                              <p className="text-sm font-medium text-[#1A1A2E]">Click or drag to upload</p>
+                              <p className="text-xs text-[#6B7280] mt-1">JPG, PNG, or PDF — Max 5MB</p>
+                              <input
+                                id="aadhaar-front-input"
+                                type="file"
+                                accept=".jpg,.jpeg,.png,.pdf"
+                                className="hidden"
+                                onChange={(e) => e.target.files?.[0] && handleFileSelect('front', e.target.files[0])}
+                              />
+                            </div>
+                            {isMobileReg && (
+                              <button
+                                type="button"
+                                onClick={() => setCameraOpenReg('front')}
+                                className="w-full flex items-center justify-center gap-1.5 text-xs py-2.5 rounded-xl border border-coke-red/30 bg-coke-red/5 text-coke-red hover:bg-coke-red/10 transition-colors"
+                              >
+                                <Camera className="h-4 w-4" weight="duotone" /> Take Photo
+                              </button>
+                            )}
                           </div>
                         )}
                       </div>
@@ -1175,25 +1194,49 @@ export default function UnifiedRegistration() {
                             </div>
                           </div>
                         ) : (
-                          <div
-                            onDrop={handleDrop('back')}
-                            onDragOver={handleDragOver}
-                            onClick={() => document.getElementById('aadhaar-back-input')?.click()}
-                            className="rounded-xl border-2 border-dashed border-[#D1D5DB] bg-[#F9FAFB] hover:border-[#1A1A2E] hover:bg-[#1A1A2E]/5 transition-all cursor-pointer p-6 text-center"
-                          >
-                            <CloudArrowUp size={32} weight="bold" className="text-[#6B7280] mx-auto mb-2" />
-                            <p className="text-sm font-medium text-[#1A1A2E]">Click or drag to upload</p>
-                            <p className="text-xs text-[#6B7280] mt-1">JPG, PNG, or PDF — Max 5MB</p>
-                            <input
-                              id="aadhaar-back-input"
-                              type="file"
-                              accept=".jpg,.jpeg,.png,.pdf"
-                              className="hidden"
-                              onChange={(e) => e.target.files?.[0] && handleFileSelect('back', e.target.files[0])}
-                            />
+                          <div className="space-y-2">
+                            <div
+                              onDrop={handleDrop('back')}
+                              onDragOver={handleDragOver}
+                              onClick={() => document.getElementById('aadhaar-back-input')?.click()}
+                              className="rounded-xl border-2 border-dashed border-[#D1D5DB] bg-[#F9FAFB] hover:border-[#1A1A2E] hover:bg-[#1A1A2E]/5 transition-all cursor-pointer p-6 text-center"
+                            >
+                              <CloudArrowUp size={32} weight="bold" className="text-[#6B7280] mx-auto mb-2" />
+                              <p className="text-sm font-medium text-[#1A1A2E]">Click or drag to upload</p>
+                              <p className="text-xs text-[#6B7280] mt-1">JPG, PNG, or PDF — Max 5MB</p>
+                              <input
+                                id="aadhaar-back-input"
+                                type="file"
+                                accept=".jpg,.jpeg,.png,.pdf"
+                                className="hidden"
+                                onChange={(e) => e.target.files?.[0] && handleFileSelect('back', e.target.files[0])}
+                              />
+                            </div>
+                            {isMobileReg && (
+                              <button
+                                type="button"
+                                onClick={() => setCameraOpenReg('back')}
+                                className="w-full flex items-center justify-center gap-1.5 text-xs py-2.5 rounded-xl border border-coke-red/30 bg-coke-red/5 text-coke-red hover:bg-coke-red/10 transition-colors"
+                              >
+                                <Camera className="h-4 w-4" weight="duotone" /> Take Photo
+                              </button>
+                            )}
                           </div>
                         )}
                       </div>
+
+                      {/* Camera Capture for mobile */}
+                      {isMobileReg && (
+                        <CameraCapture
+                          open={cameraOpenReg !== null}
+                          onOpenChange={(open) => { if (!open) setCameraOpenReg(null); }}
+                          onCapture={(file) => {
+                            if (cameraOpenReg) handleFileSelect(cameraOpenReg, file);
+                            setCameraOpenReg(null);
+                          }}
+                          documentType={cameraOpenReg === 'front' ? 'aadhaar-front' : 'aadhaar-back'}
+                        />
+                      )}
 
                       {/* Aadhaar Number — 3 boxes of 4 digits */}
                       <div>

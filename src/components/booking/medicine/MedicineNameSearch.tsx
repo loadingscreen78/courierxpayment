@@ -101,7 +101,7 @@ export function MedicineNameSearch({ value, onChange, onSelect }: MedicineNameSe
           onFocus={() => { if (suggestions.length > 0) setShowDropdown(true); }}
           onKeyDown={handleKeyDown}
           className="input-premium pr-10"
-          autoComplete="off"
+          autoComplete="on"
         />
         <div className="absolute right-3 top-1/2 -translate-y-1/2">
           {isLoading ? (
