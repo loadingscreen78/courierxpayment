@@ -43,9 +43,9 @@
     --muted-foreground: 0 0% 40%;
 
     /* 10% - Coke Red (Accent) */
-    --accent: 0 100% 48%;
-    /* Coke Red #F40000 */
-    --accent-foreground: 0 0% 100%;
+    --accent: 0 30% 96%;
+    /* Light red tint for hover states — keeps text readable on light theme */
+    --accent-foreground: 0 0% 15%;
     --destructive: 0 100% 48%;
     /* Coke Red for destructive/CTA */
     --destructive-foreground: 0 0% 100%;
@@ -167,9 +167,9 @@
     -webkit-backdrop-filter: blur(24px) saturate(180%);
   }
 
-  /* Desktop sidebar - Fixed positioning */
+  /* Desktop sidebar - Fixed positioning, width controlled by component */
   .desktop-sidebar {
-    @apply hidden lg:flex flex-col h-screen w-64 border-r overflow-hidden;
+    @apply hidden lg:flex flex-col h-screen border-r overflow-hidden;
     background: hsl(var(--sidebar-background));
     color: hsl(var(--sidebar-foreground));
     border-color: hsl(var(--sidebar-border));

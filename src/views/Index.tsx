@@ -18,6 +18,10 @@ import {
   Cube,
   CaretRight,
   Sparkle,
+  Calculator,
+  FolderOpen,
+  Question,
+  ShieldCheck,
 } from '@phosphor-icons/react';
 import { useHaptics } from '@/hooks/useHaptics';
 import { useAuth } from '@/contexts/AuthContext';
@@ -33,8 +37,6 @@ import { format } from 'date-fns';
 import { useShippingMode } from '@/contexts/ShippingModeContext';
 import { KycBanner } from '@/components/dashboard/KycBanner';
 
-// Remove mock data - now using real data from database
-
 const containerVariants = {
   hidden: { opacity: 0 },
   visible: { opacity: 1, transition: { staggerChildren: 0.08 } }
@@ -43,62 +45,6 @@ const containerVariants = {
 const itemVariants = {
   hidden: { opacity: 0, y: 16 },
   visible: { opacity: 1, y: 0, transition: { duration: 0.4 } }
-};
-
-// Metallic Stat Card - Using project colors only
-const StatCard = ({ 
-  icon: Icon, 
-  value, 
-  label, 
-  accent,
-  href
-}: { 
-  icon: React.ElementType; 
-  value: string | number; 
-  label: string;
-  accent?: boolean;
-  href: string;
-}) => {
-  const router = useRouter();
-  const { lightTap } = useHaptics();
-
-  return (
-    <motion.div
-      whileHover={{ y: -3 }}
-      whileTap={{ scale: 0.98 }}
-      onClick={() => { lightTap(); router.push(href); }}
-      className="cursor-pointer"
-    >
-      <div className={`relative overflow-hidden rounded-3xl p-[1px] shadow-lg ${
-        accent 
-          ? 'bg-gradient-to-br from-coke-red/80 via-coke-red to-coke-red/80' 
-          : 'bg-gradient-to-br from-border via-muted to-border'
-      }`}>
-        <div className={`relative rounded-3xl p-5 ${
-          accent 
-            ? 'bg-gradient-to-br from-coke-red via-coke-red to-red-700' 
-            : 'bg-card'
-        }`}>
-          {/* Metallic shine */}
-          <div className={`absolute top-0 left-0 right-0 h-1/2 rounded-t-3xl ${
-            accent ? 'bg-gradient-to-b from-white/20 to-transparent' : 'bg-gradient-to-b from-white/5 to-transparent'
-          }`} />
-          
-          <div className="relative flex items-center gap-4">
-            <div className={`p-3 rounded-2xl ${
-              accent ? 'bg-white/20' : 'bg-coke-red/10'
-            }`}>
-              <Icon className={`h-5 w-5 ${accent ? 'text-white' : 'text-coke-red'}`} />
-            </div>
-            <div>
-              <p className={`text-2xl font-bold font-typewriter ${accent ? 'text-white' : 'text-foreground'}`}>{value}</p>
-              <p className={`text-xs font-medium uppercase tracking-wider ${accent ? 'text-white/70' : 'text-muted-foreground'}`}>{label}</p>
-            </div>
-          </div>
-        </div>
-      </div>
-    </motion.div>
-  );
 };
 
 // Premium Shipment Card - Project colors only
@@ -113,7 +59,6 @@ const ShipmentCard = ({ shipment, index }: { shipment: Shipment; index: number }
   const statusDotColor = getStatusDotColor(shipment.current_status as ShipmentStatus);
   const legLabel = getLegLabel(shipment.current_leg as ShipmentLeg);
 
-  // Extract city from destination address
   const getDestinationCity = () => {
     if (shipment.consignee_address?.city) {
       return `${shipment.consignee_address.city}, ${shipment.destination_country}`;
@@ -121,7 +66,6 @@ const ShipmentCard = ({ shipment, index }: { shipment: Shipment; index: number }
     return shipment.destination_country;
   };
 
-  // Get item name based on type
   const getItemName = () => {
     const typeNames = {
       medicine: 'Prescription Medicine',
@@ -140,17 +84,12 @@ const ShipmentCard = ({ shipment, index }: { shipment: Shipment; index: number }
       onClick={() => { lightTap(); router.push(`/shipments`); }}
       className="cursor-pointer group"
     >
-      {/* Metallic border container */}
       <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-border via-muted to-border p-[1px] shadow-xl">
         <div className="relative rounded-3xl bg-card overflow-hidden">
-          {/* Top metallic shine */}
           <div className="absolute top-0 left-0 right-0 h-16 bg-gradient-to-b from-white/[0.04] to-transparent" />
-          
-          {/* Status bar - Coke Red */}
           <div className="h-1 bg-coke-red" />
           
           <div className="relative p-5">
-            {/* Header */}
             <div className="flex items-start justify-between mb-4">
               <div className="flex items-center gap-3">
                 <div className="p-3 rounded-2xl bg-coke-red/10">
@@ -167,7 +106,6 @@ const ShipmentCard = ({ shipment, index }: { shipment: Shipment; index: number }
               </Badge>
             </div>
 
-            {/* Destination Box */}
             <div className="rounded-2xl bg-muted/50 border border-border p-4 mb-4">
               <div className="flex items-center gap-3">
                 <div className="p-2 rounded-xl bg-background">
@@ -180,7 +118,6 @@ const ShipmentCard = ({ shipment, index }: { shipment: Shipment; index: number }
               </div>
             </div>
 
-            {/* Status Row */}
             <div className="flex items-center justify-between text-sm mb-4">
               <div className="flex items-center gap-2">
                 <MapPin className="h-4 w-4 text-muted-foreground" />
@@ -194,7 +131,6 @@ const ShipmentCard = ({ shipment, index }: { shipment: Shipment; index: number }
               </div>
             </div>
 
-            {/* Footer */}
             <div className="flex items-center justify-between pt-4 border-t border-border">
               <div className="flex items-center gap-2">
                 <Truck className="h-4 w-4 text-muted-foreground" />
@@ -213,6 +149,33 @@ const ShipmentCard = ({ shipment, index }: { shipment: Shipment; index: number }
   );
 };
 
+// Quick action card for new users
+const QuickActionCard = ({ icon: Icon, title, description, href, color }: {
+  icon: React.ElementType;
+  title: string;
+  description: string;
+  href: string;
+  color: string;
+}) => {
+  const router = useRouter();
+  const { lightTap } = useHaptics();
+
+  return (
+    <motion.div
+      whileHover={{ y: -2 }}
+      whileTap={{ scale: 0.98 }}
+      onClick={() => { lightTap(); router.push(href); }}
+      className="cursor-pointer rounded-2xl border border-border bg-card p-4 hover:border-coke-red/20 hover:bg-coke-red/[0.02] transition-all duration-200"
+    >
+      <div className={`p-2.5 rounded-xl ${color} w-fit mb-3`}>
+        <Icon className="h-5 w-5" />
+      </div>
+      <p className="font-semibold text-foreground text-sm">{title}</p>
+      <p className="text-xs text-muted-foreground mt-1">{description}</p>
+    </motion.div>
+  );
+};
+
 const Index = () => {
   const router = useRouter();
   const { profile } = useAuth();
@@ -224,12 +187,10 @@ const Index = () => {
   
   const displayName = profile?.full_name?.split(' ')[0] || 'there';
 
-  // Show loading state with branded loader (truck animation)
   if (loading) {
     return <CourierXLoader isLoading={true} />;
   }
 
-  // Redirect new users with no shipments to new-shipment page
   const hasNoShipments = activeShipments.length === 0 && deliveredShipments.length === 0;
   if (hasNoShipments && !isInternational) {
     router.replace('/new-shipment');
@@ -247,58 +208,14 @@ const Index = () => {
           transition={{ duration: 0.35, ease: 'easeInOut' }}
           className="space-y-8 pb-8"
         >
-        {/* Mode Banner — info only, no toggle (toggle lives in sidebar + header) */}
-        <motion.div
-          initial={{ opacity: 0, y: -8 }}
-          animate={{ opacity: 1, y: 0 }}
-          className={`flex items-center gap-3 px-5 py-3 rounded-2xl border transition-all duration-300 ${
-            isInternational
-              ? 'bg-[#F40000]/5 border-[#F40000]/20'
-              : 'bg-muted/40 border-border/60'
-          }`}
-        >
-          <div className={`p-2 rounded-xl shrink-0 ${isInternational ? 'bg-[#F40000]/10' : 'bg-foreground/8'}`}>
-            {isInternational
-              ? (
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="text-[#F40000]">
-                  <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.8"/>
-                  <path d="M12 3C12 3 8.5 7 8.5 12C8.5 17 12 21 12 21" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
-                  <path d="M12 3C12 3 15.5 7 15.5 12C15.5 17 12 21 12 21" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
-                  <path d="M3.5 12H20.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
-                </svg>
-              ) : (
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="text-foreground/60">
-                  <path d="M1 4h13v12H1z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round"/>
-                  <path d="M14 9h4.5L22 12.5V16h-8V9z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round"/>
-                  <circle cx="5.5" cy="19" r="2" stroke="currentColor" strokeWidth="1.8"/>
-                  <circle cx="18.5" cy="19" r="2" stroke="currentColor" strokeWidth="1.8"/>
-                </svg>
-              )
-            }
-          </div>
-          <div>
-            <p className={`text-xs font-bold uppercase tracking-widest ${isInternational ? 'text-[#F40000]' : 'text-foreground/70'}`}>
-              {isInternational ? 'International Mode' : 'Domestic Mode'}
-            </p>
-            <p className="text-[11px] text-muted-foreground mt-0.5">
-              {isInternational
-                ? 'Shipping to 150+ countries — medicines, documents & gifts'
-                : 'Fast delivery across India — same-day & next-day options'}
-            </p>
-          </div>
-        </motion.div>
 
-        {/* Welcome Header - Metallic Card */}
+        {/* Welcome Header */}
         <motion.header variants={itemVariants}>
-
-          {/* KYC Completion Banner */}
           <KycBanner />
 
           <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-border via-muted to-border p-[1px] shadow-xl mt-4">
             <div className="relative rounded-3xl bg-card p-5 sm:p-8 overflow-hidden">
-              {/* Subtle decorative gradient */}
               <div className="absolute top-0 right-0 w-72 h-72 bg-coke-red/5 rounded-full blur-3xl" />
-              {/* Metallic shine */}
               <div className="absolute top-0 left-0 right-0 h-1/2 bg-gradient-to-b from-white/[0.03] to-transparent rounded-t-3xl" />
               
               <div className="relative">
@@ -323,35 +240,6 @@ const Index = () => {
             </div>
           </div>
         </motion.header>
-
-        {/* Stats Grid */}
-        <motion.div variants={itemVariants} className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <StatCard
-            icon={Package}
-            value={activeShipments.length}
-            label="Active Shipments"
-            accent
-            href="/shipments"
-          />
-          <StatCard
-            icon={Wallet}
-            value={`₹${balance.toLocaleString('en-IN')}`}
-            label="Wallet Balance"
-            href="/wallet"
-          />
-          <StatCard
-            icon={CheckCircle}
-            value={deliveredShipments.length}
-            label="Delivered"
-            href="/history"
-          />
-          <StatCard
-            icon={Cube}
-            value={addresses.length}
-            label="Saved Addresses"
-            href="/vault"
-          />
-        </motion.div>
 
         {/* Domestic-only notice */}
         {!isInternational && (
@@ -409,28 +297,79 @@ const Index = () => {
           </motion.section>
         )}
 
-        {/* Empty State */}
+        {/* Empty State - Enhanced for new users */}
         {activeShipments.length === 0 && (
           <motion.section variants={itemVariants}>
             <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-border via-muted to-border p-[1px] shadow-lg">
               <div className="relative rounded-3xl bg-card overflow-hidden">
                 <div className="absolute top-0 left-0 right-0 h-16 bg-gradient-to-b from-white/[0.03] to-transparent" />
-                <div className="relative p-12 text-center">
-                  <div className="mx-auto w-16 h-16 rounded-full bg-coke-red/10 flex items-center justify-center mb-4">
-                    <Package className="h-8 w-8 text-coke-red" />
+                <div className="relative p-8 sm:p-12">
+                  <div className="text-center mb-8">
+                    <div className="mx-auto w-16 h-16 rounded-full bg-coke-red/10 flex items-center justify-center mb-4">
+                      <Package className="h-8 w-8 text-coke-red" />
+                    </div>
+                    <h3 className="text-xl font-bold text-foreground mb-2 font-typewriter">No Active Shipments</h3>
+                    <p className="text-muted-foreground max-w-md mx-auto">
+                      {isInternational
+                        ? "You're all set to ship medicines, documents, or gifts to 150+ countries. Here's what you can do:"
+                        : "Book a domestic shipment to get started. Here's what you can do:"}
+                    </p>
                   </div>
-                  <h3 className="text-xl font-bold text-foreground mb-2">No Active Shipments</h3>
-                  <p className="text-muted-foreground mb-6">
-                    {isInternational
-                      ? 'Start shipping your medicines, documents, or gifts internationally'
-                      : 'Book a domestic shipment to get started'}
-                  </p>
-                  <Button 
-                    onClick={() => router.push('/new-shipment')}
-                    className="bg-coke-red hover:bg-coke-red/90 text-white rounded-full px-6"
-                  >
-                    Create New Shipment
-                  </Button>
+
+                  {/* Quick Actions Grid */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-8">
+                    <QuickActionCard
+                      icon={Airplane}
+                      title="Create a Shipment"
+                      description="Ship medicines, documents, or gifts internationally"
+                      href="/new-shipment"
+                      color="bg-coke-red/10 text-coke-red"
+                    />
+                    <QuickActionCard
+                      icon={Calculator}
+                      title="Check Rates"
+                      description="Get instant pricing for your shipment"
+                      href="/rate-calculator"
+                      color="bg-blue-500/10 text-blue-600"
+                    />
+                    <QuickActionCard
+                      icon={FolderOpen}
+                      title="Save Addresses"
+                      description="Add frequently used addresses to your vault"
+                      href="/vault"
+                      color="bg-amber-500/10 text-amber-600"
+                    />
+                    <QuickActionCard
+                      icon={Wallet}
+                      title="Add Wallet Balance"
+                      description="Top up your wallet for faster checkout"
+                      href="/wallet"
+                      color="bg-green-500/10 text-green-600"
+                    />
+                    <QuickActionCard
+                      icon={ShieldCheck}
+                      title="Complete KYC"
+                      description="Unlock lower rates and full account features"
+                      href="/auth/kyc"
+                      color="bg-purple-500/10 text-purple-600"
+                    />
+                    <QuickActionCard
+                      icon={Question}
+                      title="Help & Support"
+                      description="Get answers to common shipping questions"
+                      href="/support"
+                      color="bg-muted-foreground/10 text-muted-foreground"
+                    />
+                  </div>
+
+                  <div className="text-center">
+                    <Button 
+                      onClick={() => router.push('/new-shipment')}
+                      className="bg-coke-red hover:bg-coke-red/90 text-white rounded-full px-8 py-3 text-base font-semibold"
+                    >
+                      Create New Shipment
+                    </Button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -442,7 +381,6 @@ const Index = () => {
           <motion.section variants={itemVariants}>
             <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-border via-muted to-border p-[1px] shadow-lg">
               <div className="relative rounded-3xl bg-card overflow-hidden">
-                {/* Metallic shine */}
                 <div className="absolute top-0 left-0 right-0 h-16 bg-gradient-to-b from-white/[0.03] to-transparent" />
                 
                 <div className="relative p-6">
@@ -497,19 +435,6 @@ const Index = () => {
           </motion.section>
         )}
 
-        {/* Footer */}
-        <motion.footer variants={itemVariants} className="pt-4">
-          <div className="flex items-center justify-center">
-            <div className="flex items-center gap-3 px-6 py-3 rounded-full bg-muted/50 border border-border">
-              <div className="w-2 h-2 rounded-full bg-coke-red animate-pulse" />
-              <p className="text-xs text-muted-foreground font-medium">
-                {isInternational
-                  ? 'CSB IV Compliant • Personal Use Only • Insured Shipments'
-                  : 'Pan-India Coverage • Same-Day Available • Insured Shipments'}
-              </p>
-            </div>
-          </div>
-        </motion.footer>
         </motion.div>
       </AnimatePresence>
     </AppLayout>

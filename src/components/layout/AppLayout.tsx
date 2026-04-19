@@ -1,4 +1,6 @@
-import { ReactNode } from 'react';
+"use client";
+
+import { ReactNode, useState } from 'react';
 import { DesktopSidebar } from './DesktopSidebar';
 import { MobileNav } from './MobileNav';
 import { Header } from './Header';
@@ -13,6 +15,7 @@ interface AppLayoutProps {
 
 export const AppLayout = ({ children }: AppLayoutProps) => {
   const { mode, isSwitching } = useShippingMode();
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   return (
     <div className="min-h-screen bg-background">
@@ -21,9 +24,9 @@ export const AppLayout = ({ children }: AppLayoutProps) => {
 
       {/* Desktop Layout */}
       <div className="hidden lg:flex">
-        <DesktopSidebar />
+        <DesktopSidebar collapsed={sidebarCollapsed} onToggle={() => setSidebarCollapsed(prev => !prev)} />
         {/* Content with left margin to account for fixed sidebar */}
-        <div className="flex-1 flex flex-col min-h-screen ml-64">
+        <div className={`flex-1 flex flex-col min-h-screen transition-all duration-300 ease-in-out ${sidebarCollapsed ? 'ml-[72px]' : 'ml-64'}`}>
           <Header />
           <main className="flex-1 p-6 overflow-auto">
             <PageTransition>

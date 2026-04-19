@@ -1,6 +1,6 @@
 "use client";
 
-import { Wallet, Calculator, Bell, SignOut, Warning, CaretDown } from '@phosphor-icons/react';
+import { Wallet, Calculator, Bell, SignOut, Warning, CaretDown, PaperPlaneTilt } from '@phosphor-icons/react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -14,29 +14,49 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useWallet } from '@/contexts/WalletContext';
 import { useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
+import Link from 'next/link';
+import Image from 'next/image';
+import { useHaptics } from '@/hooks/useHaptics';
 
 export const Header = () => {
   const { user, profile, signOut } = useAuth();
   const { balance } = useWallet();
   const router = useRouter();
+  const { mediumTap } = useHaptics();
 
   const handleSignOut = async () => {
     await signOut();
     router.replace('/auth');
-  };  const displayName = profile?.full_name || user?.email?.split('@')[0] || 'User';
+  };
+
+  const displayName = profile?.full_name || user?.email?.split('@')[0] || 'User';
   const displayEmail = user?.email || profile?.phone_number || '';
   const isLowBalance = balance <= 0;
 
   return (
     <header className="sticky top-0 z-40 bg-background/80 backdrop-blur-xl border-b border-border/40">
-      <div className="flex items-center justify-end h-14 px-4 lg:px-6">
-        {/* Right Actions - Rate Calculator, Wallet, Notifications, Profile */}
+      <div className="flex items-center justify-between h-14 px-4 lg:px-6">
+        {/* Left side - New Shipment button (desktop) + Logo (mobile) */}
+        <div className="flex items-center gap-3">
+          {/* New Shipment CTA - Desktop */}
+          <Link
+            href="/new-shipment"
+            onClick={() => mediumTap()}
+            className="hidden lg:flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-coke-red to-red-600 text-white rounded-xl font-semibold text-sm transition-all duration-200 shadow-md shadow-coke-red/25 hover:shadow-lg hover:shadow-coke-red/35 hover:brightness-105 overflow-hidden group relative"
+          >
+            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-600" />
+            <PaperPlaneTilt className="h-4 w-4 relative z-10" weight="bold" />
+            <span className="relative z-10">New Shipment</span>
+          </Link>
+        </div>
+
+        {/* Right Actions - Logo (mobile), Rate Calculator, Wallet, Notifications, Profile */}
         <div className="flex items-center gap-1.5">
           {/* Rate Calculator */}
           <Button 
             variant="ghost" 
             size="sm" 
-            className="gap-1.5 rounded-xl text-muted-foreground hover:text-foreground h-9"
+            className="gap-1.5 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted/60 h-9"
             onClick={() => router.push('/rate-calculator')}
           >
             <Calculator className="h-4 w-4" />
@@ -54,7 +74,7 @@ export const Header = () => {
             )}
           >
             {isLowBalance ? (
-            <Warning className="h-3.5 w-3.5 text-destructive shrink-0" />
+              <Warning className="h-3.5 w-3.5 text-destructive shrink-0" />
             ) : (
               <div className="w-5 h-5 rounded-md bg-green-500/15 flex items-center justify-center shrink-0">
                 <Wallet className="h-3 w-3 text-green-600" />
@@ -75,15 +95,20 @@ export const Header = () => {
           </button>
 
           {/* Notifications */}
-          <Button variant="ghost" size="icon" className="rounded-xl hover:bg-muted/80 relative h-9 w-9">
+          <Button variant="ghost" size="icon" className="rounded-xl hover:bg-muted/60 relative h-9 w-9">
             <Bell className="h-4 w-4" weight="bold" />
             <span className="absolute top-1.5 right-1.5 h-2 w-2 bg-coke-red rounded-full border-2 border-background" />
           </Button>
 
+          {/* Mobile Logo - shown only on mobile, top right */}
+          <Link href="/dashboard" className="lg:hidden flex items-center">
+            <Image src="/logo.svg" alt="CourierX" width={28} height={28} className="h-7 w-auto" />
+          </Link>
+
           {/* Profile Dropdown */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm" className="rounded-xl hover:bg-muted/80 gap-2 h-9 px-2">
+              <Button variant="ghost" size="sm" className="rounded-xl hover:bg-muted/60 gap-2 h-9 px-2">
                 <div className="h-7 w-7 rounded-lg bg-gradient-to-br from-coke-red to-red-600 flex items-center justify-center text-white text-xs font-bold shrink-0">
                   {displayName.charAt(0).toUpperCase()}
                 </div>
