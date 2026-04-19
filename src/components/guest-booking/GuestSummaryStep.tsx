@@ -719,13 +719,16 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
             <div>
               <p className="text-xs text-muted-foreground mb-1 flex items-center gap-1"><Package className="h-3 w-3" /> Package</p>
               <p className="text-sm">{senderReceiver.contentDescription.replace(/\s*\[HSN:[^\]]*\]/g, '')}</p>
-              {weight && <p className="text-xs text-muted-foreground mt-0.5">Weight: {weight}</p>}
+              {/* For international, show weight inline; for domestic it moves to the right card */}
+              {weight && !isDomestic && <p className="text-xs text-muted-foreground mt-0.5">Weight: {weight}</p>}
             </div>
             {dims && (
               <div>
-                <p className="text-xs text-muted-foreground mb-1 flex items-center gap-1"><Ruler className="h-3 w-3" /> Dimensions</p>
+                <p className="text-xs text-muted-foreground mb-1 flex items-center gap-1"><Ruler className="h-3 w-3" /> Dimensions &amp; Weight</p>
                 <p className="text-sm">{dims.l} × {dims.w} × {dims.h} cm</p>
-                {rateFormData?.weightGrams && dims.l && dims.w && dims.h && (
+                {/* For domestic, show weight here on the right side */}
+                {weight && isDomestic && <p className="text-xs text-muted-foreground mt-0.5">Weight: {weight}</p>}
+                {dims.l && dims.w && dims.h && (rateFormData?.weightGrams || rateFormData?.weightKg) && (
                   <p className="text-xs text-muted-foreground mt-0.5">Vol. weight: {((dims.l * dims.w * dims.h) / 5000).toFixed(1)} kg</p>
                 )}
               </div>
