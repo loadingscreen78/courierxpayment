@@ -71,7 +71,7 @@ export async function fetchDomesticRates(req: RateCheckRequest): Promise<Courier
     origin: req.pickupPincode,
     destination: req.deliveryPincode,
     payment_type: 'prepaid',
-    order_amount: req.declaredValue,
+    order_amount: req.declaredValue > 0 ? req.declaredValue : 500, // NimbusPost requires positive order_amount
     weight: Math.round(req.weightKg * 1000), // kg → grams, must be integer
     length: req.lengthCm,
     breadth: req.widthCm,
