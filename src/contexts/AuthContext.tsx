@@ -38,6 +38,7 @@ interface AuthContextType {
   verifyPhoneOtp: (phone: string, code: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
   updateProfile: (updates: Partial<Profile>) => Promise<{ error: Error | null }>;
+  refreshProfile: () => Promise<void>;
   completeAadhaarKyc: (aadhaarNumber: string, otp: string) => Promise<{ error: Error | null; address?: string }>;
 }
 
@@ -60,6 +61,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setProfile(data as Profile);
     }
   };
+
+  const refreshProfile = useCallback(async () => {
+    if (user) {
+      await fetchProfile(user.id);
+    }
+  }, [user]);
 
   useEffect(() => {
     // Set up auth state listener FIRST
@@ -343,8 +350,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     verifyPhoneOtp,
     signOut,
     updateProfile,
+    refreshProfile,
     completeAadhaarKyc,
-  }), [user, session, profile, loading, signInWithEmail, signUpWithEmail, signInWithOtp, verifyOtp, signInWithGoogle, sendWhatsAppOtp, verifyWhatsAppOtp, sendPhoneOtp, verifyPhoneOtp, signOut, updateProfile, completeAadhaarKyc]);
+  }), [user, session, profile, loading, signInWithEmail, signUpWithEmail, signInWithOtp, verifyOtp, signInWithGoogle, sendWhatsAppOtp, verifyWhatsAppOtp, sendPhoneOtp, verifyPhoneOtp, signOut, updateProfile, refreshProfile, completeAadhaarKyc]);
 
   return (
     <AuthContext.Provider value={contextValue}>

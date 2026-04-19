@@ -57,7 +57,7 @@ type KycStep = 'aadhaar' | 'redirect' | 'verifying' | 'success';
 function AadhaarKycInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { profile, loading } = useAuth();
+  const { profile, loading, refreshProfile } = useAuth();
   const { toast } = useToast();
 
   const [step, setStep] = useState<KycStep>('aadhaar');
@@ -156,6 +156,8 @@ function AadhaarKycInner() {
       setVerifiedName(data.verifiedName || '');
       setVerifiedAddress(data.verifiedAddress || '');
       setMaskedAadhaar(data.maskedAadhaar || '');
+      // Refresh the profile in AuthContext so KycBanner and ProtectedRoute see the update
+      await refreshProfile();
       setStep('success');
       toast({ title: 'KYC Complete', description: 'Your Aadhaar has been verified successfully.' });
     } catch (err) {
