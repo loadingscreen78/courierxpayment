@@ -181,9 +181,6 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
 
   const courierName = selectedCourier?.carrier || selectedCourier?.courier_name || 'Courier';
   const basePrice = selectedCourier?.price || selectedCourier?.customer_price || 0;
-  // For international, use rateBreakdown total as the authoritative price to ensure breakdown matches total
-  const effectiveBasePrice = (mode === 'international' && rateBreakdown?.total) ? rateBreakdown.total : basePrice;
-  const finalPrice = Math.max(0, effectiveBasePrice - couponDiscount);
   const shipmentType = rateFormData?.shipmentType || 'gift';
   const destinationCountryInfo = !isDomestic && rateFormData?.destinationCountry
     ? getCountryByCode(rateFormData.destinationCountry) : null;
@@ -444,6 +441,10 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
       }, true);
     } catch { return null; }
   }, [mode, rateFormData]);
+
+  // For international, use rateBreakdown total as the authoritative price so breakdown matches total
+  const effectiveBasePrice = (mode === 'international' && rateBreakdown?.total) ? rateBreakdown.total : basePrice;
+  const finalPrice = Math.max(0, effectiveBasePrice - couponDiscount);
 
   // Aadhaar thumbnail URLs
   const frontThumb = useMemo(() => aadhaarFront ? URL.createObjectURL(aadhaarFront) : null, [aadhaarFront]);
