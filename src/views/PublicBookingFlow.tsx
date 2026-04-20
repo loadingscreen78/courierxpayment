@@ -351,6 +351,8 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
   const [pharmacyBillDocs, setPharmacyBillDocs] = useState<File[]>([]);
   const [intlZipLookup, setIntlZipLookup] = useState<{ loading: boolean; city: string; state: string; error: string }>({ loading: false, city: '', state: '', error: '' });
   const [showWeightLimitModal, setShowWeightLimitModal] = useState(false);
+  // ── Separate pickup phone (not synced with shipper phone) ──
+  const [pickupPhone, setPickupPhone] = useState('');
 
   // ── Aadhaar OCR state ──
   const { ocrResult, isProcessing: ocrProcessing, ocrError, processAadhaar, clearOcr } = useAadhaarOcr();
@@ -476,6 +478,9 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
   const domesticPickupPincode = !isInternational ? (rateFormData as DomesticRateValues)?.pickupPincode || '' : '';
   const domesticDeliveryPincode = !isInternational ? (rateFormData as DomesticRateValues)?.deliveryPincode || '' : '';
 
+  // For international: inherit pickup pincode from URL params (passed from landing page CTA)
+  const internationalPickupPincode = isInternational ? (searchParams?.get('pickupPincode') || '') : '';
+
   // Watch the actual pincode fields for lookup
   const senderPincodeValue = detailsForm.watch('senderPincode');
   const receiverPincodeValue = detailsForm.watch('receiverZipcode');
@@ -498,7 +503,14 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
         detailsForm.setValue('receiverZipcode', domesticDeliveryPincode);
       }
     }
-  }, [step, isInternational, domesticPickupPincode, domesticDeliveryPincode, detailsForm]);
+    // For international: auto-fill sender pincode from URL param
+    if (step === 3 && isInternational && internationalPickupPincode) {
+      const currentSenderPin = detailsForm.getValues('senderPincode');
+      if (!currentSenderPin) {
+        detailsForm.setValue('senderPincode', internationalPickupPincode);
+      }
+    }
+  }, [step, isInternational, domesticPickupPincode, domesticDeliveryPincode, internationalPickupPincode, detailsForm]);
 
   // Auto-fill city/state from lookup results
   useEffect(() => {
@@ -670,6 +682,17 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
       : (['senderName', 'senderPhone', 'senderAddress', 'senderCity', 'senderState', 'senderPincode'] as const);
     const result = await detailsForm.trigger(fieldsToValidate);
     if (!result) return;
+    // For international: require Aadhaar front AND back
+    if (isInternational && requiresAadhaarKyc) {
+      if (!aadhaarFront) {
+        toast({ title: 'Aadhaar Required', description: 'Please upload the front side of your Aadhaar card.', variant: 'destructive' });
+        return;
+      }
+      if (!aadhaarBack) {
+        toast({ title: 'Aadhaar Back Required', description: 'Please upload the back side of your Aadhaar card.', variant: 'destructive' });
+        return;
+      }
+    }
     // For international: require email OTP verification
     if (isInternational && emailOtpState !== 'verified') {
       toast({ title: 'Email not verified', description: 'Please verify your email address before continuing.', variant: 'destructive' });
@@ -825,6 +848,16 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
     const receiverFields = isInternational
       ? ['receiverName', 'receiverPhone', 'receiverEmail', 'receiverAddress', 'receiverCity', 'receiverState', 'receiverZipcode'] as const
       : ['receiverName', 'receiverPhone', 'receiverAddress', 'receiverCity', 'receiverZipcode'] as const;
+    // For countries without postal codes, auto-set "000" before validation
+    if (isInternational && destinationCountryInfo) {
+      const NO_POSTAL_CODES = new Set(['AE','QA','KW','BH','OM','YE','JO','IQ','LB','SY','AF','AO','BO','BW','BJ','BF','BI','CM','CF','TD','KM','CG','CD','CI','DJ','GQ','ER','ET','FJ','GA','GM','GH','GN','GW','KE','LS','LR','LY','MG','MW','ML','MR','MZ','NA','NE','NG','RW','ST','SN','SL','SO','SS','SD','SZ','TZ','TG','UG','ZM','ZW','TL','PG','SB','VU','WS','TO','TV','KI','NR','PW','MH','FM','CK','NU','TK','WF','GU','MP','AS','VI','PR','PN','NF','CX','CC','HM','AQ','BV','TF','GS','UM','IO','SH','AC','TA','FK','PM','BL','MF','GP','MQ','RE','YT','GF','NC','PF','GI','IM','JE','GG','AX','FO','GL','SJ','BM','KY','TC','VG','AI','MS','AG','DM','LC','VC','GD','BB','TT','JM','HT','CU','DO','BS','AW','CW','SX','BQ','MX']);
+      if (NO_POSTAL_CODES.has(destinationCountryInfo.code)) {
+        const currentZip = detailsForm.getValues('receiverZipcode');
+        if (!currentZip || currentZip.trim() === '') {
+          detailsForm.setValue('receiverZipcode', '000');
+        }
+      }
+    }
     const result = await detailsForm.trigger(receiverFields);
     if (!result) return;
     // For domestic, auto-set receiverState from pincode lookup if available
@@ -1851,10 +1884,10 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                                     {...field}
                                     placeholder="110001"
                                     maxLength={6}
-                                    readOnly={!!domesticPickupPincode}
-                                    className={`h-11 ${domesticPickupPincode ? 'bg-muted text-muted-foreground cursor-not-allowed pointer-events-none' : ''}`}
+                                    readOnly={!!(domesticPickupPincode || internationalPickupPincode)}
+                                    className={`h-11 ${(domesticPickupPincode || internationalPickupPincode) ? 'bg-muted text-muted-foreground cursor-not-allowed pointer-events-none' : ''}`}
                                   />
-                                  {!!domesticPickupPincode && (
+                                  {!!(domesticPickupPincode || internationalPickupPincode) && (
                                     <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-medium text-muted-foreground bg-muted px-1.5 py-0.5 rounded border border-border/60">locked</span>
                                   )}
                                 </div>
@@ -1864,25 +1897,27 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                               <FormMessage />
                             </FormItem>
                           )} />
-                          {/* Pickup phone for international — shows OTP-verified shipper phone, editable */}
+                          {/* Pickup phone for international — separate from shipper phone */}
                           {isInternational && (
-                            <FormField control={detailsForm.control} name="senderPhone" render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Pickup Contact Number</FormLabel>
-                                <div className="relative">
-                                  <FormControl>
-                                    <Input {...field} placeholder="+91 98765 43210" className="h-11 pr-32" />
-                                  </FormControl>
-                                  {emailOtpState === 'verified' && field.value && (
-                                    <span className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1 text-[10px] font-medium text-candlestick-green bg-candlestick-green/10 px-2 py-0.5 rounded-full border border-candlestick-green/20">
-                                      <ShieldCheck className="h-3 w-3" weight="fill" /> OTP verified
-                                    </span>
-                                  )}
-                                </div>
-                                <p className="text-[11px] text-muted-foreground">Same as your OTP-verified number above. Edit if pickup contact is different.</p>
-                                <FormMessage />
-                              </FormItem>
-                            )} />
+                            <div className="space-y-1.5">
+                              <label className="text-sm font-medium">Pickup Contact Number</label>
+                              <div className="flex gap-2">
+                                <Input
+                                  value={pickupPhone}
+                                  onChange={e => setPickupPhone(e.target.value)}
+                                  placeholder="+91 98765 43210"
+                                  className="h-11 flex-1"
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => setPickupPhone(detailsForm.getValues('senderPhone'))}
+                                  className="shrink-0 h-11 px-3 rounded-lg border border-border/60 bg-muted/40 hover:bg-muted/70 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors whitespace-nowrap"
+                                >
+                                  Same as shipper
+                                </button>
+                              </div>
+                              <p className="text-[11px] text-muted-foreground">Enter the number where our pickup agent should call. Tap "Same as shipper" to copy your number above.</p>
+                            </div>
                           )}
                           <div className="grid grid-cols-1 xs:grid-cols-2 gap-3 sm:gap-4">
                             <FormField control={detailsForm.control} name="senderCity" render={({ field }) => (
@@ -2073,31 +2108,70 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
 
                           {/* International: city/state/zip grid */}
                           {isInternational && (
-                            <div className="grid grid-cols-1 xs:grid-cols-3 gap-3 sm:gap-4">
-                              <FormField control={detailsForm.control} name="receiverCity" render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel>City</FormLabel>
-                                  <FormControl><Input {...field} placeholder="City" className="h-11" /></FormControl>
-                                  <FormMessage />
-                                </FormItem>
-                              )} />
-                              <FormField control={detailsForm.control} name="receiverState" render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel>State / Province</FormLabel>
-                                  <FormControl><Input {...field} placeholder="State or Province" className="h-11" /></FormControl>
-                                  <FormMessage />
-                                </FormItem>
-                              )} />
-                              <FormField control={detailsForm.control} name="receiverZipcode" render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel>Zip / Postal Code</FormLabel>
-                                  <FormControl><Input {...field} placeholder="Zipcode" maxLength={10} className="h-11" /></FormControl>
-                                  {intlZipLookup.loading && <p className="text-xs text-muted-foreground flex items-center gap-1"><CircleNotch className="h-3 w-3 animate-spin" /> Looking up...</p>}
-                                  {intlZipLookup.city && <p className="text-xs text-candlestick-green">{intlZipLookup.city}{intlZipLookup.state ? `, ${intlZipLookup.state}` : ''}</p>}
-                                  <FormMessage />
-                                </FormItem>
-                              )} />
-                            </div>
+                            <>
+                              {/* Country display — clearly visible */}
+                              {destinationCountryInfo && (
+                                <div className="flex items-center gap-2 px-3 py-2.5 rounded-lg bg-muted/50 border border-border/60">
+                                  <span className="text-xl">{destinationCountryInfo.flag}</span>
+                                  <div className="min-w-0">
+                                    <p className="text-sm font-semibold truncate">{destinationCountryInfo.name}</p>
+                                    <p className="text-[11px] text-muted-foreground">Destination country</p>
+                                  </div>
+                                </div>
+                              )}
+                              {/* Countries that don't use postal codes */}
+                              {(() => {
+                                const NO_POSTAL_CODES = new Set(['AE','QA','KW','BH','OM','YE','JO','IQ','LB','SY','AF','AO','BO','BW','BJ','BF','BI','CM','CF','TD','KM','CG','CD','CI','DJ','GQ','ER','ET','FJ','GA','GM','GH','GN','GW','KE','LS','LR','LY','MG','MW','ML','MR','MZ','NA','NE','NG','RW','ST','SN','SL','SO','SS','SD','SZ','TZ','TG','UG','ZM','ZW','TL','PG','SB','VU','WS','TO','TV','KI','NR','PW','MH','FM','CK','NU','TK','WF','GU','MP','AS','VI','PR','PN','NF','CX','CC','HM','AQ','BV','TF','GS','UM','IO','SH','AC','TA','FK','PM','BL','MF','GP','MQ','RE','YT','GF','NC','PF','GI','IM','JE','GG','AX','FO','GL','SJ','BM','KY','TC','VG','AI','MS','AG','DM','LC','VC','GD','BB','TT','JM','HT','CU','DO','BS','AW','CW','SX','BQ','MX'];
+                                const noPostal = destinationCountryInfo && NO_POSTAL_CODES.has(destinationCountryInfo.code);
+                                return (
+                                  <div className="grid grid-cols-1 xs:grid-cols-3 gap-3 sm:gap-4">
+                                    <FormField control={detailsForm.control} name="receiverCity" render={({ field }) => (
+                                      <FormItem>
+                                        <FormLabel>City</FormLabel>
+                                        <FormControl><Input {...field} placeholder="City" className="h-11" /></FormControl>
+                                        <FormMessage />
+                                      </FormItem>
+                                    )} />
+                                    <FormField control={detailsForm.control} name="receiverState" render={({ field }) => (
+                                      <FormItem>
+                                        <FormLabel>State / Province</FormLabel>
+                                        <FormControl><Input {...field} placeholder="State or Province" className="h-11" /></FormControl>
+                                        <FormMessage />
+                                      </FormItem>
+                                    )} />
+                                    <FormField control={detailsForm.control} name="receiverZipcode" render={({ field }) => (
+                                      <FormItem>
+                                        <FormLabel>
+                                          Zip / Postal Code
+                                          {noPostal && <span className="ml-1 text-[10px] font-normal text-amber-600">(not used)</span>}
+                                        </FormLabel>
+                                        <FormControl>
+                                          <Input
+                                            {...field}
+                                            placeholder={noPostal ? 'Enter 000' : 'Zipcode'}
+                                            maxLength={10}
+                                            className="h-11"
+                                            onChange={e => {
+                                              field.onChange(e);
+                                              if (noPostal && !e.target.value) field.onChange('000');
+                                            }}
+                                          />
+                                        </FormControl>
+                                        {noPostal && (
+                                          <p className="text-[11px] text-amber-600 flex items-center gap-1">
+                                            <Info className="h-3 w-3 shrink-0" weight="fill" />
+                                            {destinationCountryInfo?.name} does not use postal codes. Enter 000.
+                                          </p>
+                                        )}
+                                        {!noPostal && intlZipLookup.loading && <p className="text-xs text-muted-foreground flex items-center gap-1"><CircleNotch className="h-3 w-3 animate-spin" /> Looking up...</p>}
+                                        {!noPostal && intlZipLookup.city && <p className="text-xs text-candlestick-green">{intlZipLookup.city}{intlZipLookup.state ? `, ${intlZipLookup.state}` : ''}</p>}
+                                        <FormMessage />
+                                      </FormItem>
+                                    )} />
+                                  </div>
+                                );
+                              })()}
+                            </>
                           )}
 
                           {/* Passport Upload - Medicine only */}

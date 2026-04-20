@@ -40,10 +40,10 @@ function usePinLookup(pincode: string): PincodeMeta {
         if (data.success) {
           setMeta({ state: data.state || '', district: data.district || '', areas: data.areas || [], loading: false, error: null });
         } else {
-          setMeta({ ...EMPTY_PIN, error: 'Invalid pincode' });
+          setMeta({ ...EMPTY_PIN, error: 'This pincode is incorrect. Please enter a valid Indian pincode.' });
         }
       })
-      .catch(() => { if (!cancelled) setMeta({ ...EMPTY_PIN, error: 'Lookup failed' }); });
+      .catch(() => { if (!cancelled) setMeta({ ...EMPTY_PIN, error: 'This pincode is incorrect. Please enter a valid Indian pincode.' }); });
     return () => { cancelled = true; };
   }, [pincode]);
   return meta;
@@ -244,7 +244,10 @@ const PinInput = ({ value, onChange, meta, placeholder, showAssistance }: {
           </motion.p>
         )}
         {meta.error && (
-          <motion.p initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="text-xs text-destructive pl-1">{meta.error}</motion.p>
+          <motion.p initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="text-xs text-destructive pl-1 flex items-center gap-1">
+            <span className="inline-block w-1.5 h-1.5 rounded-full bg-destructive shrink-0" />
+            {meta.error}
+          </motion.p>
         )}
       </AnimatePresence>
     </div>
@@ -294,6 +297,7 @@ export const HeroCTAForm = ({ defaultTab = 'ship' }: { defaultTab?: 'ship' | 'tr
     const params = new URLSearchParams();
     if (isDomestic) {
       if (pickupPin.length !== 6 || dropPin.length !== 6) return;
+      // Show inline error via meta — don't block silently
       if (pickupMeta.error || dropMeta.error) return;
       params.set('pickupPincode', pickupPin);
       params.set('deliveryPincode', dropPin);
@@ -303,7 +307,9 @@ export const HeroCTAForm = ({ defaultTab = 'ship' }: { defaultTab?: 'ship' | 'tr
       if (dropMeta.district) params.set('deliveryCity', dropMeta.district);
       router.push(`/public/book/domestic?${params.toString()}`);
     } else {
-      if (!destCountry || pickupPin.length !== 6 || pickupMeta.error) return;
+      if (!destCountry || pickupPin.length !== 6) return;
+      // Show inline error via meta — don't block silently
+      if (pickupMeta.error) return;
       params.set('pickupPincode', pickupPin);
       if (pickupMeta.state) params.set('pickupState', pickupMeta.state);
       if (pickupMeta.district) params.set('pickupCity', pickupMeta.district);

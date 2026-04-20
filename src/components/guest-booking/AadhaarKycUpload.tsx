@@ -331,18 +331,21 @@ export default function AadhaarKycUpload({
         <ShieldCheck className="h-5 w-5 text-[#FF6B00]" weight="duotone" />
         <h4 className="font-semibold text-sm">Aadhaar Verification</h4>
       </div>
-      <div className="rounded-lg border border-blue-200 dark:border-blue-800/40 bg-blue-50 dark:bg-blue-950/20 p-3 text-xs space-y-1">
-        <p className="font-medium text-blue-900 dark:text-blue-200">Your Aadhaar helps us process your shipment smoothly:</p>
-        <ul className="list-disc list-inside text-blue-800 dark:text-blue-300 space-y-0.5">
-          <li>Indian customs requires identity verification for all international shipments</li>
-          <li>Your sender address will be picked from your Aadhaar details automatically</li>
-          <li>Upload front and back — JPEG or PNG, max 5MB each</li>
-          <li>Make sure the document is clear, well-lit, and readable</li>
+      <div className="rounded-lg border border-amber-200 dark:border-amber-800/40 bg-amber-50 dark:bg-amber-950/20 p-3 text-xs space-y-1">
+        <p className="font-medium text-amber-900 dark:text-amber-200 flex items-center gap-1.5">
+          <ShieldCheck className="h-3.5 w-3.5 text-amber-600" weight="fill" />
+          Aadhaar upload requirements
+        </p>
+        <ul className="list-disc list-inside text-amber-800 dark:text-amber-300 space-y-0.5">
+          <li>Both front and back sides are mandatory</li>
+          <li>Upload clear, well-lit images — JPEG or PNG, max 5 MB each</li>
+          <li>Ensure all text, photo, and QR code are fully visible</li>
+          <li>Your sender address will be auto-filled from the Aadhaar details</li>
         </ul>
       </div>
       <div className="grid grid-cols-2 gap-4">
         <UploadCard label="Front Side *" file={aadhaarFront} inputRef={frontRef} onFileChange={(e) => handleFile(e, 'front')} onRemove={removeFront} onPreview={() => aadhaarFront && openPreview(aadhaarFront)} isMobile={isMobile} onCameraClick={() => setCameraOpen('front')} />
-        <UploadCard label="Back Side" file={aadhaarBack} inputRef={backRef} onFileChange={(e) => handleFile(e, 'back')} onRemove={removeBack} onPreview={() => aadhaarBack && openPreview(aadhaarBack)} isMobile={isMobile} onCameraClick={() => setCameraOpen('back')} />
+        <UploadCard label="Back Side *" file={aadhaarBack} inputRef={backRef} onFileChange={(e) => handleFile(e, 'back')} onRemove={removeBack} onPreview={() => aadhaarBack && openPreview(aadhaarBack)} isMobile={isMobile} onCameraClick={() => setCameraOpen('back')} />
       </div>
       {/* No manual "Validate Aadhaar" button — OCR triggers automatically on upload */}
       {ocrError && (

@@ -181,7 +181,9 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
 
   const courierName = selectedCourier?.carrier || selectedCourier?.courier_name || 'Courier';
   const basePrice = selectedCourier?.price || selectedCourier?.customer_price || 0;
-  const finalPrice = Math.max(0, basePrice - couponDiscount);
+  // For international, use rateBreakdown total as the authoritative price to ensure breakdown matches total
+  const effectiveBasePrice = (mode === 'international' && rateBreakdown?.total) ? rateBreakdown.total : basePrice;
+  const finalPrice = Math.max(0, effectiveBasePrice - couponDiscount);
   const shipmentType = rateFormData?.shipmentType || 'gift';
   const destinationCountryInfo = !isDomestic && rateFormData?.destinationCountry
     ? getCountryByCode(rateFormData.destinationCountry) : null;
@@ -249,7 +251,7 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
       const res = await fetch('/api/coupons/validate-guest', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code: codeToApply, amount: basePrice }),
+        body: JSON.stringify({ code: codeToApply, amount: effectiveBasePrice }),
       });
       const data = await res.json();
       if (data.valid) {
@@ -677,7 +679,7 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
               </p>
             </div>
             <div className="sm:text-right shrink-0">
-              <p className="text-xl sm:text-2xl font-bold">₹{basePrice.toLocaleString('en-IN')}</p>
+              <p className="text-xl sm:text-2xl font-bold">₹{effectiveBasePrice.toLocaleString('en-IN')}</p>
               <p className="text-xs text-muted-foreground">all-inclusive</p>
             </div>
           </div>
@@ -959,8 +961,15 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
 
       {/* ── Price Breakdown ── */}
       <div className="bg-card rounded-xl border border-border p-5 space-y-2">
-        {/* Single shipping line — covers both international and domestic */}
-        {!(rateBreakdown?.breakdown) && (
+        {/* Show detailed breakdown for international if available */}
+        {rateBreakdown?.breakdown ? (
+          rateBreakdown.breakdown.map(item => (
+            <div key={item.label} className="flex justify-between text-sm">
+              <span className="text-muted-foreground">{item.label}</span>
+              <span>₹{item.amount.toLocaleString('en-IN')}</span>
+            </div>
+          ))
+        ) : (
           <div className="flex justify-between text-sm">
             <span className="text-muted-foreground">Shipping ({courierName})</span>
             <span>₹{basePrice.toLocaleString('en-IN')}</span>
