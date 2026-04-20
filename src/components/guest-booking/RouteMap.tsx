@@ -123,13 +123,29 @@ async function resolveCoords(props: RouteMapProps, token: string) {
 }
 
 // Paper plane SVG marker element
+// The SVG is drawn pointing UP (north) so bearing=0 needs no extra offset.
+// Rotation is applied to the inner svg element via CSS transition so Mapbox's
+// own translate transform on the wrapper div is never clobbered (fixes blinking).
 function createPaperPlaneEl(): HTMLDivElement {
-  const el = document.createElement('div');
-  el.style.cssText = 'width:28px;height:28px;pointer-events:none;';
-  el.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="28" height="28">
-    <path fill="#F40000" d="M21.7 2.3a1 1 0 0 0-1-.3L2.7 7.4a1 1 0 0 0-.1 1.9l7.5 2.8 2.8 7.5a1 1 0 0 0 .9.7h.1a1 1 0 0 0 .9-.6l7.4-17a1 1 0 0 0-.5-1.4zM13 17.2l-2-5.4 4.3-4.3-1.4-1.4-4.3 4.3-5.4-2L18.5 4.5z"/>
-  </svg>`;
-  return el;
+  const wrapper = document.createElement('div');
+  wrapper.style.cssText = 'width:36px;height:36px;pointer-events:none;';
+
+  // 3-D looking paper plane pointing upward (nose at top = bearing 0 = north)
+  wrapper.innerHTML = `
+    <svg id="plane-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 36 36" width="36" height="36"
+      style="display:block;transition:transform 0.25s linear;transform-origin:center center;">
+      <!-- shadow / depth base -->
+      <polygon points="18,3 33,30 18,24 3,30" fill="#b30000" opacity="0.35"/>
+      <!-- left wing (darker) -->
+      <polygon points="18,3 3,30 18,24" fill="#cc0000"/>
+      <!-- right wing (lighter highlight) -->
+      <polygon points="18,3 33,30 18,24" fill="#ff2222"/>
+      <!-- fuselage centre crease -->
+      <polygon points="18,3 18,24 18,30" fill="#ff6666" opacity="0.6"/>
+      <!-- belly fold -->
+      <polygon points="3,30 18,24 33,30 18,28" fill="#990000" opacity="0.5"/>
+    </svg>`;
+  return wrapper;
 }
 
 function addPinMarker(map: mapboxgl.Map, coords: [number, number], color: string, label: string) {
@@ -217,7 +233,7 @@ export default function RouteMap(props: RouteMapProps) {
         map.on('load', () => {
           if (cancelled) return;
 
-          const arc = generateArc(pickup, dest, 120);
+          const arc = generateArc(pickup, dest, 180);
           arcRef.current = arc;
           idxRef.current = 0;
 
@@ -238,16 +254,20 @@ export default function RouteMap(props: RouteMapProps) {
           addPinMarker(map, pickup, '#3B82F6', props.pickupCity || 'India');
           addPinMarker(map, dest, '#10B981', props.destinationCountryName || props.destinationCity || 'Destination');
 
-          // Paper plane marker
+          // Paper plane marker — anchor center so Mapbox only sets translate on wrapper
           const planeEl = createPaperPlaneEl();
+          const planeSvg = planeEl.querySelector<SVGElement>('#plane-svg')!;
           const planeMarker = new mapboxgl.Marker({ element: planeEl, anchor: 'center', rotationAlignment: 'map' })
             .setLngLat(arc[0])
             .addTo(map);
           planeMarkerRef.current = planeMarker;
 
-          // Animation — 2x slower: advance 1 step every ~33ms (≈30fps) but skip every other frame
-          // Total loop = 120 steps × 66ms ≈ 8 seconds per loop
-          const FRAME_INTERVAL = 66; // ms between position updates (2x slower than 33ms)
+          // Smooth animation: advance one arc step per frame, throttled to ~20fps
+          // so the CSS transition (0.25s) has time to interpolate between positions.
+          // 180 steps × 50ms ≈ 9 seconds per loop.
+          const FRAME_INTERVAL = 50;
+          let lastBearing = getBearing(arc[0], arc[1]);
+          planeSvg.style.transform = `rotate(${lastBearing}deg)`;
 
           const animate = (timestamp: number) => {
             if (cancelled) return;
@@ -261,9 +281,16 @@ export default function RouteMap(props: RouteMapProps) {
               const next = arcCoords[(idxRef.current + 1) % arcCoords.length];
               const bearing = getBearing(cur, next);
 
+              // Move the Mapbox marker (updates wrapper translate — does NOT touch transform)
               planeMarker.setLngLat(cur);
-              // Rotate the SVG element directly
-              planeEl.style.transform = `rotate(${bearing}deg)`;
+
+              // Rotate only the inner SVG so Mapbox's translate is never overwritten
+              // Shortest-path rotation to avoid 359→0 spin
+              let delta = bearing - lastBearing;
+              if (delta > 180) delta -= 360;
+              if (delta < -180) delta += 360;
+              lastBearing = lastBearing + delta;
+              planeSvg.style.transform = `rotate(${lastBearing}deg)`;
             }
             animRef.current = requestAnimationFrame(animate);
           };
