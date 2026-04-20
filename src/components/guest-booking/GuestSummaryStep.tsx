@@ -615,31 +615,30 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.7 }}
-          className="bg-card rounded-xl border border-border p-5 space-y-4"
+          className="bg-card rounded-xl border border-border p-4 space-y-3"
         >
-          <h3 className="font-semibold flex items-center gap-2">
-            <Package className="h-5 w-5 text-coke-red" weight="duotone" />
-            How to Pack Your Shipment
+          <h3 className="font-semibold text-sm flex items-center gap-2">
+            <Package className="h-4 w-4 text-coke-red" weight="duotone" />
+            Packing Checklist
           </h3>
-          <div className="grid sm:grid-cols-2 gap-3">
-            {(isDomestic && rateFormData?.shipmentType === 'document' ? documentPackingSteps : packingSteps).map((step, i) => (
-              <motion.div
-                key={step.title}
-                initial={{ opacity: 0, x: -10 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.8 + i * 0.1 }}
-                className="flex gap-3 p-3 rounded-lg bg-muted/30"
-              >
-                <div className="w-9 h-9 rounded-lg bg-coke-red/10 flex items-center justify-center shrink-0">
-                  <step.icon className="h-4.5 w-4.5 text-coke-red" weight="duotone" />
-                </div>
-                <div>
-                  <p className="text-sm font-medium">{step.title}</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">{step.desc}</p>
-                </div>
-              </motion.div>
+          <ul className="space-y-1.5 text-xs text-muted-foreground">
+            {(isDomestic && rateFormData?.shipmentType === 'document' ? [
+              'Use a rigid envelope or stiff cardboard folder — no bending.',
+              'Seal in a zip-lock bag first to protect from moisture.',
+              'Tape all edges firmly. Attach label on a flat, visible surface.',
+            ] : [
+              'Use a sturdy corrugated box that fits your items snugly.',
+              'Wrap each item individually in bubble wrap; fill gaps with packing material.',
+              'For liquids/medicines: seal in zip-lock bags, then wrap in bubble wrap.',
+              'Seal all seams with strong tape using the H-taping method.',
+              'Attach the AWB label on the largest flat surface — do not cover the barcode.',
+            ]).map((tip, i) => (
+              <li key={i} className="flex gap-2">
+                <span className="mt-0.5 w-3.5 h-3.5 rounded-full bg-coke-red/10 text-coke-red flex items-center justify-center shrink-0 text-[9px] font-bold">{i + 1}</span>
+                <span>{tip}</span>
+              </li>
             ))}
-          </div>
+          </ul>
         </motion.div>
 
         {/* Actions */}
@@ -748,25 +747,24 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
 
           <div className="h-px bg-border" />
 
-          {/* Package + Dimensions */}
+          {/* Package + Dimensions — content left, weight/dims right */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <p className="text-xs text-muted-foreground mb-1 flex items-center gap-1"><Package className="h-3 w-3" /> Package</p>
+              <p className="text-xs text-muted-foreground mb-1 flex items-center gap-1"><Package className="h-3 w-3" /> Package Contents</p>
               <p className="text-sm">{senderReceiver.contentDescription.replace(/\s*\[HSN:[^\]]*\]/g, '')}</p>
-              {/* For international, show weight inline; for domestic it moves to the right card */}
-              {weight && !isDomestic && <p className="text-xs text-muted-foreground mt-0.5">Weight: {weight}</p>}
             </div>
-            {dims && (
-              <div>
-                <p className="text-xs text-muted-foreground mb-1 flex items-center gap-1"><Ruler className="h-3 w-3" /> Dimensions &amp; Weight</p>
-                <p className="text-sm">{dims.l} × {dims.w} × {dims.h} cm</p>
-                {/* For domestic, show weight here on the right side */}
-                {weight && isDomestic && <p className="text-xs text-muted-foreground mt-0.5">Weight: {weight}</p>}
-                {dims.l && dims.w && dims.h && (rateFormData?.weightGrams || rateFormData?.weightKg) && (
-                  <p className="text-xs text-muted-foreground mt-0.5">Vol. weight: {((dims.l * dims.w * dims.h) / 5000).toFixed(1)} kg</p>
-                )}
-              </div>
-            )}
+            <div>
+              <p className="text-xs text-muted-foreground mb-1 flex items-center gap-1"><Ruler className="h-3 w-3" /> Weight &amp; Dimensions</p>
+              {weight && <p className="text-sm font-medium">{weight}</p>}
+              {dims && (
+                <>
+                  <p className="text-xs text-muted-foreground mt-0.5">{dims.l} × {dims.w} × {dims.h} cm</p>
+                  {dims.l && dims.w && dims.h && (rateFormData?.weightGrams || rateFormData?.weightKg) && (
+                    <p className="text-xs text-muted-foreground mt-0.5">Vol. weight: {((dims.l * dims.w * dims.h) / 5000).toFixed(1)} kg</p>
+                  )}
+                </>
+              )}
+            </div>
           </div>
 
           {/* Aadhaar thumbnails */}
@@ -818,44 +816,20 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
         </div>
         <div className="p-5 space-y-4">
 
-          {/* ── Why we need Aadhaar — legal info block ── */}
-          <div className="rounded-xl border border-blue-200 dark:border-blue-800/40 bg-blue-50/60 dark:bg-blue-950/20 p-4 space-y-3">
-            <p className="text-sm font-semibold text-blue-900 dark:text-blue-200 flex items-center gap-2">
-              <Info className="h-4 w-4 shrink-0 text-blue-600" weight="fill" />
-              Why is Aadhaar verification required?
+          {/* ── Why we need Aadhaar — compact legal context ── */}
+          <div className="rounded-lg border border-blue-200 dark:border-blue-800/40 bg-blue-50/60 dark:bg-blue-950/20 p-3 space-y-2">
+            <p className="text-xs font-semibold text-blue-900 dark:text-blue-200 flex items-center gap-1.5">
+              <Info className="h-3.5 w-3.5 shrink-0 text-blue-600" weight="fill" />
+              Why is KYC required?
             </p>
-            <ul className="space-y-2.5 text-xs text-blue-800 dark:text-blue-300 leading-relaxed">
-              <li className="flex gap-2">
-                <span className="mt-0.5 w-4 h-4 rounded-full bg-blue-200 dark:bg-blue-800 flex items-center justify-center shrink-0 text-[10px] font-bold text-blue-700 dark:text-blue-200">1</span>
-                <span>
-                  <span className="font-medium">Mandatory KYC under Indian law —</span> As per the Courier Imports and Exports (Clearance) Regulations and guidelines issued by the Ministry of Finance, all courier service providers are required to collect and verify the sender&apos;s identity before processing a shipment.
-                </span>
-              </li>
-              <li className="flex gap-2">
-                <span className="mt-0.5 w-4 h-4 rounded-full bg-blue-200 dark:bg-blue-800 flex items-center justify-center shrink-0 text-[10px] font-bold text-blue-700 dark:text-blue-200">2</span>
-                <span>
-                  <span className="font-medium">Document shipments require sender KYC —</span> Under the Indian Post Office Act and CBIC (Central Board of Indirect Taxes and Customs) norms, document couriers — especially those crossing state or international borders — must be traceable to a verified sender.
-                </span>
-              </li>
-              <li className="flex gap-2">
-                <span className="mt-0.5 w-4 h-4 rounded-full bg-blue-200 dark:bg-blue-800 flex items-center justify-center shrink-0 text-[10px] font-bold text-blue-700 dark:text-blue-200">3</span>
-                <span>
-                  <span className="font-medium">Prevention of misuse —</span> Aadhaar-based verification helps prevent fraudulent or anonymous shipments, protecting both the sender and the recipient from potential legal complications.
-                </span>
-              </li>
-              <li className="flex gap-2">
-                <span className="mt-0.5 w-4 h-4 rounded-full bg-blue-200 dark:bg-blue-800 flex items-center justify-center shrink-0 text-[10px] font-bold text-blue-700 dark:text-blue-200">4</span>
-                <span>
-                  <span className="font-medium">Your data is safe —</span> We only verify the format and checksum of your Aadhaar number via UIDAI standards. Your full Aadhaar number is never stored on our servers. Only the last 4 digits are retained for reference, in compliance with UIDAI data minimisation guidelines.
-                </span>
-              </li>
-              <li className="flex gap-2">
-                <span className="mt-0.5 w-4 h-4 rounded-full bg-blue-200 dark:bg-blue-800 flex items-center justify-center shrink-0 text-[10px] font-bold text-blue-700 dark:text-blue-200">5</span>
-                <span>
-                  <span className="font-medium">One-time per booking —</span> This verification is required once per shipment booking. It is not linked to any account and is used solely for the purpose of this shipment.
-                </span>
-              </li>
-            </ul>
+            <p className="text-xs text-blue-800 dark:text-blue-300 leading-relaxed">
+              Under the <span className="font-medium">Courier Imports &amp; Exports (Clearance) Regulations</span> and CBIC guidelines, all courier providers must verify sender identity before processing international shipments. Aadhaar is the government-approved KYC document under the <span className="font-medium">Prevention of Money Laundering Act (PMLA)</span> and UIDAI framework.
+            </p>
+            <div className="flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-blue-700 dark:text-blue-400">
+              <span className="flex items-center gap-1"><span className="w-1 h-1 rounded-full bg-blue-500 shrink-0" />Only last 4 digits stored — UIDAI compliant</span>
+              <span className="flex items-center gap-1"><span className="w-1 h-1 rounded-full bg-blue-500 shrink-0" />One-time per booking, not linked to any account</span>
+              <span className="flex items-center gap-1"><span className="w-1 h-1 rounded-full bg-blue-500 shrink-0" />Required by Indian customs for export clearance</span>
+            </div>
           </div>
 
           {/* ── Aadhaar input / verified state ── */}

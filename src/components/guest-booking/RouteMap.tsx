@@ -16,10 +16,8 @@ interface RouteMapProps {
   mode: 'international' | 'domestic';
 }
 
-// India center (New Delhi) - always the origin for all shipments
 const INDIA_CENTER: [number, number] = [77.2090, 28.6139];
 
-// Known country coordinates [lng, lat] for reliable international mapping
 const COUNTRY_COORDS: Record<string, [number, number]> = {
   US: [-77.04, 38.91], GB: [-0.13, 51.51], AE: [55.27, 25.20],
   CA: [-75.70, 45.42], AU: [149.13, -35.28], SG: [103.82, 1.35],
@@ -46,7 +44,6 @@ const COUNTRY_COORDS: Record<string, [number, number]> = {
   KH: [104.93, 11.56], LA: [102.63, 17.98],
 };
 
-// Geocode using Mapbox Geocoding API
 async function geocode(query: string, token: string): Promise<[number, number] | null> {
   if (!query || query.length < 3) return null;
   try {
@@ -56,24 +53,18 @@ async function geocode(query: string, token: string): Promise<[number, number] |
     const data = await res.json();
     const coords = data?.features?.[0]?.center;
     return coords ? [coords[0], coords[1]] : null;
-  } catch {
-    return null;
-  }
+  } catch { return null; }
 }
 
-// Haversine distance in km
 function haversineKm(a: [number, number], b: [number, number]): number {
-  const toRad = (d: number) => (d * Math.PI) / 180;
   const R = 6371;
+  const toRad = (d: number) => (d * Math.PI) / 180;
   const dLat = toRad(b[1] - a[1]);
   const dLon = toRad(b[0] - a[0]);
-  const lat1 = toRad(a[1]);
-  const lat2 = toRad(b[1]);
-  const h = Math.sin(dLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLon / 2) ** 2;
+  const h = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(a[1])) * Math.cos(toRad(b[1])) * Math.sin(dLon / 2) ** 2;
   return R * 2 * Math.atan2(Math.sqrt(h), Math.sqrt(1 - h));
 }
 
-// Generate a great-circle arc between two points
 function generateArc(start: [number, number], end: [number, number], steps = 80): [number, number][] {
   const toRad = (d: number) => (d * Math.PI) / 180;
   const toDeg = (r: number) => (r * 180) / Math.PI;
@@ -96,63 +87,78 @@ function generateArc(start: [number, number], end: [number, number], steps = 80)
   return points;
 }
 
-/**
- * Resolve coordinates for the route.
- * International: India center as origin, known country coords or country-name geocode for destination.
- * Domestic: pincode-based geocoding for both ends (pincode + India is reliable).
- */
-async function resolveCoords(
-  props: RouteMapProps,
-  token: string,
-): Promise<{ pickup: [number, number]; dest: [number, number] } | null> {
-  const { pickupCity, pickupPincode, destinationCity, destinationZipcode, destinationCountry, mode } = props;
+function getBearing(a: [number, number], b: [number, number]): number {
+  const toRad = (d: number) => (d * Math.PI) / 180;
+  const toDeg = (r: number) => (r * 180) / Math.PI;
+  const dLon = toRad(b[0] - a[0]);
+  const lat1 = toRad(a[1]), lat2 = toRad(b[1]);
+  const y = Math.sin(dLon) * Math.cos(lat2);
+  const x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLon);
+  return (toDeg(Math.atan2(y, x)) + 360) % 360;
+}
 
+async function resolveCoords(props: RouteMapProps, token: string) {
+  const { pickupPincode, destinationCountry, mode } = props;
   if (mode === 'international') {
-    // Origin: always India — use pincode geocode if available, else India center
     let pickupCoords: [number, number] = INDIA_CENTER;
     if (pickupPincode) {
-      const pincodeResult = await geocode(`${pickupPincode}, India`, token);
-      if (pincodeResult) pickupCoords = pincodeResult;
+      const r = await geocode(`${pickupPincode}, India`, token);
+      if (r) pickupCoords = r;
     }
-
-    // Destination: use known coords lookup first, then geocode by country name
-    const countryCode = (destinationCountry || '').toUpperCase();
-    let destCoords = COUNTRY_COORDS[countryCode] || null;
+    const cc = (destinationCountry || '').toUpperCase();
+    let destCoords = COUNTRY_COORDS[cc] || null;
     if (!destCoords) {
-      // Fallback: geocode by country name or code
-      const countryQuery = props.destinationCountryName || destinationCountry || '';
-      if (countryQuery) {
-        destCoords = await geocode(countryQuery, token);
-      }
+      const q = props.destinationCountryName || destinationCountry || '';
+      if (q) destCoords = await geocode(q, token);
     }
     if (!destCoords) return null;
     return { pickup: pickupCoords, dest: destCoords };
   }
-
-  // Domestic: pincode-based geocoding (very reliable for India)
-  const [pickupCoords, destCoords] = await Promise.all([
-    geocode(pickupPincode ? `${pickupPincode}, ${pickupCity || ''}, India` : `${pickupCity}, India`, token),
-    geocode(destinationZipcode ? `${destinationZipcode}, ${destinationCity || ''}, India` : `${destinationCity}, India`, token),
+  const [p, d] = await Promise.all([
+    geocode(props.pickupPincode ? `${props.pickupPincode}, ${props.pickupCity || ''}, India` : `${props.pickupCity}, India`, token),
+    geocode(props.destinationZipcode ? `${props.destinationZipcode}, ${props.destinationCity || ''}, India` : `${props.destinationCity}, India`, token),
   ]);
-  if (!pickupCoords || !destCoords) return null;
-  return { pickup: pickupCoords, dest: destCoords };
+  if (!p || !d) return null;
+  return { pickup: p, dest: d };
+}
+
+// Paper plane SVG marker element
+function createPaperPlaneEl(): HTMLDivElement {
+  const el = document.createElement('div');
+  el.style.cssText = 'width:28px;height:28px;pointer-events:none;';
+  el.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="28" height="28">
+    <path fill="#F40000" d="M21.7 2.3a1 1 0 0 0-1-.3L2.7 7.4a1 1 0 0 0-.1 1.9l7.5 2.8 2.8 7.5a1 1 0 0 0 .9.7h.1a1 1 0 0 0 .9-.6l7.4-17a1 1 0 0 0-.5-1.4zM13 17.2l-2-5.4 4.3-4.3-1.4-1.4-4.3 4.3-5.4-2L18.5 4.5z"/>
+  </svg>`;
+  return el;
+}
+
+function addPinMarker(map: mapboxgl.Map, coords: [number, number], color: string, label: string) {
+  const el = document.createElement('div');
+  el.style.cssText = `display:flex;flex-direction:column;align-items:center;pointer-events:none;`;
+  el.innerHTML = `
+    <div style="background:${color};color:white;font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px;white-space:nowrap;box-shadow:0 1px 4px rgba(0,0,0,0.25);margin-bottom:2px;">${label}</div>
+    <div style="width:10px;height:10px;border-radius:50%;background:${color};border:2px solid white;box-shadow:0 1px 4px rgba(0,0,0,0.3);"></div>
+  `;
+  new mapboxgl.Marker({ element: el, anchor: 'bottom' }).setLngLat(coords).addTo(map);
 }
 
 export default function RouteMap(props: RouteMapProps) {
-  const {
-    pickupPincode, destinationCountry, destinationCountryName, mode,
-  } = props;
+  const { pickupPincode, destinationCountry, destinationCountryName, mode } = props;
 
   const mapContainer = useRef<HTMLDivElement>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
+  const planeMarkerRef = useRef<mapboxgl.Marker | null>(null);
   const animRef = useRef<number>(0);
+  const arcRef = useRef<[number, number][]>([]);
+  const idxRef = useRef(0);
+  const lastTimeRef = useRef(0);
+
   const [distanceKm, setDistanceKm] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
 
   const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
 
-  // Stable key to detect when we need to re-init the map
   const mapKey = useMemo(
     () => mode === 'international'
       ? `intl-${pickupPincode}-${destinationCountry}`
@@ -163,9 +169,9 @@ export default function RouteMap(props: RouteMapProps) {
   useEffect(() => {
     if (!token || !mapContainer.current) return;
 
-    // Clean up previous map
     if (mapRef.current) {
       cancelAnimationFrame(animRef.current);
+      planeMarkerRef.current?.remove();
       mapRef.current.remove();
       mapRef.current = null;
     }
@@ -177,20 +183,21 @@ export default function RouteMap(props: RouteMapProps) {
     const init = async () => {
       try {
         const coords = await resolveCoords(props, token);
-
         if (cancelled || !coords || !mapContainer.current) {
           if (!cancelled) setError(true);
           setLoading(false);
           return;
         }
 
-        const { pickup: pickupCoords, dest: destCoords } = coords;
-        const km = haversineKm(pickupCoords, destCoords);
+        const { pickup, dest } = coords;
+        const km = haversineKm(pickup, dest);
         setDistanceKm(Math.round(km));
 
-        const lngs = [pickupCoords[0], destCoords[0]];
-        const lats = [pickupCoords[1], destCoords[1]];
-        const pad = Math.max(2, km * 0.002);
+        // Tighter padding for better zoom — show actual geography
+        const lngs = [pickup[0], dest[0]];
+        const lats = [pickup[1], dest[1]];
+        // Padding proportional to distance but capped so we don't zoom out too far
+        const pad = Math.min(Math.max(1.5, km * 0.001), 8);
         const bounds = new mapboxgl.LngLatBounds(
           [Math.min(...lngs) - pad, Math.min(...lats) - pad],
           [Math.max(...lngs) + pad, Math.max(...lats) + pad],
@@ -201,7 +208,7 @@ export default function RouteMap(props: RouteMapProps) {
           container: mapContainer.current,
           style: 'mapbox://styles/mapbox/light-v11',
           bounds,
-          fitBoundsOptions: { padding: { top: 48, bottom: 48, left: 40, right: 40 } },
+          fitBoundsOptions: { padding: { top: 44, bottom: 44, left: 36, right: 36 }, maxZoom: mode === 'domestic' ? 8 : 5 },
           interactive: false,
           attributionControl: false,
           projection: 'mercator',
@@ -210,67 +217,57 @@ export default function RouteMap(props: RouteMapProps) {
         map.on('load', () => {
           if (cancelled) return;
 
-          const arcCoords = generateArc(pickupCoords, destCoords);
+          const arc = generateArc(pickup, dest, 120);
+          arcRef.current = arc;
+          idxRef.current = 0;
 
-          // Dotted route line
+          // Dashed route line
           map.addSource('route', {
             type: 'geojson',
-            data: { type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: arcCoords } },
+            data: { type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: arc } },
           });
           map.addLayer({
             id: 'route-dash',
             type: 'line',
             source: 'route',
             layout: { 'line-join': 'round', 'line-cap': 'round' },
-            paint: { 'line-color': '#F40000', 'line-width': 2.5, 'line-dasharray': [2, 3], 'line-opacity': 0.6 },
+            paint: { 'line-color': '#F40000', 'line-width': 2, 'line-dasharray': [3, 4], 'line-opacity': 0.55 },
           });
 
-          // Flight icon (animated along the arc)
-          map.addSource('flight', {
-            type: 'geojson',
-            data: { type: 'Feature', properties: { bearing: 0 }, geometry: { type: 'Point', coordinates: arcCoords[0] } },
-          });
+          // Origin + destination pin markers
+          addPinMarker(map, pickup, '#3B82F6', props.pickupCity || 'India');
+          addPinMarker(map, dest, '#10B981', props.destinationCountryName || props.destinationCity || 'Destination');
 
-          const img = new Image(40, 40);
-          img.onload = () => {
-            if (map.hasImage('airplane')) return;
-            map.addImage('airplane', img, { sdf: false });
-            map.addLayer({
-              id: 'flight-icon',
-              type: 'symbol',
-              source: 'flight',
-              layout: {
-                'icon-image': 'airplane',
-                'icon-size': 0.5,
-                'icon-rotate': ['get', 'bearing'],
-                'icon-rotation-alignment': 'map',
-                'icon-allow-overlap': true,
-                'icon-ignore-placement': true,
-              },
-            });
-            let idx = 0;
-            const animate = () => {
-              idx = (idx + 1) % arcCoords.length;
-              const next = (idx + 1) % arcCoords.length;
-              const bearing = getBearing(arcCoords[idx], arcCoords[next]);
-              const src = map.getSource('flight') as mapboxgl.GeoJSONSource;
-              if (src) {
-                src.setData({
-                  type: 'Feature',
-                  properties: { bearing },
-                  geometry: { type: 'Point', coordinates: arcCoords[idx] },
-                });
-              }
-              animRef.current = requestAnimationFrame(animate);
-            };
+          // Paper plane marker
+          const planeEl = createPaperPlaneEl();
+          const planeMarker = new mapboxgl.Marker({ element: planeEl, anchor: 'center', rotationAlignment: 'map' })
+            .setLngLat(arc[0])
+            .addTo(map);
+          planeMarkerRef.current = planeMarker;
+
+          // Animation — 2x slower: advance 1 step every ~33ms (≈30fps) but skip every other frame
+          // Total loop = 120 steps × 66ms ≈ 8 seconds per loop
+          const FRAME_INTERVAL = 66; // ms between position updates (2x slower than 33ms)
+
+          const animate = (timestamp: number) => {
+            if (cancelled) return;
+            if (timestamp - lastTimeRef.current >= FRAME_INTERVAL) {
+              lastTimeRef.current = timestamp;
+              const arcCoords = arcRef.current;
+              if (arcCoords.length < 2) { animRef.current = requestAnimationFrame(animate); return; }
+
+              idxRef.current = (idxRef.current + 1) % arcCoords.length;
+              const cur = arcCoords[idxRef.current];
+              const next = arcCoords[(idxRef.current + 1) % arcCoords.length];
+              const bearing = getBearing(cur, next);
+
+              planeMarker.setLngLat(cur);
+              // Rotate the SVG element directly
+              planeEl.style.transform = `rotate(${bearing}deg)`;
+            }
             animRef.current = requestAnimationFrame(animate);
           };
-          img.src = buildAirplaneSvgUrl();
-
-          // Origin marker (India) — blue with package emoji
-          addPulseMarker(map, pickupCoords, '#3B82F6', '📦');
-          // Destination marker — green with pin emoji
-          addPulseMarker(map, destCoords, '#10B981', '📍');
+          animRef.current = requestAnimationFrame(animate);
 
           setLoading(false);
         });
@@ -286,6 +283,7 @@ export default function RouteMap(props: RouteMapProps) {
     return () => {
       cancelled = true;
       cancelAnimationFrame(animRef.current);
+      planeMarkerRef.current?.remove();
       mapRef.current?.remove();
       mapRef.current = null;
     };
@@ -293,14 +291,11 @@ export default function RouteMap(props: RouteMapProps) {
 
   if (!token || error) return null;
 
-  // Build the distance bar label
   const distanceLabel = mode === 'international' && destinationCountryName
     ? `India → ${destinationCountryName}`
     : mode === 'international' && destinationCountry
     ? `India → ${destinationCountry}`
-    : mode === 'domestic'
-    ? 'Domestic'
-    : '';
+    : 'Domestic';
 
   return (
     <div className="rounded-xl overflow-hidden border border-border bg-card">
@@ -313,51 +308,12 @@ export default function RouteMap(props: RouteMapProps) {
         <div ref={mapContainer} style={{ width: '100%', height: '200px' }} />
       </div>
       {distanceKm !== null && (
-        <div className="flex items-center justify-center gap-2 py-2.5 px-4 border-t border-border bg-muted/30">
-          <span className="text-xs text-muted-foreground">Distance:</span>
+        <div className="flex items-center justify-center gap-2 py-2 px-4 border-t border-border bg-muted/30">
+          <span className="text-xs text-muted-foreground">✈ {distanceLabel}</span>
+          <span className="text-xs text-muted-foreground">·</span>
           <span className="text-sm font-semibold">{distanceKm.toLocaleString('en-IN')} km</span>
-          {distanceLabel && (
-            <>
-              <span className="text-xs text-muted-foreground">·</span>
-              <span className="text-xs text-muted-foreground">{distanceLabel}</span>
-            </>
-          )}
         </div>
       )}
     </div>
   );
-}
-
-// ── Helpers ──
-
-function getBearing(a: [number, number], b: [number, number]): number {
-  const toRad = (d: number) => (d * Math.PI) / 180;
-  const toDeg = (r: number) => (r * 180) / Math.PI;
-  const dLon = toRad(b[0] - a[0]);
-  const lat1 = toRad(a[1]), lat2 = toRad(b[1]);
-  const y = Math.sin(dLon) * Math.cos(lat2);
-  const x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLon);
-  return (toDeg(Math.atan2(y, x)) + 360) % 360;
-}
-
-function buildAirplaneSvgUrl(): string {
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 256 256"><path fill="%23F40000" d="M240.85 63.15a24 24 0 0 0-34.63 1.26L172 103.59l-58.23-29.12a8 8 0 0 0-7.13.31l-24 14a8 8 0 0 0-1.17 12.93L119 133.41l-26.53 30.32L67.06 153a8 8 0 0 0-7.84.47l-16 10a8 8 0 0 0-.71 13.07l29.45 25.24 25.24 29.45a8 8 0 0 0 13.07-.71l10-16a8 8 0 0 0 .47-7.84l-10.69-25.41 30.32-26.53 31.7 37.55a8 8 0 0 0 12.93-1.17l14-24a8 8 0 0 0 .31-7.13L191.41 84l39.18-34.22a24 24 0 0 0 1.26-34.63Z"/></svg>`;
-  return `data:image/svg+xml;charset=utf-8,${svg}`;
-}
-
-function addPulseMarker(map: mapboxgl.Map, coords: [number, number], color: string, emoji: string) {
-  const el = document.createElement('div');
-  el.innerHTML = `
-    <div style="position:relative;width:36px;height:36px;display:flex;align-items:center;justify-content:center;">
-      <div style="position:absolute;inset:0;border-radius:50%;background:${color};opacity:0.2;animation:pulse-ring 2s ease-out infinite;"></div>
-      <div style="width:28px;height:28px;border-radius:50%;background:${color};border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.25);display:flex;align-items:center;justify-content:center;font-size:13px;">${emoji}</div>
-    </div>
-  `;
-  if (!document.getElementById('pulse-ring-style')) {
-    const style = document.createElement('style');
-    style.id = 'pulse-ring-style';
-    style.textContent = `@keyframes pulse-ring{0%{transform:scale(1);opacity:0.25}100%{transform:scale(1.8);opacity:0}}`;
-    document.head.appendChild(style);
-  }
-  new mapboxgl.Marker({ element: el, anchor: 'center' }).setLngLat(coords).addTo(map);
 }
