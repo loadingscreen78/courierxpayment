@@ -274,6 +274,10 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
       toast({ title: 'Aadhaar Required', description: 'Please verify your Aadhaar number first.', variant: 'destructive' });
       return;
     }
+    if (isDomestic && shipmentType === 'document' && !aadhaarVerified) {
+      toast({ title: 'Aadhaar Required', description: 'Aadhaar verification is required for document shipments.', variant: 'destructive' });
+      return;
+    }
     if (!termsAccepted) {
       toast({ title: 'Terms Required', description: 'Please accept the terms and conditions.', variant: 'destructive' });
       return;
@@ -796,8 +800,8 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
         mode={mode}
       />
 
-      {/* ── Identity Verification — Aadhaar OTP for international shipments only ── */}
-      {!isDomestic && (
+      {/* ── Identity Verification — Aadhaar for international shipments + all document shipments ── */}
+      {(!isDomestic || shipmentType === 'document') && (
       <div className="bg-card rounded-xl border border-border overflow-hidden">
         <div className="bg-muted/50 px-5 py-3 border-b border-border">
           <h2 className="font-semibold text-base flex items-center gap-2">
@@ -805,15 +809,49 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
             Sender Identity Verification
           </h2>
         </div>
-        <div className="p-5 space-y-3">
-          <div className="rounded-lg border border-amber-200 dark:border-amber-800/40 bg-amber-50 dark:bg-amber-950/20 p-3 text-xs">
-            <p className="font-semibold text-amber-900 dark:text-amber-200 flex items-center gap-1.5 mb-1">
-              <Info className="h-3.5 w-3.5 shrink-0" weight="fill" /> Why is this required?
+        <div className="p-5 space-y-4">
+
+          {/* ── Why we need Aadhaar — legal info block ── */}
+          <div className="rounded-xl border border-blue-200 dark:border-blue-800/40 bg-blue-50/60 dark:bg-blue-950/20 p-4 space-y-3">
+            <p className="text-sm font-semibold text-blue-900 dark:text-blue-200 flex items-center gap-2">
+              <Info className="h-4 w-4 shrink-0 text-blue-600" weight="fill" />
+              Why is Aadhaar verification required?
             </p>
-            <p className="text-amber-800 dark:text-amber-300 leading-relaxed">
-              As per KYC norms under the Indian Post Office Act, all courier providers must verify sender identity. Your Aadhaar number is verified via UIDAI and never stored in full.
-            </p>
+            <ul className="space-y-2.5 text-xs text-blue-800 dark:text-blue-300 leading-relaxed">
+              <li className="flex gap-2">
+                <span className="mt-0.5 w-4 h-4 rounded-full bg-blue-200 dark:bg-blue-800 flex items-center justify-center shrink-0 text-[10px] font-bold text-blue-700 dark:text-blue-200">1</span>
+                <span>
+                  <span className="font-medium">Mandatory KYC under Indian law —</span> As per the Courier Imports and Exports (Clearance) Regulations and guidelines issued by the Ministry of Finance, all courier service providers are required to collect and verify the sender&apos;s identity before processing a shipment.
+                </span>
+              </li>
+              <li className="flex gap-2">
+                <span className="mt-0.5 w-4 h-4 rounded-full bg-blue-200 dark:bg-blue-800 flex items-center justify-center shrink-0 text-[10px] font-bold text-blue-700 dark:text-blue-200">2</span>
+                <span>
+                  <span className="font-medium">Document shipments require sender KYC —</span> Under the Indian Post Office Act and CBIC (Central Board of Indirect Taxes and Customs) norms, document couriers — especially those crossing state or international borders — must be traceable to a verified sender.
+                </span>
+              </li>
+              <li className="flex gap-2">
+                <span className="mt-0.5 w-4 h-4 rounded-full bg-blue-200 dark:bg-blue-800 flex items-center justify-center shrink-0 text-[10px] font-bold text-blue-700 dark:text-blue-200">3</span>
+                <span>
+                  <span className="font-medium">Prevention of misuse —</span> Aadhaar-based verification helps prevent fraudulent or anonymous shipments, protecting both the sender and the recipient from potential legal complications.
+                </span>
+              </li>
+              <li className="flex gap-2">
+                <span className="mt-0.5 w-4 h-4 rounded-full bg-blue-200 dark:bg-blue-800 flex items-center justify-center shrink-0 text-[10px] font-bold text-blue-700 dark:text-blue-200">4</span>
+                <span>
+                  <span className="font-medium">Your data is safe —</span> We only verify the format and checksum of your Aadhaar number via UIDAI standards. Your full Aadhaar number is never stored on our servers. Only the last 4 digits are retained for reference, in compliance with UIDAI data minimisation guidelines.
+                </span>
+              </li>
+              <li className="flex gap-2">
+                <span className="mt-0.5 w-4 h-4 rounded-full bg-blue-200 dark:bg-blue-800 flex items-center justify-center shrink-0 text-[10px] font-bold text-blue-700 dark:text-blue-200">5</span>
+                <span>
+                  <span className="font-medium">One-time per booking —</span> This verification is required once per shipment booking. It is not linked to any account and is used solely for the purpose of this shipment.
+                </span>
+              </li>
+            </ul>
           </div>
+
+          {/* ── Aadhaar input / verified state ── */}
           {aadhaarVerified ? (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex items-center gap-3 p-3 rounded-lg bg-candlestick-green/5 border border-candlestick-green/20">
               <CheckCircle className="h-5 w-5 text-candlestick-green" weight="fill" />
@@ -826,8 +864,8 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
             <>
               <p className="text-sm text-muted-foreground">
                 {extractedAadhaarNumber
-                  ? 'Aadhaar number auto-filled. Click Verify to confirm.'
-                  : 'Enter your 12-digit Aadhaar number to verify your identity.'}
+                  ? 'Aadhaar number auto-filled from your uploaded document. Please confirm and click Verify.'
+                  : 'Enter your 12-digit Aadhaar number to verify your identity and proceed.'}
               </p>
               <div className="flex gap-2">
                 <Input
@@ -852,7 +890,9 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
                   <Warning className="h-3 w-3" weight="fill" /> {aadhaarError}
                 </p>
               )}
-              <p className="text-xs text-muted-foreground">Verified via UIDAI. We never store your full Aadhaar number.</p>
+              <p className="text-xs text-muted-foreground">
+                Verified via UIDAI checksum. We never store your full Aadhaar number.
+              </p>
             </>
           )}
         </div>
@@ -957,7 +997,7 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
       {/* ── Pay Button ── */}
       <Button
         onClick={() => { feedbackPresets.tap(); handlePayNow(); }}
-        disabled={paymentLoading || (!isDomestic && !aadhaarVerified) || !termsAccepted}
+        disabled={paymentLoading || ((!isDomestic || shipmentType === 'document') && !aadhaarVerified) || !termsAccepted}
         className="w-full bg-coke-red hover:bg-red-600 text-white gap-2 min-h-[56px] py-3 text-sm sm:text-base shadow-lg shadow-coke-red/20"
       >
         {paymentLoading ? (
@@ -970,7 +1010,7 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
         )}
       </Button>
 
-      {!isDomestic && !aadhaarVerified && (
+      {(!isDomestic || shipmentType === 'document') && !aadhaarVerified && (
         <p className="text-xs text-center text-muted-foreground">Please verify your Aadhaar number to proceed with payment.</p>
       )}
 
