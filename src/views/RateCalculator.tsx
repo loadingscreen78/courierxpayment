@@ -583,7 +583,7 @@ const RateCalculator = () => {
                           ₹{selectedOption?.price.toLocaleString() || '—'}
                         </p>
                       </div>
-                      <p className="text-xs text-gray-500 mt-1">incl. GST & all fees</p>
+                      <p className="text-xs text-gray-500 mt-1">all fees included</p>
                     </div>
                   </div>
 
@@ -642,7 +642,7 @@ const RateCalculator = () => {
                 { icon: Check, title: 'CSB IV Compliant', desc: 'Personal use shipments' },
                 { icon: Truck, title: 'Door-to-door', desc: 'Pickup to delivery' },
                 { icon: Clock, title: 'Real-time Tracking', desc: 'Track your shipment 24/7' },
-                { icon: Info, title: 'All-inclusive', desc: 'Customs & GST included' },
+                { icon: Info, title: 'All-inclusive', desc: 'Customs & all fees included' },
               ].map((item, i) => (
                 <div key={i} className="flex items-start gap-3 group">
                   <div className="p-2.5 rounded-xl bg-gradient-to-br from-coke-red/20 to-coke-red/10 border border-coke-red/30 group-hover:border-coke-red/60 transition-all duration-300 group-hover:scale-110 group-hover:shadow-lg group-hover:shadow-coke-red/30">

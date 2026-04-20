@@ -111,17 +111,9 @@ export const PriceBreakdown = ({ breakdown, className }: PriceBreakdownProps) =>
         
         <div className="space-y-1.5">
           {breakdown.breakdown.map((item, index) => (
-            <div
-              key={index}
-              className={cn(
-                'flex justify-between text-sm',
-                item.label.includes('GST') && 'pt-2 border-t'
-              )}
-            >
+            <div key={index} className="flex justify-between text-sm">
               <span className="text-muted-foreground">{item.label}</span>
-              <span className={item.label.includes('GST') ? 'font-medium' : ''}>
-                ₹{item.amount.toLocaleString()}
-              </span>
+              <span>₹{item.amount.toLocaleString()}</span>
             </div>
           ))}
         </div>

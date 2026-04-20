@@ -328,14 +328,13 @@ export const calculateRate = (
   // GST @ 18% on subtotal
   const gst = Math.round(subtotal * GST_RATE);
   
-  // Total
-  const total = subtotal + gst;
+  // Total — no GST charged (below GST threshold)
+  const total = subtotal;
 
   // Calculate savings for guests
   const accountMarkedUpBase = Math.round(baseRate * ACCOUNT_HOLDER_MULTIPLIER);
   const accountSubtotal = accountMarkedUpBase + fuelSurcharge + domesticTransit;
-  const accountGst = Math.round(accountSubtotal * GST_RATE);
-  const accountTotal = accountSubtotal + accountGst;
+  const accountTotal = accountSubtotal;
   const savings = isGuest ? (total - accountTotal) : 0;
 
   return {
@@ -347,16 +346,15 @@ export const calculateRate = (
     customsFee: 0,
     exportClearance: domesticTransit,
     subtotal,
-    gst,
+    gst: 0,
     total,
     carrier,
     zone: country.rateZone,
     billableWeightKg,
     breakdown: [
-      { label: 'Base rate', amount: baseRate }, // Show REAL base rate, not marked up
+      { label: 'Base rate', amount: baseRate },
       { label: `Fuel surcharge (${fuelPercent}%)`, amount: fuelSurcharge },
       { label: 'Domestic transit', amount: domesticTransit },
-      { label: 'GST (18%)', amount: gst },
       ...(isGuest && savings > 0 ? [{ label: 'Open account to save', amount: -savings }] : []),
     ],
   };

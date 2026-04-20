@@ -374,7 +374,7 @@ const SummaryCard = ({ title, price, transitLabel, onBook }: {
       <div className="py-6 border-y border-white/10">
         <p className="text-white/60 text-sm">Estimated Total</p>
         <p className="text-5xl font-bold mt-2">₹{price.toLocaleString('en-IN')}</p>
-        <p className="text-white/40 text-xs mt-2">Including GST & all fees</p>
+        <p className="text-white/40 text-xs mt-2">All fees included</p>
       </div>
       <div className="grid grid-cols-2 gap-4">
         <div className="bg-white/5 rounded-2xl p-4">
