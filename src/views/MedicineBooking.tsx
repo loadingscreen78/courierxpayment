@@ -53,6 +53,7 @@ export interface MedicineBookingData {
   prescription: File | null;
   pharmacyBill: File | null;
   consigneeId: File | null;
+  controlledDrugsConfirmed: boolean;
 
   // Add-ons
   insurance: boolean;
@@ -84,6 +85,7 @@ const initialBookingData: MedicineBookingData = {
   prescription: null,
   pharmacyBill: null,
   consigneeId: null,
+  controlledDrugsConfirmed: false,
   insurance: false,
   specialPackaging: false,
 };
@@ -91,7 +93,7 @@ const initialBookingData: MedicineBookingData = {
 const STEPS = [
   { id: 1, title: 'Medicine Details', description: 'Enter medicine information' },
   { id: 2, title: 'Addresses', description: 'Pickup & delivery addresses' },
-  { id: 3, title: 'Documents', description: 'Upload required documents' },
+  { id: 3, title: 'FDA Documents', description: 'Upload required documents' },
   { id: 4, title: 'Add-ons', description: 'Insurance & packaging' },
   { id: 5, title: 'Review', description: 'Confirm your booking' },
 ];
@@ -245,8 +247,9 @@ const MedicineBooking = ({ isAdminMode = false }: MedicineBookingProps) => {
         break;
       case 3:
         if (!bookingData.prescription) errors.push('Please upload doctor\'s prescription');
-        if (!bookingData.pharmacyBill) errors.push('Please upload pharmacy bill/invoice');
+        if (!bookingData.pharmacyBill) errors.push('Please upload medicine purchase bill');
         if (!bookingData.consigneeId) errors.push('Please upload consignee ID document');
+        if (!bookingData.controlledDrugsConfirmed) errors.push('Please confirm these medicines are not controlled or narcotic drugs');
         break;
     }
 
@@ -469,10 +472,11 @@ const MedicineBooking = ({ isAdminMode = false }: MedicineBookingProps) => {
       prescription={bookingData.prescription}
       pharmacyBill={bookingData.pharmacyBill}
       consigneeId={bookingData.consigneeId}
+      controlledDrugsConfirmed={bookingData.controlledDrugsConfirmed}
       onUpdate={updateBookingData}
     />
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  ), [bookingData.prescription, bookingData.pharmacyBill, bookingData.consigneeId]);
+  ), [bookingData.prescription, bookingData.pharmacyBill, bookingData.consigneeId, bookingData.controlledDrugsConfirmed]);
 
   // Step 4: only depends on addon flags
   const step4 = useMemo(() => (

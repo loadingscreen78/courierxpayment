@@ -10,6 +10,7 @@ interface DocumentUploadStepProps {
   prescription: File | null;
   pharmacyBill: File | null;
   consigneeId: File | null;
+  controlledDrugsConfirmed: boolean;
   onUpdate: (updates: Partial<MedicineBookingData>) => void;
 }
 
@@ -146,7 +147,7 @@ const DocumentUploadCard = memo(function DocumentUploadCard({
   );
 });
 
-const DocumentUploadStepComponent = ({ prescription, pharmacyBill, consigneeId, onUpdate }: DocumentUploadStepProps) => {
+const DocumentUploadStepComponent = ({ prescription, pharmacyBill, consigneeId, controlledDrugsConfirmed, onUpdate }: DocumentUploadStepProps) => {
   // Memoize callbacks to prevent DocumentUploadCard re-renders
   const handlePrescriptionUpload = useCallback((file: File) => {
     onUpdate({ prescription: file });
@@ -175,16 +176,16 @@ const DocumentUploadStepComponent = ({ prescription, pharmacyBill, consigneeId, 
   return (
     <div className="space-y-6" style={{ transform: 'translateZ(0)', willChange: 'transform' }}>
       <div className="space-y-2">
-        <h3 className="font-typewriter text-lg font-bold">Required Documents</h3>
+        <h3 className="font-typewriter text-lg font-bold">FDA Documents</h3>
         <p className="text-sm text-muted-foreground">
-          Upload clear, legible copies of the following documents. All documents must be valid and match the shipment details.
+          Upload clear, legible copies of the following documents. These are required by customs and destination country health authorities to permit medicine imports.
         </p>
       </div>
 
       <div className="grid gap-4" style={{ transform: 'translateZ(0)', willChange: 'transform' }}>
         <DocumentUploadCard
           title="Doctor's Prescription"
-          description="Original prescription with doctor's name, registration number, and date"
+          description="Must be by a registered doctor with registration number on letterhead. Recipient name must match consignee. Max 90-day supply."
           file={prescription}
           required={true}
           accepts=".pdf,.jpg,.jpeg,.png"
@@ -193,8 +194,8 @@ const DocumentUploadStepComponent = ({ prescription, pharmacyBill, consigneeId, 
         />
 
         <DocumentUploadCard
-          title="Pharmacy Bill / Invoice"
-          description="Purchase bill showing medicine name, quantity, and price"
+          title="Medicine Purchase Bill"
+          description="Patient name must be printed on the bill. Medicines must not expire within 6 months of shipment date."
           file={pharmacyBill}
           required={true}
           accepts=".pdf,.jpg,.jpeg,.png"
@@ -218,34 +219,52 @@ const DocumentUploadStepComponent = ({ prescription, pharmacyBill, consigneeId, 
         <CardHeader className="pb-3">
           <CardTitle className="text-sm flex items-center gap-2">
             <AlertCircle className="h-4 w-4" />
-            Document Guidelines
+            Document Requirements
           </CardTitle>
         </CardHeader>
         <CardContent>
           <ul className="space-y-2 text-sm text-muted-foreground">
             <li className="flex items-start gap-2">
               <span className="text-foreground">•</span>
-              Prescription must be dated within the last 6 months
+              Prescription must be issued by a registered doctor with their registration number printed on the letterhead — required for customs clearance.
             </li>
             <li className="flex items-start gap-2">
               <span className="text-foreground">•</span>
-              Medicine name and dosage on prescription must match shipment details
+              Prescription must not cover more than a 90-day medicine supply — larger quantities are not permitted for personal import.
             </li>
             <li className="flex items-start gap-2">
               <span className="text-foreground">•</span>
-              Pharmacy bill must be from a licensed pharmacy with GST number
+              The recipient (consignee) name on the prescription must exactly match the delivery address name.
             </li>
             <li className="flex items-start gap-2">
               <span className="text-foreground">•</span>
-              Consignee ID must be valid and not expired
+              The patient name must be printed on the purchase bill — this links the purchase to the prescription.
             </li>
             <li className="flex items-start gap-2">
               <span className="text-foreground">•</span>
-              All documents should be clearly readable without blur or glare
+              Medicines must not have an expiry date within 6 months from shipment — near-expiry medicines will be rejected at customs.
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="text-foreground">•</span>
+              All documents should be clearly readable without blur or glare.
             </li>
           </ul>
         </CardContent>
       </Card>
+
+      {/* Controlled Drugs Declaration */}
+      <div
+        className={`flex items-start gap-3 rounded-lg border p-4 cursor-pointer transition-colors ${controlledDrugsConfirmed ? 'border-green-500/50 bg-green-50/50 dark:bg-green-950/20' : 'border-border bg-muted/30'}`}
+        onClick={() => onUpdate({ controlledDrugsConfirmed: !controlledDrugsConfirmed } as any)}
+      >
+        <div className={`mt-0.5 w-5 h-5 rounded border-2 flex items-center justify-center shrink-0 transition-colors ${controlledDrugsConfirmed ? 'bg-green-500 border-green-500' : 'border-muted-foreground'}`}>
+          {controlledDrugsConfirmed && <Check className="h-3 w-3 text-white" />}
+        </div>
+        <div className="space-y-1">
+          <p className="text-sm font-medium leading-snug">I confirm these medicines are not controlled or narcotic drugs</p>
+          <p className="text-xs text-muted-foreground">Controlled substances (opioids, psychotropics, narcotics, etc.) are strictly prohibited for international shipment regardless of prescription. Shipping such medicines is illegal and will result in seizure and legal action.</p>
+        </div>
+      </div>
 
       {/* Upload Status Summary */}
       <div className="flex items-center justify-between p-4 bg-card rounded-lg border border-border">

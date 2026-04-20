@@ -349,10 +349,12 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
   const [expandedItemIndex, setExpandedItemIndex] = useState<number>(0);
   const [prescriptionDocs, setPrescriptionDocs] = useState<File[]>([]);
   const [pharmacyBillDocs, setPharmacyBillDocs] = useState<File[]>([]);
+  const [controlledDrugsConfirmed, setControlledDrugsConfirmed] = useState(false);
   const [intlZipLookup, setIntlZipLookup] = useState<{ loading: boolean; city: string; state: string; error: string }>({ loading: false, city: '', state: '', error: '' });
   const [showWeightLimitModal, setShowWeightLimitModal] = useState(false);
-  // ── Separate pickup phone (not synced with shipper phone) ──
+  // ── Separate pickup phone (auto-populated from shipper phone, editable) ──
   const [pickupPhone, setPickupPhone] = useState('');
+  const [pickupPhoneManuallyEdited, setPickupPhoneManuallyEdited] = useState(false);
 
   // ── Aadhaar OCR state ──
   const { ocrResult, isProcessing: ocrProcessing, ocrError, processAadhaar, clearOcr } = useAadhaarOcr();
@@ -375,7 +377,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
   // ── International rate form ──
   const intlForm = useForm<InternationalRateValues>({
     resolver: zodResolver(internationalRateSchema),
-    defaultValues: { shipmentType: undefined, destinationCountry: '', weightGrams: 500, lengthCm: 20, widthCm: 15, heightCm: 10, declaredValue: 1000, prohibitedItemsConfirmed: false },
+    defaultValues: { shipmentType: undefined, destinationCountry: '', weightGrams: undefined as any, lengthCm: undefined as any, widthCm: undefined as any, heightCm: undefined as any, declaredValue: undefined as any, prohibitedItemsConfirmed: false },
   });
 
   // ── Domestic rate form ──
@@ -521,6 +523,14 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
       detailsForm.setValue('senderState', senderLookup.state);
     }
   }, [senderLookup.district, senderLookup.state, detailsForm]);
+
+  // ── Auto-populate pickup phone from shipper phone (international) ──
+  const watchedSenderPhone = detailsForm.watch('senderPhone');
+  useEffect(() => {
+    if (isInternational && watchedSenderPhone && !pickupPhoneManuallyEdited) {
+      setPickupPhone(watchedSenderPhone);
+    }
+  }, [watchedSenderPhone, isInternational, pickupPhoneManuallyEdited]);
 
   useEffect(() => {
     if (receiverLookup.district && !isInternational) {
@@ -1635,7 +1645,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                 const normalizedSubStep = (isInternational && addressSubStep === 'sender') ? 'pickup' : addressSubStep;
                 const currentIdx = stepOrder.indexOf(normalizedSubStep);
                 const labels = isInternational
-                  ? ['Sender KYC', 'Receiver', 'Contents']
+                  ? ['Sender KYC', 'Receiver', isMedicineFlow ? 'FDA Documents' : 'Contents']
                   : (!isInternational && (rateFormData as DomesticRateValues)?.shipmentType === 'document')
                     ? ['Pickup Address', 'Recipient Address']
                     : ['Pickup Address', 'Recipient Address', 'Contents'];
@@ -1904,26 +1914,17 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                               <FormMessage />
                             </FormItem>
                           )} />
-                          {/* Pickup phone for international — separate from shipper phone */}
+                          {/* Pickup phone for international — auto-populated from shipper phone, editable */}
                           {isInternational && (
                             <div className="space-y-1.5">
                               <label className="text-sm font-medium">Pickup Contact Number</label>
-                              <div className="flex gap-2">
-                                <Input
-                                  value={pickupPhone}
-                                  onChange={e => setPickupPhone(e.target.value)}
-                                  placeholder="+91 98765 43210"
-                                  className="h-11 flex-1"
-                                />
-                                <button
-                                  type="button"
-                                  onClick={() => setPickupPhone(detailsForm.getValues('senderPhone'))}
-                                  className="shrink-0 h-11 px-3 rounded-lg border border-border/60 bg-muted/40 hover:bg-muted/70 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors whitespace-nowrap"
-                                >
-                                  Same as shipper
-                                </button>
-                              </div>
-                              <p className="text-[11px] text-muted-foreground">Enter the number where our pickup agent should call. Tap "Same as shipper" to copy your number above.</p>
+                              <Input
+                                value={pickupPhone}
+                                onChange={e => { setPickupPhone(e.target.value); setPickupPhoneManuallyEdited(true); }}
+                                placeholder="+91 98765 43210"
+                                className="h-11"
+                              />
+                              <p className="text-[11px] text-muted-foreground">Enter the number where our pickup agent should call. Defaults to your shipper number — edit if different.</p>
                             </div>
                           )}
                           <div className="grid grid-cols-1 xs:grid-cols-2 gap-3 sm:gap-4">
@@ -2251,7 +2252,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                             <ArrowLeft className="h-4 w-4 shrink-0" /> <span className="truncate">{isInternational ? 'Sender KYC' : 'Pickup'}</span>
                           </Button>
                           <Button type="button" onClick={() => { feedbackPresets.stepChange(); handleReceiverNext(); }} className="flex-1 bg-coke-red hover:bg-red-600 text-white gap-1.5 min-h-[48px] text-sm">
-                            {(!isInternational && (rateFormData as DomesticRateValues)?.shipmentType === 'document') ? <><span className="truncate">Continue to Summary</span> <ArrowRight className="h-4 w-4 shrink-0" /></> : <><span className="truncate">Next: Contents</span> <ArrowRight className="h-4 w-4 shrink-0" /></>}
+                            {(!isInternational && (rateFormData as DomesticRateValues)?.shipmentType === 'document') ? <><span className="truncate">Continue to Summary</span> <ArrowRight className="h-4 w-4 shrink-0" /></> : isMedicineFlow ? <><span className="truncate">Next: FDA Documents</span> <ArrowRight className="h-4 w-4 shrink-0" /></> : <><span className="truncate">Next: Contents</span> <ArrowRight className="h-4 w-4 shrink-0" /></>}
                           </Button>
                         </div>
                       </motion.div>
@@ -2272,13 +2273,13 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                             <FileText className="h-4 w-4 sm:h-5 sm:w-5 text-purple-600" weight="duotone" />
                           </div>
                           <div className="min-w-0">
-                            <h3 className="font-semibold text-sm sm:text-base">Shipment Contents</h3>
-                            <p className="text-[11px] sm:text-xs text-muted-foreground">{isMedicineFlow ? 'Add each medicine for customs declaration' : isDocumentFlow ? 'Document details for customs declaration' : isInternational ? 'Add each item for customs declaration' : 'Describe what you are shipping'}</p>
+                            <h3 className="font-semibold text-sm sm:text-base">{isMedicineFlow ? 'FDA Documents' : 'Shipment Contents'}</h3>
+                            <p className="text-[11px] sm:text-xs text-muted-foreground">{isMedicineFlow ? 'Upload required documents for customs & FDA clearance' : isDocumentFlow ? 'Document details for customs declaration' : isInternational ? 'Add each item for customs declaration' : 'Describe what you are shipping'}</p>
                           </div>
                         </div>
 
-                        {/* Item list */}
-                        <div className="space-y-4">
+                        {/* Item list — hidden for medicine flow (replaced by FDA document uploads below) */}
+                        {!isMedicineFlow && <div className="space-y-4">
                           {isDocumentFlow ? (
                             /* ── Document Flow: simplified single-item view ── */
                             <div className="rounded-lg border border-border p-4 space-y-3">
@@ -2440,9 +2441,10 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                           </>
                           )}
                         </div>
+                        }
 
-                        {/* Add item button — hidden for document flow */}
-                        {!isDocumentFlow && (() => {
+                        {/* Add item button — hidden for document flow and medicine flow */}
+                        {!isDocumentFlow && !isMedicineFlow && (() => {
                           const totalValue = contentItems.reduce((sum, i) => sum + (i.qty * i.unitPrice), 0);
                           const isOverLimit = totalValue > 49000;
                           return (
@@ -2451,13 +2453,13 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                             setContentItems(prev => [...prev, { name: '', type: '', hsnCode: '', qty: 1, unitPrice: 0 }]);
                             setExpandedItemIndex(newIdx);
                           }} className="w-full gap-2 border-dashed" disabled={isOverLimit}>
-                            <Plus className="h-4 w-4" /> {isMedicineFlow ? 'Add Another Medicine' : 'Add Another Item'}
+                            <Plus className="h-4 w-4" /> Add Another Item
                           </Button>
                           );
                         })()}
 
-                        {/* Total value display — hidden for document flow */}
-                        {!isDocumentFlow && (() => {
+                        {/* Total value display — hidden for document flow and medicine flow */}
+                        {!isDocumentFlow && !isMedicineFlow && (() => {
                           const totalValue = contentItems.reduce((sum, i) => sum + (i.qty * i.unitPrice), 0);
                           const isOverLimit = totalValue > 49000;
                           return (
@@ -2486,13 +2488,13 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                                 <Pill className="h-5 w-5 text-blue-600" weight="duotone" />
                                 <h4 className="font-semibold text-sm">Doctor's Prescription</h4>
                               </div>
-                              <div className="rounded-lg border border-blue-200 dark:border-blue-800/40 bg-blue-50 dark:bg-blue-950/20 p-3 text-xs space-y-1">
-                                <p className="font-medium text-blue-900 dark:text-blue-200">What to upload:</p>
-                                <ul className="list-disc list-inside text-blue-800 dark:text-blue-300 space-y-0.5">
-                                  <li>Valid prescription issued by a registered medical practitioner</li>
-                                  <li>Must include doctor's name, registration number, and signature</li>
-                                  <li>Patient (receiver) name must be clearly mentioned</li>
-                                  <li>Medicine names, dosage, and duration should be legible</li>
+                              <div className="rounded-lg border border-blue-200 dark:border-blue-800/40 bg-blue-50 dark:bg-blue-950/20 p-3 text-xs space-y-1.5">
+                                <p className="font-medium text-blue-900 dark:text-blue-200">Why we need this & what to upload:</p>
+                                <ul className="list-disc list-inside text-blue-800 dark:text-blue-300 space-y-1">
+                                  <li>Customs and destination country health authorities require a valid prescription to permit medicine imports — without it, the shipment will be seized.</li>
+                                  <li>Must be issued by a registered doctor with their registration number printed on the letterhead.</li>
+                                  <li>The prescription must not cover more than a 90-day medicine supply — larger quantities are not permitted for personal import.</li>
+                                  <li>The recipient (consignee) name on the prescription must exactly match the delivery address name.</li>
                                 </ul>
                               </div>
                               {prescriptionDocs.length > 0 && (
@@ -2519,20 +2521,18 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                               </label>
                             </div>
 
-                            {/* ── Section 2: Pharmacy Purchase Bill ── */}
+                            {/* ── Section 2: Medicine Purchase Bill ── */}
                             <div className="space-y-3">
                               <div className="flex items-center gap-2">
                                 <FileText className="h-5 w-5 text-coke-red" weight="duotone" />
-                                <h4 className="font-semibold text-sm">Pharmacy Purchase Bill</h4>
+                                <h4 className="font-semibold text-sm">Medicine Purchase Bill</h4>
                               </div>
-                              <div className="rounded-lg border border-coke-red/20 bg-coke-red/5 p-3 text-xs space-y-1">
-                                <p className="font-medium text-coke-red/90">What to upload:</p>
-                                <ul className="list-disc list-inside text-muted-foreground space-y-0.5">
-                                  <li>Original purchase bill or invoice from the pharmacy</li>
-                                  <li>Patient (buyer) name must be on the bill</li>
-                                  <li>Must show pharmacy name, GST number, and address</li>
-                                  <li>Each medicine name, batch number, quantity, and price should be listed</li>
-                                  <li>Bill date must be recent (within 30 days of shipment)</li>
+                              <div className="rounded-lg border border-coke-red/20 bg-coke-red/5 p-3 text-xs space-y-1.5">
+                                <p className="font-medium text-coke-red/90">Why we need this & what to upload:</p>
+                                <ul className="list-disc list-inside text-muted-foreground space-y-1">
+                                  <li>A purchase bill proves the medicines were legally bought and establishes their declared value for customs assessment.</li>
+                                  <li>The patient name (buyer) must be printed on the bill — this links the purchase to the prescription.</li>
+                                  <li>Medicines must not have an expiry date within 6 months from the date of shipment — expired or near-expiry medicines will be rejected at customs.</li>
                                 </ul>
                               </div>
                               {pharmacyBillDocs.length > 0 && (
@@ -2554,9 +2554,23 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                               <label className="flex items-center justify-center gap-2 rounded-xl border-2 border-dashed border-coke-red/30 bg-coke-red/5 hover:bg-coke-red/10 p-3.5 cursor-pointer transition-colors">
                                 <input type="file" accept="image/*,.pdf" multiple className="hidden" onChange={(e) => { if (e.target.files) setPharmacyBillDocs(prev => [...prev, ...Array.from(e.target.files!)]); }} />
                                 <Upload className="h-4 w-4 text-coke-red" weight="duotone" />
-                                <span className="text-sm font-medium text-coke-red">Upload Pharmacy Bill</span>
+                                <span className="text-sm font-medium text-coke-red">Upload Purchase Bill</span>
                                 <span className="text-xs text-muted-foreground">(PDF, JPG, PNG)</span>
                               </label>
+                            </div>
+
+                            {/* ── Controlled Drugs Declaration ── */}
+                            <div
+                              className={`flex items-start gap-3 rounded-lg border p-4 cursor-pointer transition-colors ${controlledDrugsConfirmed ? 'border-green-500/50 bg-green-50/50 dark:bg-green-950/20' : 'border-border bg-muted/30'}`}
+                              onClick={() => setControlledDrugsConfirmed(v => !v)}
+                            >
+                              <div className={`mt-0.5 w-5 h-5 rounded border-2 flex items-center justify-center shrink-0 transition-colors ${controlledDrugsConfirmed ? 'bg-green-500 border-green-500' : 'border-muted-foreground'}`}>
+                                {controlledDrugsConfirmed && <Check className="h-3 w-3 text-white" weight="bold" />}
+                              </div>
+                              <div className="space-y-1">
+                                <p className="text-sm font-medium leading-snug">I confirm these medicines are not controlled or narcotic drugs</p>
+                                <p className="text-xs text-muted-foreground">Controlled substances (opioids, psychotropics, narcotics, etc.) are strictly prohibited for international shipment regardless of prescription. Shipping such medicines is illegal and will result in seizure and legal action.</p>
+                              </div>
                             </div>
                           </div>
                         )}
@@ -2572,6 +2586,14 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                           </Button>
                           <Button type="button" onClick={() => {
                             feedbackPresets.stepChange();
+                            if (isMedicineFlow) {
+                              if (prescriptionDocs.length === 0) { toast({ title: 'Prescription required', description: 'Please upload the doctor\'s prescription.', variant: 'destructive' }); return; }
+                              if (pharmacyBillDocs.length === 0) { toast({ title: 'Purchase bill required', description: 'Please upload the medicine purchase bill.', variant: 'destructive' }); return; }
+                              if (!controlledDrugsConfirmed) { toast({ title: 'Declaration required', description: 'Please confirm these medicines are not controlled or narcotic drugs.', variant: 'destructive' }); return; }
+                              detailsForm.setValue('contentDescription', 'medicine shipment with prescription');
+                              detailsForm.handleSubmit(handleFinalSubmit)();
+                              return;
+                            }
                             if (isDocumentFlow) {
                               const docType = contentItems[0]?.type;
                               if (!docType) { return; }
