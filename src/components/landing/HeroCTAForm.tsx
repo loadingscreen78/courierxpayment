@@ -253,7 +253,7 @@ const PinInput = ({ value, onChange, meta, placeholder, showAssistance }: {
 
 // ── Main Component ───────────────────────────────────────────────────────────
 
-export const HeroCTAForm = () => {
+export const HeroCTAForm = ({ defaultTab = 'ship' }: { defaultTab?: 'ship' | 'track' }) => {
   const router = useRouter();
 
   const [shipType, setShipType] = useState<ShipType>('international');
@@ -324,7 +324,7 @@ export const HeroCTAForm = () => {
   return (
     <div className="w-full">
       <div className="rounded-2xl bg-card border border-border/40 shadow-xl shadow-black/[0.08] overflow-visible">
-        <Tabs defaultValue="ship" className="w-full">
+        <Tabs defaultValue={defaultTab} className="w-full">
           {/* ── Tab bar ── */}
           <TabsList className="w-full h-auto p-0 bg-transparent rounded-none rounded-t-2xl overflow-hidden grid grid-cols-2">
             <TabsTrigger
