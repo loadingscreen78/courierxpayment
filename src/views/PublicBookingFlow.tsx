@@ -1125,7 +1125,20 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                       <FormField control={domForm.control} name="pickupPincode" render={({ field }) => (
                         <FormItem>
                           <FormLabel>Pickup Pincode</FormLabel>
-                          <FormControl><Input {...field} placeholder="110001" maxLength={6} /></FormControl>
+                          <FormControl>
+                            <div className="relative">
+                              <Input
+                                {...field}
+                                placeholder="110001"
+                                maxLength={6}
+                                readOnly={!!rateFormData}
+                                className={!!rateFormData ? 'bg-muted text-muted-foreground cursor-not-allowed select-none pointer-events-none' : ''}
+                              />
+                              {!!rateFormData && (
+                                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-medium text-muted-foreground bg-muted px-1.5 py-0.5 rounded border border-border/60">locked</span>
+                              )}
+                            </div>
+                          </FormControl>
                           {pickupLookup.loading && <p className="text-xs text-muted-foreground flex items-center gap-1"><CircleNotch className="h-3 w-3 animate-spin" /> Looking up...</p>}
                           {pickupLookup.state && <p className="text-xs text-candlestick-green">{pickupLookup.district}, {pickupLookup.state}</p>}
                           {pickupLookup.error && <p className="text-xs text-destructive">{pickupLookup.error}</p>}
@@ -1135,7 +1148,20 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                       <FormField control={domForm.control} name="deliveryPincode" render={({ field }) => (
                         <FormItem>
                           <FormLabel>Delivery Pincode</FormLabel>
-                          <FormControl><Input {...field} placeholder="400001" maxLength={6} /></FormControl>
+                          <FormControl>
+                            <div className="relative">
+                              <Input
+                                {...field}
+                                placeholder="400001"
+                                maxLength={6}
+                                readOnly={!!rateFormData}
+                                className={!!rateFormData ? 'bg-muted text-muted-foreground cursor-not-allowed select-none pointer-events-none' : ''}
+                              />
+                              {!!rateFormData && (
+                                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-medium text-muted-foreground bg-muted px-1.5 py-0.5 rounded border border-border/60">locked</span>
+                              )}
+                            </div>
+                          </FormControl>
                           {deliveryLookup.loading && <p className="text-xs text-muted-foreground flex items-center gap-1"><CircleNotch className="h-3 w-3 animate-spin" /> Looking up...</p>}
                           {deliveryLookup.state && <p className="text-xs text-candlestick-green">{deliveryLookup.district}, {deliveryLookup.state}</p>}
                           {deliveryLookup.error && <p className="text-xs text-destructive">{deliveryLookup.error}</p>}
@@ -1627,7 +1653,20 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                           <FormField control={detailsForm.control} name="senderPincode" render={({ field }) => (
                             <FormItem>
                               <FormLabel>Pincode</FormLabel>
-                              <FormControl><Input {...field} placeholder="110001" maxLength={6} className="h-11" /></FormControl>
+                              <FormControl>
+                                <div className="relative">
+                                  <Input
+                                    {...field}
+                                    placeholder="110001"
+                                    maxLength={6}
+                                    readOnly={!!domesticPickupPincode}
+                                    className={`h-11 ${domesticPickupPincode ? 'bg-muted text-muted-foreground cursor-not-allowed pointer-events-none' : ''}`}
+                                  />
+                                  {!!domesticPickupPincode && (
+                                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-medium text-muted-foreground bg-muted px-1.5 py-0.5 rounded border border-border/60">locked</span>
+                                  )}
+                                </div>
+                              </FormControl>
                               {senderLookup.loading && <p className="text-xs text-muted-foreground flex items-center gap-1"><CircleNotch className="h-3 w-3 animate-spin" /> Looking up...</p>}
                               {senderLookup.error && <p className="text-xs text-destructive">{senderLookup.error}</p>}
                               <FormMessage />
@@ -1924,12 +1963,18 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                                   <FormLabel>Pincode</FormLabel>
                                   <div className="flex gap-1.5">
                                     <FormControl>
-                                      <Input
-                                        {...field}
-                                        placeholder="400001"
-                                        maxLength={6}
-                                        className="h-11 flex-1"
-                                      />
+                                      <div className="relative flex-1">
+                                        <Input
+                                          {...field}
+                                          placeholder="400001"
+                                          maxLength={6}
+                                          readOnly={!!domesticDeliveryPincode}
+                                          className={`h-11 flex-1 ${domesticDeliveryPincode ? 'bg-muted text-muted-foreground cursor-not-allowed pointer-events-none' : ''}`}
+                                        />
+                                        {!!domesticDeliveryPincode && (
+                                          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-medium text-muted-foreground bg-muted px-1.5 py-0.5 rounded border border-border/60">locked</span>
+                                        )}
+                                      </div>
                                     </FormControl>
                                     {!domesticDeliveryPincode && (
                                       <div className="relative">

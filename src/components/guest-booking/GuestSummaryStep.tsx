@@ -802,11 +802,12 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
 
       {/* ── Identity Verification — Aadhaar for international shipments + all document shipments ── */}
       {(!isDomestic || shipmentType === 'document') && (
-      <div className="bg-card rounded-xl border border-border overflow-hidden">
-        <div className="bg-muted/50 px-5 py-3 border-b border-border">
-          <h2 className="font-semibold text-base flex items-center gap-2">
-            <ShieldCheck className="h-4.5 w-4.5 text-blue-600" weight="duotone" />
+      <div className="bg-card rounded-xl border-2 border-blue-400/50 dark:border-blue-600/40 overflow-hidden shadow-sm shadow-blue-500/10">
+        <div className="bg-blue-50/80 dark:bg-blue-950/30 px-5 py-3 border-b border-blue-200/60 dark:border-blue-800/40">
+          <h2 className="font-semibold text-base flex items-center gap-2 text-blue-900 dark:text-blue-200">
+            <ShieldCheck className="h-4.5 w-4.5 text-blue-600" weight="fill" />
             Sender Identity Verification
+            <span className="ml-auto text-[10px] font-semibold px-2 py-0.5 rounded-full bg-blue-600 text-white">Required</span>
           </h2>
         </div>
         <div className="p-5 space-y-4">
