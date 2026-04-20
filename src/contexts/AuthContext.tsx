@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect, useCallback, useMemo, ReactNode } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
+import { cx } from '@/lib/cookies';
 
 interface Profile {
   id: string;
@@ -75,6 +76,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setSession(session);
         setUser(session?.user ?? null);
         
+        // Sync auth tokens to cookies on every auth state change
+        if (session?.access_token && session?.refresh_token) {
+          cx.setAuth(session.access_token, session.refresh_token);
+          cx.setUserId(session.user.id);
+        } else {
+          cx.clearAuth();
+        }
+
         // Defer profile fetch with setTimeout to avoid deadlock
         if (session?.user) {
           setTimeout(() => {
@@ -296,6 +305,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       sessionStorage.setItem('explicit_logout', '1');
     }
     await supabase.auth.signOut();
+    cx.clearAuth();
     setProfile(null);
   }, []);
 
