@@ -7,7 +7,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import {
   ArrowRight, CircleNotch, ShieldCheck, Package, MapPin, Airplane,
-  CurrencyInr, Tag, CheckCircle, Warning, DownloadSimple, Copy,
+  CurrencyInr, CheckCircle, Warning, DownloadSimple, Copy,
   Clock, Scissors, SealCheck, Drop, ArrowLeft, Cube, Info,
   Ruler, IdentificationCard, House, Upload, FileText, Camera, X, Eye,
   Pill, Receipt, IdentificationBadge, FolderOpen,
@@ -23,7 +23,6 @@ import { getCountryByCode } from '@/lib/shipping/countries';
 import { motion, AnimatePresence } from 'framer-motion';
 import { feedbackPresets } from '@/lib/haptics';
 import RouteMap from '@/components/guest-booking/RouteMap';
-import { PublicCouponBanner } from '@/components/guest-booking/PublicCouponBanner';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -134,6 +133,7 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
   const [couponDiscount, setCouponDiscount] = useState(0);
   const [couponApplied, setCouponApplied] = useState(false);
   const [couponLoading, setCouponLoading] = useState(false);
+  const [showManualCoupon, setShowManualCoupon] = useState(false);
   const [paymentLoading, setPaymentLoading] = useState(false);
   const [trackingNumber, setTrackingNumber] = useState('');
   const [awbUrl, setAwbUrl] = useState('');
@@ -242,9 +242,10 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
   const handleApplyCoupon = async (codeToValidate?: string) => {
     const codeToApply = (codeToValidate || couponCode).trim().toUpperCase();
     if (!codeToApply) return;
+    // Prevent applying a second coupon if one is already active
+    if (couponApplied) return;
     setCouponLoading(true);
     try {
-      // Guest coupon validation — simple check against public coupons
       const res = await fetch('/api/coupons/validate-guest', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -253,9 +254,11 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
       const data = await res.json();
       if (data.valid) {
         setCouponCode(codeToApply);
-        setCouponDiscount(data.discountAmount || 0);
+        // Cap discount at effectiveBasePrice so 100% coupon always gives ₹0 total
+        const discount = Math.min(data.discountAmount || 0, effectiveBasePrice);
+        setCouponDiscount(discount);
         setCouponApplied(true);
-        toast({ title: 'Coupon Applied', description: `You saved ₹${data.discountAmount}` });
+        toast({ title: 'Coupon Applied', description: `You saved ₹${discount}` });
       } else {
         toast({ title: 'Invalid Coupon', description: data.error || 'This coupon is not valid.', variant: 'destructive' });
       }
@@ -904,59 +907,88 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
       )}
 
       {/* ── Coupon Code ── */}
-      {!couponApplied && (
-        <PublicCouponBanner
-          onApply={(code) => {
-            handleApplyCoupon(code);
-          }}
-          isApplied={couponApplied}
-          isLoading={couponLoading}
-        />
-      )}
-      
       {couponApplied ? (
-        /* Show applied coupon status - no manual input */
         <div className="bg-card rounded-xl border border-candlestick-green/30 p-5">
           <div className="flex items-center gap-2 p-2.5 rounded-lg bg-candlestick-green/5 border border-candlestick-green/20">
             <CheckCircle className="h-5 w-5 text-candlestick-green" weight="fill" />
             <div className="flex-1">
               <p className="text-sm font-medium text-candlestick-green">{couponCode.toUpperCase()} Applied</p>
-              <p className="text-xs text-muted-foreground">You saved ₹{couponDiscount}</p>
+              <p className="text-xs text-muted-foreground">You saved ₹{couponDiscount.toLocaleString('en-IN')}</p>
             </div>
-            <button 
-              onClick={() => { 
-                setCouponApplied(false); 
-                setCouponDiscount(0); 
-                setCouponCode(''); 
-              }} 
-              className="text-xs text-muted-foreground hover:text-foreground px-3 py-1.5 rounded-lg hover:bg-white/10 transition-colors"
+            <button
+              onClick={() => {
+                setCouponApplied(false);
+                setCouponDiscount(0);
+                setCouponCode('');
+                setShowManualCoupon(false);
+              }}
+              className="text-xs text-muted-foreground hover:text-foreground px-3 py-1.5 rounded-lg hover:bg-muted/60 transition-colors"
             >
               Remove
             </button>
           </div>
         </div>
       ) : (
-        /* Show manual coupon input only if no coupon applied */
-        <div className="bg-card rounded-xl border border-border p-5 space-y-3">
-          <h3 className="font-semibold text-sm flex items-center gap-2">
-            <Tag className="h-4 w-4 text-coke-red" weight="duotone" />
-            Have a different coupon code?
-          </h3>
-          <div className="flex gap-2">
-            <Input
-              placeholder="Enter coupon code"
-              value={couponCode}
-              onChange={e => setCouponCode(e.target.value.toUpperCase())}
-              className="flex-1 uppercase"
-            />
-            <Button 
-              variant="outline" 
-              onClick={() => { feedbackPresets.tap(); handleApplyCoupon(); }} 
-              disabled={couponLoading || !couponCode.trim()}
+        <div className="bg-card rounded-xl border border-border p-4 space-y-3">
+          {/* WELCOME10 banner — only show if not in manual mode */}
+          {!showManualCoupon && (
+            <div className="flex items-center gap-3">
+              <div className="flex-1 min-w-0">
+                <p className="text-sm">
+                  Use code{' '}
+                  <span className="font-mono font-semibold">WELCOME10</span>
+                  {' '}for 10% off
+                </p>
+              </div>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => { feedbackPresets.tap(); handleApplyCoupon('WELCOME10'); }}
+                disabled={couponLoading}
+                className="shrink-0 h-8 text-xs"
+              >
+                {couponLoading ? <CircleNotch className="h-3.5 w-3.5 animate-spin" /> : 'Apply'}
+              </Button>
+            </div>
+          )}
+          {/* Toggle to manual input */}
+          {!showManualCoupon ? (
+            <button
+              type="button"
+              onClick={() => setShowManualCoupon(true)}
+              className="text-xs text-muted-foreground hover:text-foreground underline underline-offset-2 transition-colors"
             >
-              {couponLoading ? <CircleNotch className="h-4 w-4 animate-spin" /> : 'Apply'}
-            </Button>
-          </div>
+              Have a different code?
+            </button>
+          ) : (
+            <div className="space-y-2">
+              <div className="flex gap-2">
+                <Input
+                  placeholder="Enter coupon code"
+                  value={couponCode}
+                  onChange={e => setCouponCode(e.target.value.toUpperCase())}
+                  className="flex-1 uppercase h-9 text-sm"
+                  autoFocus
+                />
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => { feedbackPresets.tap(); handleApplyCoupon(); }}
+                  disabled={couponLoading || !couponCode.trim()}
+                  className="h-9"
+                >
+                  {couponLoading ? <CircleNotch className="h-3.5 w-3.5 animate-spin" /> : 'Apply'}
+                </Button>
+              </div>
+              <button
+                type="button"
+                onClick={() => { setShowManualCoupon(false); setCouponCode(''); }}
+                className="text-xs text-muted-foreground hover:text-foreground underline underline-offset-2 transition-colors"
+              >
+                ← Back
+              </button>
+            </div>
+          )}
         </div>
       )}
 
