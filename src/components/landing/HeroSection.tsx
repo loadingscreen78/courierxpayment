@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Sparkle, Package, MagnifyingGlass, X } from '@phosphor-icons/react';
+import { Sparkle, Package, MagnifyingGlass } from '@phosphor-icons/react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { HeroCTAForm } from './HeroCTAForm';
 
@@ -107,19 +107,6 @@ const MobileCTALightbox = ({
                       'inset 4px 4px 8px rgba(0,0,0,0.4), inset -4px -4px 8px rgba(255,255,255,0.05)',
                   }}
                 />
-
-                {/* Close button */}
-                <button
-                  onClick={onClose}
-                  className="absolute top-4 right-4 z-10 w-8 h-8 rounded-full flex items-center justify-center transition-all"
-                  style={{
-                    background: 'rgba(0,0,0,0.08)',
-                    boxShadow: '2px 2px 5px rgba(0,0,0,0.15), -2px -2px 5px rgba(255,255,255,0.5)',
-                  }}
-                  aria-label="Close"
-                >
-                  <X className="h-4 w-4 text-foreground/70" weight="bold" />
-                </button>
 
                 {/* Scroll-to-dismiss hint */}
                 <p className="text-center text-xs text-muted-foreground pt-4 pb-1 px-4">
