@@ -842,23 +842,30 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
   const verifyEmailOtpRef = useRef(verifyEmailOtp);
   useEffect(() => { verifyEmailOtpRef.current = verifyEmailOtp; }, [verifyEmailOtp]);
 
+  // Countries that don't use postal codes
+  const COUNTRIES_WITHOUT_POSTAL_CODES = new Set([
+    'AE','QA','KW','BH','OM','YE','JO','IQ','LB','SY','AF','AO','BO','BW','BJ','BF','BI',
+    'CM','CF','TD','KM','CG','CD','CI','DJ','GQ','ER','ET','FJ','GA','GM','GH','GN','GW',
+    'KE','LS','LR','LY','MG','MW','ML','MR','MZ','NA','NE','NG','RW','ST','SN','SL','SO',
+    'SS','SD','SZ','TZ','TG','UG','ZM','ZW','TL','PG','SB','VU','WS','TO','TV','KI','NR',
+    'PW','MH','FM','CK','NU','TK','WF','GU','MP','VI','PN','NF','GI','IM','JE','GG','AX',
+    'FO','GL','SJ','BM','KY','TC','VG','AI','MS','AG','DM','LC','VC','GD','BB','TT','JM',
+    'HT','CU','DO','BS','AW','CW','SX','BQ',
+  ]);
+
   // ── Validate receiver fields before sliding to content ──
   const handleReceiverNext = async () => {
-    // For domestic, receiverState is auto-filled from pincode lookup — skip validating it
-    const receiverFields = isInternational
-      ? ['receiverName', 'receiverPhone', 'receiverEmail', 'receiverAddress', 'receiverCity', 'receiverState', 'receiverZipcode'] as const
-      : ['receiverName', 'receiverPhone', 'receiverAddress', 'receiverCity', 'receiverZipcode'] as const;
     // For countries without postal codes, auto-set "000" before validation
-    if (isInternational && destinationCountryInfo) {
-      const NO_POSTAL_CODES = new Set(['AE','QA','KW','BH','OM','YE','JO','IQ','LB','SY','AF','AO','BO','BW','BJ','BF','BI','CM','CF','TD','KM','CG','CD','CI','DJ','GQ','ER','ET','FJ','GA','GM','GH','GN','GW','KE','LS','LR','LY','MG','MW','ML','MR','MZ','NA','NE','NG','RW','ST','SN','SL','SO','SS','SD','SZ','TZ','TG','UG','ZM','ZW','TL','PG','SB','VU','WS','TO','TV','KI','NR','PW','MH','FM','CK','NU','TK','WF','GU','MP','AS','VI','PR','PN','NF','CX','CC','HM','AQ','BV','TF','GS','UM','IO','SH','AC','TA','FK','PM','BL','MF','GP','MQ','RE','YT','GF','NC','PF','GI','IM','JE','GG','AX','FO','GL','SJ','BM','KY','TC','VG','AI','MS','AG','DM','LC','VC','GD','BB','TT','JM','HT','CU','DO','BS','AW','CW','SX','BQ','MX']);
-      if (NO_POSTAL_CODES.has(destinationCountryInfo.code)) {
-        const currentZip = detailsForm.getValues('receiverZipcode');
-        if (!currentZip || currentZip.trim() === '') {
-          detailsForm.setValue('receiverZipcode', '000');
-        }
+    if (isInternational && destinationCountryInfo && COUNTRIES_WITHOUT_POSTAL_CODES.has(destinationCountryInfo.code)) {
+      const currentZip = detailsForm.getValues('receiverZipcode');
+      if (!currentZip || currentZip.trim() === '') {
+        detailsForm.setValue('receiverZipcode', '000');
       }
     }
-    const result = await detailsForm.trigger(receiverFields);
+    // For domestic, receiverState is auto-filled from pincode lookup — skip validating it
+    const intlFields = ['receiverName', 'receiverPhone', 'receiverEmail', 'receiverAddress', 'receiverCity', 'receiverState', 'receiverZipcode'] as const;
+    const domFields = ['receiverName', 'receiverPhone', 'receiverAddress', 'receiverCity', 'receiverZipcode'] as const;
+    const result = await detailsForm.trigger(isInternational ? intlFields : domFields);
     if (!result) return;
     // For domestic, auto-set receiverState from pincode lookup if available
     if (!isInternational && receiverLookup.state) {
@@ -2121,8 +2128,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                               )}
                               {/* Countries that don't use postal codes */}
                               {(() => {
-                                const NO_POSTAL_CODES = new Set(['AE','QA','KW','BH','OM','YE','JO','IQ','LB','SY','AF','AO','BO','BW','BJ','BF','BI','CM','CF','TD','KM','CG','CD','CI','DJ','GQ','ER','ET','FJ','GA','GM','GH','GN','GW','KE','LS','LR','LY','MG','MW','ML','MR','MZ','NA','NE','NG','RW','ST','SN','SL','SO','SS','SD','SZ','TZ','TG','UG','ZM','ZW','TL','PG','SB','VU','WS','TO','TV','KI','NR','PW','MH','FM','CK','NU','TK','WF','GU','MP','AS','VI','PR','PN','NF','CX','CC','HM','AQ','BV','TF','GS','UM','IO','SH','AC','TA','FK','PM','BL','MF','GP','MQ','RE','YT','GF','NC','PF','GI','IM','JE','GG','AX','FO','GL','SJ','BM','KY','TC','VG','AI','MS','AG','DM','LC','VC','GD','BB','TT','JM','HT','CU','DO','BS','AW','CW','SX','BQ','MX'];
-                                const noPostal = destinationCountryInfo && NO_POSTAL_CODES.has(destinationCountryInfo.code);
+                                const noPostal = !!(destinationCountryInfo && COUNTRIES_WITHOUT_POSTAL_CODES.has(destinationCountryInfo.code));
                                 return (
                                   <div className="grid grid-cols-1 xs:grid-cols-3 gap-3 sm:gap-4">
                                     <FormField control={detailsForm.control} name="receiverCity" render={({ field }) => (
