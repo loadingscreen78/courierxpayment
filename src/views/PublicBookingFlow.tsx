@@ -62,15 +62,18 @@ const domesticRateSchema = z.object({
   pickupPincode: z.string().regex(/^\d{6}$/, 'Enter valid 6-digit pincode'),
   deliveryPincode: z.string().regex(/^\d{6}$/, 'Enter valid 6-digit pincode'),
   weightKg: z.coerce.number().min(0.1, 'Min 0.1 kg').max(10, 'Max 10 kg for guest booking'),
-  lengthCm: z.coerce.number().min(1, 'Required').max(150),
-  widthCm: z.coerce.number().min(1, 'Required').max(150),
-  heightCm: z.coerce.number().min(1, 'Required').max(150),
+  lengthCm: z.coerce.number().min(1, 'Required').max(150).optional(),
+  widthCm: z.coerce.number().min(1, 'Required').max(150).optional(),
+  heightCm: z.coerce.number().min(1, 'Required').max(150).optional(),
   declaredValue: z.coerce.number().min(0).max(49000).optional().default(0),
 }).superRefine((data, ctx) => {
   if (data.shipmentType === 'document') {
-    if (data.weightKg > 1) ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Documents max 1 kg', path: ['weightKg'] });
+    if (data.weightKg > 2) ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Documents max 2 kg', path: ['weightKg'] });
   }
   if (data.shipmentType === 'gift') {
+    if (!data.lengthCm) ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Required', path: ['lengthCm'] });
+    if (!data.widthCm) ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Required', path: ['widthCm'] });
+    if (!data.heightCm) ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Required', path: ['heightCm'] });
     if (data.weightKg > 10) ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Guest booking max 10 kg. Open an account for heavier shipments.', path: ['weightKg'] });
     if (data.declaredValue > 49000) ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Max declared value ₹49,000', path: ['declaredValue'] });
   }
@@ -377,8 +380,6 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
     resolver: zodResolver(domesticRateSchema),
     defaultValues: { shipmentType: undefined, pickupPincode: '', deliveryPincode: '', weightKg: undefined as any, lengthCm: undefined as any, widthCm: undefined as any, heightCm: undefined as any, declaredValue: 0 },
   });
-
-  // ── Sender/Receiver form ──
   const detailsForm = useForm<SenderReceiverValues>({
     resolver: zodResolver(senderReceiverSchema),
     defaultValues: {
@@ -578,7 +579,14 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
   // ── Handle domestic rate calculation ──
   const handleDomRateSubmit = async (values: DomesticRateValues) => {
     setIsDomesticLoading(true);
-    setRateFormData(values);
+    // For documents: use default envelope dimensions and set declared value to ₹100
+    const isDoc = values.shipmentType === 'document';
+    const lengthCm = values.lengthCm ?? (isDoc ? 30 : 1);
+    const widthCm = values.widthCm ?? (isDoc ? 25 : 1);
+    const heightCm = values.heightCm ?? (isDoc ? 2 : 1);
+    const declaredValue = isDoc ? 100 : (values.declaredValue ?? 0);
+    const enrichedValues = { ...values, lengthCm, widthCm, heightCm, declaredValue };
+    setRateFormData(enrichedValues);
     try {
       const res = await fetch('/api/domestic/rates', {
         method: 'POST',
@@ -587,10 +595,10 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
           pickupPincode: values.pickupPincode,
           deliveryPincode: values.deliveryPincode,
           weightKg: values.weightKg,
-          lengthCm: values.lengthCm,
-          widthCm: values.widthCm,
-          heightCm: values.heightCm,
-          declaredValue: values.declaredValue,
+          lengthCm,
+          widthCm,
+          heightCm,
+          declaredValue,
           shipmentType: values.shipmentType,
           isGuest: true,
         }),
@@ -831,6 +839,12 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
     // For domestic, auto-set receiverState from pincode lookup if available
     if (!isInternational && receiverLookup.state) {
       detailsForm.setValue('receiverState', receiverLookup.state);
+    }
+    // For domestic document flow: skip content step, auto-set description and submit
+    if (!isInternational && (rateFormData as DomesticRateValues)?.shipmentType === 'document') {
+      detailsForm.setValue('contentDescription', 'Documents x1 @ ₹100');
+      detailsForm.handleSubmit(handleFinalSubmit)();
+      return;
     }
     setAddressSubStep('content');
   };
@@ -1141,8 +1155,11 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                                 <SelectTrigger><SelectValue placeholder="Select weight" /></SelectTrigger>
                               </FormControl>
                               <SelectContent>
+                                <SelectItem value="0.1">Below 100g</SelectItem>
                                 <SelectItem value="0.5">Up to 500g</SelectItem>
                                 <SelectItem value="1">Up to 1 kg</SelectItem>
+                                <SelectItem value="1.5">Up to 1.5 kg</SelectItem>
+                                <SelectItem value="2">Up to 2 kg</SelectItem>
                               </SelectContent>
                             </Select>
                           ) : (
@@ -1173,7 +1190,8 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                       )} />
                     </div>
 
-                    {/* Dimensions with measurement instructions */}
+                    {/* Dimensions with measurement instructions — hidden for domestic documents */}
+                    {!isDocumentDom && (
                     <div>
                       <div className="flex items-center justify-between mb-1">
                         <p className="text-sm font-medium">Package Dimensions (cm)</p>
@@ -1208,6 +1226,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                         </div>
                       )}
                     </div>
+                    )}
 
                     <Button type="submit" className="w-full bg-coke-red hover:bg-red-600 text-white gap-2 py-5" disabled={isDomesticLoading} onClick={() => feedbackPresets.tap()}>
                       {isDomesticLoading ? <><CircleNotch className="h-4 w-4 animate-spin" /> Fetching Rates...</> : <>Calculate Rates <ArrowRight className="h-4 w-4" /></>}
@@ -1513,15 +1532,25 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
               </div>
             )}
 
-            {/* Sub-step indicator — 3 steps for domestic, 4 for international */}
+            {/* Sub-step indicator — 2 steps for domestic document, 3 for domestic gift, 4 for international */}
             <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto">
               {(isInternational
                 ? (['pickup', 'sender', 'receiver', 'content'] as const)
-                : (['pickup', 'receiver', 'content'] as const)
+                : (!isInternational && (rateFormData as DomesticRateValues)?.shipmentType === 'document')
+                  ? (['pickup', 'receiver'] as const)
+                  : (['pickup', 'receiver', 'content'] as const)
               ).map((s, i, arr) => {
-                const stepOrder = isInternational ? ['pickup', 'sender', 'receiver', 'content'] : ['pickup', 'receiver', 'content'];
+                const stepOrder = isInternational
+                  ? ['pickup', 'sender', 'receiver', 'content']
+                  : (!isInternational && (rateFormData as DomesticRateValues)?.shipmentType === 'document')
+                    ? ['pickup', 'receiver']
+                    : ['pickup', 'receiver', 'content'];
                 const currentIdx = stepOrder.indexOf(addressSubStep);
-                const labels = isInternational ? ['Pickup Details', 'Sender / KYC', 'Receiver', 'Contents'] : ['Pickup Address', 'Recipient Address', 'Contents'];
+                const labels = isInternational
+                  ? ['Pickup Details', 'Sender / KYC', 'Receiver', 'Contents']
+                  : (!isInternational && (rateFormData as DomesticRateValues)?.shipmentType === 'document')
+                    ? ['Pickup Address', 'Recipient Address']
+                    : ['Pickup Address', 'Recipient Address', 'Contents'];
                 return (
                   <div key={s} className="flex items-center gap-1.5 sm:gap-2 flex-1 min-w-0">
                     <div className={`w-6 h-6 sm:w-7 sm:h-7 rounded-full flex items-center justify-center text-[10px] sm:text-xs font-bold transition-colors shrink-0 ${
@@ -2051,7 +2080,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                             <ArrowLeft className="h-4 w-4" /> {isInternational ? 'Sender' : 'Pickup'}
                           </Button>
                           <Button type="button" onClick={() => { feedbackPresets.stepChange(); handleReceiverNext(); }} className="flex-1 bg-coke-red hover:bg-red-600 text-white gap-2">
-                            Next: Contents <ArrowRight className="h-4 w-4" />
+                            {(!isInternational && (rateFormData as DomesticRateValues)?.shipmentType === 'document') ? <>Continue to Summary <ArrowRight className="h-4 w-4" /></> : <>Next: Contents <ArrowRight className="h-4 w-4" /></>}
                           </Button>
                         </div>
                       </motion.div>

@@ -110,6 +110,13 @@ const packingSteps = [
   { icon: SealCheck, title: 'Seal the box securely', desc: 'Use strong packing tape on all seams. Apply the H-taping method (top, bottom, and sides).' },
 ];
 
+const documentPackingSteps = [
+  { icon: FileText, title: 'Use a rigid envelope or folder', desc: 'Place documents in a stiff cardboard envelope or document folder to prevent bending.' },
+  { icon: Drop, title: 'Protect from moisture', desc: 'Seal documents in a zip-lock plastic bag before placing in the envelope to guard against moisture.' },
+  { icon: SealCheck, title: 'Seal securely', desc: 'Use strong adhesive tape to seal all edges of the envelope. Do not use staples on the outside.' },
+  { icon: Scissors, title: 'Label clearly', desc: 'Attach the shipping label on a flat surface. Ensure the address is fully visible and not covered by tape.' },
+];
+
 // ── Component ────────────────────────────────────────────────────────────────
 
 export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, senderReceiver, onBack, extractedAadhaarNumber, aadhaarFront, aadhaarBack }: GuestSummaryStepProps) {
@@ -605,7 +612,7 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
             How to Pack Your Shipment
           </h3>
           <div className="grid sm:grid-cols-2 gap-3">
-            {packingSteps.map((step, i) => (
+            {(isDomestic && rateFormData?.shipmentType === 'document' ? documentPackingSteps : packingSteps).map((step, i) => (
               <motion.div
                 key={step.title}
                 initial={{ opacity: 0, x: -10 }}
