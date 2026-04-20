@@ -147,6 +147,43 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
 
   const isDomestic = mode === 'domestic';
 
+  // ── Abandoned booking notification ──
+  // Track whether booking was completed to avoid false positives
+  const bookingCompletedRef = useRef(false);
+  const abandonNotifiedRef = useRef(false);
+
+  // Helper to send abandoned booking notification
+  const notifyAbandonedBooking = useCallback((reason?: string) => {
+    if (bookingCompletedRef.current || abandonNotifiedRef.current) return;
+    abandonNotifiedRef.current = true;
+
+    const effectivePrice = (mode === 'international' && selectedCourier?.price)
+      ? selectedCourier.price
+      : selectedCourier?.price || selectedCourier?.customer_price || 0;
+
+    fetch('/api/public/guest-booking-abandoned', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        senderReceiver,
+        rateFormData,
+        selectedCourier,
+        amount: effectivePrice,
+        mode,
+        reason: reason || 'Customer left the summary/payment page without completing the booking.',
+      }),
+    }).catch(() => { /* fire-and-forget */ });
+  }, [senderReceiver, rateFormData, selectedCourier, mode]);
+
+  // Send abandoned notification on unmount if booking wasn't completed
+  useEffect(() => {
+    return () => {
+      if (!bookingCompletedRef.current) {
+        notifyAbandonedBooking();
+      }
+    };
+  }, [notifyAbandonedBooking]);
+
   // ── KYC doc helpers ──
   const kycDocLabel = kycDocType === 'aadhaar' ? 'Aadhaar Card' : kycDocType === 'driving_license' ? 'Driving License' : kycDocType === 'passport' ? 'Passport' : kycDocType === 'voter_id' ? 'Voter ID Card' : '';
 
@@ -308,6 +345,7 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
       const data = await res.json();
 
       if (!data.orderId) {
+        notifyAbandonedBooking(`Order creation failed: ${data.error || 'Unknown error'}`);
         toast({ title: 'Error', description: data.error || 'Failed to create order.', variant: 'destructive' });
         setPaymentLoading(false);
         return;
@@ -321,6 +359,7 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
         try {
           await loadCashfreeScript();
         } catch {
+          notifyAbandonedBooking('Failed to load Cashfree payment gateway script.');
           toast({ title: 'Error', description: 'Failed to load payment gateway. Please try again.', variant: 'destructive' });
           setPaymentLoading(false);
           return;
@@ -365,6 +404,7 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
         clearInterval(pollInterval);
 
         if (checkoutResult?.error && !pollingDetectedPayment) {
+          notifyAbandonedBooking(`Payment failed at Cashfree checkout: ${checkoutResult.error.message || 'Payment was not completed'}`);
           toast({ title: 'Payment Failed', description: checkoutResult.error.message || 'Payment was not completed.', variant: 'destructive' });
           setPaymentLoading(false);
           return;
@@ -379,20 +419,24 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
           });
           const verifyData = await verifyRes.json();
           if (verifyData.success) {
+            bookingCompletedRef.current = true;
             setTrackingNumber(serverTracking);
             setAwbUrl(verifyData.awbUrl || data.awbUrl || '');
             setPhase('success');
             toast({ title: 'Payment Successful', description: 'Your shipment has been booked.' });
           } else if (pollingDetectedPayment) {
             // Polling said paid but verify failed — still show success
+            bookingCompletedRef.current = true;
             setTrackingNumber(serverTracking);
             setAwbUrl(data.awbUrl || '');
             setPhase('success');
             toast({ title: 'Payment Successful', description: 'Your shipment has been booked.' });
           } else {
+            notifyAbandonedBooking('Payment verification failed after Cashfree checkout.');
             toast({ title: 'Payment Verification Failed', description: 'Please contact support with your order ID.', variant: 'destructive' });
           }
         } catch {
+          bookingCompletedRef.current = true;
           setTrackingNumber(serverTracking);
           setAwbUrl(data.awbUrl || '');
           setPhase('success');
@@ -407,12 +451,14 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
             body: JSON.stringify({ orderId: data.orderId }),
           });
           const verifyData = await verifyRes.json();
+          bookingCompletedRef.current = true;
           setTrackingNumber(verifyData.trackingNumber || serverTracking);
           setAwbUrl(verifyData.awbUrl || '');
           setPhase('success');
           toast({ title: 'Booking Confirmed', description: 'Your shipment has been booked successfully.' });
         } catch {
           // Fallback — still show success, shipment will be processed
+          bookingCompletedRef.current = true;
           setTrackingNumber(serverTracking);
           setAwbUrl('');
           setPhase('success');
@@ -420,6 +466,7 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
         }
       }
     } catch {
+      notifyAbandonedBooking('Payment process failed — possible gateway error or network issue.');
       toast({ title: 'Error', description: 'Payment failed. Please try again.', variant: 'destructive' });
     } finally {
       setPaymentLoading(false);

@@ -20,6 +20,10 @@ export async function POST(request: NextRequest) {
     const aadhaarNumber = formData.get('aadhaarNumber') as string || '';
     const couponCode = formData.get('couponCode') as string || '';
 
+    // Extract uploaded KYC documents (domestic flow)
+    const kycDocument = formData.get('kycDocument') as File | null;
+    const kycDocType = formData.get('kycDocType') as string || '';
+
     // For domestic, senderEmail is optional. For international it's required.
     // Also allow amount=0 when a coupon covers the full cost.
     const isInternationalBooking = !!rateFormData?.destinationCountry;
@@ -38,6 +42,35 @@ export async function POST(request: NextRequest) {
 
     // Store guest booking in DB with full payload for NimbusPost
     const supabase = getServiceRoleClient();
+
+    // Upload KYC document to Supabase storage if provided
+    let uploadedDocPath = '';
+    let uploadedDocName = '';
+    let uploadedDocType = '';
+    if (kycDocument && kycDocument instanceof File && kycDocument.size > 0) {
+      try {
+        const timestamp = Date.now();
+        const sanitizedName = kycDocument.name.replace(/[^a-zA-Z0-9.-]/g, '_');
+        const storagePath = `guest/${orderId}/${kycDocType || 'kyc'}_${timestamp}_${sanitizedName}`;
+        const buffer = Buffer.from(await kycDocument.arrayBuffer());
+
+        const { error: uploadErr } = await supabase.storage
+          .from('shipment-documents')
+          .upload(storagePath, buffer, { contentType: kycDocument.type, upsert: false });
+
+        if (uploadErr) {
+          console.error('[create-guest-order] KYC doc upload failed:', uploadErr.message);
+        } else {
+          uploadedDocPath = storagePath;
+          uploadedDocName = kycDocument.name;
+          uploadedDocType = kycDocument.type;
+          console.log('[create-guest-order] KYC doc uploaded:', storagePath);
+        }
+      } catch (uploadEx) {
+        console.error('[create-guest-order] KYC doc upload exception:', uploadEx);
+      }
+    }
+
     const { error: insertError } = await supabase.from('guest_bookings').insert({
       order_id: orderId,
       tracking_number: trackingNumber,
@@ -55,7 +88,12 @@ export async function POST(request: NextRequest) {
       aadhaar_last4: aadhaarNumber?.slice(-4) || '',
       coupon_code: couponCode || null,
       status: 'pending_payment',
-      booking_payload: { senderReceiver, rateFormData, selectedCourier },
+      booking_payload: {
+        senderReceiver,
+        rateFormData,
+        selectedCourier,
+        ...(uploadedDocPath && { kycDocPath: uploadedDocPath, kycDocName: uploadedDocName, kycDocMimeType: uploadedDocType, kycDocType }),
+      },
     });
 
     if (insertError) {

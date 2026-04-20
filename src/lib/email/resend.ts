@@ -1,10 +1,17 @@
 import { Resend } from 'resend';
 
+export interface EmailAttachment {
+  filename: string;
+  content: Buffer;
+  contentType?: string;
+}
+
 export interface EmailPayload {
   to: string;
   subject: string;
   html: string;
   replyTo?: string;
+  attachments?: EmailAttachment[];
 }
 
 export interface EmailResult {
@@ -33,6 +40,13 @@ export async function sendEmail(payload: EmailPayload): Promise<EmailResult> {
       subject: payload.subject,
       html: payload.html,
       ...(payload.replyTo && { reply_to: payload.replyTo }),
+      ...(payload.attachments?.length && {
+        attachments: payload.attachments.map(a => ({
+          filename: a.filename,
+          content: a.content,
+          ...(a.contentType && { content_type: a.contentType }),
+        })),
+      }),
     });
 
     if (error) {

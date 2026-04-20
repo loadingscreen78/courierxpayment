@@ -4,8 +4,9 @@ import { CASHFREE_API_BASE, CASHFREE_API_VERSION } from '@/lib/wallet/cashfreeCo
 import { createDomesticShipment, fetchDomesticRates } from '@/lib/domestic/nimbusPostDomestic';
 import { lookupPincode } from '@/lib/pincode-lookup';
 import { getNearestWarehouse } from '@/lib/warehouse/getWarehouse';
-import { sendEmail } from '@/lib/email/resend';
+import { sendEmail, type EmailAttachment } from '@/lib/email/resend';
 import { renderSenderConfirmationEmail, renderReceiverNotificationEmail, type GuestBookingEmailData } from '@/lib/email/templates/guestBookingConfirmation';
+import { renderAdminBookingNotificationEmail, type AdminGuestBookingEmailData } from '@/lib/email/templates/adminGuestBookingNotification';
 
 /**
  * Verify a guest booking payment with Cashfree.
@@ -391,6 +392,65 @@ export async function POST(request: NextRequest) {
         }).catch(e => console.error('[verify-guest-payment] Receiver email error:', e))
       );
     }
+
+    // ── Send admin notification email with all details + document attachments ──
+    const bookingMode = isInternational ? 'international' : 'domestic';
+    const shipmentTypeLabel = rateFormData?.shipmentType || 'parcel';
+    const adminSubjectPrefix = isInternational ? '🌍 Intl' : '🇮🇳 Domestic';
+    const adminSubjectType = shipmentTypeLabel.charAt(0).toUpperCase() + shipmentTypeLabel.slice(1);
+
+    const adminEmailData: AdminGuestBookingEmailData = {
+      ...emailData,
+      orderId,
+      aadhaarLast4: booking.aadhaar_last4 || '',
+      couponCode: booking.coupon_code || '',
+      weightInfo: rateFormData?.weightGrams
+        ? `${rateFormData.weightGrams}g`
+        : rateFormData?.weightKg
+          ? `${rateFormData.weightKg} kg`
+          : '',
+      dimensions: rateFormData?.lengthCm
+        ? `${rateFormData.lengthCm} × ${rateFormData.widthCm} × ${rateFormData.heightCm} cm`
+        : '',
+      bookingMode: bookingMode as 'international' | 'domestic',
+      paidAt: booking.paid_at || new Date().toISOString(),
+      kycDocType: bookingPayload?.kycDocType || '',
+    };
+
+    // Collect document attachments from Supabase storage
+    const adminAttachments: EmailAttachment[] = [];
+    try {
+      if (bookingPayload?.kycDocPath) {
+        const { data: docData, error: docErr } = await supabase.storage
+          .from('shipment-documents')
+          .download(bookingPayload.kycDocPath);
+        if (docData && !docErr) {
+          const buffer = Buffer.from(await docData.arrayBuffer());
+          adminAttachments.push({
+            filename: bookingPayload.kycDocName || 'kyc-document',
+            content: buffer,
+            contentType: bookingPayload.kycDocMimeType || 'application/octet-stream',
+          });
+          console.log(`[verify-guest-payment] Attached KYC doc: ${bookingPayload.kycDocName}`);
+        } else {
+          console.error('[verify-guest-payment] Failed to download KYC doc for admin email:', docErr?.message);
+        }
+      }
+    } catch (attachErr) {
+      console.error('[verify-guest-payment] Error fetching attachments for admin email:', attachErr);
+    }
+
+    emailPromises.push(
+      sendEmail({
+        to: 'info@courierx.in',
+        subject: `${adminSubjectPrefix} ${adminSubjectType} Booking — ${emailData.trackingNumber} | ₹${emailData.amount.toLocaleString('en-IN')} | ${emailData.senderName}`,
+        html: renderAdminBookingNotificationEmail(adminEmailData),
+        ...(adminAttachments.length > 0 && { attachments: adminAttachments }),
+      }).then(r => {
+        if (r.success) console.log(`[verify-guest-payment] Admin notification sent to info@courierx.in`);
+        else console.error(`[verify-guest-payment] Admin email failed:`, r.error);
+      }).catch(e => console.error('[verify-guest-payment] Admin email error:', e))
+    );
 
     // Wait for emails but don't fail the response if they error
     await Promise.allSettled(emailPromises);

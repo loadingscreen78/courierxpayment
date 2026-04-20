@@ -2313,6 +2313,14 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                           ) : (
                           /* ── Gift flow: multi-item view ── */
                           <>
+                            {/* CSB-IV value limit notice */}
+                            <div className="flex items-start gap-2.5 rounded-lg border border-amber-300/50 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-700/30 p-3">
+                              <Warning className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" weight="fill" />
+                              <p className="text-xs text-amber-900 dark:text-amber-200">
+                                <span className="font-semibold">CSB-IV Shipment Limit:</span> The total declared value of all items combined should not exceed <span className="font-bold">₹25,000 INR</span>. All international gift/personal shipments are sent under CSB-IV mode, which does not permit a value above ₹25,000.
+                              </p>
+                            </div>
+
                             {/* Assistive example — shown when no items filled yet */}
                             {contentItems.length === 1 && !contentItems[0].name && (
                               <div className="rounded-xl border-2 border-dashed border-coke-red/20 bg-coke-red/[0.03] overflow-hidden">
@@ -2533,6 +2541,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                                   <li>A purchase bill proves the medicines were legally bought and establishes their declared value for customs assessment.</li>
                                   <li>The patient name (buyer) must be printed on the bill — this links the purchase to the prescription.</li>
                                   <li>Medicines must not have an expiry date within 6 months from the date of shipment — expired or near-expiry medicines will be rejected at customs.</li>
+                                  <li className="font-medium text-coke-red/90">The total medicine value on the bill should be less than ₹25,000 INR — all medicine shipments are sent under CSB-IV mode, which does not allow a declared value exceeding ₹25,000.</li>
                                 </ul>
                               </div>
                               {pharmacyBillDocs.length > 0 && (
