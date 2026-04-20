@@ -61,7 +61,7 @@ const domesticRateSchema = z.object({
   shipmentType: z.enum(['document', 'gift'], { required_error: 'Select shipment type' }),
   pickupPincode: z.string().regex(/^\d{6}$/, 'Enter valid 6-digit pincode'),
   deliveryPincode: z.string().regex(/^\d{6}$/, 'Enter valid 6-digit pincode'),
-  weightKg: z.coerce.number().min(0.1, 'Min 0.1 kg').max(10, 'Max 10 kg for guest booking'),
+  weightKg: z.coerce.number().min(0.05, 'Min 50g').max(10, 'Max 10 kg for guest booking'),
   lengthCm: z.coerce.number().min(1, 'Required').max(150).optional(),
   widthCm: z.coerce.number().min(1, 'Required').max(150).optional(),
   heightCm: z.coerce.number().min(1, 'Required').max(150).optional(),
@@ -1155,6 +1155,8 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                                 <SelectTrigger><SelectValue placeholder="Select weight" /></SelectTrigger>
                               </FormControl>
                               <SelectContent>
+                                <SelectItem value="0.05">Below 50g</SelectItem>
+                                <SelectItem value="0.25">Up to 250g</SelectItem>
                                 <SelectItem value="0.1">Below 100g</SelectItem>
                                 <SelectItem value="0.5">Up to 500g</SelectItem>
                                 <SelectItem value="1">Up to 1 kg</SelectItem>
