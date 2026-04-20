@@ -69,17 +69,42 @@ export const metadata: Metadata = {
   },
 };
 
-// ── Below-fold sections loaded lazily (no SSR needed, reduces initial JS) ─────
+// ── Header & Hero: client-only but with instant skeletons so nothing flashes ──
 const LandingHeader = dynamic(
   () => import('@/components/landing/LandingHeader').then((m) => m.LandingHeader),
-  { ssr: false }
-);
-const LandingFooter = dynamic(
-  () => import('@/components/landing/LandingFooter').then((m) => m.LandingFooter),
-  { ssr: false }
+  {
+    ssr: false,
+    loading: () => <div className="h-16 w-full border-b border-border/40 bg-background/80" />,
+  }
 );
 const HeroSection = dynamic(
   () => import('@/components/landing/HeroSection').then((m) => m.HeroSection),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="min-h-[80vh] sm:min-h-[90vh] flex items-center animate-pulse">
+        <div className="container py-16 sm:py-20">
+          <div className="grid lg:grid-cols-2 gap-10 lg:gap-16 items-center">
+            <div className="space-y-6">
+              <div className="h-8 w-64 rounded-full bg-muted" />
+              <div className="space-y-3">
+                <div className="h-12 w-3/4 rounded-lg bg-muted" />
+                <div className="h-12 w-1/2 rounded-lg bg-muted" />
+              </div>
+              <div className="h-5 w-full max-w-md rounded-lg bg-muted" />
+              <div className="h-5 w-2/3 max-w-md rounded-lg bg-muted" />
+            </div>
+            <div className="hidden lg:block h-96 rounded-3xl bg-muted" />
+          </div>
+        </div>
+      </div>
+    ),
+  }
+);
+
+// ── Below-fold sections: client-only, lazy-loaded via SectionLoader ───────────
+const LandingFooter = dynamic(
+  () => import('@/components/landing/LandingFooter').then((m) => m.LandingFooter),
   { ssr: false }
 );
 const FeaturesSection = dynamic(
