@@ -662,32 +662,22 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
     if (result.pincode && (fc.pincode ?? 80) >= 50) detailsForm.setValue('senderPincode', result.pincode);
   }, [aadhaarFront, aadhaarBack, processAadhaar, detailsForm, isInternational]);
 
-  // ── Validate pickup address fields before sliding to next step ──
+  // ── Validate sender KYC + pickup fields before sliding to receiver ──
   const handlePickupNext = async () => {
-    const pickupFields = ['senderName', 'senderPhone', 'senderAddress', 'senderCity', 'senderState', 'senderPincode'] as const;
-    const result = await detailsForm.trigger(pickupFields);
+    const pickupFields = ['senderName', 'senderPhone', 'senderEmail', 'senderAddress', 'senderCity', 'senderState', 'senderPincode'] as const;
+    const fieldsToValidate = isInternational
+      ? pickupFields
+      : (['senderName', 'senderPhone', 'senderAddress', 'senderCity', 'senderState', 'senderPincode'] as const);
+    const result = await detailsForm.trigger(fieldsToValidate);
     if (!result) return;
-    // For domestic flows, skip sender step — go directly to receiver
-    if (!isInternational) {
-      setAddressSubStep('receiver');
-    } else {
-      setAddressSubStep('sender');
-    }
-  };
-
-  // ── Validate sender fields before sliding to receiver ──
-  const handleSenderNext = async () => {
-    const senderFields = ['senderPhone', 'senderEmail'] as const;
-    const result = await detailsForm.trigger(senderFields);
-    if (!result) return;
-    // Block if under 18
-    if (isUnderAge) {
-      toast({ title: 'Age Restriction', description: 'Sender must be 18 years or older to book a shipment.', variant: 'destructive' });
-      return;
-    }
-    // Require email verification for international flows
+    // For international: require email OTP verification
     if (isInternational && emailOtpState !== 'verified') {
       toast({ title: 'Email not verified', description: 'Please verify your email address before continuing.', variant: 'destructive' });
+      return;
+    }
+    // Block if under 18
+    if (isInternational && isUnderAge) {
+      toast({ title: 'Age Restriction', description: 'Sender must be 18 years or older to book a shipment.', variant: 'destructive' });
       return;
     }
     setAddressSubStep('receiver');
@@ -1588,35 +1578,37 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
               </div>
             )}
 
-            {/* Sub-step indicator — 2 steps for domestic document, 3 for domestic gift, 4 for international */}
+            {/* Sub-step indicator — 2 steps for domestic document, 3 for domestic gift, 3 for international */}
             <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto">
               {(isInternational
-                ? (['pickup', 'sender', 'receiver', 'content'] as const)
+                ? (['pickup', 'receiver', 'content'] as const)
                 : (!isInternational && (rateFormData as DomesticRateValues)?.shipmentType === 'document')
                   ? (['pickup', 'receiver'] as const)
                   : (['pickup', 'receiver', 'content'] as const)
               ).map((s, i, arr) => {
                 const stepOrder = isInternational
-                  ? ['pickup', 'sender', 'receiver', 'content']
+                  ? ['pickup', 'receiver', 'content']
                   : (!isInternational && (rateFormData as DomesticRateValues)?.shipmentType === 'document')
                     ? ['pickup', 'receiver']
                     : ['pickup', 'receiver', 'content'];
-                const currentIdx = stepOrder.indexOf(addressSubStep);
+                // Map 'sender' sub-step to 'pickup' for progress indicator purposes
+                const normalizedSubStep = (isInternational && addressSubStep === 'sender') ? 'pickup' : addressSubStep;
+                const currentIdx = stepOrder.indexOf(normalizedSubStep);
                 const labels = isInternational
-                  ? ['Pickup Details', 'Sender / KYC', 'Receiver', 'Contents']
+                  ? ['Sender KYC', 'Receiver', 'Contents']
                   : (!isInternational && (rateFormData as DomesticRateValues)?.shipmentType === 'document')
                     ? ['Pickup Address', 'Recipient Address']
                     : ['Pickup Address', 'Recipient Address', 'Contents'];
                 return (
                   <div key={s} className="flex items-center gap-1.5 sm:gap-2 flex-1 min-w-0">
                     <div className={`w-6 h-6 sm:w-7 sm:h-7 rounded-full flex items-center justify-center text-[10px] sm:text-xs font-bold transition-colors shrink-0 ${
-                      s === addressSubStep ? 'bg-coke-red text-white' :
+                      s === normalizedSubStep ? 'bg-coke-red text-white' :
                       currentIdx > i ? 'bg-candlestick-green text-white' :
                       'bg-muted text-muted-foreground'
                     }`}>
                       {currentIdx > i ? '✓' : i + 1}
                     </div>
-                    <span className={`text-[10px] sm:text-xs hidden sm:inline truncate ${s === addressSubStep ? 'font-medium text-foreground' : 'text-muted-foreground'}`}>
+                    <span className={`text-[10px] sm:text-xs hidden sm:inline truncate ${s === normalizedSubStep ? 'font-medium text-foreground' : 'text-muted-foreground'}`}>
                       {labels[i]}
                     </span>
                     {i < arr.length - 1 && <div className="flex-1 h-px bg-border min-w-2" />}
@@ -1630,170 +1622,76 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                 {/* Slider container */}
                 <div className="overflow-hidden">
                   <AnimatePresence mode="wait">
-                    {/* ── Step 1: Pickup Address ── */}
+                    {/* ── Step 1: Sender KYC + Pickup Address (International) / Pickup Address (Domestic) ── */}
                     {addressSubStep === 'pickup' && (
                       <motion.div key="pickup" initial={{ x: 300, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: -300, opacity: 0 }} transition={{ duration: 0.3, ease: 'easeInOut' }}
                         className="bg-card rounded-xl sm:rounded-2xl border border-border p-4 sm:p-8 lg:p-10 space-y-4 sm:space-y-5">
                         <div className="flex items-center gap-3 mb-1">
-                          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-orange-100 dark:bg-orange-950/40 flex items-center justify-center shrink-0">
-                            <House className="h-4 w-4 sm:h-5 sm:w-5 text-orange-600" weight="duotone" />
+                          <div className={`w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center shrink-0 ${isInternational ? 'bg-coke-red/10' : 'bg-orange-100 dark:bg-orange-950/40'}`}>
+                            {isInternational
+                              ? <IdentificationCard className="h-4 w-4 sm:h-5 sm:w-5 text-coke-red" weight="duotone" />
+                              : <House className="h-4 w-4 sm:h-5 sm:w-5 text-orange-600" weight="duotone" />
+                            }
                           </div>
                           <div className="min-w-0">
-                            <h3 className="font-semibold text-sm sm:text-base">Pickup Address</h3>
-                            <p className="text-[11px] sm:text-xs text-muted-foreground">Where should we collect the shipment from?</p>
+                            <h3 className="font-semibold text-sm sm:text-base">{isInternational ? 'Sender KYC' : 'Pickup Address'}</h3>
+                            <p className="text-[11px] sm:text-xs text-muted-foreground">{isInternational ? 'Verify your identity and pickup details' : 'Where should we collect the shipment from?'}</p>
                           </div>
                         </div>
-                        <div className="space-y-3 sm:space-y-4">
-                          <div className="grid grid-cols-1 xs:grid-cols-2 gap-3 sm:gap-4">
-                            <FormField control={detailsForm.control} name="senderName" render={({ field }) => (
-                              <FormItem><FormLabel>Full Name</FormLabel><FormControl><Input {...field} placeholder="Sender name" className="h-11" /></FormControl><FormMessage /></FormItem>
-                            )} />
-                            <FormField control={detailsForm.control} name="senderPhone" render={({ field }) => (
-                              <FormItem><FormLabel>Mobile Number</FormLabel><FormControl><Input {...field} placeholder="+91 98765 43210" className="h-11" /></FormControl><FormMessage /></FormItem>
-                            )} />
-                          </div>
-                          {/* Optional email for domestic */}
-                          {!isInternational && (
+
+                        {/* ── International: Shipper identity section ── */}
+                        {isInternational && (
+                          <div className="space-y-3 sm:space-y-4">
+                            {/* ── 1. Email with OTP verification ── */}
                             <FormField control={detailsForm.control} name="senderEmail" render={({ field }) => (
                               <FormItem>
-                                <FormLabel>Email <span className="text-muted-foreground font-normal">(optional)</span></FormLabel>
-                                <FormControl><Input {...field} type="email" placeholder="sender@email.com" className="h-11" /></FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )} />
-                          )}
-                          <FormField control={detailsForm.control} name="senderAddress" render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Full Address (House/Flat No, Street, Locality)</FormLabel>
-                              <FormControl><Input {...field} placeholder="e.g. 42, MG Road, Lajpat Nagar" className="h-11" /></FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )} />
-                          <FormField control={detailsForm.control} name="senderPincode" render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Pincode</FormLabel>
-                              <FormControl>
-                                <div className="relative">
-                                  <Input
-                                    {...field}
-                                    placeholder="110001"
-                                    maxLength={6}
-                                    readOnly={!!domesticPickupPincode}
-                                    className={`h-11 ${domesticPickupPincode ? 'bg-muted text-muted-foreground cursor-not-allowed pointer-events-none' : ''}`}
-                                  />
-                                  {!!domesticPickupPincode && (
-                                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-medium text-muted-foreground bg-muted px-1.5 py-0.5 rounded border border-border/60">locked</span>
-                                  )}
-                                </div>
-                              </FormControl>
-                              {senderLookup.loading && <p className="text-xs text-muted-foreground flex items-center gap-1"><CircleNotch className="h-3 w-3 animate-spin" /> Looking up...</p>}
-                              {senderLookup.error && <p className="text-xs text-destructive">{senderLookup.error}</p>}
-                              <FormMessage />
-                            </FormItem>
-                          )} />
-                          <div className="grid grid-cols-1 xs:grid-cols-2 gap-3 sm:gap-4">
-                            <FormField control={detailsForm.control} name="senderCity" render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>District</FormLabel>
-                                <div className={`h-11 flex items-center px-3 rounded-md border text-sm ${senderLookup.district ? 'border-border bg-muted font-medium' : 'border-border bg-muted text-muted-foreground'}`}>
-                                  {senderLookup.loading
-                                    ? <span className="flex items-center gap-1.5 text-muted-foreground"><CircleNotch className="h-3.5 w-3.5 animate-spin" /> Fetching district...</span>
-                                    : senderLookup.district || (field.value || 'Auto-filled from pincode')}
+                                <FormLabel>Email</FormLabel>
+                                <div className="flex gap-2">
+                                  <FormControl>
+                                    <Input
+                                      {...field}
+                                      type="email"
+                                      placeholder="sender@email.com"
+                                      className={`h-11 flex-1 ${emailOtpState === 'verified' ? 'border-candlestick-green bg-candlestick-green/5' : ''}`}
+                                      readOnly={emailOtpState === 'verified'}
+                                      onChange={(e) => {
+                                        field.onChange(e);
+                                        if (emailOtpState !== 'idle') {
+                                          setEmailOtpState('idle');
+                                          setEmailOtpCode(['', '', '', '', '', '']);
+                                          setEmailOtpToken('');
+                                          setEmailOtpError('');
+                                        }
+                                      }}
+                                    />
+                                  </FormControl>
+                                  {emailOtpState === 'verified' ? (
+                                    <div className="flex items-center gap-1.5 px-3 h-11 rounded-lg bg-candlestick-green/10 border border-candlestick-green/30 text-candlestick-green shrink-0">
+                                      <ShieldCheck className="h-4 w-4" weight="fill" />
+                                      <span className="text-xs font-semibold">Verified</span>
+                                    </div>
+                                  ) : emailOtpState !== 'sent' && emailOtpState !== 'verifying' ? (
+                                    <Button
+                                      type="button"
+                                      variant="outline"
+                                      onClick={handleSendEmailOtp}
+                                      disabled={emailOtpState === 'sending' || !field.value}
+                                      className="shrink-0 h-11 gap-1.5 border-coke-red/30 text-coke-red hover:bg-coke-red/5 hover:text-coke-red"
+                                    >
+                                      {emailOtpState === 'sending' ? (
+                                        <><CircleNotch className="h-4 w-4 animate-spin" /> Sending...</>
+                                      ) : (
+                                        <><EnvelopeSimple className="h-4 w-4" weight="duotone" /> Verify Email</>
+                                      )}
+                                    </Button>
+                                  ) : null}
                                 </div>
                                 <FormMessage />
                               </FormItem>
                             )} />
-                            <FormField control={detailsForm.control} name="senderState" render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>State</FormLabel>
-                                {senderLookup.state ? (
-                                  <div className="h-11 flex items-center px-3 rounded-md border border-border bg-muted text-sm font-medium">{senderLookup.state}</div>
-                                ) : (
-                                  <Select onValueChange={field.onChange} value={field.value}>
-                                    <FormControl><SelectTrigger className="h-11"><SelectValue placeholder="Select state" /></SelectTrigger></FormControl>
-                                    <SelectContent>{INDIAN_STATES.map(st => <SelectItem key={st} value={st}>{st}</SelectItem>)}</SelectContent>
-                                  </Select>
-                                )}
-                                <FormMessage />
-                              </FormItem>
-                            )} />
-                          </div>
-                          {senderLookup.state && senderLookup.district && (
-                            <p className="text-xs text-candlestick-green flex items-center gap-1">{senderLookup.district}, {senderLookup.state}</p>
-                          )}
-                        </div>
-                        <Button type="button" onClick={() => { feedbackPresets.stepChange(); handlePickupNext(); }} className="w-full bg-coke-red hover:bg-red-600 text-white gap-2 py-4 min-h-[52px] text-sm sm:text-base">
-                          {isInternational ? 'Next: Sender Details' : 'Next: Recipient Details'} <ArrowRight className="h-4 w-4" />
-                        </Button>
-                      </motion.div>
-                    )}
-
-                    {/* ── Step 2: Sender Details + Aadhaar (International only) ── */}
-                    {/* New flow: Email (with OTP) → Phone → Aadhaar Upload (auto-triggers OCR in background) → Address fields */}
-                    {isInternational && addressSubStep === 'sender' && (
-                      <motion.div key="sender" initial={{ x: 300, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: -300, opacity: 0 }} transition={{ duration: 0.3, ease: 'easeInOut' }}
-                        className="bg-card rounded-xl sm:rounded-2xl border border-border p-4 sm:p-8 lg:p-10 space-y-4 sm:space-y-5">
-                        <div className="flex items-center gap-3 mb-1">
-                          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-coke-red/10 flex items-center justify-center shrink-0">
-                            <User className="h-4 w-4 sm:h-5 sm:w-5 text-coke-red" weight="duotone" />
-                          </div>
-                          <div className="min-w-0">
-                            <h3 className="font-semibold text-sm sm:text-base">Sender Details</h3>
-                            <p className="text-[11px] sm:text-xs text-muted-foreground">Verify your identity for customs compliance</p>
-                          </div>
-                        </div>
-
-                        <div className="space-y-3 sm:space-y-4">
-                          {/* ── 1. Email with OTP verification ── */}
-                          <FormField control={detailsForm.control} name="senderEmail" render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Email</FormLabel>
-                              <div className="flex gap-2">
-                                <FormControl>
-                                  <Input
-                                    {...field}
-                                    type="email"
-                                    placeholder="sender@email.com"
-                                    className={`h-11 flex-1 ${emailOtpState === 'verified' ? 'border-candlestick-green bg-candlestick-green/5' : ''}`}
-                                    readOnly={emailOtpState === 'verified'}
-                                    onChange={(e) => {
-                                      field.onChange(e);
-                                      if (emailOtpState !== 'idle') {
-                                        setEmailOtpState('idle');
-                                        setEmailOtpCode(['', '', '', '', '', '']);
-                                        setEmailOtpToken('');
-                                        setEmailOtpError('');
-                                      }
-                                    }}
-                                  />
-                                </FormControl>
-                                {emailOtpState === 'verified' ? (
-                                  <div className="flex items-center gap-1.5 px-3 h-11 rounded-lg bg-candlestick-green/10 border border-candlestick-green/30 text-candlestick-green shrink-0">
-                                    <ShieldCheck className="h-4 w-4" weight="fill" />
-                                    <span className="text-xs font-semibold">Verified</span>
-                                  </div>
-                                ) : emailOtpState !== 'sent' && emailOtpState !== 'verifying' ? (
-                                  <Button
-                                    type="button"
-                                    variant="outline"
-                                    onClick={handleSendEmailOtp}
-                                    disabled={emailOtpState === 'sending' || !field.value}
-                                    className="shrink-0 h-11 gap-1.5 border-coke-red/30 text-coke-red hover:bg-coke-red/5 hover:text-coke-red"
-                                  >
-                                    {emailOtpState === 'sending' ? (
-                                      <><CircleNotch className="h-4 w-4 animate-spin" /> Sending...</>
-                                    ) : (
-                                      <><EnvelopeSimple className="h-4 w-4" weight="duotone" /> Verify Email</>
-                                    )}
-                                  </Button>
-                                ) : null}
-                              </div>
-                              <FormMessage />
-                            </FormItem>
-                          )} />
 
                           {/* ── Email OTP Input Section ── */}
-                          {(emailOtpState === 'sent' || emailOtpState === 'verifying') && (
+                          {isInternational && (emailOtpState === 'sent' || emailOtpState === 'verifying') && (
                             <motion.div
                               initial={{ height: 0, opacity: 0 }}
                               animate={{ height: 'auto', opacity: 1 }}
@@ -1856,7 +1754,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                           )}
 
                           {/* Verified success banner */}
-                          {emailOtpState === 'verified' && (
+                          {isInternational && emailOtpState === 'verified' && (
                             <motion.div
                               initial={{ height: 0, opacity: 0 }}
                               animate={{ height: 'auto', opacity: 1 }}
@@ -1870,17 +1768,19 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                             </motion.div>
                           )}
 
-                          {/* ── 2. Phone number ── */}
-                          <FormField control={detailsForm.control} name="senderPhone" render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Phone</FormLabel>
-                              <FormControl><Input {...field} placeholder="+91 98765 43210" className="h-11" /></FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )} />
+                          {/* ── 2. Phone number (international) ── */}
+                          {isInternational && (
+                            <FormField control={detailsForm.control} name="senderPhone" render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Phone</FormLabel>
+                                <FormControl><Input {...field} placeholder="+91 98765 43210" className="h-11" /></FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )} />
+                          )}
 
                           {/* ── 3. Aadhaar Upload (auto-triggers OCR in background) ── */}
-                          {requiresAadhaarKyc && (
+                          {isInternational && requiresAadhaarKyc && (
                             <AadhaarKycUpload
                               aadhaarFront={aadhaarFront}
                               aadhaarBack={aadhaarBack}
@@ -1893,15 +1793,131 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                               isUnderAge={isUnderAge}
                             />
                           )}
+                          </div>
+                        )}
+
+                        {/* ── Divider between KYC and Pickup (international only) ── */}
+                        {isInternational && (
+                          <div className="flex items-center gap-3 py-1">
+                            <div className="flex-1 h-px bg-border" />
+                            <div className="flex items-center gap-1.5 text-xs text-muted-foreground font-medium">
+                              <House className="h-3.5 w-3.5" weight="duotone" />
+                              Pickup Details
+                            </div>
+                            <div className="flex-1 h-px bg-border" />
+                          </div>
+                        )}
+
+                        {/* ── Pickup address fields ── */}
+                        <div className="space-y-3 sm:space-y-4">
+                          {/* Name + Phone for domestic; Name only for international (phone already above) */}
+                          <div className="grid grid-cols-1 xs:grid-cols-2 gap-3 sm:gap-4">
+                            <FormField control={detailsForm.control} name="senderName" render={({ field }) => (
+                              <FormItem><FormLabel>Full Name</FormLabel><FormControl><Input {...field} placeholder="Sender name" className="h-11" /></FormControl><FormMessage /></FormItem>
+                            )} />
+                            {!isInternational && (
+                              <FormField control={detailsForm.control} name="senderPhone" render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Mobile Number</FormLabel>
+                                  <FormControl><Input {...field} placeholder="+91 98765 43210" className="h-11" /></FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )} />
+                            )}
+                          </div>
+                          {/* Optional email for domestic */}
+                          {!isInternational && (
+                            <FormField control={detailsForm.control} name="senderEmail" render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Email <span className="text-muted-foreground font-normal">(optional)</span></FormLabel>
+                                <FormControl><Input {...field} type="email" placeholder="sender@email.com" className="h-11" /></FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )} />
+                          )}
+                          <FormField control={detailsForm.control} name="senderAddress" render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Full Address (House/Flat No, Street, Locality)</FormLabel>
+                              <FormControl><Input {...field} placeholder="e.g. 42, MG Road, Lajpat Nagar" className="h-11" /></FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )} />
+                          <FormField control={detailsForm.control} name="senderPincode" render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Pincode</FormLabel>
+                              <FormControl>
+                                <div className="relative">
+                                  <Input
+                                    {...field}
+                                    placeholder="110001"
+                                    maxLength={6}
+                                    readOnly={!!domesticPickupPincode}
+                                    className={`h-11 ${domesticPickupPincode ? 'bg-muted text-muted-foreground cursor-not-allowed pointer-events-none' : ''}`}
+                                  />
+                                  {!!domesticPickupPincode && (
+                                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-medium text-muted-foreground bg-muted px-1.5 py-0.5 rounded border border-border/60">locked</span>
+                                  )}
+                                </div>
+                              </FormControl>
+                              {senderLookup.loading && <p className="text-xs text-muted-foreground flex items-center gap-1"><CircleNotch className="h-3 w-3 animate-spin" /> Looking up...</p>}
+                              {senderLookup.error && <p className="text-xs text-destructive">{senderLookup.error}</p>}
+                              <FormMessage />
+                            </FormItem>
+                          )} />
+                          {/* Pickup phone for international — shows OTP-verified shipper phone, editable */}
+                          {isInternational && (
+                            <FormField control={detailsForm.control} name="senderPhone" render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Pickup Contact Number</FormLabel>
+                                <div className="relative">
+                                  <FormControl>
+                                    <Input {...field} placeholder="+91 98765 43210" className="h-11 pr-32" />
+                                  </FormControl>
+                                  {emailOtpState === 'verified' && field.value && (
+                                    <span className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1 text-[10px] font-medium text-candlestick-green bg-candlestick-green/10 px-2 py-0.5 rounded-full border border-candlestick-green/20">
+                                      <ShieldCheck className="h-3 w-3" weight="fill" /> OTP verified
+                                    </span>
+                                  )}
+                                </div>
+                                <p className="text-[11px] text-muted-foreground">Same as your OTP-verified number above. Edit if pickup contact is different.</p>
+                                <FormMessage />
+                              </FormItem>
+                            )} />
+                          )}
+                          <div className="grid grid-cols-1 xs:grid-cols-2 gap-3 sm:gap-4">
+                            <FormField control={detailsForm.control} name="senderCity" render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>District</FormLabel>
+                                <div className={`h-11 flex items-center px-3 rounded-md border text-sm ${senderLookup.district ? 'border-border bg-muted font-medium' : 'border-border bg-muted text-muted-foreground'}`}>
+                                  {senderLookup.loading
+                                    ? <span className="flex items-center gap-1.5 text-muted-foreground"><CircleNotch className="h-3.5 w-3.5 animate-spin" /> Fetching district...</span>
+                                    : senderLookup.district || (field.value || 'Auto-filled from pincode')}
+                                </div>
+                                <FormMessage />
+                              </FormItem>
+                            )} />
+                            <FormField control={detailsForm.control} name="senderState" render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>State</FormLabel>
+                                {senderLookup.state ? (
+                                  <div className="h-11 flex items-center px-3 rounded-md border border-border bg-muted text-sm font-medium">{senderLookup.state}</div>
+                                ) : (
+                                  <Select onValueChange={field.onChange} value={field.value}>
+                                    <FormControl><SelectTrigger className="h-11"><SelectValue placeholder="Select state" /></SelectTrigger></FormControl>
+                                    <SelectContent>{INDIAN_STATES.map(st => <SelectItem key={st} value={st}>{st}</SelectItem>)}</SelectContent>
+                                  </Select>
+                                )}
+                                <FormMessage />
+                              </FormItem>
+                            )} />
+                          </div>
+                          {senderLookup.state && senderLookup.district && (
+                            <p className="text-xs text-candlestick-green flex items-center gap-1">{senderLookup.district}, {senderLookup.state}</p>
+                          )}
                         </div>
-                        <div className="flex gap-3">
-                          <Button type="button" variant="outline" onClick={() => { feedbackPresets.tap(); setAddressSubStep('pickup'); }} className="flex-1 gap-1.5 min-h-[48px] text-sm">
-                            <ArrowLeft className="h-4 w-4 shrink-0" /> <span className="truncate">Pickup</span>
-                          </Button>
-                          <Button type="button" onClick={() => { feedbackPresets.stepChange(); handleSenderNext(); }} disabled={isUnderAge} className="flex-1 bg-coke-red hover:bg-red-600 text-white gap-1.5 min-h-[48px] text-sm">
-                            <span className="truncate">Next: Receiver</span> <ArrowRight className="h-4 w-4 shrink-0" />
-                          </Button>
-                        </div>
+                        <Button type="button" onClick={() => { feedbackPresets.stepChange(); handlePickupNext(); }} disabled={isInternational && isUnderAge} className="w-full bg-coke-red hover:bg-red-600 text-white gap-2 py-4 min-h-[52px] text-sm sm:text-base">
+                          Next: Recipient Details <ArrowRight className="h-4 w-4" />
+                        </Button>
                       </motion.div>
                     )}
 
@@ -2151,8 +2167,8 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                           )}
                         </div>
                         <div className="flex gap-3">
-                          <Button type="button" variant="outline" onClick={() => { feedbackPresets.tap(); setAddressSubStep(isInternational ? 'sender' : 'pickup'); }} className="flex-1 gap-1.5 min-h-[48px] text-sm">
-                            <ArrowLeft className="h-4 w-4 shrink-0" /> <span className="truncate">{isInternational ? 'Sender' : 'Pickup'}</span>
+                          <Button type="button" variant="outline" onClick={() => { feedbackPresets.tap(); setAddressSubStep('pickup'); }} className="flex-1 gap-1.5 min-h-[48px] text-sm">
+                            <ArrowLeft className="h-4 w-4 shrink-0" /> <span className="truncate">{isInternational ? 'Sender KYC' : 'Pickup'}</span>
                           </Button>
                           <Button type="button" onClick={() => { feedbackPresets.stepChange(); handleReceiverNext(); }} className="flex-1 bg-coke-red hover:bg-red-600 text-white gap-1.5 min-h-[48px] text-sm">
                             {(!isInternational && (rateFormData as DomesticRateValues)?.shipmentType === 'document') ? <><span className="truncate">Continue to Summary</span> <ArrowRight className="h-4 w-4 shrink-0" /></> : <><span className="truncate">Next: Contents</span> <ArrowRight className="h-4 w-4 shrink-0" /></>}
