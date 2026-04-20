@@ -66,6 +66,7 @@ const domesticRateSchema = z.object({
   widthCm: z.coerce.number().min(1, 'Required').max(150).optional(),
   heightCm: z.coerce.number().min(1, 'Required').max(150).optional(),
   declaredValue: z.coerce.number().min(0).max(49000).optional().default(0),
+  prohibitedItemsConfirmed: z.boolean().refine(val => val === true, { message: 'You must confirm your package does not contain prohibited items' }),
 }).superRefine((data, ctx) => {
   if (data.shipmentType === 'document') {
     if (data.weightKg > 2.5) ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Documents max 2.5 kg', path: ['weightKg'] });
@@ -378,7 +379,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
   // ── Domestic rate form ──
   const domForm = useForm<DomesticRateValues>({
     resolver: zodResolver(domesticRateSchema),
-    defaultValues: { shipmentType: undefined, pickupPincode: '', deliveryPincode: '', weightKg: undefined as any, lengthCm: undefined as any, widthCm: undefined as any, heightCm: undefined as any, declaredValue: 0 },
+    defaultValues: { shipmentType: undefined, pickupPincode: '', deliveryPincode: '', weightKg: undefined as any, lengthCm: undefined as any, widthCm: undefined as any, heightCm: undefined as any, declaredValue: 0, prohibitedItemsConfirmed: false },
   });
   const detailsForm = useForm<SenderReceiverValues>({
     resolver: zodResolver(senderReceiverSchema),
@@ -1255,6 +1256,24 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                       )}
                     </div>
                     )}
+
+                    {/* Prohibited Items Confirmation */}
+                    <FormField control={domForm.control} name="prohibitedItemsConfirmed" render={({ field }) => (
+                      <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-lg border border-border p-4 bg-muted/30">
+                        <FormControl>
+                          <Checkbox checked={field.value} onCheckedChange={field.onChange} />
+                        </FormControl>
+                        <div className="space-y-1 leading-none">
+                          <FormLabel className="text-sm font-medium cursor-pointer">
+                            I confirm this package does not contain prohibited items
+                          </FormLabel>
+                          <p className="text-xs text-muted-foreground">
+                            Gold, silver, precious metals, chemicals, narcotics, batteries, currency, physical cash, credit/debit cards, or any restricted substances.
+                          </p>
+                          <FormMessage />
+                        </div>
+                      </FormItem>
+                    )} />
 
                     <Button type="submit" className="w-full bg-coke-red hover:bg-red-600 text-white gap-2 py-4 min-h-[52px] text-sm sm:text-base" disabled={isDomesticLoading} onClick={() => feedbackPresets.tap()}>
                       {isDomesticLoading ? <><CircleNotch className="h-4 w-4 animate-spin" /> Fetching Rates...</> : <>Calculate Rates <ArrowRight className="h-4 w-4" /></>}
