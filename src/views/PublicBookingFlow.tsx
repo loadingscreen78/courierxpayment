@@ -1085,7 +1085,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                       </FormItem>
                     )} />
 
-                    <Button type="submit" className="w-full bg-coke-red hover:bg-red-600 text-white gap-2 py-5" onClick={() => feedbackPresets.tap()}>
+                    <Button type="submit" className="w-full bg-coke-red hover:bg-red-600 text-white gap-2 py-4 min-h-[52px] text-sm sm:text-base" onClick={() => feedbackPresets.tap()}>
                       Calculate Rates <ArrowRight className="h-4 w-4" />
                     </Button>
                   </form>
@@ -1230,7 +1230,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                     </div>
                     )}
 
-                    <Button type="submit" className="w-full bg-coke-red hover:bg-red-600 text-white gap-2 py-5" disabled={isDomesticLoading} onClick={() => feedbackPresets.tap()}>
+                    <Button type="submit" className="w-full bg-coke-red hover:bg-red-600 text-white gap-2 py-4 min-h-[52px] text-sm sm:text-base" disabled={isDomesticLoading} onClick={() => feedbackPresets.tap()}>
                       {isDomesticLoading ? <><CircleNotch className="h-4 w-4 animate-spin" /> Fetching Rates...</> : <>Calculate Rates <ArrowRight className="h-4 w-4" /></>}
                     </Button>
                   </form>
@@ -1314,7 +1314,16 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                                   <span className="text-[10px] sm:text-xs px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950/40 text-amber-600 font-medium shrink-0">Available Soon</span>
                                 )}
                               </div>
-                              <p className="text-xs sm:text-sm text-muted-foreground mt-1">{option.transitDays.min}–{option.transitDays.max} days delivery</p>
+                              <p className="text-xs sm:text-sm text-muted-foreground mt-1">
+                                {(() => {
+                                  const min = option.transitDays.min;
+                                  const max = option.transitDays.max;
+                                  const d = new Date();
+                                  d.setDate(d.getDate() + max);
+                                  const dateStr = d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+                                  return `${min}–${max} days · Est. by ${dateStr}`;
+                                })()}
+                              </p>
                               <div className="flex flex-wrap gap-1 sm:gap-1.5 mt-2">
                                 {option.features.slice(0, 3).map(f => (
                                   <span key={f} className="text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 rounded bg-muted/50 text-muted-foreground">{f}</span>
@@ -1333,7 +1342,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                                   Available Soon
                                 </Button>
                               ) : (
-                                <Button size="sm" className="mt-2 bg-coke-red hover:bg-red-600 text-white" onClick={() => { feedbackPresets.select(); handleSelectCourier(option); }}>
+                                <Button size="sm" className="mt-2 bg-coke-red hover:bg-red-600 text-white min-h-[44px] px-4" onClick={() => { feedbackPresets.select(); handleSelectCourier(option); }}>
                                   Book Now
                                 </Button>
                               )}
@@ -1655,7 +1664,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                             <p className="text-xs text-candlestick-green flex items-center gap-1">{senderLookup.district}, {senderLookup.state}</p>
                           )}
                         </div>
-                        <Button type="button" onClick={() => { feedbackPresets.stepChange(); handlePickupNext(); }} className="w-full bg-coke-red hover:bg-red-600 text-white gap-2 py-5">
+                        <Button type="button" onClick={() => { feedbackPresets.stepChange(); handlePickupNext(); }} className="w-full bg-coke-red hover:bg-red-600 text-white gap-2 py-4 min-h-[52px] text-sm sm:text-base">
                           {isInternational ? 'Next: Sender Details' : 'Next: Recipient Details'} <ArrowRight className="h-4 w-4" />
                         </Button>
                       </motion.div>
@@ -1828,11 +1837,11 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                           )}
                         </div>
                         <div className="flex gap-3">
-                          <Button type="button" variant="outline" onClick={() => { feedbackPresets.tap(); setAddressSubStep('pickup'); }} className="flex-1 gap-1.5">
-                            <ArrowLeft className="h-4 w-4" /> Pickup
+                          <Button type="button" variant="outline" onClick={() => { feedbackPresets.tap(); setAddressSubStep('pickup'); }} className="flex-1 gap-1.5 min-h-[48px] text-sm">
+                            <ArrowLeft className="h-4 w-4 shrink-0" /> <span className="truncate">Pickup</span>
                           </Button>
-                          <Button type="button" onClick={() => { feedbackPresets.stepChange(); handleSenderNext(); }} disabled={isUnderAge} className="flex-1 bg-coke-red hover:bg-red-600 text-white gap-2">
-                            Next: Receiver <ArrowRight className="h-4 w-4" />
+                          <Button type="button" onClick={() => { feedbackPresets.stepChange(); handleSenderNext(); }} disabled={isUnderAge} className="flex-1 bg-coke-red hover:bg-red-600 text-white gap-1.5 min-h-[48px] text-sm">
+                            <span className="truncate">Next: Receiver</span> <ArrowRight className="h-4 w-4 shrink-0" />
                           </Button>
                         </div>
                       </motion.div>
@@ -2078,11 +2087,11 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                           )}
                         </div>
                         <div className="flex gap-3">
-                          <Button type="button" variant="outline" onClick={() => { feedbackPresets.tap(); setAddressSubStep(isInternational ? 'sender' : 'pickup'); }} className="flex-1 gap-1.5">
-                            <ArrowLeft className="h-4 w-4" /> {isInternational ? 'Sender' : 'Pickup'}
+                          <Button type="button" variant="outline" onClick={() => { feedbackPresets.tap(); setAddressSubStep(isInternational ? 'sender' : 'pickup'); }} className="flex-1 gap-1.5 min-h-[48px] text-sm">
+                            <ArrowLeft className="h-4 w-4 shrink-0" /> <span className="truncate">{isInternational ? 'Sender' : 'Pickup'}</span>
                           </Button>
-                          <Button type="button" onClick={() => { feedbackPresets.stepChange(); handleReceiverNext(); }} className="flex-1 bg-coke-red hover:bg-red-600 text-white gap-2">
-                            {(!isInternational && (rateFormData as DomesticRateValues)?.shipmentType === 'document') ? <>Continue to Summary <ArrowRight className="h-4 w-4" /></> : <>Next: Contents <ArrowRight className="h-4 w-4" /></>}
+                          <Button type="button" onClick={() => { feedbackPresets.stepChange(); handleReceiverNext(); }} className="flex-1 bg-coke-red hover:bg-red-600 text-white gap-1.5 min-h-[48px] text-sm">
+                            {(!isInternational && (rateFormData as DomesticRateValues)?.shipmentType === 'document') ? <><span className="truncate">Continue to Summary</span> <ArrowRight className="h-4 w-4 shrink-0" /></> : <><span className="truncate">Next: Contents</span> <ArrowRight className="h-4 w-4 shrink-0" /></>}
                           </Button>
                         </div>
                       </motion.div>
@@ -2398,8 +2407,8 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                         )} />
 
                         <div className="flex gap-3">
-                          <Button type="button" variant="outline" onClick={() => { feedbackPresets.tap(); setAddressSubStep('receiver'); }} className="flex-1 gap-1.5">
-                            <ArrowLeft className="h-4 w-4" /> Receiver
+                          <Button type="button" variant="outline" onClick={() => { feedbackPresets.tap(); setAddressSubStep('receiver'); }} className="flex-1 gap-1.5 min-h-[48px] text-sm">
+                            <ArrowLeft className="h-4 w-4 shrink-0" /> <span className="truncate">Receiver</span>
                           </Button>
                           <Button type="button" onClick={() => {
                             feedbackPresets.stepChange();
@@ -2423,8 +2432,8 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                             const desc = contentItems.filter(i => i.name.trim()).map(i => `${i.name} (${i.type || 'other'}) x${i.qty} @ ₹${i.unitPrice}`).join('; ');
                             detailsForm.setValue('contentDescription', desc);
                             detailsForm.handleSubmit(handleFinalSubmit)();
-                          }} className="flex-1 bg-coke-red hover:bg-red-600 text-white gap-2">
-                            Continue to Summary <ArrowRight className="h-4 w-4" />
+                          }} className="flex-1 bg-coke-red hover:bg-red-600 text-white gap-1.5 min-h-[48px] text-sm">
+                            <span className="truncate">Continue to Summary</span> <ArrowRight className="h-4 w-4 shrink-0" />
                           </Button>
                         </div>
                       </motion.div>

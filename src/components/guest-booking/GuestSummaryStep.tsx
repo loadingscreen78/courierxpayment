@@ -633,11 +633,11 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
         </motion.div>
 
         {/* Actions */}
-        <div className="flex gap-3">
-          <Button variant="outline" className="flex-1" onClick={() => router.push(`/public/track?tracking=${encodeURIComponent(trackingNumber)}`)}>
+        <div className="flex flex-col xs:flex-row gap-3">
+          <Button variant="outline" className="flex-1 min-h-[48px] text-sm" onClick={() => router.push(`/public/track?tracking=${encodeURIComponent(trackingNumber)}`)}>
             Track Shipment
           </Button>
-          <Button className="flex-1 bg-coke-red hover:bg-red-600 text-white" onClick={() => router.push('/public/book')}>
+          <Button className="flex-1 min-h-[48px] text-sm bg-coke-red hover:bg-red-600 text-white" onClick={() => router.push('/public/book')}>
             Ship Another
           </Button>
         </div>
@@ -699,7 +699,7 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
                 <p className="text-sm font-medium">{senderReceiver.receiverName}</p>
                 <p className="text-xs text-muted-foreground">{senderReceiver.receiverAddress}</p>
                 <p className="text-xs text-muted-foreground">{senderReceiver.receiverCity} - {senderReceiver.receiverZipcode}</p>
-                <p className="text-xs text-muted-foreground">{senderReceiver.receiverPhone} · {senderReceiver.receiverEmail}</p>
+                <p className="text-xs text-muted-foreground">{senderReceiver.receiverPhone}{senderReceiver.receiverEmail ? ` · ${senderReceiver.receiverEmail}` : ''}</p>
               </div>
             </div>
           ) : (
@@ -956,14 +956,14 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
       <Button
         onClick={() => { feedbackPresets.tap(); handlePayNow(); }}
         disabled={paymentLoading || (!isDomestic && !aadhaarVerified) || !termsAccepted}
-        className="w-full bg-coke-red hover:bg-red-600 text-white gap-2 py-5 sm:py-6 text-sm sm:text-base shadow-lg shadow-coke-red/20"
+        className="w-full bg-coke-red hover:bg-red-600 text-white gap-2 min-h-[56px] py-3 text-sm sm:text-base shadow-lg shadow-coke-red/20"
       >
         {paymentLoading ? (
-          <><CircleNotch className="h-5 w-5 animate-spin" /> Processing Payment...</>
+          <><CircleNotch className="h-5 w-5 animate-spin shrink-0" /> <span className="truncate">Processing Payment...</span></>
         ) : (
           <>
-            <ShieldCheck className="h-5 w-5" weight="bold" />
-            Complete Booking — ₹{finalPrice.toLocaleString('en-IN')}
+            <ShieldCheck className="h-5 w-5 shrink-0" weight="bold" />
+            <span className="truncate">Complete Booking — ₹{finalPrice.toLocaleString('en-IN')}</span>
           </>
         )}
       </Button>

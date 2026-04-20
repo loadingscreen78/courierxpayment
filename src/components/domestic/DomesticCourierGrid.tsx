@@ -94,19 +94,28 @@ export function DomesticCourierCard({
           <p className="text-[11px] text-muted-foreground mt-0.5">incl. all taxes</p>
         </div>
 
-        {/* Delivery date */}
+        {/* Delivery date — computed from actual estimated_delivery_days returned by courier API */}
         <div className="flex items-center justify-center gap-1.5 text-sm">
           <Clock size={14} weight="bold" className="text-muted-foreground" />
           <span>
             {(() => {
+              const days = courier.estimated_delivery_days;
+              if (!days || days <= 0) return `${courier.mode === 'air' ? '1–3' : '4–7'} days`;
               const d = new Date();
-              d.setDate(d.getDate() + courier.estimated_delivery_days);
-              // Skip weekends
-              while (d.getDay() === 0 || d.getDay() === 6) d.setDate(d.getDate() + 1);
+              // Add business days (skip weekends)
+              let added = 0;
+              while (added < days) {
+                d.setDate(d.getDate() + 1);
+                if (d.getDay() !== 0 && d.getDay() !== 6) added++;
+              }
               return `By ${d.toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' })}`;
             })()}
           </span>
         </div>
+        {/* Show raw days for clarity */}
+        <p className="text-[10px] text-muted-foreground text-center -mt-1">
+          {courier.estimated_delivery_days > 0 ? `${courier.estimated_delivery_days} business day${courier.estimated_delivery_days === 1 ? '' : 's'}` : ''}
+        </p>
 
         {/* Rating */}
         <div className="space-y-1.5 pt-1 text-left">
@@ -125,7 +134,7 @@ export function DomesticCourierCard({
         {showBookButton ? (
           <Button
             size="sm"
-            className={cn("w-full mt-2 transition-all bg-coke-red hover:bg-coke-red/90 text-white")}
+            className={cn("w-full mt-2 min-h-[44px] text-sm transition-all bg-coke-red hover:bg-coke-red/90 text-white")}
             onClick={(e) => { e.stopPropagation(); onBook?.(); }}
           >
             Book Now <CaretRight size={16} weight="bold" className="ml-1" />
@@ -134,7 +143,7 @@ export function DomesticCourierCard({
           <Button
             variant={isSelected ? "default" : "outline"}
             size="sm"
-            className={cn("w-full mt-2 transition-all", isSelected && "bg-coke-red hover:bg-coke-red/90")}
+            className={cn("w-full mt-2 min-h-[44px] text-sm transition-all", isSelected && "bg-coke-red hover:bg-coke-red/90")}
           >
             {isSelected
               ? <><Check size={16} weight="bold" className="mr-1" /> Selected</>
