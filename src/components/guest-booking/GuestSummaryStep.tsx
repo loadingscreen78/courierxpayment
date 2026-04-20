@@ -691,6 +691,7 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
                 <p className="text-xs text-muted-foreground">{senderReceiver.senderAddress}</p>
                 <p className="text-xs text-muted-foreground">{senderReceiver.senderCity} - {senderReceiver.senderPincode}</p>
                 <p className="text-xs text-muted-foreground">{senderReceiver.senderPhone}</p>
+                {senderReceiver.senderEmail && <p className="text-xs text-muted-foreground">{senderReceiver.senderEmail}</p>}
               </div>
               <div>
                 <p className="text-xs text-muted-foreground mb-1 flex items-center gap-1">
@@ -699,7 +700,8 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
                 <p className="text-sm font-medium">{senderReceiver.receiverName}</p>
                 <p className="text-xs text-muted-foreground">{senderReceiver.receiverAddress}</p>
                 <p className="text-xs text-muted-foreground">{senderReceiver.receiverCity} - {senderReceiver.receiverZipcode}</p>
-                <p className="text-xs text-muted-foreground">{senderReceiver.receiverPhone}{senderReceiver.receiverEmail ? ` · ${senderReceiver.receiverEmail}` : ''}</p>
+                <p className="text-xs text-muted-foreground">{senderReceiver.receiverPhone}</p>
+                {senderReceiver.receiverEmail && <p className="text-xs text-muted-foreground">{senderReceiver.receiverEmail}</p>}
               </div>
             </div>
           ) : (
