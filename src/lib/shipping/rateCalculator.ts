@@ -352,10 +352,9 @@ export const calculateRate = (
     zone: country.rateZone,
     billableWeightKg,
     breakdown: [
-      { label: 'Base rate', amount: baseRate },
+      { label: 'Base rate', amount: markedUpBase },
       { label: `Fuel surcharge (${fuelPercent}%)`, amount: fuelSurcharge },
       { label: 'Domestic transit', amount: domesticTransit },
-      ...(isGuest && savings > 0 ? [{ label: 'Open account to save', amount: -savings }] : []),
     ],
   };
 };
