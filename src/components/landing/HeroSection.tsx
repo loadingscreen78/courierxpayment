@@ -66,79 +66,73 @@ const MobileCTALightbox = ({
     <AnimatePresence>
       {open && (
         <>
-          {/* Blurred backdrop */}
+          {/* Blurred backdrop — covers full screen */}
           <motion.div
             key="backdrop"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.35, ease: 'easeOut' }}
+            transition={{ duration: 0.3, ease: 'easeOut' }}
             className="fixed inset-0 z-[60] backdrop-blur-xl"
-            style={{ backgroundColor: 'rgba(0,0,0,0.55)' }}
+            style={{ backgroundColor: 'rgba(0,0,0,0.6)' }}
             onClick={onClose}
           />
 
-          {/* Lightbox panel — neumorphism card sliding up from bottom */}
-          <motion.div
-            key="lightbox"
-            initial={{ opacity: 0, y: '100%' }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: '100%' }}
-            transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
-            className="fixed bottom-0 left-0 right-0 z-[70] px-4 pb-6 pt-2"
-            style={{ maxHeight: '92vh', overflowY: 'auto' }}
-          >
-            {/* Drag handle */}
-            <div className="flex justify-center mb-3">
-              <div
-                className="w-10 h-1 rounded-full"
-                style={{ background: 'rgba(255,255,255,0.35)' }}
-              />
-            </div>
-
-            {/* Neumorphism card */}
-            <div
-              className="relative rounded-3xl overflow-hidden"
-              style={{
-                background: 'linear-gradient(145deg, #f0f0f0, #cacaca)',
-                boxShadow:
-                  '20px 20px 60px rgba(0,0,0,0.25), -20px -20px 60px rgba(255,255,255,0.15), inset 0 1px 0 rgba(255,255,255,0.6)',
-              }}
+          {/* Centred wrapper — true vertical + horizontal centre */}
+          <div className="fixed inset-0 z-[70] flex items-center justify-center px-4 py-8 pointer-events-none">
+            <motion.div
+              key="lightbox"
+              initial={{ opacity: 0, scale: 0.92, y: 24 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.92, y: 24 }}
+              transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+              className="pointer-events-auto w-full"
+              style={{ maxWidth: 480, maxHeight: '90vh', overflowY: 'auto' }}
             >
-              {/* Dark mode neumorphism overlay */}
+              {/* Neumorphism card */}
               <div
-                className="absolute inset-0 rounded-3xl pointer-events-none dark:block hidden"
+                className="relative rounded-3xl overflow-hidden"
                 style={{
-                  background: 'linear-gradient(145deg, #2a2a2a, #1a1a1a)',
+                  background: 'linear-gradient(145deg, #f2f2f2, #c8c8c8)',
                   boxShadow:
-                    'inset 4px 4px 8px rgba(0,0,0,0.4), inset -4px -4px 8px rgba(255,255,255,0.05)',
+                    '24px 24px 64px rgba(0,0,0,0.28), -12px -12px 40px rgba(255,255,255,0.18), inset 0 1px 0 rgba(255,255,255,0.7)',
                 }}
-              />
-
-              {/* Close button */}
-              <button
-                onClick={onClose}
-                className="absolute top-4 right-4 z-10 w-8 h-8 rounded-full flex items-center justify-center transition-all"
-                style={{
-                  background: 'rgba(0,0,0,0.08)',
-                  boxShadow: '2px 2px 5px rgba(0,0,0,0.15), -2px -2px 5px rgba(255,255,255,0.5)',
-                }}
-                aria-label="Close"
               >
-                <X className="h-4 w-4 text-foreground/70" weight="bold" />
-              </button>
+                {/* Dark mode neumorphism overlay */}
+                <div
+                  className="absolute inset-0 rounded-3xl pointer-events-none dark:block hidden"
+                  style={{
+                    background: 'linear-gradient(145deg, #2a2a2a, #1a1a1a)',
+                    boxShadow:
+                      'inset 4px 4px 8px rgba(0,0,0,0.4), inset -4px -4px 8px rgba(255,255,255,0.05)',
+                  }}
+                />
 
-              {/* Scroll-to-dismiss hint */}
-              <p className="text-center text-xs text-muted-foreground pt-4 pb-1 px-4">
-                Scroll down to dismiss
-              </p>
+                {/* Close button */}
+                <button
+                  onClick={onClose}
+                  className="absolute top-4 right-4 z-10 w-8 h-8 rounded-full flex items-center justify-center transition-all"
+                  style={{
+                    background: 'rgba(0,0,0,0.08)',
+                    boxShadow: '2px 2px 5px rgba(0,0,0,0.15), -2px -2px 5px rgba(255,255,255,0.5)',
+                  }}
+                  aria-label="Close"
+                >
+                  <X className="h-4 w-4 text-foreground/70" weight="bold" />
+                </button>
 
-              {/* CTA Form */}
-              <div className="p-4 relative z-[1]">
-                <HeroCTAForm defaultTab={defaultTab} />
+                {/* Scroll-to-dismiss hint */}
+                <p className="text-center text-xs text-muted-foreground pt-4 pb-1 px-4">
+                  Scroll down to dismiss
+                </p>
+
+                {/* CTA Form */}
+                <div className="p-4 relative z-[1]">
+                  <HeroCTAForm defaultTab={defaultTab} />
+                </div>
               </div>
-            </div>
-          </motion.div>
+            </motion.div>
+          </div>
         </>
       )}
     </AnimatePresence>
