@@ -68,7 +68,7 @@ const domesticRateSchema = z.object({
   declaredValue: z.coerce.number().min(0).max(49000).optional().default(0),
 }).superRefine((data, ctx) => {
   if (data.shipmentType === 'document') {
-    if (data.weightKg > 2) ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Documents max 2 kg', path: ['weightKg'] });
+    if (data.weightKg > 2.5) ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Documents max 2.5 kg', path: ['weightKg'] });
   }
   if (data.shipmentType === 'gift') {
     if (!data.lengthCm) ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Required', path: ['lengthCm'] });
@@ -1156,12 +1156,12 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                               </FormControl>
                               <SelectContent>
                                 <SelectItem value="0.05">Below 50g</SelectItem>
-                                <SelectItem value="0.25">Up to 250g</SelectItem>
                                 <SelectItem value="0.1">Below 100g</SelectItem>
                                 <SelectItem value="0.5">Up to 500g</SelectItem>
                                 <SelectItem value="1">Up to 1 kg</SelectItem>
                                 <SelectItem value="1.5">Up to 1.5 kg</SelectItem>
                                 <SelectItem value="2">Up to 2 kg</SelectItem>
+                                <SelectItem value="2.5">Up to 2.5 kg</SelectItem>
                               </SelectContent>
                             </Select>
                           ) : (
