@@ -150,7 +150,7 @@ export const HeroSection = () => {
   }, []);
 
   return (
-    <section className="relative min-h-[80vh] sm:min-h-[90vh] flex items-center overflow-x-clip">
+    <section className="relative min-h-[60vh] sm:min-h-[67.5vh] flex items-center overflow-x-clip">
       {/* Animated Background */}
       <div className="absolute inset-0 bg-gradient-to-br from-background via-background to-primary/5" />
 
@@ -192,10 +192,10 @@ export const HeroSection = () => {
         }}
       />
 
-      <div className="container relative z-10 py-16 sm:py-16 md:py-20">
-        <div className="grid lg:grid-cols-2 gap-10 lg:gap-16 items-center">
+      <div className="container relative z-10 py-12 sm:py-12 md:py-[60px]">
+        <div className="grid lg:grid-cols-2 gap-[30px] lg:gap-12 items-center">
           {/* Left Content */}
-          <div className="space-y-6 sm:space-y-8">
+          <div className="space-y-[18px] sm:space-y-6">
             {/* Badge */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
@@ -294,7 +294,7 @@ export const HeroSection = () => {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ duration: 0.8, delay: 1 }}
-              className="hidden sm:block pt-8 border-t border-border/50"
+              className="hidden sm:block pt-6 border-t border-border/50"
             >
               <p className="text-xs text-muted-foreground mb-4 uppercase tracking-wider">
                 Trusted Carrier Partners — Domestic &amp; International

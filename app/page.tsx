@@ -82,9 +82,9 @@ const HeroSection = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div className="min-h-[80vh] sm:min-h-[90vh] flex items-center animate-pulse">
-        <div className="container py-16 sm:py-20">
-          <div className="grid lg:grid-cols-2 gap-10 lg:gap-16 items-center">
+      <div className="min-h-[60vh] sm:min-h-[67.5vh] flex items-center animate-pulse">
+        <div className="container py-12 sm:py-12">
+          <div className="grid lg:grid-cols-2 gap-[30px] lg:gap-12 items-center">
             <div className="space-y-6">
               <div className="h-8 w-64 rounded-full bg-muted" />
               <div className="space-y-3">
