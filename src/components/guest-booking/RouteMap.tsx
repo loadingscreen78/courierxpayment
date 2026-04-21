@@ -1,8 +1,10 @@
 "use client";
 
-import { useEffect, useRef, useState, useMemo } from 'react';
+import { useEffect, useRef, useState, useMemo, useCallback } from 'react';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
+import { X, ArrowsOut } from '@phosphor-icons/react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface RouteMapProps {
   pickupAddress: string;
@@ -162,16 +164,24 @@ export default function RouteMap(props: RouteMapProps) {
   const { pickupPincode, destinationCountry, destinationCountryName, mode } = props;
 
   const mapContainer = useRef<HTMLDivElement>(null);
+  const expandedMapContainer = useRef<HTMLDivElement>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
+  const expandedMapRef = useRef<mapboxgl.Map | null>(null);
   const planeMarkerRef = useRef<mapboxgl.Marker | null>(null);
+  const expandedPlaneMarkerRef = useRef<mapboxgl.Marker | null>(null);
   const animRef = useRef<number>(0);
+  const expandedAnimRef = useRef<number>(0);
   const arcRef = useRef<[number, number][]>([]);
   const idxRef = useRef(0);
+  const expandedIdxRef = useRef(0);
   const lastTimeRef = useRef(0);
+  const expandedLastTimeRef = useRef(0);
 
   const [distanceKm, setDistanceKm] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [resolvedCoords, setResolvedCoords] = useState<{ pickup: [number, number]; dest: [number, number] } | null>(null);
 
   const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
 
@@ -182,6 +192,112 @@ export default function RouteMap(props: RouteMapProps) {
     [mode, pickupPincode, destinationCountry, props.destinationZipcode]
   );
 
+  // Lock body scroll when expanded
+  useEffect(() => {
+    if (isExpanded) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => { document.body.style.overflow = ''; };
+  }, [isExpanded]);
+
+  // Close on Escape key
+  useEffect(() => {
+    if (!isExpanded) return;
+    const handleKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setIsExpanded(false); };
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
+  }, [isExpanded]);
+
+  // ── Initialize expanded map when modal opens ──
+  useEffect(() => {
+    if (!isExpanded || !token || !expandedMapContainer.current || !resolvedCoords) return;
+
+    const { pickup, dest } = resolvedCoords;
+    const km = haversineKm(pickup, dest);
+    const arc = generateArc(pickup, dest, 180);
+
+    const lngs = [pickup[0], dest[0]];
+    const lats = [pickup[1], dest[1]];
+    const pad = Math.min(Math.max(1.5, km * 0.001), 8);
+    const bounds = new mapboxgl.LngLatBounds(
+      [Math.min(...lngs) - pad, Math.min(...lats) - pad],
+      [Math.max(...lngs) + pad, Math.max(...lats) + pad],
+    );
+
+    mapboxgl.accessToken = token;
+    const map = new mapboxgl.Map({
+      container: expandedMapContainer.current,
+      style: 'mapbox://styles/mapbox/light-v11',
+      bounds,
+      fitBoundsOptions: { padding: { top: 60, bottom: 60, left: 50, right: 50 }, maxZoom: mode === 'domestic' ? 8 : 5 },
+      interactive: true,
+      attributionControl: false,
+      projection: 'mercator',
+    });
+
+    map.addControl(new mapboxgl.NavigationControl({ showCompass: false }), 'top-right');
+
+    map.on('load', () => {
+      map.addSource('route', {
+        type: 'geojson',
+        data: { type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: arc } },
+      });
+      map.addLayer({
+        id: 'route-dash',
+        type: 'line',
+        source: 'route',
+        layout: { 'line-join': 'round', 'line-cap': 'round' },
+        paint: { 'line-color': '#F40000', 'line-width': 2.5, 'line-dasharray': [3, 4], 'line-opacity': 0.55 },
+      });
+
+      addPinMarker(map, pickup, '#3B82F6', props.pickupCity || 'India');
+      addPinMarker(map, dest, '#10B981', props.destinationCountryName || props.destinationCity || 'Destination');
+
+      const planeEl = createPaperPlaneEl();
+      const planeSvg = planeEl.querySelector<SVGElement>('#plane-svg')!;
+      const planeMarker = new mapboxgl.Marker({ element: planeEl, anchor: 'center', rotationAlignment: 'map' })
+        .setLngLat(arc[0])
+        .addTo(map);
+      expandedPlaneMarkerRef.current = planeMarker;
+
+      const FRAME_INTERVAL = 50;
+      let lastBearing = getBearing(arc[0], arc[1]);
+      planeSvg.style.transform = `rotate(${lastBearing}deg)`;
+      expandedIdxRef.current = 0;
+
+      const animate = (timestamp: number) => {
+        if (timestamp - expandedLastTimeRef.current >= FRAME_INTERVAL) {
+          expandedLastTimeRef.current = timestamp;
+          if (arc.length < 2) { expandedAnimRef.current = requestAnimationFrame(animate); return; }
+          expandedIdxRef.current = (expandedIdxRef.current + 1) % arc.length;
+          const cur = arc[expandedIdxRef.current];
+          const next = arc[(expandedIdxRef.current + 1) % arc.length];
+          const bearing = getBearing(cur, next);
+          planeMarker.setLngLat(cur);
+          let delta = bearing - lastBearing;
+          if (delta > 180) delta -= 360;
+          if (delta < -180) delta += 360;
+          lastBearing = lastBearing + delta;
+          planeSvg.style.transform = `rotate(${lastBearing}deg)`;
+        }
+        expandedAnimRef.current = requestAnimationFrame(animate);
+      };
+      expandedAnimRef.current = requestAnimationFrame(animate);
+    });
+
+    expandedMapRef.current = map;
+
+    return () => {
+      cancelAnimationFrame(expandedAnimRef.current);
+      expandedPlaneMarkerRef.current?.remove();
+      expandedMapRef.current?.remove();
+      expandedMapRef.current = null;
+    };
+  }, [isExpanded, token, resolvedCoords]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Initialize inline (small) map ──
   useEffect(() => {
     if (!token || !mapContainer.current) return;
 
@@ -205,14 +321,13 @@ export default function RouteMap(props: RouteMapProps) {
           return;
         }
 
+        setResolvedCoords(coords);
         const { pickup, dest } = coords;
         const km = haversineKm(pickup, dest);
         setDistanceKm(Math.round(km));
 
-        // Tighter padding for better zoom — show actual geography
         const lngs = [pickup[0], dest[0]];
         const lats = [pickup[1], dest[1]];
-        // Padding proportional to distance but capped so we don't zoom out too far
         const pad = Math.min(Math.max(1.5, km * 0.001), 8);
         const bounds = new mapboxgl.LngLatBounds(
           [Math.min(...lngs) - pad, Math.min(...lats) - pad],
@@ -237,7 +352,6 @@ export default function RouteMap(props: RouteMapProps) {
           arcRef.current = arc;
           idxRef.current = 0;
 
-          // Dashed route line
           map.addSource('route', {
             type: 'geojson',
             data: { type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: arc } },
@@ -250,11 +364,9 @@ export default function RouteMap(props: RouteMapProps) {
             paint: { 'line-color': '#F40000', 'line-width': 2, 'line-dasharray': [3, 4], 'line-opacity': 0.55 },
           });
 
-          // Origin + destination pin markers
           addPinMarker(map, pickup, '#3B82F6', props.pickupCity || 'India');
           addPinMarker(map, dest, '#10B981', props.destinationCountryName || props.destinationCity || 'Destination');
 
-          // Paper plane marker — anchor center so Mapbox only sets translate on wrapper
           const planeEl = createPaperPlaneEl();
           const planeSvg = planeEl.querySelector<SVGElement>('#plane-svg')!;
           const planeMarker = new mapboxgl.Marker({ element: planeEl, anchor: 'center', rotationAlignment: 'map' })
@@ -262,9 +374,6 @@ export default function RouteMap(props: RouteMapProps) {
             .addTo(map);
           planeMarkerRef.current = planeMarker;
 
-          // Smooth animation: advance one arc step per frame, throttled to ~20fps
-          // so the CSS transition (0.25s) has time to interpolate between positions.
-          // 180 steps × 50ms ≈ 9 seconds per loop.
           const FRAME_INTERVAL = 50;
           let lastBearing = getBearing(arc[0], arc[1]);
           planeSvg.style.transform = `rotate(${lastBearing}deg)`;
@@ -281,11 +390,8 @@ export default function RouteMap(props: RouteMapProps) {
               const next = arcCoords[(idxRef.current + 1) % arcCoords.length];
               const bearing = getBearing(cur, next);
 
-              // Move the Mapbox marker (updates wrapper translate — does NOT touch transform)
               planeMarker.setLngLat(cur);
 
-              // Rotate only the inner SVG so Mapbox's translate is never overwritten
-              // Shortest-path rotation to avoid 359→0 spin
               let delta = bearing - lastBearing;
               if (delta > 180) delta -= 360;
               if (delta < -180) delta += 360;
@@ -325,22 +431,86 @@ export default function RouteMap(props: RouteMapProps) {
     : 'Domestic';
 
   return (
-    <div className="rounded-xl overflow-hidden border border-border bg-card">
-      <div className="relative">
-        {loading && (
-          <div className="absolute inset-0 z-10 flex items-center justify-center bg-muted/60 backdrop-blur-sm">
-            <div className="h-5 w-5 border-2 border-coke-red border-t-transparent rounded-full animate-spin" />
+    <>
+      {/* Inline map — clickable to expand */}
+      <div
+        className="rounded-xl overflow-hidden border border-border bg-card cursor-pointer group relative"
+        onClick={() => setIsExpanded(true)}
+        role="button"
+        tabIndex={0}
+        aria-label="Click to expand map"
+        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setIsExpanded(true); } }}
+      >
+        <div className="relative">
+          {loading && (
+            <div className="absolute inset-0 z-10 flex items-center justify-center bg-muted/60 backdrop-blur-sm">
+              <div className="h-5 w-5 border-2 border-coke-red border-t-transparent rounded-full animate-spin" />
+            </div>
+          )}
+          <div ref={mapContainer} style={{ width: '100%', height: '200px' }} />
+          {/* Expand hint overlay */}
+          <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/0 group-hover:bg-black/10 transition-colors duration-200 pointer-events-none">
+            <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-black/60 text-white text-xs font-medium px-3 py-1.5 rounded-full flex items-center gap-1.5 backdrop-blur-sm">
+              <ArrowsOut className="h-3.5 w-3.5" weight="bold" />
+              Tap to expand
+            </div>
+          </div>
+        </div>
+        {distanceKm !== null && (
+          <div className="flex items-center justify-center gap-2 py-2 px-4 border-t border-border bg-muted/30">
+            <span className="text-xs text-muted-foreground">✈ {distanceLabel}</span>
+            <span className="text-xs text-muted-foreground">·</span>
+            <span className="text-sm font-semibold">{distanceKm.toLocaleString('en-IN')} km</span>
           </div>
         )}
-        <div ref={mapContainer} style={{ width: '100%', height: '200px' }} />
       </div>
-      {distanceKm !== null && (
-        <div className="flex items-center justify-center gap-2 py-2 px-4 border-t border-border bg-muted/30">
-          <span className="text-xs text-muted-foreground">✈ {distanceLabel}</span>
-          <span className="text-xs text-muted-foreground">·</span>
-          <span className="text-sm font-semibold">{distanceKm.toLocaleString('en-IN')} km</span>
-        </div>
-      )}
-    </div>
+
+      {/* Expanded map modal */}
+      <AnimatePresence>
+        {isExpanded && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm p-3 sm:p-6"
+            onClick={() => setIsExpanded(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+              className="relative w-full max-w-4xl bg-card rounded-2xl overflow-hidden border border-border shadow-2xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Header */}
+              <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-muted/30">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-semibold">Shipment Route</span>
+                  {distanceKm !== null && (
+                    <>
+                      <span className="text-xs text-muted-foreground">·</span>
+                      <span className="text-xs text-muted-foreground">✈ {distanceLabel}</span>
+                      <span className="text-xs text-muted-foreground">·</span>
+                      <span className="text-sm font-semibold">{distanceKm.toLocaleString('en-IN')} km</span>
+                    </>
+                  )}
+                </div>
+                <button
+                  onClick={() => setIsExpanded(false)}
+                  className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-muted transition-colors"
+                  aria-label="Close map"
+                >
+                  <X className="h-4 w-4" weight="bold" />
+                </button>
+              </div>
+              {/* Map container */}
+              <div ref={expandedMapContainer} style={{ width: '100%', height: 'min(70vh, 500px)' }} />
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </>
   );
 }
