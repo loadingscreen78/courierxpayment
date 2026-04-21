@@ -39,6 +39,7 @@ interface StableInputProps {
   max?: string;
   rows?: number;
   isTextarea?: boolean;
+  inputMode?: React.HTMLAttributes<HTMLInputElement>['inputMode'];
 }
 
 const StableInput = memo(({
@@ -52,6 +53,7 @@ const StableInput = memo(({
   max,
   rows,
   isTextarea = false,
+  inputMode,
 }: StableInputProps) => {
   const [localValue, setLocalValue] = useState(String(value ?? ''));
   const isFocused = useRef(false);
@@ -131,6 +133,7 @@ const StableInput = memo(({
       placeholder={placeholder}
       min={min}
       max={max}
+      inputMode={inputMode}
       className={cn(inputClasses, "h-10")}
     />
   );
