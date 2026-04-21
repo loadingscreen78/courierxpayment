@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useState, useCallback, ReactNode } from 'react';
+import { createContext, useContext, useState, useCallback, useRef, useEffect, ReactNode } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 
 export type ShippingMode = 'international' | 'domestic';
@@ -32,30 +32,40 @@ export const ShippingModeProvider = ({ children }: { children: ReactNode }) => {
   const router = useRouter();
   const pathname = usePathname();
 
+  // Keep a ref so callbacks always read the latest pathname without stale closures
+  const pathnameRef = useRef(pathname);
+  useEffect(() => { pathnameRef.current = pathname; }, [pathname]);
+
+  // Keep a ref for mode too
+  const modeRef = useRef(mode);
+  useEffect(() => { modeRef.current = mode; }, [mode]);
+
   const setMode = useCallback((newMode: ShippingMode) => {
-    if (newMode === mode) return;
+    // Always read from refs — never from stale closure values
+    if (newMode === modeRef.current) return;
 
     setIsSwitching(true);
     setModeState(newMode);
+    modeRef.current = newMode;
     localStorage.setItem(STORAGE_KEY, newMode);
 
-    // Only navigate if the current page is mode-specific
-    const isDomesticPage = DOMESTIC_PAGES.some(p => pathname?.startsWith(p));
-    const isIntlPage = INTERNATIONAL_PAGES.some(p => pathname?.startsWith(p));
+    const currentPath = pathnameRef.current ?? '';
+    const isDomesticPage = DOMESTIC_PAGES.some(p => currentPath.startsWith(p));
+    const isIntlPage = INTERNATIONAL_PAGES.some(p => currentPath.startsWith(p));
 
     if (newMode === 'domestic' && isIntlPage) {
       router.push('/new-shipment');
     } else if (newMode === 'international' && isDomesticPage) {
       router.push('/dashboard');
     }
-    // If on a neutral page (profile, settings, etc.) — stay put, just update the mode
+    // Neutral page — stay put, just update mode
 
     setTimeout(() => setIsSwitching(false), 400);
-  }, [mode, router, pathname]);
+  }, [router]); // router is stable — no stale closure risk
 
   const toggleMode = useCallback(() => {
-    setMode(mode === 'international' ? 'domestic' : 'international');
-  }, [mode, setMode]);
+    setMode(modeRef.current === 'international' ? 'domestic' : 'international');
+  }, [setMode]);
 
   return (
     <ShippingModeContext.Provider value={{ mode, isSwitching, setMode, toggleMode }}>
