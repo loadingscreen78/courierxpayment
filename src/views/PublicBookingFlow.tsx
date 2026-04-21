@@ -383,7 +383,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
   // ── Domestic rate form ──
   const domForm = useForm<DomesticRateValues>({
     resolver: zodResolver(domesticRateSchema),
-    defaultValues: { shipmentType: undefined, pickupPincode: '', deliveryPincode: '', weightKg: undefined as any, lengthCm: undefined as any, widthCm: undefined as any, heightCm: undefined as any, declaredValue: 0, prohibitedItemsConfirmed: false },
+    defaultValues: { shipmentType: 'document', pickupPincode: '', deliveryPincode: '', weightKg: undefined as any, lengthCm: undefined as any, widthCm: undefined as any, heightCm: undefined as any, declaredValue: 0, prohibitedItemsConfirmed: false },
   });
   const detailsForm = useForm<SenderReceiverValues>({
     resolver: zodResolver(senderReceiverSchema),
@@ -408,6 +408,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
   // Watch domestic shipment type
   const watchedDomType = domForm.watch('shipmentType');
   const isDocumentDom = watchedDomType === 'document';
+  const [domTypeExplicitlySelected, setDomTypeExplicitlySelected] = useState(false);
 
   // ── Pre-fill from rate calculator localStorage data ──
   useEffect(() => {
@@ -421,7 +422,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
       if (!isInternational && data.mode === 'domestic') {
         if (data.pickupPincode) domForm.setValue('pickupPincode', data.pickupPincode);
         if (data.deliveryPincode) domForm.setValue('deliveryPincode', data.deliveryPincode);
-        if (data.shipmentType) domForm.setValue('shipmentType', data.shipmentType);
+        if (data.shipmentType) { domForm.setValue('shipmentType', data.shipmentType); setDomTypeExplicitlySelected(true); }
         if (data.weightKg) domForm.setValue('weightKg', data.weightKg);
         if (data.lengthCm) domForm.setValue('lengthCm', data.lengthCm);
         if (data.widthCm) domForm.setValue('widthCm', data.widthCm);
@@ -1144,14 +1145,14 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                             <button
                               key={opt.value}
                               type="button"
-                              onClick={() => { feedbackPresets.select(); field.onChange(opt.value); }}
+                              onClick={() => { feedbackPresets.select(); setDomTypeExplicitlySelected(true); field.onChange(opt.value); }}
                               className={`p-3 rounded-lg border text-left transition-all ${
-                                field.value === opt.value
+                                domTypeExplicitlySelected && field.value === opt.value
                                   ? 'border-coke-red bg-coke-red/5 ring-1 ring-coke-red/20'
                                   : 'border-border hover:border-muted-foreground/30'
                               }`}
                             >
-                              <opt.icon className={`h-5 w-5 mb-1 ${field.value === opt.value ? 'text-coke-red' : 'text-muted-foreground'}`} weight="duotone" />
+                              <opt.icon className={`h-5 w-5 mb-1 ${domTypeExplicitlySelected && field.value === opt.value ? 'text-coke-red' : 'text-muted-foreground'}`} weight="duotone" />
                               <p className="text-sm font-medium">{opt.label}</p>
                               <p className="text-[11px] sm:text-xs text-muted-foreground leading-tight">{opt.desc}</p>
                             </button>

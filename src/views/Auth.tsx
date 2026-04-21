@@ -121,6 +121,7 @@ const Auth = () => {
   const [forgotEmail, setForgotEmail] = useState('');
   const [forgotLoading, setForgotLoading] = useState(false);
   const [routeIndex, setRouteIndex] = useState(0);
+  const [resendCooldown, setResendCooldown] = useState(0);
 
   useSeo({
     title: 'Sign In | CourierX',
@@ -149,6 +150,15 @@ const Auth = () => {
     }, 4000);
     return () => clearInterval(interval);
   }, []);
+
+  /* Resend OTP cooldown timer */
+  useEffect(() => {
+    if (resendCooldown <= 0) return;
+    const timer = setInterval(() => {
+      setResendCooldown((prev) => (prev <= 1 ? 0 : prev - 1));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [resendCooldown]);
 
   // Handle redirect after sign in
   useEffect(() => {
@@ -291,6 +301,7 @@ const Auth = () => {
     setIsLoading(false);
     if (error) { toast({ title: 'Error', description: error.message, variant: 'destructive' }); return; }
     setPhoneNumber(values.phone);
+    setResendCooldown(60);
     setStep('otp');
     toast({ title: 'OTP Sent', description: `Verification code sent to ${values.phone}` });
   };
@@ -345,12 +356,14 @@ const Auth = () => {
   };
 
   const handleResendOtp = async () => {
+    if (resendCooldown > 0) return;
     setIsLoading(true);
     const { error } = method === 'sms'
       ? await sendPhoneOtp(phoneNumber)
       : await signInWithOtp(phoneNumber);
     setIsLoading(false);
     if (error) { toast({ title: 'Error', description: 'Failed to resend.', variant: 'destructive' }); return; }
+    setResendCooldown(60);
     toast({ title: 'OTP Resent', description: `New code sent to ${phoneNumber}` });
   };
 
@@ -781,10 +794,10 @@ const Auth = () => {
                     <button
                       type="button"
                       onClick={handleResendOtp}
-                      disabled={isLoading}
-                      className="w-full text-center text-sm text-muted-foreground hover:text-coke-red transition-colors"
+                      disabled={isLoading || resendCooldown > 0}
+                      className="w-full text-center text-sm text-muted-foreground hover:text-coke-red transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      Resend OTP
+                      {resendCooldown > 0 ? `Resend OTP in ${resendCooldown}s` : 'Resend OTP'}
                     </button>
                   </form>
                 </Form>
