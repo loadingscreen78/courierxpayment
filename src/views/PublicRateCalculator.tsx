@@ -428,34 +428,6 @@ const SummaryCard = ({ title, price, transitLabel, onBook }: { title: string; pr
   </motion.div>
 );
 
-// -- Build rate tiers from courier list --------------------------------
-function buildRateTiers(couriers: CourierOption[]) {
-  if (!couriers.length) return { express: null, economy: null, saver: null };
-  const bySpeed = [...couriers].sort((a, b) => (a.estimated_delivery_days || 99) - (b.estimated_delivery_days || 99));
-  const byCost  = [...couriers].sort((a, b) => a.customer_price - b.customer_price);
-  const airFirst = bySpeed.filter(c => c.mode === 'air');
-  const expressCourier = airFirst[0] || bySpeed[0];
-  const saverCourier   = byCost[0];
-  const mid = couriers.filter(c =>
-    c.courier_company_id !== expressCourier.courier_company_id &&
-    c.courier_company_id !== saverCourier.courier_company_id
-  );
-  const economyCourier = mid.length > 0
-    ? mid.sort((a, b) => a.customer_price - b.customer_price)[Math.floor(mid.length / 2)]
-    : (expressCourier.courier_company_id !== saverCourier.courier_company_id ? byCost[Math.floor(byCost.length / 2)] : null);
-  const fmtDays = (c: CourierOption) => {
-    const d = c.estimated_delivery_days;
-    if (!d || d <= 0) return c.mode === 'air' ? '1�3 days' : '4�7 days';
-    return `${d} day${d !== 1 ? 's' : ''}`;
-  };
-  return {
-    express: expressCourier ? { price: expressCourier.customer_price, days: fmtDays(expressCourier), name: expressCourier.courier_name, courier: expressCourier } : null,
-    economy: economyCourier ? { price: economyCourier.customer_price, days: fmtDays(economyCourier), name: economyCourier.courier_name, courier: economyCourier } : null,
-    saver:   (saverCourier && saverCourier.courier_company_id !== expressCourier?.courier_company_id)
-      ? { price: saverCourier.customer_price, days: fmtDays(saverCourier), name: saverCourier.courier_name, courier: saverCourier } : null,
-  };
-}
-
 // ── Build rate tiers from courier list ────────────────────────────────
 function buildRateTiers(couriers: CourierOption[]) {
   if (!couriers.length) return { express: null, economy: null, saver: null };
