@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { ArrowLeft, ArrowRight, CircleNotch, UserPlus, Pill, FileText, Gift, Truck, Globe, User, Envelope, Phone, MapPin, Info, AirplaneTilt, Warning, X, IdentificationCard, Upload, IdentificationBadge, House, Plus, Trash, MagnifyingGlass, CaretUpDown, Check, PencilSimple, CaretDown, CaretRight, ShieldCheck, EnvelopeSimple, Camera, Package, Laptop } from '@phosphor-icons/react';
+import { ArrowLeft, ArrowRight, CircleNotch, UserPlus, Pill, FileText, Gift, Truck, Globe, User, Envelope, Phone, MapPin, Info, AirplaneTilt, Warning, X, IdentificationCard, Upload, IdentificationBadge, House, Plus, Trash, MagnifyingGlass, CaretUpDown, Check, PencilSimple, CaretDown, CaretRight, ShieldCheck, EnvelopeSimple, Camera, Package, Laptop, Clock } from '@phosphor-icons/react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
@@ -355,6 +355,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
   const [aadhaarBack, setAadhaarBack] = useState<File | null>(null);
   const [passportIdentity, setPassportIdentity] = useState<File | null>(null);
   const [passportAddress, setPassportAddress] = useState<File | null>(null);
+  const [passportUploadLater, setPassportUploadLater] = useState(false);
   const [isMobilePBF, setIsMobilePBF] = useState(false);
   const [passportCameraOpen, setPassportCameraOpen] = useState<'identity' | 'address' | null>(null);
   const [contentItems, setContentItems] = useState<Array<{ name: string; type: string; hsnCode: string; qty: number; unitPrice: number }>>([
@@ -1116,19 +1117,19 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                       <div className="grid grid-cols-3 gap-3">
                         <FormField control={intlForm.control} name="lengthCm" render={({ field }) => (
                           <FormItem>
-                            <FormControl><Input {...field} type="number" placeholder="Length" /></FormControl>
+                            <FormControl><Input {...field} type="number" inputMode="numeric" placeholder="Length" /></FormControl>
                             <FormMessage />
                           </FormItem>
                         )} />
                         <FormField control={intlForm.control} name="widthCm" render={({ field }) => (
                           <FormItem>
-                            <FormControl><Input {...field} type="number" placeholder="Width" /></FormControl>
+                            <FormControl><Input {...field} type="number" inputMode="numeric" placeholder="Width" /></FormControl>
                             <FormMessage />
                           </FormItem>
                         )} />
                         <FormField control={intlForm.control} name="heightCm" render={({ field }) => (
                           <FormItem>
-                            <FormControl><Input {...field} type="number" placeholder="Height" /></FormControl>
+                            <FormControl><Input {...field} type="number" inputMode="numeric" placeholder="Height" /></FormControl>
                             <FormMessage />
                           </FormItem>
                         )} />
@@ -1321,13 +1322,13 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                       </div>
                       <div className="grid grid-cols-3 gap-3">
                         <FormField control={domForm.control} name="lengthCm" render={({ field }) => (
-                          <FormItem><FormLabel className="text-xs">Length</FormLabel><FormControl><Input {...field} type="number" placeholder="cm" /></FormControl><FormMessage /></FormItem>
+                          <FormItem><FormLabel className="text-xs">Length</FormLabel><FormControl><Input {...field} type="number" inputMode="numeric" placeholder="cm" /></FormControl><FormMessage /></FormItem>
                         )} />
                         <FormField control={domForm.control} name="widthCm" render={({ field }) => (
-                          <FormItem><FormLabel className="text-xs">Width</FormLabel><FormControl><Input {...field} type="number" placeholder="cm" /></FormControl><FormMessage /></FormItem>
+                          <FormItem><FormLabel className="text-xs">Width</FormLabel><FormControl><Input {...field} type="number" inputMode="numeric" placeholder="cm" /></FormControl><FormMessage /></FormItem>
                         )} />
                         <FormField control={domForm.control} name="heightCm" render={({ field }) => (
-                          <FormItem><FormLabel className="text-xs">Height</FormLabel><FormControl><Input {...field} type="number" placeholder="cm" /></FormControl><FormMessage /></FormItem>
+                          <FormItem><FormLabel className="text-xs">Height</FormLabel><FormControl><Input {...field} type="number" inputMode="numeric" placeholder="cm" /></FormControl><FormMessage /></FormItem>
                         )} />
                       </div>
                       {volumetricWeight > 0 && (
@@ -1392,7 +1393,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                         <FormItem>
                           <FormLabel>Declared Value (₹)</FormLabel>
                           <FormControl>
-                            <Input {...field} type="number" min={0} max={100000} placeholder="e.g. 50000" />
+                            <Input {...field} type="number" inputMode="numeric" min={0} max={100000} placeholder="e.g. 50000" />
                           </FormControl>
                           <p className="text-[10px] text-muted-foreground">Enter the approximate market value of the laptop. Max ₹1,00,000.</p>
                           <FormMessage />
@@ -2306,55 +2307,82 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                           {/* Passport Upload - Medicine only */}
                           {isMedicineFlow && (
                             <div className="space-y-4 pt-2">
-                              <div className="flex items-center gap-2">
-                                <IdentificationBadge className="h-5 w-5 text-blue-600" weight="duotone" />
-                                <h4 className="font-semibold text-sm">Receiver Passport Upload</h4>
-                              </div>
-                              <div className="rounded-lg border border-blue-200 dark:border-blue-800/40 bg-blue-50 dark:bg-blue-950/20 p-3 text-xs space-y-1">
-                                <p className="font-medium text-blue-900 dark:text-blue-200">How to capture a clear passport photo:</p>
-                                <ul className="list-disc list-inside text-blue-800 dark:text-blue-300 space-y-0.5">
-                                  <li>Open passport flat on a well-lit surface</li>
-                                  <li>Capture the full page without cutting edges</li>
-                                  <li>Name, photo, and passport number must be clearly readable</li>
-                                  <li>Address page: capture the page with the current address</li>
-                                </ul>
-                              </div>
-                              <div className="grid grid-cols-1 xs:grid-cols-2 gap-4">
-                                <div className="space-y-2">
-                                  <label className="text-sm font-medium">Identity Page (Photo side)</label>
-                                  <label className="flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-blue-400/40 bg-blue-50/50 dark:bg-blue-950/20 hover:bg-blue-100/50 p-4 cursor-pointer transition-colors">
-                                    <input type="file" accept="image/*,.pdf" className="hidden" onChange={(e) => { if (e.target.files?.[0]) setPassportIdentity(e.target.files[0]); }} />
-                                    {passportIdentity ? (
-                                      <div className="text-center"><IdentificationBadge className="h-8 w-8 text-candlestick-green mx-auto" weight="duotone" /><p className="text-xs font-medium text-candlestick-green mt-1">Uploaded</p><p className="text-xs text-muted-foreground truncate max-w-[120px]">{passportIdentity.name}</p></div>
-                                    ) : (
-                                      <div className="text-center"><Upload className="h-6 w-6 text-blue-500 mx-auto" weight="duotone" /><p className="text-xs font-medium text-blue-600">Upload Identity</p><p className="text-[10px] text-muted-foreground">JPG, PNG or PDF</p></div>
-                                    )}
-                                  </label>
-                                  {isMobilePBF && !passportIdentity && (
-                                    <button type="button" onClick={() => setPassportCameraOpen('identity')} className="w-full flex items-center justify-center gap-1.5 text-xs py-2.5 rounded-xl border border-coke-red/30 bg-coke-red/5 text-coke-red hover:bg-coke-red/10 transition-colors">
-                                      <Camera className="h-4 w-4" weight="duotone" /> Take Photo
-                                    </button>
-                                  )}
+                              <div className="flex items-center justify-between gap-2">
+                                <div className="flex items-center gap-2">
+                                  <IdentificationBadge className="h-5 w-5 text-blue-600" weight="duotone" />
+                                  <h4 className="font-semibold text-sm">Receiver Passport Upload</h4>
                                 </div>
-                                <div className="space-y-2">
-                                  <label className="text-sm font-medium">Address Page</label>
-                                  <label className="flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-blue-400/40 bg-blue-50/50 dark:bg-blue-950/20 hover:bg-blue-100/50 p-4 cursor-pointer transition-colors">
-                                    <input type="file" accept="image/*,.pdf" className="hidden" onChange={(e) => { if (e.target.files?.[0]) setPassportAddress(e.target.files[0]); }} />
-                                    {passportAddress ? (
-                                      <div className="text-center"><IdentificationBadge className="h-8 w-8 text-candlestick-green mx-auto" weight="duotone" /><p className="text-xs font-medium text-candlestick-green mt-1">Uploaded</p><p className="text-xs text-muted-foreground truncate max-w-[120px]">{passportAddress.name}</p></div>
-                                    ) : (
-                                      <div className="text-center"><Upload className="h-6 w-6 text-blue-500 mx-auto" weight="duotone" /><p className="text-xs font-medium text-blue-600">Upload Address</p><p className="text-[10px] text-muted-foreground">JPG, PNG or PDF</p></div>
-                                    )}
-                                  </label>
-                                  {isMobilePBF && !passportAddress && (
-                                    <button type="button" onClick={() => setPassportCameraOpen('address')} className="w-full flex items-center justify-center gap-1.5 text-xs py-2.5 rounded-xl border border-coke-red/30 bg-coke-red/5 text-coke-red hover:bg-coke-red/10 transition-colors">
-                                      <Camera className="h-4 w-4" weight="duotone" /> Take Photo
-                                    </button>
-                                  )}
-                                </div>
+                                {/* Upload Later toggle */}
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setPassportUploadLater(prev => {
+                                      const next = !prev;
+                                      if (next) { setPassportIdentity(null); setPassportAddress(null); }
+                                      return next;
+                                    });
+                                  }}
+                                  className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full border transition-colors ${passportUploadLater ? 'bg-amber-50 border-amber-300 text-amber-700 dark:bg-amber-950/30 dark:border-amber-700 dark:text-amber-400' : 'bg-muted border-border text-muted-foreground hover:text-foreground'}`}
+                                >
+                                  <Clock className="h-3.5 w-3.5" weight="duotone" />
+                                  {passportUploadLater ? 'Upload Later (selected)' : 'Upload Later'}
+                                </button>
                               </div>
+
+                              {passportUploadLater ? (
+                                <div className="rounded-lg border border-amber-200 dark:border-amber-800/40 bg-amber-50 dark:bg-amber-950/20 p-3 text-xs space-y-1">
+                                  <p className="font-medium text-amber-900 dark:text-amber-200">Passport upload deferred</p>
+                                  <p className="text-amber-800 dark:text-amber-300">You can proceed without uploading now. Our team will contact you via email/WhatsApp to collect the passport copy before shipment dispatch.</p>
+                                </div>
+                              ) : (
+                                <>
+                                  <div className="rounded-lg border border-blue-200 dark:border-blue-800/40 bg-blue-50 dark:bg-blue-950/20 p-3 text-xs space-y-1">
+                                    <p className="font-medium text-blue-900 dark:text-blue-200">How to capture a clear passport photo:</p>
+                                    <ul className="list-disc list-inside text-blue-800 dark:text-blue-300 space-y-0.5">
+                                      <li>Open passport flat on a well-lit surface</li>
+                                      <li>Capture the full page without cutting edges</li>
+                                      <li>Name, photo, and passport number must be clearly readable</li>
+                                      <li>Address page: capture the page with the current address</li>
+                                    </ul>
+                                  </div>
+                                  <div className="grid grid-cols-1 xs:grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                      <label className="text-sm font-medium">Identity Page (Photo side)</label>
+                                      <label className="flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-blue-400/40 bg-blue-50/50 dark:bg-blue-950/20 hover:bg-blue-100/50 p-4 cursor-pointer transition-colors">
+                                        <input type="file" accept="image/*,.pdf" className="hidden" onChange={(e) => { if (e.target.files?.[0]) setPassportIdentity(e.target.files[0]); }} />
+                                        {passportIdentity ? (
+                                          <div className="text-center"><IdentificationBadge className="h-8 w-8 text-candlestick-green mx-auto" weight="duotone" /><p className="text-xs font-medium text-candlestick-green mt-1">Uploaded</p><p className="text-xs text-muted-foreground truncate max-w-[120px]">{passportIdentity.name}</p></div>
+                                        ) : (
+                                          <div className="text-center"><Upload className="h-6 w-6 text-blue-500 mx-auto" weight="duotone" /><p className="text-xs font-medium text-blue-600">Upload Identity</p><p className="text-[10px] text-muted-foreground">JPG, PNG or PDF</p></div>
+                                        )}
+                                      </label>
+                                      {isMobilePBF && !passportIdentity && (
+                                        <button type="button" onClick={() => setPassportCameraOpen('identity')} className="w-full flex items-center justify-center gap-1.5 text-xs py-2.5 rounded-xl border border-coke-red/30 bg-coke-red/5 text-coke-red hover:bg-coke-red/10 transition-colors">
+                                          <Camera className="h-4 w-4" weight="duotone" /> Take Photo
+                                        </button>
+                                      )}
+                                    </div>
+                                    <div className="space-y-2">
+                                      <label className="text-sm font-medium">Address Page</label>
+                                      <label className="flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-blue-400/40 bg-blue-50/50 dark:bg-blue-950/20 hover:bg-blue-100/50 p-4 cursor-pointer transition-colors">
+                                        <input type="file" accept="image/*,.pdf" className="hidden" onChange={(e) => { if (e.target.files?.[0]) setPassportAddress(e.target.files[0]); }} />
+                                        {passportAddress ? (
+                                          <div className="text-center"><IdentificationBadge className="h-8 w-8 text-candlestick-green mx-auto" weight="duotone" /><p className="text-xs font-medium text-candlestick-green mt-1">Uploaded</p><p className="text-xs text-muted-foreground truncate max-w-[120px]">{passportAddress.name}</p></div>
+                                        ) : (
+                                          <div className="text-center"><Upload className="h-6 w-6 text-blue-500 mx-auto" weight="duotone" /><p className="text-xs font-medium text-blue-600">Upload Address</p><p className="text-[10px] text-muted-foreground">JPG, PNG or PDF</p></div>
+                                        )}
+                                      </label>
+                                      {isMobilePBF && !passportAddress && (
+                                        <button type="button" onClick={() => setPassportCameraOpen('address')} className="w-full flex items-center justify-center gap-1.5 text-xs py-2.5 rounded-xl border border-coke-red/30 bg-coke-red/5 text-coke-red hover:bg-coke-red/10 transition-colors">
+                                          <Camera className="h-4 w-4" weight="duotone" /> Take Photo
+                                        </button>
+                                      )}
+                                    </div>
+                                  </div>
+                                </>
+                              )}
                               {/* Passport Camera Capture for mobile */}
-                              {isMobilePBF && (
+                              {isMobilePBF && !passportUploadLater && (
                                 <CameraCapture
                                   open={passportCameraOpen !== null}
                                   onOpenChange={(open) => { if (!open) setPassportCameraOpen(null); }}
@@ -2560,11 +2588,11 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                               <div className="grid grid-cols-2 gap-3">
                                 <div>
                                   <label className="text-xs font-medium">Quantity</label>
-                                  <Input type="number" value={item.qty} onChange={(e) => { const arr = [...contentItems]; arr[idx].qty = Number(e.target.value) || 0; setContentItems(arr); }} className="h-10 mt-1" />
+                                  <Input type="number" inputMode="numeric" value={item.qty} onChange={(e) => { const arr = [...contentItems]; arr[idx].qty = Number(e.target.value) || 0; setContentItems(arr); }} className="h-10 mt-1" />
                                 </div>
                                 <div>
                                   <label className="text-xs font-medium">Unit Price (₹)</label>
-                                  <Input type="number" min={0} value={item.unitPrice || ''} onChange={(e) => { const arr = [...contentItems]; arr[idx].unitPrice = Number(e.target.value) || 0; setContentItems(arr); }} placeholder="500" className="h-10 mt-1" />
+                                  <Input type="number" inputMode="numeric" min={0} value={item.unitPrice || ''} onChange={(e) => { const arr = [...contentItems]; arr[idx].unitPrice = Number(e.target.value) || 0; setContentItems(arr); }} placeholder="500" className="h-10 mt-1" />
                                 </div>
                               </div>
                               {item.name && item.unitPrice > 0 && (
@@ -2792,6 +2820,9 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
             extractedAadhaarNumber={extractedAadhaarNumber}
             aadhaarFront={aadhaarFront}
             aadhaarBack={aadhaarBack}
+            passportIdentity={passportIdentity}
+            passportAddress={passportAddress}
+            passportUploadLater={passportUploadLater}
           />
         )}
       </main>

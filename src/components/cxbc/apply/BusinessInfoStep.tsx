@@ -181,7 +181,7 @@ export const BusinessInfoStep = ({ data, onUpdate, onNext }: BusinessInfoStepPro
                 <FormItem>
                   <FormLabel>Phone Number *</FormLabel>
                   <FormControl>
-                    <Input type="tel" placeholder="9876543210" maxLength={10} {...field} />
+                    <Input type="tel" inputMode="tel" placeholder="9876543210" maxLength={10} {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -272,7 +272,7 @@ export const BusinessInfoStep = ({ data, onUpdate, onNext }: BusinessInfoStepPro
                 <FormItem>
                   <FormLabel>Pincode *</FormLabel>
                   <FormControl>
-                    <Input placeholder="110001" maxLength={6} {...field} />
+                    <Input placeholder="110001" inputMode="numeric" maxLength={6} {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

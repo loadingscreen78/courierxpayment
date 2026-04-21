@@ -24,6 +24,11 @@ export async function POST(request: NextRequest) {
     const kycDocument = formData.get('kycDocument') as File | null;
     const kycDocType = formData.get('kycDocType') as string || '';
 
+    // Extract passport documents (international medicine flow)
+    const passportIdentityFile = formData.get('passportIdentity') as File | null;
+    const passportAddressFile = formData.get('passportAddress') as File | null;
+    const passportUploadLater = formData.get('passportUploadLater') === 'true';
+
     // For domestic, senderEmail is optional. For international it's required.
     // Also allow amount=0 when a coupon covers the full cost.
     const isInternationalBooking = !!rateFormData?.destinationCountry;

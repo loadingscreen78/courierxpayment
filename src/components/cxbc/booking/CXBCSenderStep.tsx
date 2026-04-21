@@ -215,6 +215,7 @@ export const CXBCSenderStep = ({ data, onUpdate, defaultSender, partnerAddress }
                 value={data.pincode}
                 onChange={(e) => updateField('pincode', e.target.value.replace(/\D/g, '').slice(0, 6))}
                 placeholder="6-digit PIN"
+                inputMode="numeric"
                 maxLength={6}
                 className="input-premium font-mono"
               />

@@ -119,6 +119,7 @@ export const CXBCDocumentDetailsStep = ({ data, onUpdate }: CXBCDocumentDetailsS
           <div className="flex items-center gap-3">
             <Input
               type="number"
+              inputMode="numeric"
               min="1"
               max="2000"
               placeholder="Enter weight"
@@ -147,6 +148,7 @@ export const CXBCDocumentDetailsStep = ({ data, onUpdate }: CXBCDocumentDetailsS
               <Input
                 id="length"
                 type="number"
+                inputMode="numeric"
                 min="1"
                 placeholder="L"
                 value={data.lengthCm || ''}
@@ -158,6 +160,7 @@ export const CXBCDocumentDetailsStep = ({ data, onUpdate }: CXBCDocumentDetailsS
               <Input
                 id="width"
                 type="number"
+                inputMode="numeric"
                 min="1"
                 placeholder="W"
                 value={data.widthCm || ''}
@@ -169,6 +172,7 @@ export const CXBCDocumentDetailsStep = ({ data, onUpdate }: CXBCDocumentDetailsS
               <Input
                 id="height"
                 type="number"
+                inputMode="numeric"
                 min="1"
                 placeholder="H"
                 value={data.heightCm || ''}

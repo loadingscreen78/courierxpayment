@@ -100,6 +100,7 @@ export const CXBCConsigneeStep = ({ data, onUpdate, selectedCountryCode }: CXBCC
               </Label>
               <Input
                 type="tel"
+                inputMode="tel"
                 value={data.phone}
                 onChange={(e) => updateField('phone', e.target.value)}
                 placeholder="With country code (e.g., +971 50 123 4567)"

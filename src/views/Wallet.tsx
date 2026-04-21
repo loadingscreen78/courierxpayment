@@ -622,6 +622,7 @@ const WalletPage = () => {
                 <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground font-medium text-sm">₹</span>
                 <Input
                   type="number"
+                  inputMode="numeric"
                   placeholder="Enter amount"
                   value={rechargeAmount}
                   onChange={(e) => { setRechargeAmount(e.target.value); setCouponResult(null); }}

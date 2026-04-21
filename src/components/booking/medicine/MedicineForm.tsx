@@ -250,6 +250,7 @@ export const MedicineForm = ({ medicine, onSave, onCancel, isEditing }: Medicine
             <Label className="text-xs text-muted-foreground">Total Units</Label>
             <Input
               type="number"
+              inputMode="numeric"
               min="1"
               placeholder="e.g., 60"
               value={formData.unitCount || ''}
@@ -261,6 +262,7 @@ export const MedicineForm = ({ medicine, onSave, onCancel, isEditing }: Medicine
             <Label className="text-xs text-muted-foreground">Price per Unit (₹)</Label>
             <Input
               type="number"
+              inputMode="decimal"
               min="0.01"
               step="0.01"
               placeholder="e.g., 15.50"
@@ -275,6 +277,7 @@ export const MedicineForm = ({ medicine, onSave, onCancel, isEditing }: Medicine
             </Label>
             <Input
               type="number"
+              inputMode="numeric"
               min="1"
               placeholder={formData.form === 'liquid' || formData.form === 'semi-liquid' ? 'e.g., 10' : 'e.g., 2'}
               value={formData.dailyDosage === 0 ? '' : formData.dailyDosage}

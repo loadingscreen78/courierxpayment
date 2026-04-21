@@ -234,6 +234,7 @@ export const DocumentDetailsStep = memo(({ data, onUpdate }: DocumentDetailsStep
         <div className="flex items-center gap-3">
           <StableInput
             type="number"
+            inputMode="numeric"
             min="1"
             max="2000"
             placeholder="Enter weight"
@@ -262,6 +263,7 @@ export const DocumentDetailsStep = memo(({ data, onUpdate }: DocumentDetailsStep
             <StableInput
               id="length"
               type="number"
+              inputMode="numeric"
               min="1"
               placeholder="L"
               value={data.length || ''}
@@ -273,6 +275,7 @@ export const DocumentDetailsStep = memo(({ data, onUpdate }: DocumentDetailsStep
             <StableInput
               id="width"
               type="number"
+              inputMode="numeric"
               min="1"
               placeholder="W"
               value={data.width || ''}
@@ -284,6 +287,7 @@ export const DocumentDetailsStep = memo(({ data, onUpdate }: DocumentDetailsStep
             <StableInput
               id="height"
               type="number"
+              inputMode="numeric"
               min="1"
               placeholder="H"
               value={data.height || ''}

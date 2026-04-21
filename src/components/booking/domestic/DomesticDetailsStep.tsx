@@ -216,6 +216,7 @@ const DomesticDetailsStepComponent = ({ data, onUpdate, lockedType }: Props) => 
                 <Label className="text-xs">{dim.label}</Label>
                 <Input
                   type="number"
+                  inputMode="numeric"
                   min={1}
                   max={150}
                   value={localDimensions[dim.key]}
@@ -250,6 +251,7 @@ const DomesticDetailsStepComponent = ({ data, onUpdate, lockedType }: Props) => 
             <Label>Declared Value (₹)</Label>
             <Input
               type="number"
+              inputMode="numeric"
               min={0}
               max={limits.maxValue}
               value={localDeclaredValue}

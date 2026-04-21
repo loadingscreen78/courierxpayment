@@ -137,6 +137,7 @@ export default function CXBCRateCalculator() {
               <Label>Weight (grams)</Label>
               <Input
                 type="number"
+                inputMode="numeric"
                 value={weightGrams}
                 onChange={(e) => setWeightGrams(Number(e.target.value))}
                 min={1}
@@ -152,6 +153,7 @@ export default function CXBCRateCalculator() {
               <Label>Declared Value (₹)</Label>
               <Input
                 type="number"
+                inputMode="numeric"
                 value={declaredValue}
                 onChange={(e) => setDeclaredValue(Number(e.target.value))}
                 min={0}

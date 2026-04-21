@@ -405,6 +405,7 @@ const ContactForm = () => {
         <Input 
           id="phone" 
           type="tel" 
+          inputMode="tel"
           placeholder="+91 98765 43210" 
           className="bg-background/50"
           value={formData.phone}

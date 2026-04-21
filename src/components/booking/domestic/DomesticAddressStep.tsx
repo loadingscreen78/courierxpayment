@@ -159,6 +159,7 @@ const DomesticAddressStepComponent = ({ data, onUpdate }: Props) => {
                   if (val.length === 6) handlePincodeLookup(key, val);
                 }}
                 placeholder="6-digit PIN code"
+                inputMode="numeric"
                 maxLength={6}
                 className={cn(pinError && 'border-destructive')}
               />

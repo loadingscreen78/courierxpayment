@@ -127,6 +127,7 @@ export const CXBCShipmentStep = ({
               <Label>Weight (grams) *</Label>
               <Input
                 type="number"
+                inputMode="numeric"
                 value={weightGrams}
                 onChange={(e) => setWeightGrams(Number(e.target.value))}
                 min={1}
@@ -136,6 +137,7 @@ export const CXBCShipmentStep = ({
               <Label>Declared Value (₹) *</Label>
               <Input
                 type="number"
+                inputMode="numeric"
                 value={declaredValue}
                 onChange={(e) => setDeclaredValue(Number(e.target.value))}
                 min={0}

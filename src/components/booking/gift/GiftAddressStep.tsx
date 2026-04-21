@@ -288,6 +288,7 @@ export const GiftAddressStep = ({ data, onUpdate, flushRef, fieldErrors = {} }: 
                 <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <DebouncedInput
                   type="tel"
+                  inputMode="tel"
                   placeholder="+91 98765 43210"
                   value={localPickupAddress.phone}
                   onChange={(value) => updatePickupAddress('phone', value)}
@@ -326,6 +327,7 @@ export const GiftAddressStep = ({ data, onUpdate, flushRef, fieldErrors = {} }: 
               <div className="relative">
                 <DebouncedInput
                   placeholder="6-digit PIN"
+                  inputMode="numeric"
                   maxLength={6}
                   value={localPickupAddress.pincode}
                   onChange={handlePincodeChange}
@@ -410,6 +412,7 @@ export const GiftAddressStep = ({ data, onUpdate, flushRef, fieldErrors = {} }: 
                 <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <DebouncedInput
                   type="tel"
+                  inputMode="tel"
                   placeholder={countryInfo?.phone.example || 'With country code (e.g., +971 50 123 4567)'}
                   value={localConsigneeAddress.phone}
                   onChange={handleConsigneePhoneChange}

@@ -245,6 +245,7 @@ export const WalletBalanceCheck = ({
               <label className="text-sm font-medium">Recharge Amount</label>
               <Input
                 type="number"
+                inputMode="numeric"
                 placeholder="Enter amount"
                 value={rechargeAmount}
                 onChange={(e) => setRechargeAmount(e.target.value)}

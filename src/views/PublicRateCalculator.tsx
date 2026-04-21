@@ -115,7 +115,7 @@ const PincodeInput = ({ value, onChange, label }: {
   return (
     <div ref={wrapperRef} className="space-y-1.5">
       <Label className="text-xs text-muted-foreground">{label}</Label>
-      <Input type="text" maxLength={6} placeholder="e.g. 110001" value={value}
+      <Input type="text" inputMode="numeric" maxLength={6} placeholder="e.g. 110001" value={value}
         onChange={(e) => onChange(e.target.value.replace(/\D/g, '').slice(0, 6))}
         className="text-lg font-semibold h-12 font-typewriter" />
       {locationInfo && (
@@ -236,7 +236,7 @@ const WeightSelector = ({ value, onChange }: { value: number; onChange: (v: numb
           animate={{ width: `${Math.min((value / 10000) * 100, 100)}%` }} transition={{ duration: 0.3 }} />
       </div>
       <div className="relative flex-1">
-        <Input type="number" value={value} onChange={(e) => onChange(Number(e.target.value))}
+        <Input type="number" inputMode="numeric" value={value} onChange={(e) => onChange(Number(e.target.value))}
           min={100} max={30000} className="pr-16 text-lg font-semibold h-12" />
         <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">grams</span>
       </div>
@@ -654,7 +654,7 @@ const PublicRateCalculator = () => {
                           ].map(d => (
                             <div key={d.label} className="space-y-1">
                               <Label className="text-xs">{d.label} (cm)</Label>
-                              <Input type="number" min={1} max={150} value={d.val}
+                              <Input type="number" inputMode="numeric" min={1} max={150} value={d.val}
                                 onChange={(e) => d.set(Math.max(1, Number(e.target.value) || 1))}
                                 className="font-typewriter h-10" />
                             </div>
@@ -864,7 +864,7 @@ const PublicRateCalculator = () => {
                           ].map(d => (
                             <div key={d.label} className="space-y-1">
                               <Label className="text-xs">{d.label}</Label>
-                              <Input type="number" min={1} max={150} value={d.val}
+                              <Input type="number" inputMode="numeric" min={1} max={150} value={d.val}
                                 onChange={(e) => d.set(Math.max(1, Number(e.target.value) || 1))}
                                 className="font-typewriter h-10" />
                             </div>

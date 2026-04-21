@@ -137,6 +137,7 @@ const ItemEditForm = ({
             <Label>Quantity *</Label>
             <DebouncedInput
               type="number"
+              inputMode="numeric"
               min="1"
               placeholder="1"
               value={item.units || ''}
@@ -148,6 +149,7 @@ const ItemEditForm = ({
             <Label>Unit Price (₹) *</Label>
             <DebouncedInput
               type="number"
+              inputMode="decimal"
               min="1"
               placeholder="0"
               value={item.unitPrice || ''}

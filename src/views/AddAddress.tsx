@@ -229,6 +229,7 @@ export default function AddAddress() {
                   <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-300" />
                   <Input
                     type="tel"
+                    inputMode="numeric"
                     maxLength={10}
                     value={formData.phone}
                     onChange={(e) => handleInputChange('phone', e.target.value.replace(/\D/g, ''))}
@@ -248,6 +249,7 @@ export default function AddAddress() {
                   <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-300" />
                   <Input
                     type="tel"
+                    inputMode="numeric"
                     maxLength={10}
                     value={formData.alternatePhone}
                     onChange={(e) => handleInputChange('alternatePhone', e.target.value.replace(/\D/g, ''))}
@@ -279,6 +281,7 @@ export default function AddAddress() {
                 <Navigation className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-300" />
                 <Input
                   type="tel"
+                  inputMode="numeric"
                   maxLength={6}
                   value={formData.pincode}
                   onChange={(e) => handlePincodeChange(e.target.value)}

@@ -260,6 +260,7 @@ const MedicineForm = ({
             <Label className="text-xs text-muted-foreground">Total Units</Label>
             <Input
               type="number"
+              inputMode="numeric"
               min="1"
               placeholder="e.g., 60"
               value={formData.unitCount || ''}
@@ -270,6 +271,7 @@ const MedicineForm = ({
             <Label className="text-xs text-muted-foreground">Price per Unit (₹)</Label>
             <Input
               type="number"
+              inputMode="decimal"
               min="0.01"
               step="0.01"
               placeholder="e.g., 15.50"
@@ -281,6 +283,7 @@ const MedicineForm = ({
             <Label className="text-xs text-muted-foreground">Daily Dosage (units)</Label>
             <Input
               type="number"
+              inputMode="numeric"
               min="1"
               placeholder="e.g., 2"
               value={formData.dailyDosage || ''}

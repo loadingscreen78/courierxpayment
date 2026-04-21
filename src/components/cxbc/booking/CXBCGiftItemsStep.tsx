@@ -153,6 +153,7 @@ export const CXBCGiftItemsStep = ({ items, onUpdateItems }: CXBCGiftItemsStepPro
                     <Label>Quantity *</Label>
                     <Input
                       type="number"
+                      inputMode="numeric"
                       min="1"
                       placeholder="1"
                       value={item.units || ''}
@@ -163,6 +164,7 @@ export const CXBCGiftItemsStep = ({ items, onUpdateItems }: CXBCGiftItemsStepPro
                     <Label>Unit Price (₹) *</Label>
                     <Input
                       type="number"
+                      inputMode="decimal"
                       min="1"
                       placeholder="0"
                       value={item.unitPrice || ''}

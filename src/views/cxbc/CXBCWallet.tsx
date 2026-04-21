@@ -284,6 +284,7 @@ export default function CXBCWallet() {
                         <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">₹</span>
                         <Input
                           type="number"
+                          inputMode="numeric"
                           value={rechargeAmount}
                           onChange={(e) => setRechargeAmount(Number(e.target.value))}
                           className="pl-8"

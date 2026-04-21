@@ -254,6 +254,7 @@ const AddressStepComponent = ({ data, onUpdate }: AddressStepProps) => {
                 <Input
                   id="pickupPhone"
                   type="tel"
+                  inputMode="tel"
                   placeholder="+91 98765 43210"
                   value={localPickupAddress.phone}
                   onChange={(e) => updatePickupAddress('phone', e.target.value)}
@@ -293,6 +294,7 @@ const AddressStepComponent = ({ data, onUpdate }: AddressStepProps) => {
                 <Input
                   id="pickupPincode"
                   placeholder="6-digit PIN"
+                  inputMode="numeric"
                   maxLength={6}
                   value={localPickupAddress.pincode}
                   onChange={(e) => handlePincodeChange(e.target.value)}
@@ -391,6 +393,7 @@ const AddressStepComponent = ({ data, onUpdate }: AddressStepProps) => {
                 <DebouncedInput
                   id="consigneePhone"
                   type="tel"
+                  inputMode="tel"
                   placeholder={countryInfo?.phone.example || 'With country code (e.g., +971 50 123 4567)'}
                   value={localConsigneeAddress.phone}
                   onChange={(value) => updateConsigneeAddress('phone', value)}

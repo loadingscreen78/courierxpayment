@@ -720,6 +720,7 @@ const Auth = () => {
                             <FormControl>
                               <Input
                                 type="tel"
+                                inputMode="tel"
                                 placeholder="Phone Number (+91...)"
                                 className="h-12 rounded-full border-border bg-background px-5 focus:border-coke-red focus:ring-coke-red/20"
                                 {...field}

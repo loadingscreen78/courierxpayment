@@ -43,6 +43,9 @@ interface GuestSummaryStepProps {
   extractedAadhaarNumber?: string;
   aadhaarFront?: File | null;
   aadhaarBack?: File | null;
+  passportIdentity?: File | null;
+  passportAddress?: File | null;
+  passportUploadLater?: boolean;
 }
 
 type SummaryPhase = 'review' | 'aadhaar' | 'payment' | 'success';
@@ -118,7 +121,7 @@ const documentPackingSteps = [
 
 // ── Component ────────────────────────────────────────────────────────────────
 
-export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, senderReceiver, onBack, extractedAadhaarNumber, aadhaarFront, aadhaarBack }: GuestSummaryStepProps) {
+export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, senderReceiver, onBack, extractedAadhaarNumber, aadhaarFront, aadhaarBack, passportIdentity, passportAddress, passportUploadLater }: GuestSummaryStepProps) {
   const router = useRouter();
   const { toast } = useToast();
 
@@ -332,6 +335,16 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
       if (isDomestic && kycDocFile) {
         formData.append('kycDocument', kycDocFile);
         formData.append('kycDocType', kycDocType);
+      }
+      // International medicine: attach passport files if provided
+      if (!isDomestic && passportIdentity) {
+        formData.append('passportIdentity', passportIdentity);
+      }
+      if (!isDomestic && passportAddress) {
+        formData.append('passportAddress', passportAddress);
+      }
+      if (!isDomestic) {
+        formData.append('passportUploadLater', passportUploadLater ? 'true' : 'false');
       }
 
       const res = await fetch('/api/cashfree/create-guest-order', {
@@ -852,6 +865,17 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
         destinationCountryName={destinationCountryInfo?.name}
         mode={mode}
       />
+
+      {/* ── Passport Upload Later reminder (medicine flow) ── */}
+      {passportUploadLater && (
+        <div className="rounded-xl border border-amber-200 dark:border-amber-800/40 bg-amber-50 dark:bg-amber-950/20 p-4 flex items-start gap-3">
+          <Clock className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" weight="duotone" />
+          <div className="space-y-0.5">
+            <p className="text-sm font-semibold text-amber-900 dark:text-amber-200">Passport upload pending</p>
+            <p className="text-xs text-amber-800 dark:text-amber-300">You chose to upload the receiver&apos;s passport later. Our team will reach out via email or WhatsApp before dispatch to collect it. Shipment will not be dispatched until the passport copy is received.</p>
+          </div>
+        </div>
+      )}
 
       {/* ── Identity Verification — Aadhaar for all shipments (international + domestic) ── */}
       <div className="bg-card rounded-xl border-2 border-blue-400/50 dark:border-blue-600/40 overflow-hidden shadow-sm shadow-blue-500/10">
