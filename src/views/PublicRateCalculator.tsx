@@ -6,7 +6,7 @@ import {
   Package, MapPin, Scales, Clock, Truck, Warning, Check,
   ArrowRight, Sparkle, Shield, Globe, CaretRight, Cube,
   House, Lock, FileText, Gift, MagnifyingGlass, CaretDown, MapPinLine,
-  AirplaneTilt, CircleNotch,
+  AirplaneTilt, CircleNotch, Lightning, Star,
 } from '@phosphor-icons/react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
