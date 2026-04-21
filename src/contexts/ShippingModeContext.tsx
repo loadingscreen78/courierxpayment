@@ -16,9 +16,11 @@ interface ShippingModeContextType {
 
 const ShippingModeContext = createContext<ShippingModeContextType | undefined>(undefined);
 
-// Pages that are mode-specific and should redirect when mode changes
-const DOMESTIC_PAGES = ['/new-shipment', '/book/domestic'];
-const INTERNATIONAL_PAGES = ['/dashboard', '/book/medicine', '/book/document', '/book/gift', '/history', '/drafts'];
+// Pages that are mode-specific and should redirect when mode changes.
+// NOTE: /new-shipment handles both modes itself — no redirect needed.
+// NOTE: /dashboard is neutral — it works for both modes, no redirect needed.
+const DOMESTIC_PAGES = ['/book/domestic'];
+const INTERNATIONAL_PAGES = ['/book/medicine', '/book/document', '/book/gift'];
 
 export const ShippingModeProvider = ({ children }: { children: ReactNode }) => {
   const [mode, setModeState] = useState<ShippingMode>(() => {
