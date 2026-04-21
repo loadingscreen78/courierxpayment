@@ -574,8 +574,8 @@ const Contact = () => {
                 </div>
                 
                 <div className="grid grid-cols-2 gap-3">
-                  <a 
-                    href="mailto:info@courierx.in"
+                  <a
+                    href={`mailto:info@courierx.in?subject=${encodeURIComponent('Support Request — CourierX')}`}
                     className="flex items-center gap-2 p-3 rounded-xl bg-muted/50 hover:bg-muted transition-colors"
                   >
                     <Mail className="h-4 w-4 text-primary shrink-0" />
@@ -584,16 +584,20 @@ const Contact = () => {
                       <p className="text-xs text-muted-foreground">info@courierx.in</p>
                     </div>
                   </a>
-                  <a 
-                    href="tel:+918484050057"
-                    className="flex items-center gap-2 p-3 rounded-xl bg-muted/50 hover:bg-muted transition-colors"
+                  <button
+                    type="button"
+                    onClick={() => {
+                      navigator.clipboard.writeText('+91 8484050057').catch(() => {});
+                      window.open('https://wa.me/918484050057?text=' + encodeURIComponent('Hi, I need support with my CourierX shipment.'), '_blank', 'noopener,noreferrer');
+                    }}
+                    className="flex items-center gap-2 p-3 rounded-xl bg-muted/50 hover:bg-muted transition-colors text-left"
                   >
                     <Phone className="h-4 w-4 text-candlestick-green shrink-0" />
                     <div>
                       <p className="text-xs font-medium">Phone</p>
                       <p className="text-xs text-muted-foreground">+91 8484050057</p>
                     </div>
-                  </a>
+                  </button>
                 </div>
               </div>
 
@@ -726,7 +730,9 @@ const Contact = () => {
                 action: '+91 7008368628',
                 actionLabel: 'Call Now',
                 color: 'bg-candlestick-green',
-                href: 'tel:+917008368628',
+                type: 'phone' as const,
+                phone: '+917008368628',
+                displayPhone: '+91 7008368628',
               },
               {
                 icon: Phone,
@@ -735,7 +741,9 @@ const Contact = () => {
                 action: '+91 8484050057',
                 actionLabel: 'Call Now',
                 color: 'bg-primary',
-                href: 'tel:+918484050057',
+                type: 'phone' as const,
+                phone: '+918484050057',
+                displayPhone: '+91 8484050057',
               },
               {
                 icon: Mail,
@@ -744,18 +752,28 @@ const Contact = () => {
                 action: 'info@courierx.in',
                 actionLabel: 'Send Email',
                 color: 'bg-coke-red',
-                href: 'mailto:info@courierx.in',
+                type: 'email' as const,
+                phone: null,
+                displayPhone: 'info@courierx.in',
               },
             ].map((item, index) => (
-              <motion.a
+              <motion.div
                 key={item.title}
-                href={item.href}
                 initial={{ opacity: 0, y: 30 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.5, delay: index * 0.1 }}
                 whileHover={{ y: -8, scale: 1.02 }}
-                className="group bg-card border border-border rounded-3xl p-8 text-center hover:border-coke-red/30 hover:shadow-xl transition-all duration-300"
+                onClick={() => {
+                  if (item.type === 'phone' && item.phone) {
+                    navigator.clipboard.writeText(item.displayPhone).catch(() => {});
+                    const waUrl = `https://wa.me/${item.phone.replace('+', '')}?text=${encodeURIComponent('Hi, I need support with my CourierX shipment.')}`;
+                    window.open(waUrl, '_blank', 'noopener,noreferrer');
+                  } else {
+                    window.location.href = `mailto:info@courierx.in?subject=${encodeURIComponent('Support Request — CourierX')}`;
+                  }
+                }}
+                className="group bg-card border border-border rounded-3xl p-8 text-center hover:border-coke-red/30 hover:shadow-xl transition-all duration-300 cursor-pointer"
               >
                 <motion.div
                   whileHover={{ rotate: 10, scale: 1.1 }}
@@ -770,7 +788,7 @@ const Contact = () => {
                   {item.actionLabel}
                   <ArrowRight className="h-4 w-4" />
                 </span>
-              </motion.a>
+              </motion.div>
             ))}
           </div>
         </div>
