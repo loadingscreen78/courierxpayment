@@ -150,9 +150,17 @@ export const ProfileHeader = () => {
             </p>
 
             {profile?.account_number && (
-              <p className="text-xs font-mono text-coke-red font-semibold">
-                {profile.account_number}
-              </p>
+              profile?.aadhaar_verified ? (
+                <p className="text-xs font-mono text-coke-red font-semibold">
+                  {profile.account_number}
+                </p>
+              ) : (
+                <p className="text-xs font-mono text-muted-foreground/60 font-semibold flex items-center gap-1">
+                  <span>Account #: </span>
+                  <span className="blur-sm select-none">CX-XXXXXXXX</span>
+                  <span className="text-amber-600 no-blur text-[10px] ml-1">(KYC required)</span>
+                </p>
+              )
             )}
             
             <p className="text-xs text-muted-foreground/70">

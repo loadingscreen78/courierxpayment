@@ -5,7 +5,7 @@ import MyVault from '@/views/MyVault';
 
 export default function VaultPage() {
   return (
-    <ProtectedRoute>
+    <ProtectedRoute kycGated kycGatedSection="My Vault">
       <MyVault />
     </ProtectedRoute>
   );

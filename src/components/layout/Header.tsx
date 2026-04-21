@@ -126,7 +126,11 @@ export const Header = () => {
                     <p className="text-sm font-semibold leading-none truncate">{displayName}</p>
                     <p className="text-xs leading-none text-muted-foreground mt-1 truncate">{displayEmail}</p>
                     {profile?.account_number && (
-                      <p className="text-[10px] font-mono text-coke-red mt-1">{profile.account_number}</p>
+                      profile?.aadhaar_verified ? (
+                        <p className="text-[10px] font-mono text-coke-red mt-1">{profile.account_number}</p>
+                      ) : (
+                        <p className="text-[10px] font-mono text-amber-600 mt-1">KYC pending</p>
+                      )
                     )}
                   </div>
                 </div>

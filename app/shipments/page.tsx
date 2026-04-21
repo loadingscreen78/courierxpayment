@@ -5,7 +5,7 @@ import Shipments from '@/views/Shipments';
 
 export default function ShipmentsPage() {
   return (
-    <ProtectedRoute>
+    <ProtectedRoute kycGated kycGatedSection="Track Shipments">
       <Shipments />
     </ProtectedRoute>
   );

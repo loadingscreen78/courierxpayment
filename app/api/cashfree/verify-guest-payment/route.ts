@@ -20,9 +20,20 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'Order ID required' }, { status: 400 });
     }
 
+    // Optional auth — if a logged-in user is verifying, link the booking to their account
+    const authHeader = request.headers.get('authorization');
+    let callerUserId: string | null = null;
+
     const appId = process.env.CASHFREE_APP_ID?.trim();
     const secretKey = process.env.CASHFREE_SECRET_KEY?.trim();
     const supabase = getServiceRoleClient();
+
+    if (authHeader?.startsWith('Bearer ')) {
+      try {
+        const { data: { user } } = await supabase.auth.getUser(authHeader.slice(7));
+        callerUserId = user?.id ?? null;
+      } catch { /* non-fatal */ }
+    }
 
     const devMode = !appId || !secretKey;
     let isPaid = devMode;
@@ -93,7 +104,11 @@ export async function POST(request: NextRequest) {
     if (booking.status === 'pending_payment') {
       await supabase
         .from('guest_bookings')
-        .update({ status: 'paid', paid_at: new Date().toISOString() })
+        .update({
+          status: 'paid',
+          paid_at: new Date().toISOString(),
+          ...(callerUserId && !booking.user_id ? { user_id: callerUserId } : {}),
+        })
         .eq('order_id', orderId);
     }
 
@@ -330,13 +345,14 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Update guest booking with AWB
+    // Update guest booking with AWB (and link to user if authenticated)
     await supabase
       .from('guest_bookings')
       .update({
         status: 'shipped',
         awb_number: awb,
         label_url: labelUrl,
+        ...(callerUserId && !booking.user_id ? { user_id: callerUserId } : {}),
       })
       .eq('order_id', orderId);
 

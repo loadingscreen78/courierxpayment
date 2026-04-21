@@ -4,13 +4,27 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { Loader2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { KycGate } from './KycGate';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
+  /** Redirect to KYC page if not verified (old behaviour) */
   requireKyc?: boolean;
+  /**
+   * Show an in-page KYC gate instead of redirecting.
+   * Use this for sections that should be visible but locked until KYC is done.
+   */
+  kycGated?: boolean;
+  /** Human-readable section name shown in the KYC gate message */
+  kycGatedSection?: string;
 }
 
-export const ProtectedRoute = ({ children, requireKyc = false }: ProtectedRouteProps) => {
+export const ProtectedRoute = ({
+  children,
+  requireKyc = false,
+  kycGated = false,
+  kycGatedSection,
+}: ProtectedRouteProps) => {
   const { user, profile, loading } = useAuth();
   const pathname = usePathname();
   const router = useRouter();
@@ -54,6 +68,11 @@ export const ProtectedRoute = ({ children, requireKyc = false }: ProtectedRouteP
 
   if (requireKyc && profile && !profile.aadhaar_verified) {
     return null;
+  }
+
+  // KYC gate: show in-page lock screen instead of redirecting
+  if (kycGated && profile && !profile.aadhaar_verified) {
+    return <KycGate section={kycGatedSection} />;
   }
 
   return <>{children}</>;

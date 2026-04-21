@@ -5,7 +5,7 @@ import Index from '@/views/Index';
 
 export default function DashboardPage() {
   return (
-    <ProtectedRoute>
+    <ProtectedRoute kycGated kycGatedSection="the Dashboard">
       <Index />
     </ProtectedRoute>
   );
