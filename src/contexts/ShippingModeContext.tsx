@@ -1,8 +1,7 @@
 'use client';
 
 import { createContext, useContext, useState, useCallback, ReactNode } from 'react';
-import { useRouter } from 'next/navigation';
-import { supabase } from '@/integrations/supabase/client';
+import { useRouter, usePathname } from 'next/navigation';
 
 export type ShippingMode = 'international' | 'domestic';
 
@@ -17,6 +16,10 @@ interface ShippingModeContextType {
 
 const ShippingModeContext = createContext<ShippingModeContextType | undefined>(undefined);
 
+// Pages that are mode-specific and should redirect when mode changes
+const DOMESTIC_PAGES = ['/new-shipment', '/book/domestic'];
+const INTERNATIONAL_PAGES = ['/dashboard', '/book/medicine', '/book/document', '/book/gift', '/history', '/drafts'];
+
 export const ShippingModeProvider = ({ children }: { children: ReactNode }) => {
   const [mode, setModeState] = useState<ShippingMode>(() => {
     if (typeof window !== 'undefined') {
@@ -27,50 +30,28 @@ export const ShippingModeProvider = ({ children }: { children: ReactNode }) => {
   });
   const [isSwitching, setIsSwitching] = useState(false);
   const router = useRouter();
+  const pathname = usePathname();
 
-  const setMode = useCallback(async (newMode: ShippingMode) => {
+  const setMode = useCallback((newMode: ShippingMode) => {
     if (newMode === mode) return;
+
     setIsSwitching(true);
-    
-    setTimeout(async () => {
-      setModeState(newMode);
-      localStorage.setItem(STORAGE_KEY, newMode);
-      
-      // Check if user has any shipments
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        const { data: shipments, error } = await supabase
-          .from('shipments')
-          .select('id')
-          .eq('user_id', user.id)
-          .limit(1);
-        
-        const hasShipments = shipments && shipments.length > 0;
-        
-        // Navigate based on mode and shipment history
-        if (hasShipments) {
-          // User has shipments - always go to dashboard
-          router.push('/dashboard');
-        } else {
-          // New user with no shipments
-          if (newMode === 'international') {
-            router.push('/dashboard');
-          } else {
-            router.push('/new-shipment');
-          }
-        }
-      } else {
-        // Not logged in - default behavior
-        if (newMode === 'international') {
-          router.push('/dashboard');
-        } else {
-          router.push('/new-shipment');
-        }
-      }
-      
-      setTimeout(() => setIsSwitching(false), 600);
-    }, 800);
-  }, [mode, router]);
+    setModeState(newMode);
+    localStorage.setItem(STORAGE_KEY, newMode);
+
+    // Only navigate if the current page is mode-specific
+    const isDomesticPage = DOMESTIC_PAGES.some(p => pathname?.startsWith(p));
+    const isIntlPage = INTERNATIONAL_PAGES.some(p => pathname?.startsWith(p));
+
+    if (newMode === 'domestic' && isIntlPage) {
+      router.push('/new-shipment');
+    } else if (newMode === 'international' && isDomesticPage) {
+      router.push('/dashboard');
+    }
+    // If on a neutral page (profile, settings, etc.) — stay put, just update the mode
+
+    setTimeout(() => setIsSwitching(false), 400);
+  }, [mode, router, pathname]);
 
   const toggleMode = useCallback(() => {
     setMode(mode === 'international' ? 'domestic' : 'international');
