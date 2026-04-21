@@ -73,7 +73,7 @@ const domesticRateSchema = z.object({
   hasOriginalPackaging: z.boolean().optional(),
 }).superRefine((data, ctx) => {
   if (data.shipmentType === 'document') {
-    if (data.weightKg > 2.5) ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Documents max 2.5 kg', path: ['weightKg'] });
+    if (data.weightKg > 1) ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Documents max 1 kg', path: ['weightKg'] });
   }
   if (data.shipmentType === 'gift') {
     if (!data.lengthCm) ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Required', path: ['lengthCm'] });
@@ -362,6 +362,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
     { name: '', type: '', hsnCode: '', qty: 1, unitPrice: 0 },
   ]);
   const [expandedItemIndex, setExpandedItemIndex] = useState<number>(0);
+  const [isEditingExistingItem, setIsEditingExistingItem] = useState<boolean>(false);
   const [prescriptionDocs, setPrescriptionDocs] = useState<File[]>([]);
   const [pharmacyBillDocs, setPharmacyBillDocs] = useState<File[]>([]);
   const [prescriptionUploadLater, setPrescriptionUploadLater] = useState(false);
@@ -944,6 +945,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
     setAddressSubStep('pickup');
     setContentItems([{ name: '', type: '', hsnCode: '', qty: 1, unitPrice: 0 }]);
     setExpandedItemIndex(0);
+    setIsEditingExistingItem(false);
     setPrescriptionDocs([]);
     setPharmacyBillDocs([]);
     setPrescriptionUploadLater(false);
@@ -1242,10 +1244,8 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                                 {...field}
                                 placeholder="110001"
                                 maxLength={6}
-                                readOnly={!!rateFormData}
-                                className={!!rateFormData ? 'bg-muted text-muted-foreground cursor-not-allowed select-none pointer-events-none' : ''}
                               />
-                              {!!rateFormData && (
+                              {false && (
                                 <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-medium text-muted-foreground bg-muted px-1.5 py-0.5 rounded border border-border/60">locked</span>
                               )}
                             </div>
@@ -1265,12 +1265,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                                 {...field}
                                 placeholder="400001"
                                 maxLength={6}
-                                readOnly={!!rateFormData}
-                                className={!!rateFormData ? 'bg-muted text-muted-foreground cursor-not-allowed select-none pointer-events-none' : ''}
                               />
-                              {!!rateFormData && (
-                                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-medium text-muted-foreground bg-muted px-1.5 py-0.5 rounded border border-border/60">locked</span>
-                              )}
                             </div>
                           </FormControl>
                           {deliveryLookup.loading && <p className="text-xs text-muted-foreground flex items-center gap-1"><CircleNotch className="h-3 w-3 animate-spin" /> Looking up...</p>}
@@ -1299,9 +1294,6 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                                 <SelectItem value="0.1">Below 100g</SelectItem>
                                 <SelectItem value="0.5">Up to 500g</SelectItem>
                                 <SelectItem value="1">Up to 1 kg</SelectItem>
-                                <SelectItem value="1.5">Up to 1.5 kg</SelectItem>
-                                <SelectItem value="2">Up to 2 kg</SelectItem>
-                                <SelectItem value="2.5">Up to 2.5 kg</SelectItem>
                               </SelectContent>
                             </Select>
                           ) : isLaptopDom ? (
@@ -2567,7 +2559,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                                         <span className="font-semibold">₹{rowTotal.toLocaleString('en-IN')}</span>
                                         <button
                                           type="button"
-                                          onClick={() => setExpandedItemIndex(idx)}
+                                          onClick={() => { setExpandedItemIndex(idx); setIsEditingExistingItem(true); }}
                                           className="flex items-center gap-1 px-2 py-1 rounded-md bg-coke-red/10 hover:bg-coke-red/20 text-coke-red text-[11px] font-semibold transition-colors"
                                         >
                                           <PencilSimple className="h-3.5 w-3.5" weight="bold" /> Edit
@@ -2588,8 +2580,6 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                             {contentItems.map((item, idx) => {
                             const isExpanded = expandedItemIndex === idx;
                             const itemTotal = item.qty * item.unitPrice;
-                            // Item is being edited (clicked Edit from the table) vs being newly added
-                            const isEditingExisting = isExpanded && item.name.trim() !== '' && contentItems.length > 1 && idx < contentItems.length - 1 || (isExpanded && (contentItems.length > 1 || contentItems[0]?.name));
 
                             if (!isExpanded && item.name.trim()) return null; // shown in table above
 
@@ -2597,8 +2587,13 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                             <div key={idx} className="rounded-lg border border-border p-4 space-y-3 relative">
                               <div className="flex items-center justify-between">
                                 <span className="text-xs font-semibold text-muted-foreground">Item {idx + 1}</span>
-                                {contentItems.length > 1 && (
-                                  <button type="button" onClick={() => { setContentItems(prev => prev.filter((_, i) => i !== idx)); if (expandedItemIndex >= contentItems.length - 1) setExpandedItemIndex(Math.max(0, contentItems.length - 2)); }} className="text-destructive hover:text-destructive/80 p-1">
+                                {/* Allow delete if there are multiple items OR if editing an existing saved item (others exist in table) */}
+                                {(contentItems.length > 1 || (isEditingExistingItem && contentItems.filter(i => i.name.trim()).length > 1)) && (
+                                  <button type="button" onClick={() => {
+                                    setContentItems(prev => prev.filter((_, i) => i !== idx));
+                                    setExpandedItemIndex(-1);
+                                    setIsEditingExistingItem(false);
+                                  }} className="text-destructive hover:text-destructive/80 p-1">
                                     <Trash className="h-4 w-4" weight="bold" />
                                   </button>
                                 )}
@@ -2634,7 +2629,23 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                                 </div>
                                 <div>
                                   <label className="text-xs font-medium">Unit Price (₹)</label>
-                                  <Input type="number" inputMode="numeric" min={0} value={item.unitPrice || ''} onChange={(e) => { const arr = [...contentItems]; arr[idx].unitPrice = Number(e.target.value) || 0; setContentItems(arr); }} placeholder="500" className="h-10 mt-1" />
+                                  <Input
+                                    type="number"
+                                    inputMode="numeric"
+                                    min={0}
+                                    value={item.unitPrice || ''}
+                                    onChange={(e) => {
+                                      const raw = e.target.value.replace(/[^0-9]/g, '');
+                                      const arr = [...contentItems];
+                                      arr[idx].unitPrice = raw === '' ? 0 : parseInt(raw, 10);
+                                      setContentItems(arr);
+                                    }}
+                                    onKeyDown={(e) => {
+                                      if (['-', '+', 'e', 'E', '.'].includes(e.key)) e.preventDefault();
+                                    }}
+                                    placeholder="500"
+                                    className="h-10 mt-1"
+                                  />
                                 </div>
                               </div>
                               {item.name && item.unitPrice > 0 && (
@@ -2643,11 +2654,11 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                                   <span className="font-semibold">₹{itemTotal.toLocaleString('en-IN')}</span>
                                 </div>
                               )}
-                              {/* Done Editing button — only shows when user clicked Edit on an existing item */}
-                              {isExpanded && expandedItemIndex >= 0 && item.name.trim() && (contentItems.filter(i => i.name.trim()).length > 1 || idx !== contentItems.length - 1) && (
+                              {/* Done Editing button — only shows when user explicitly clicked Edit on a saved item */}
+                              {isExpanded && isEditingExistingItem && item.name.trim() && (
                                 <button
                                   type="button"
-                                  onClick={() => setExpandedItemIndex(-1)}
+                                  onClick={() => { setExpandedItemIndex(-1); setIsEditingExistingItem(false); }}
                                   className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-coke-red text-white text-xs font-semibold hover:bg-red-600 transition-colors w-full justify-center"
                                 >
                                   <Check className="h-3.5 w-3.5" weight="bold" /> Done Editing
@@ -2671,6 +2682,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                             const newIdx = contentItems.length;
                             setContentItems(prev => [...prev, { name: '', type: '', hsnCode: '', qty: 1, unitPrice: 0 }]);
                             setExpandedItemIndex(newIdx);
+                            setIsEditingExistingItem(false);
                           }} className="w-full gap-2 border-dashed" disabled={isOverLimit}>
                             <Plus className="h-4 w-4" /> Add Another Item
                           </Button>
