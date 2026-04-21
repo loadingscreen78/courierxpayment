@@ -76,6 +76,46 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Upload passport documents to Supabase storage if provided (international medicine flow)
+    let passportIdentityPath = '';
+    let passportAddressPath = '';
+    if (passportIdentityFile && passportIdentityFile instanceof File && passportIdentityFile.size > 0) {
+      try {
+        const timestamp = Date.now();
+        const sanitizedName = passportIdentityFile.name.replace(/[^a-zA-Z0-9.-]/g, '_');
+        const storagePath = `guest/${orderId}/passport_identity_${timestamp}_${sanitizedName}`;
+        const buffer = Buffer.from(await passportIdentityFile.arrayBuffer());
+        const { error: uploadErr } = await supabase.storage
+          .from('shipment-documents')
+          .upload(storagePath, buffer, { contentType: passportIdentityFile.type, upsert: false });
+        if (uploadErr) {
+          console.error('[create-guest-order] Passport identity upload failed:', uploadErr.message);
+        } else {
+          passportIdentityPath = storagePath;
+        }
+      } catch (ex) {
+        console.error('[create-guest-order] Passport identity upload exception:', ex);
+      }
+    }
+    if (passportAddressFile && passportAddressFile instanceof File && passportAddressFile.size > 0) {
+      try {
+        const timestamp = Date.now();
+        const sanitizedName = passportAddressFile.name.replace(/[^a-zA-Z0-9.-]/g, '_');
+        const storagePath = `guest/${orderId}/passport_address_${timestamp}_${sanitizedName}`;
+        const buffer = Buffer.from(await passportAddressFile.arrayBuffer());
+        const { error: uploadErr } = await supabase.storage
+          .from('shipment-documents')
+          .upload(storagePath, buffer, { contentType: passportAddressFile.type, upsert: false });
+        if (uploadErr) {
+          console.error('[create-guest-order] Passport address upload failed:', uploadErr.message);
+        } else {
+          passportAddressPath = storagePath;
+        }
+      } catch (ex) {
+        console.error('[create-guest-order] Passport address upload exception:', ex);
+      }
+    }
+
     const { error: insertError } = await supabase.from('guest_bookings').insert({
       order_id: orderId,
       tracking_number: trackingNumber,
@@ -98,6 +138,9 @@ export async function POST(request: NextRequest) {
         rateFormData,
         selectedCourier,
         ...(uploadedDocPath && { kycDocPath: uploadedDocPath, kycDocName: uploadedDocName, kycDocMimeType: uploadedDocType, kycDocType }),
+        ...(passportIdentityPath && { passportIdentityPath }),
+        ...(passportAddressPath && { passportAddressPath }),
+        ...(passportUploadLater && { passportUploadLater: true }),
       },
     });
 
