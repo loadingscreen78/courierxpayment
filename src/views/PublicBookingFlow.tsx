@@ -931,9 +931,47 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
     }
   };
 
+  // Reset all downstream state when returning to step 1 (shipment type may change)
+  const resetDownstreamState = useCallback(() => {
+    setRateFormData(null);
+    setSelectedCourier(null);
+    setGuestCouriers([]);
+    setAccountCouriers([]);
+    setDomesticCouriers([]);
+    setSenderReceiverData(null);
+    setAddressSubStep('pickup');
+    setContentItems([{ name: '', type: '', hsnCode: '', qty: 1, unitPrice: 0 }]);
+    setExpandedItemIndex(0);
+    setPrescriptionDocs([]);
+    setPharmacyBillDocs([]);
+    setControlledDrugsConfirmed(false);
+    setAadhaarFront(null);
+    setAadhaarBack(null);
+    setPassportIdentity(null);
+    setPassportAddress(null);
+    setPassportUploadLater(false);
+    setPickupPhone('');
+    setPickupPhoneManuallyEdited(false);
+    setEmailOtpState('idle');
+    setEmailOtpCode(['', '', '', '', '', '']);
+    setEmailOtpToken('');
+    setEmailOtpError('');
+    setEmailOtpCooldown(0);
+    setEmailOtpAttempts(0);
+    setExtractedAadhaarNumber('');
+    setIsUnderAge(false);
+    clearOcr();
+    detailsForm.reset();
+  }, [clearOcr, detailsForm]);
+
   const handleBack = () => {
     if (step === 1) router.push('/');
-    else setStep(step - 1);
+    else {
+      // Going back to step 1 — clear all type-specific cached data so a
+      // different shipment type starts with a clean slate
+      if (step === 2) resetDownstreamState();
+      setStep(step - 1);
+    }
   };
 
   const stepLabels = ['Shipment Details', 'Select Rate', 'Sender & Receiver', 'Summary & Pay'];
@@ -1490,7 +1528,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                     </p>
                   </motion.div>
                   <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.4 }} className="flex flex-col sm:flex-row gap-2 justify-center pt-2">
-                    <Button variant="outline" size="sm" onClick={() => setStep(1)}>
+                    <Button variant="outline" size="sm" onClick={() => { resetDownstreamState(); setStep(1); }}>
                       <ArrowLeft className="h-3.5 w-3.5 mr-1.5" /> Try Different Route
                     </Button>
                     <Button variant="outline" size="sm" onClick={() => router.push('/contact')}>
@@ -1654,7 +1692,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                       </p>
                     </motion.div>
                     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.4 }} className="flex flex-col sm:flex-row gap-2 justify-center pt-2">
-                      <Button variant="outline" size="sm" onClick={() => setStep(1)}><ArrowLeft className="h-3.5 w-3.5 mr-1.5" /> Try Different Route</Button>
+                      <Button variant="outline" size="sm" onClick={() => { resetDownstreamState(); setStep(1); }}><ArrowLeft className="h-3.5 w-3.5 mr-1.5" /> Try Different Route</Button>
                       <Button variant="outline" size="sm" onClick={() => router.push('/contact')}>Contact Support</Button>
                     </motion.div>
                   </motion.div>
