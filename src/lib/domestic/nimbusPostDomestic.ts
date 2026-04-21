@@ -141,6 +141,8 @@ export async function fetchDomesticRates(req: RateCheckRequest): Promise<Courier
         throw new Error(`NimbusPost rate check failed: ${retryRes.status}`);
       }
       const retryData = await retryRes.json();
+      _lastOriginPin = req.pickupPincode;
+      _lastDestPin = req.deliveryPincode;
       return mapCourierResponse(retryData);
     }
     throw new Error(`NimbusPost rate check failed: ${res.status}`);
@@ -148,8 +150,75 @@ export async function fetchDomesticRates(req: RateCheckRequest): Promise<Courier
 
   const data = await res.json();
   console.log('[nimbusPostDomestic] Raw response keys:', Object.keys(data), 'rates count:', data?.rates?.length ?? 'N/A');
+  // Store pincodes for distance-based delivery estimation
+  _lastOriginPin = req.pickupPincode;
+  _lastDestPin = req.deliveryPincode;
   return mapCourierResponse(data);
 }
+
+/**
+ * Estimate delivery days based on courier mode and origin/destination pincodes.
+ * Uses the first 2-3 digits of Indian pincodes to determine regional distance.
+ *
+ * Indian pincode zones (first digit):
+ *   1 = Delhi, Haryana, Punjab, HP, J&K
+ *   2 = UP, Uttarakhand
+ *   3 = Rajasthan, Gujarat
+ *   4 = Maharashtra, Goa, MP, Chhattisgarh
+ *   5 = Andhra Pradesh, Telangana, Karnataka
+ *   6 = Kerala, Tamil Nadu
+ *   7 = West Bengal, Odisha, NE states
+ *   8 = Bihar, Jharkhand
+ *   9 = Army Post Office
+ *
+ * Distance tiers:
+ *   Same zone (first digit match)  → local
+ *   Adjacent zones (diff 1)        → regional
+ *   Far zones (diff 2-3)           → inter-regional
+ *   Very far zones (diff 4+)       → cross-country
+ */
+function estimateDeliveryDays(
+  mode: CourierMode,
+  originPin?: string,
+  destPin?: string,
+): number {
+  // Default fallback if pincodes unavailable
+  if (!originPin || !destPin || originPin.length < 3 || destPin.length < 3) {
+    return mode === 'air' ? 2 : 5;
+  }
+
+  const originZone = parseInt(originPin[0], 10);
+  const destZone = parseInt(destPin[0], 10);
+  const originRegion = parseInt(originPin.substring(0, 3), 10);
+  const destRegion = parseInt(destPin.substring(0, 3), 10);
+
+  // Same first 3 digits = same city/district
+  const sameDistrict = originRegion === destRegion;
+  // Same first digit = same postal zone
+  const sameZone = originZone === destZone;
+  const zoneDiff = Math.abs(originZone - destZone);
+
+  if (mode === 'air') {
+    if (sameDistrict) return 1;
+    if (sameZone) return 1;
+    if (zoneDiff <= 2) return 2;
+    if (zoneDiff <= 4) return 2;
+    return 3; // cross-country air
+  }
+
+  // Surface delivery
+  if (sameDistrict) return 2;
+  if (sameZone) return 3;
+  if (zoneDiff === 1) return 4;
+  if (zoneDiff === 2) return 5;
+  if (zoneDiff === 3) return 6;
+  if (zoneDiff === 4) return 7;
+  return 8; // cross-country surface (e.g. Delhi to Kerala)
+}
+
+// Store origin/destination for use in mapCourierResponse
+let _lastOriginPin = '';
+let _lastDestPin = '';
 
 function mapCourierResponse(data: any): CourierOption[] {
   // NimbusPost actual response: { status: true, data: [...] }
@@ -181,19 +250,31 @@ function mapCourierResponse(data: any): CourierOption[] {
       : (isBlueDart && !hasSurfaceInName) ? 'air'
       : 'surface';
 
-    // Parse EDD to get estimated delivery days
-    let estimatedDays = 3;
+    // Parse EDD from NimbusPost response
+    let estimatedDays = 0;
+    let eddParsedOk = false;
     if (c.edd) {
       try {
         const [day, month, year] = c.edd.split('-').map(Number);
-        const eddDate = new Date(year, month - 1, day);
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        const diffMs = eddDate.getTime() - today.getTime();
-        estimatedDays = Math.max(1, Math.round(diffMs / (1000 * 60 * 60 * 24)));
+        if (day && month && year) {
+          const eddDate = new Date(year, month - 1, day);
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+          const diffMs = eddDate.getTime() - today.getTime();
+          const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
+          if (diffDays >= 1 && diffDays <= 30) {
+            estimatedDays = diffDays;
+            eddParsedOk = true;
+          }
+        }
       } catch {
-        estimatedDays = 3;
+        // parsing failed, will use distance-based estimate
       }
+    }
+
+    // If NimbusPost didn't provide a valid EDD, estimate based on mode + distance
+    if (!eddParsedOk || estimatedDays <= 0) {
+      estimatedDays = estimateDeliveryDays(mode, _lastOriginPin, _lastDestPin);
     }
 
     return {

@@ -60,6 +60,20 @@ export async function POST(request: NextRequest) {
     const skipNimbus = !process.env.NIMBUS_EMAIL || !process.env.NIMBUS_PASSWORD;
 
     if (skipNimbus) {
+      // ── Distance-based delivery day estimation for mock data ──
+      const originZone = parseInt(data.pickupPincode[0], 10);
+      const destZone = parseInt(data.deliveryPincode[0], 10);
+      const originRegion = parseInt(data.pickupPincode.substring(0, 3), 10);
+      const destRegion = parseInt(data.deliveryPincode.substring(0, 3), 10);
+      const sameDistrict = originRegion === destRegion;
+      const sameZone = originZone === destZone;
+      const zoneDiff = Math.abs(originZone - destZone);
+
+      // Air delivery days based on distance
+      const airDays = sameDistrict ? 1 : sameZone ? 1 : zoneDiff <= 2 ? 2 : zoneDiff <= 4 ? 2 : 3;
+      // Surface delivery days based on distance
+      const surfaceDays = sameDistrict ? 2 : sameZone ? 3 : zoneDiff === 1 ? 4 : zoneDiff === 2 ? 5 : zoneDiff === 3 ? 6 : zoneDiff === 4 ? 7 : 8;
+
       // Mock courier options for development — includes air & surface modes
       const buildMock = (id: number, name: string, base: number, perKg: number, days: number, rating: number, mode: 'surface' | 'air', recommended: boolean) => {
         const freight = Math.round(base + data.weightKg * perKg);
@@ -75,14 +89,14 @@ export async function POST(request: NextRequest) {
       };
 
       const mockCouriers = [
-        buildMock(1, 'Delhivery Surface', 40, 30, 5, 4.2, 'surface', false),
-        buildMock(2, 'BlueDart Air', 80, 50, 2, 4.5, 'air', false),
-        buildMock(3, 'DTDC Surface', 50, 35, 4, 3.8, 'surface', false),
-        buildMock(4, 'Ecom Express Surface', 35, 28, 6, 3.5, 'surface', false),
-        buildMock(5, 'Delhivery Air', 70, 45, 2, 4.2, 'air', false),
-        buildMock(6, 'DTDC Air', 75, 48, 2, 3.8, 'air', false),
-        buildMock(7, 'Xpressbees Surface', 38, 26, 5, 3.9, 'surface', false),
-        buildMock(8, 'Xpressbees Air', 65, 42, 2, 3.9, 'air', false),
+        buildMock(1, 'Delhivery Surface', 40, 30, surfaceDays, 4.2, 'surface', false),
+        buildMock(2, 'BlueDart Air', 80, 50, airDays, 4.5, 'air', false),
+        buildMock(3, 'DTDC Surface', 50, 35, surfaceDays + 1, 3.8, 'surface', false),
+        buildMock(4, 'Ecom Express Surface', 35, 28, surfaceDays + 2, 3.5, 'surface', false),
+        buildMock(5, 'Delhivery Air', 70, 45, airDays, 4.2, 'air', false),
+        buildMock(6, 'DTDC Air', 75, 48, airDays, 3.8, 'air', false),
+        buildMock(7, 'Xpressbees Surface', 38, 26, surfaceDays + 1, 3.9, 'surface', false),
+        buildMock(8, 'Xpressbees Air', 65, 42, airDays, 3.9, 'air', false),
       ];
 
       // Sort by customer_price ascending and mark cheapest as recommended
