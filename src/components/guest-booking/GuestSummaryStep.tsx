@@ -309,12 +309,8 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
   // ── Payment handler ──
 
   const handlePayNow = async () => {
-    if (!isDomestic && !aadhaarVerified) {
-      toast({ title: 'Aadhaar Required', description: 'Please verify your Aadhaar number first.', variant: 'destructive' });
-      return;
-    }
-    if (isDomestic && shipmentType === 'document' && !aadhaarVerified) {
-      toast({ title: 'Aadhaar Required', description: 'Aadhaar verification is required for document shipments.', variant: 'destructive' });
+    if (!aadhaarVerified) {
+      toast({ title: 'Aadhaar Required', description: 'Please verify your Aadhaar number to proceed with payment.', variant: 'destructive' });
       return;
     }
     if (!termsAccepted) {
@@ -331,11 +327,11 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
       formData.append('rateFormData', JSON.stringify(rateFormData));
       formData.append('selectedCourier', JSON.stringify(selectedCourier));
       formData.append('couponCode', couponApplied ? couponCode : '');
+      // Always send Aadhaar number for verification
+      formData.append('aadhaarNumber', aadhaarInput);
       if (isDomestic && kycDocFile) {
         formData.append('kycDocument', kycDocFile);
         formData.append('kycDocType', kycDocType);
-      } else if (!isDomestic) {
-        formData.append('aadhaarNumber', aadhaarInput);
       }
 
       const res = await fetch('/api/cashfree/create-guest-order', {
@@ -851,8 +847,7 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
         mode={mode}
       />
 
-      {/* ── Identity Verification — Aadhaar for international shipments + all document shipments ── */}
-      {(!isDomestic || shipmentType === 'document') && (
+      {/* ── Identity Verification — Aadhaar for all shipments (international + domestic) ── */}
       <div className="bg-card rounded-xl border-2 border-blue-400/50 dark:border-blue-600/40 overflow-hidden shadow-sm shadow-blue-500/10">
         <div className="bg-blue-50/80 dark:bg-blue-950/30 px-5 py-3 border-b border-blue-200/60 dark:border-blue-800/40">
           <h2 className="font-semibold text-base flex items-center gap-2 text-blue-900 dark:text-blue-200">
@@ -870,12 +865,15 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
               Why is KYC required?
             </p>
             <p className="text-xs text-blue-800 dark:text-blue-300 leading-relaxed">
-              Under the <span className="font-medium">Courier Imports &amp; Exports (Clearance) Regulations</span> and CBIC guidelines, all courier providers must verify sender identity before processing international shipments. Aadhaar is the government-approved KYC document under the <span className="font-medium">Prevention of Money Laundering Act (PMLA)</span> and UIDAI framework.
+              {isDomestic
+                ? 'As per courier industry regulations, identity verification is required for all shipments to prevent misuse and ensure safe delivery. Aadhaar is the standard KYC document accepted across all courier partners.'
+                : <>Under the <span className="font-medium">Courier Imports &amp; Exports (Clearance) Regulations</span> and CBIC guidelines, all courier providers must verify sender identity before processing international shipments. Aadhaar is the government-approved KYC document under the <span className="font-medium">Prevention of Money Laundering Act (PMLA)</span> and UIDAI framework.</>
+              }
             </p>
             <div className="flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-blue-700 dark:text-blue-400">
               <span className="flex items-center gap-1"><span className="w-1 h-1 rounded-full bg-blue-500 shrink-0" />Only last 4 digits stored — UIDAI compliant</span>
               <span className="flex items-center gap-1"><span className="w-1 h-1 rounded-full bg-blue-500 shrink-0" />One-time per booking, not linked to any account</span>
-              <span className="flex items-center gap-1"><span className="w-1 h-1 rounded-full bg-blue-500 shrink-0" />Required by Indian customs for export clearance</span>
+              {!isDomestic && <span className="flex items-center gap-1"><span className="w-1 h-1 rounded-full bg-blue-500 shrink-0" />Required by Indian customs for export clearance</span>}
             </div>
           </div>
 
@@ -925,7 +923,6 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
           )}
         </div>
       </div>
-      )}
 
       {/* ── Coupon Code ── */}
       {couponApplied ? (
@@ -1061,7 +1058,7 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
       {/* ── Pay Button ── */}
       <Button
         onClick={() => { feedbackPresets.tap(); handlePayNow(); }}
-        disabled={paymentLoading || ((!isDomestic || shipmentType === 'document') && !aadhaarVerified) || !termsAccepted}
+        disabled={paymentLoading || !aadhaarVerified || !termsAccepted}
         className="w-full bg-coke-red hover:bg-red-600 text-white gap-2 min-h-[56px] py-3 text-sm sm:text-base shadow-lg shadow-coke-red/20"
       >
         {paymentLoading ? (
@@ -1074,7 +1071,7 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
         )}
       </Button>
 
-      {(!isDomestic || shipmentType === 'document') && !aadhaarVerified && (
+      {!aadhaarVerified && (
         <p className="text-xs text-center text-muted-foreground">Please verify your Aadhaar number to proceed with payment.</p>
       )}
 

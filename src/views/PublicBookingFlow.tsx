@@ -1211,6 +1211,9 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                       )} />
                     </div>
 
+                    {/* Weight, dimensions, and remaining fields — only shown after shipment type is selected */}
+                    {watchedDomType && (
+                    <>
                     {/* Weight only — no declared value in step 1 */}
                     <div>
                       <FormField control={domForm.control} name="weightKg" render={({ field }) => (
@@ -1259,8 +1262,8 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                       )} />
                     </div>
 
-                    {/* Dimensions with measurement instructions — hidden for domestic documents */}
-                    {!isDocumentDom && (
+                    {/* Dimensions with measurement instructions — only shown for gift/parcel shipments */}
+                    {watchedDomType === 'gift' && (
                     <div>
                       <div className="flex items-center justify-between mb-1">
                         <p className="text-sm font-medium">Package Dimensions (cm)</p>
@@ -1315,9 +1318,11 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                       </FormItem>
                     )} />
 
-                    <Button type="submit" className="w-full bg-coke-red hover:bg-red-600 text-white gap-2 py-4 min-h-[52px] text-sm sm:text-base" disabled={isDomesticLoading} onClick={() => feedbackPresets.tap()}>
+                    <Button type="submit" className="w-full bg-coke-red hover:bg-red-600 text-white gap-2 py-4 min-h-[52px] text-sm sm:text-base" disabled={isDomesticLoading || !watchedDomType} onClick={() => feedbackPresets.tap()}>
                       {isDomesticLoading ? <><CircleNotch className="h-4 w-4 animate-spin" /> Fetching Rates...</> : <>Calculate Rates <ArrowRight className="h-4 w-4" /></>}
                     </Button>
+                    </>
+                    )}
                   </form>
                 </Form>
               )}
@@ -1475,11 +1480,11 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                   }
                 }
 
-                // Filter out weight slabs > 10kg (guest booking max)
+                // Filter out weight slabs > 10kg (guest booking max) and large slabs
                 filteredDomestic = filteredDomestic.filter((c: any) => {
                   const name = (c.courier_name || '').toUpperCase();
-                  // Remove 15kg, 20kg, 25kg, 30kg slabs
-                  if (/\b(15|20|25|30)\s*(K\.?G|KG)\b/.test(name)) return false;
+                  // Remove 10kg, 15kg, 20kg, 25kg, 30kg slabs — keep only smaller slabs
+                  if (/\b(10|15|20|25|30)\s*(K\.?G|KG)\b/.test(name)) return false;
                   return true;
                 });
 
@@ -1500,9 +1505,9 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                   : saverCouriers;
 
                 const tabDescriptions: Record<string, { icon: typeof AirplaneTilt; label: string; desc: string; color: string; bg: string }> = {
-                  express: { icon: AirplaneTilt, label: 'Express', desc: 'Priority air delivery · 1–3 business days · Note: liquid items cannot be transported by air', color: 'text-blue-600', bg: 'bg-blue-50 dark:bg-blue-950/30' },
-                  economy: { icon: Truck, label: 'Economy', desc: 'Standard ground shipping · 4–7 business days', color: 'text-green-600', bg: 'bg-green-50 dark:bg-green-950/30' },
-                  saver: { icon: Package, label: 'Saver', desc: 'Top 3 cheapest options across all services', color: 'text-amber-600', bg: 'bg-amber-50 dark:bg-amber-950/30' },
+                  express: { icon: AirplaneTilt, label: 'Express', desc: 'Air delivery · 1–3 business days · Note: liquid items cannot be sent by air', color: 'text-blue-600', bg: 'bg-blue-50 dark:bg-blue-950/30' },
+                  economy: { icon: Truck, label: 'Economy', desc: 'Ground delivery · 4–7 business days · All item types accepted', color: 'text-green-600', bg: 'bg-green-50 dark:bg-green-950/30' },
+                  saver: { icon: Package, label: 'Saver', desc: 'Top 3 lowest-price options across all services', color: 'text-amber-600', bg: 'bg-amber-50 dark:bg-amber-950/30' },
                 };
 
                 return filteredDomestic.length === 0 ? (
@@ -1572,12 +1577,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                       <div className={`flex items-start gap-2 text-xs rounded-lg px-3 py-2 ${tabDescriptions[courierFilterTab].bg} ${tabDescriptions[courierFilterTab].color}`}>
                         {(() => { const I = tabDescriptions[courierFilterTab].icon; return <I className="h-4 w-4 shrink-0 mt-0.5" weight="fill" />; })()}
                         <div className="space-y-1">
-                          <span>{courierFilterTab === 'express' ? 'Priority air delivery · 1–3 business days' : tabDescriptions[courierFilterTab].desc}</span>
-                          {courierFilterTab === 'express' && (
-                            <p className="text-blue-700 dark:text-blue-300 opacity-80">
-                              Please note: If your shipment contains any liquid items, we kindly request that you choose a surface delivery option instead. Liquids are not permitted on passenger or cargo aircraft as per aviation safety regulations.
-                            </p>
-                          )}
+                          <span>{tabDescriptions[courierFilterTab].desc}</span>
                         </div>
                       </div>
                     )}
@@ -2274,7 +2274,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                           </div>
                           <div className="min-w-0">
                             <h3 className="font-semibold text-sm sm:text-base">{isMedicineFlow ? 'FDA Documents' : 'Shipment Contents'}</h3>
-                            <p className="text-[11px] sm:text-xs text-muted-foreground">{isMedicineFlow ? 'Upload required documents for customs & FDA clearance' : isDocumentFlow ? 'Document details for customs declaration' : isInternational ? 'Add each item for customs declaration' : 'Describe what you are shipping'}</p>
+                            <p className="text-[11px] sm:text-xs text-muted-foreground">{isMedicineFlow ? 'Upload required documents for customs & FDA clearance' : isDocumentFlow ? 'Document details for customs declaration' : isInternational ? 'Add each item for customs declaration' : 'List the items you are shipping with their approximate value'}</p>
                           </div>
                         </div>
 
@@ -2313,13 +2313,25 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                           ) : (
                           /* ── Gift flow: multi-item view ── */
                           <>
-                            {/* CSB-IV value limit notice */}
+                            {/* CSB-IV value limit notice — only for international shipments */}
+                            {isInternational && (
                             <div className="flex items-start gap-2.5 rounded-lg border border-amber-300/50 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-700/30 p-3">
                               <Warning className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" weight="fill" />
                               <p className="text-xs text-amber-900 dark:text-amber-200">
                                 <span className="font-semibold">CSB-IV Shipment Limit:</span> The total declared value of all items combined should not exceed <span className="font-bold">₹25,000 INR</span>. All international gift/personal shipments are sent under CSB-IV mode, which does not permit a value above ₹25,000.
                               </p>
                             </div>
+                            )}
+
+                            {/* Domestic value limit notice */}
+                            {!isInternational && (
+                            <div className="flex items-start gap-2.5 rounded-lg border border-blue-200/60 bg-blue-50 dark:bg-blue-950/20 dark:border-blue-700/30 p-3">
+                              <Info className="h-4 w-4 text-blue-600 shrink-0 mt-0.5" weight="fill" />
+                              <p className="text-xs text-blue-900 dark:text-blue-200">
+                                Please list each item you're sending with its approximate value. This helps us handle your shipment correctly.
+                              </p>
+                            </div>
+                            )}
 
                             {/* Assistive example — shown when no items filled yet */}
                             {contentItems.length === 1 && !contentItems[0].name && (
@@ -2381,6 +2393,8 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                             {contentItems.map((item, idx) => {
                             const isExpanded = expandedItemIndex === idx;
                             const itemTotal = item.qty * item.unitPrice;
+                            // Item is being edited (clicked Edit from the table) vs being newly added
+                            const isEditingExisting = isExpanded && item.name.trim() !== '' && contentItems.length > 1 && idx < contentItems.length - 1 || (isExpanded && (contentItems.length > 1 || contentItems[0]?.name));
 
                             if (!isExpanded && item.name.trim()) return null; // shown in table above
 
@@ -2434,7 +2448,8 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                                   <span className="font-semibold">₹{itemTotal.toLocaleString('en-IN')}</span>
                                 </div>
                               )}
-                              {item.name.trim() && (
+                              {/* Done Editing button — only shows when user clicked Edit on an existing item */}
+                              {isExpanded && expandedItemIndex >= 0 && item.name.trim() && (contentItems.filter(i => i.name.trim()).length > 1 || idx !== contentItems.length - 1) && (
                                 <button
                                   type="button"
                                   onClick={() => setExpandedItemIndex(-1)}
@@ -2454,7 +2469,8 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                         {/* Add item button — hidden for document flow and medicine flow */}
                         {!isDocumentFlow && !isMedicineFlow && (() => {
                           const totalValue = contentItems.reduce((sum, i) => sum + (i.qty * i.unitPrice), 0);
-                          const isOverLimit = totalValue > 49000;
+                          const valueLimit = isInternational ? 25000 : 49000;
+                          const isOverLimit = totalValue > valueLimit;
                           return (
                           <Button type="button" variant="outline" onClick={() => {
                             const newIdx = contentItems.length;
@@ -2469,7 +2485,8 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                         {/* Total value display — hidden for document flow and medicine flow */}
                         {!isDocumentFlow && !isMedicineFlow && (() => {
                           const totalValue = contentItems.reduce((sum, i) => sum + (i.qty * i.unitPrice), 0);
-                          const isOverLimit = totalValue > 49000;
+                          const valueLimit = isInternational ? 25000 : 49000;
+                          const isOverLimit = totalValue > valueLimit;
                           return (
                           <div className="space-y-2">
                             <div className={`flex justify-between items-center text-sm rounded-lg px-4 py-2.5 ${isOverLimit ? 'bg-destructive/10 border border-destructive/30' : 'bg-muted/50'}`}>
@@ -2479,10 +2496,13 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                             {isOverLimit && (
                               <div className="flex items-start gap-2 text-xs text-destructive px-1">
                                 <Warning className="h-4 w-4 shrink-0 mt-0.5" weight="fill" />
-                                <span>Total declared value cannot exceed ₹49,000 for guest shipments. Please reduce item quantities or prices.</span>
+                                <span>{isInternational
+                                  ? 'Total declared value cannot exceed ₹25,000 for international shipments under CSB-IV. Please reduce item quantities or prices.'
+                                  : 'Total declared value cannot exceed ₹49,000 for guest shipments. Please reduce item quantities or prices.'
+                                }</span>
                               </div>
                             )}
-                            <p className="text-[10px] text-muted-foreground text-right px-1">Maximum allowed: ₹49,000</p>
+                            <p className="text-[10px] text-muted-foreground text-right px-1">Maximum allowed: ₹{isInternational ? '25,000' : '49,000'}</p>
                           </div>
                           );
                         })()}
