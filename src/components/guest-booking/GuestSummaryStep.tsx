@@ -46,6 +46,8 @@ interface GuestSummaryStepProps {
   passportIdentity?: File | null;
   passportAddress?: File | null;
   passportUploadLater?: boolean;
+  prescriptionUploadLater?: boolean;
+  pharmacyBillUploadLater?: boolean;
 }
 
 type SummaryPhase = 'review' | 'aadhaar' | 'payment' | 'success';
@@ -121,7 +123,7 @@ const documentPackingSteps = [
 
 // ── Component ────────────────────────────────────────────────────────────────
 
-export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, senderReceiver, onBack, extractedAadhaarNumber, aadhaarFront, aadhaarBack, passportIdentity, passportAddress, passportUploadLater }: GuestSummaryStepProps) {
+export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, senderReceiver, onBack, extractedAadhaarNumber, aadhaarFront, aadhaarBack, passportIdentity, passportAddress, passportUploadLater, prescriptionUploadLater, pharmacyBillUploadLater }: GuestSummaryStepProps) {
   const router = useRouter();
   const { toast } = useToast();
 
@@ -345,6 +347,8 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
       }
       if (!isDomestic) {
         formData.append('passportUploadLater', passportUploadLater ? 'true' : 'false');
+        formData.append('prescriptionUploadLater', prescriptionUploadLater ? 'true' : 'false');
+        formData.append('pharmacyBillUploadLater', pharmacyBillUploadLater ? 'true' : 'false');
       }
 
       const res = await fetch('/api/cashfree/create-guest-order', {

@@ -2765,41 +2765,60 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
 
                             {/* ── Section 2: Medicine Purchase Bill ── */}
                             <div className="space-y-3">
-                              <div className="flex items-center gap-2">
-                                <FileText className="h-5 w-5 text-coke-red" weight="duotone" />
-                                <h4 className="font-semibold text-sm">Medicine Purchase Bill</h4>
-                              </div>
-                              <div className="rounded-lg border border-coke-red/20 bg-coke-red/5 p-3 text-xs space-y-1.5">
-                                <p className="font-medium text-coke-red/90">Why we need this & what to upload:</p>
-                                <ul className="list-disc list-inside text-muted-foreground space-y-1">
-                                  <li>A purchase bill proves the medicines were legally bought and establishes their declared value for customs assessment.</li>
-                                  <li>The patient name (buyer) must be printed on the bill — this links the purchase to the prescription.</li>
-                                  <li>Medicines must not have an expiry date within 6 months from the date of shipment — expired or near-expiry medicines will be rejected at customs.</li>
-                                  <li className="font-medium text-coke-red/90">The total medicine value on the bill should be less than ₹25,000 INR — all medicine shipments are sent under CSB-IV mode, which does not allow a declared value exceeding ₹25,000.</li>
-                                </ul>
-                              </div>
-                              {pharmacyBillDocs.length > 0 && (
-                                <div className="space-y-2">
-                                  {pharmacyBillDocs.map((file, idx) => (
-                                    <div key={idx} className="flex items-center justify-between rounded-lg border border-coke-red/20 bg-coke-red/5 px-3 py-2">
-                                      <div className="flex items-center gap-2 min-w-0">
-                                        <FileText className="h-4 w-4 text-coke-red shrink-0" weight="duotone" />
-                                        <span className="text-xs truncate">{file.name}</span>
-                                        <span className="text-[10px] text-muted-foreground shrink-0">({(file.size / 1024).toFixed(0)} KB)</span>
-                                      </div>
-                                      <button type="button" onClick={() => setPharmacyBillDocs(prev => prev.filter((_, i) => i !== idx))} className="text-destructive hover:text-destructive/80 p-1 shrink-0">
-                                        <X className="h-3.5 w-3.5" weight="bold" />
-                                      </button>
-                                    </div>
-                                  ))}
+                              <div className="flex items-center justify-between gap-2">
+                                <div className="flex items-center gap-2">
+                                  <FileText className="h-5 w-5 text-coke-red" weight="duotone" />
+                                  <h4 className="font-semibold text-sm">Medicine Purchase Bill</h4>
                                 </div>
+                                <button
+                                  type="button"
+                                  onClick={() => { setPharmacyBillUploadLater(prev => { const next = !prev; if (next) setPharmacyBillDocs([]); return next; }); }}
+                                  className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full border transition-colors ${pharmacyBillUploadLater ? 'bg-amber-50 border-amber-300 text-amber-700 dark:bg-amber-950/30 dark:border-amber-700 dark:text-amber-400' : 'bg-amber-50/40 border-amber-200 text-amber-600 hover:bg-amber-50 hover:border-amber-300 dark:bg-amber-950/10 dark:border-amber-800/50 dark:text-amber-500'}`}
+                                >
+                                  <Clock className="h-3.5 w-3.5" weight="duotone" />
+                                  {pharmacyBillUploadLater ? 'Upload Later (selected)' : 'Upload Later'}
+                                </button>
+                              </div>
+                              {pharmacyBillUploadLater ? (
+                                <div className="rounded-lg border border-amber-200 dark:border-amber-800/40 bg-amber-50 dark:bg-amber-950/20 p-3 text-xs space-y-1">
+                                  <p className="font-medium text-amber-900 dark:text-amber-200">Purchase bill upload deferred</p>
+                                  <p className="text-amber-800 dark:text-amber-300">Our team will contact you via email/WhatsApp to collect the purchase bill before dispatch.</p>
+                                </div>
+                              ) : (
+                                <>
+                                  <div className="rounded-lg border border-coke-red/20 bg-coke-red/5 p-3 text-xs space-y-1.5">
+                                    <p className="font-medium text-coke-red/90">Why we need this & what to upload:</p>
+                                    <ul className="list-disc list-inside text-muted-foreground space-y-1">
+                                      <li>A purchase bill proves the medicines were legally bought and establishes their declared value for customs assessment.</li>
+                                      <li>The patient name (buyer) must be printed on the bill — this links the purchase to the prescription.</li>
+                                      <li>Medicines must not have an expiry date within 6 months from the date of shipment — expired or near-expiry medicines will be rejected at customs.</li>
+                                      <li className="font-medium text-coke-red/90">The total medicine value on the bill should be less than ₹25,000 INR — all medicine shipments are sent under CSB-IV mode, which does not allow a declared value exceeding ₹25,000.</li>
+                                    </ul>
+                                  </div>
+                                  {pharmacyBillDocs.length > 0 && (
+                                    <div className="space-y-2">
+                                      {pharmacyBillDocs.map((file, idx) => (
+                                        <div key={idx} className="flex items-center justify-between rounded-lg border border-coke-red/20 bg-coke-red/5 px-3 py-2">
+                                          <div className="flex items-center gap-2 min-w-0">
+                                            <FileText className="h-4 w-4 text-coke-red shrink-0" weight="duotone" />
+                                            <span className="text-xs truncate">{file.name}</span>
+                                            <span className="text-[10px] text-muted-foreground shrink-0">({(file.size / 1024).toFixed(0)} KB)</span>
+                                          </div>
+                                          <button type="button" onClick={() => setPharmacyBillDocs(prev => prev.filter((_, i) => i !== idx))} className="text-destructive hover:text-destructive/80 p-1 shrink-0">
+                                            <X className="h-3.5 w-3.5" weight="bold" />
+                                          </button>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  )}
+                                  <label className="flex items-center justify-center gap-2 rounded-xl border-2 border-dashed border-coke-red/30 bg-coke-red/5 hover:bg-coke-red/10 p-3.5 cursor-pointer transition-colors">
+                                    <input type="file" accept="image/*,.pdf" multiple className="hidden" onChange={(e) => { if (e.target.files) setPharmacyBillDocs(prev => [...prev, ...Array.from(e.target.files!)]); }} />
+                                    <Upload className="h-4 w-4 text-coke-red" weight="duotone" />
+                                    <span className="text-sm font-medium text-coke-red">Upload Purchase Bill</span>
+                                    <span className="text-xs text-muted-foreground">(PDF, JPG, PNG)</span>
+                                  </label>
+                                </>
                               )}
-                              <label className="flex items-center justify-center gap-2 rounded-xl border-2 border-dashed border-coke-red/30 bg-coke-red/5 hover:bg-coke-red/10 p-3.5 cursor-pointer transition-colors">
-                                <input type="file" accept="image/*,.pdf" multiple className="hidden" onChange={(e) => { if (e.target.files) setPharmacyBillDocs(prev => [...prev, ...Array.from(e.target.files!)]); }} />
-                                <Upload className="h-4 w-4 text-coke-red" weight="duotone" />
-                                <span className="text-sm font-medium text-coke-red">Upload Purchase Bill</span>
-                                <span className="text-xs text-muted-foreground">(PDF, JPG, PNG)</span>
-                              </label>
                             </div>
 
                             {/* ── Controlled Drugs Declaration ── */}
@@ -2830,8 +2849,8 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                           <Button type="button" onClick={() => {
                             feedbackPresets.stepChange();
                             if (isMedicineFlow) {
-                              if (prescriptionDocs.length === 0) { toast({ title: 'Prescription required', description: 'Please upload the doctor\'s prescription.', variant: 'destructive' }); return; }
-                              if (pharmacyBillDocs.length === 0) { toast({ title: 'Purchase bill required', description: 'Please upload the medicine purchase bill.', variant: 'destructive' }); return; }
+                              if (prescriptionDocs.length === 0 && !prescriptionUploadLater) { toast({ title: 'Prescription required', description: 'Please upload the doctor\'s prescription or choose Upload Later.', variant: 'destructive' }); return; }
+                              if (pharmacyBillDocs.length === 0 && !pharmacyBillUploadLater) { toast({ title: 'Purchase bill required', description: 'Please upload the medicine purchase bill or choose Upload Later.', variant: 'destructive' }); return; }
                               if (!controlledDrugsConfirmed) { toast({ title: 'Declaration required', description: 'Please confirm these medicines are not controlled or narcotic drugs.', variant: 'destructive' }); return; }
                               detailsForm.setValue('contentDescription', 'medicine shipment with prescription');
                               detailsForm.handleSubmit(handleFinalSubmit)();
@@ -2884,6 +2903,8 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
             passportIdentity={passportIdentity}
             passportAddress={passportAddress}
             passportUploadLater={passportUploadLater}
+            prescriptionUploadLater={prescriptionUploadLater}
+            pharmacyBillUploadLater={pharmacyBillUploadLater}
           />
         )}
       </main>

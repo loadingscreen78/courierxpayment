@@ -28,6 +28,8 @@ export async function POST(request: NextRequest) {
     const passportIdentityFile = formData.get('passportIdentity') as File | null;
     const passportAddressFile = formData.get('passportAddress') as File | null;
     const passportUploadLater = formData.get('passportUploadLater') === 'true';
+    const prescriptionUploadLater = formData.get('prescriptionUploadLater') === 'true';
+    const pharmacyBillUploadLater = formData.get('pharmacyBillUploadLater') === 'true';
 
     // For domestic, senderEmail is optional. For international it's required.
     // Also allow amount=0 when a coupon covers the full cost.
@@ -141,6 +143,8 @@ export async function POST(request: NextRequest) {
         ...(passportIdentityPath && { passportIdentityPath }),
         ...(passportAddressPath && { passportAddressPath }),
         ...(passportUploadLater && { passportUploadLater: true }),
+        ...(prescriptionUploadLater && { prescriptionUploadLater: true }),
+        ...(pharmacyBillUploadLater && { pharmacyBillUploadLater: true }),
       },
     });
 
