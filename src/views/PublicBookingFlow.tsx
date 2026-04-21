@@ -364,6 +364,8 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
   const [expandedItemIndex, setExpandedItemIndex] = useState<number>(0);
   const [prescriptionDocs, setPrescriptionDocs] = useState<File[]>([]);
   const [pharmacyBillDocs, setPharmacyBillDocs] = useState<File[]>([]);
+  const [prescriptionUploadLater, setPrescriptionUploadLater] = useState(false);
+  const [pharmacyBillUploadLater, setPharmacyBillUploadLater] = useState(false);
   const [controlledDrugsConfirmed, setControlledDrugsConfirmed] = useState(false);
   const [intlZipLookup, setIntlZipLookup] = useState<{ loading: boolean; city: string; state: string; error: string }>({ loading: false, city: '', state: '', error: '' });
   const [showWeightLimitModal, setShowWeightLimitModal] = useState(false);
@@ -944,6 +946,8 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
     setExpandedItemIndex(0);
     setPrescriptionDocs([]);
     setPharmacyBillDocs([]);
+    setPrescriptionUploadLater(false);
+    setPharmacyBillUploadLater(false);
     setControlledDrugsConfirmed(false);
     setAadhaarFront(null);
     setAadhaarBack(null);
@@ -2360,7 +2364,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                                       return next;
                                     });
                                   }}
-                                  className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full border transition-colors ${passportUploadLater ? 'bg-amber-50 border-amber-300 text-amber-700 dark:bg-amber-950/30 dark:border-amber-700 dark:text-amber-400' : 'bg-muted border-border text-muted-foreground hover:text-foreground'}`}
+                                  className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full border transition-colors ${passportUploadLater ? 'bg-amber-50 border-amber-300 text-amber-700 dark:bg-amber-950/30 dark:border-amber-700 dark:text-amber-400' : 'bg-amber-50/40 border-amber-200 text-amber-600 hover:bg-amber-50 hover:border-amber-300 dark:bg-amber-950/10 dark:border-amber-800/50 dark:text-amber-500'}`}
                                 >
                                   <Clock className="h-3.5 w-3.5" weight="duotone" />
                                   {passportUploadLater ? 'Upload Later (selected)' : 'Upload Later'}
@@ -2703,41 +2707,60 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                           <div className="space-y-5 pt-1">
                             {/* ── Section 1: Doctor Prescription ── */}
                             <div className="space-y-3">
-                              <div className="flex items-center gap-2">
-                                <Pill className="h-5 w-5 text-blue-600" weight="duotone" />
-                                <h4 className="font-semibold text-sm">Doctor's Prescription</h4>
-                              </div>
-                              <div className="rounded-lg border border-blue-200 dark:border-blue-800/40 bg-blue-50 dark:bg-blue-950/20 p-3 text-xs space-y-1.5">
-                                <p className="font-medium text-blue-900 dark:text-blue-200">Why we need this & what to upload:</p>
-                                <ul className="list-disc list-inside text-blue-800 dark:text-blue-300 space-y-1">
-                                  <li>Customs and destination country health authorities require a valid prescription to permit medicine imports — without it, the shipment will be seized.</li>
-                                  <li>Must be issued by a registered doctor with their registration number printed on the letterhead.</li>
-                                  <li>The prescription must not cover more than a 90-day medicine supply — larger quantities are not permitted for personal import.</li>
-                                  <li>The recipient (consignee) name on the prescription must exactly match the delivery address name.</li>
-                                </ul>
-                              </div>
-                              {prescriptionDocs.length > 0 && (
-                                <div className="space-y-2">
-                                  {prescriptionDocs.map((file, idx) => (
-                                    <div key={idx} className="flex items-center justify-between rounded-lg border border-blue-200 bg-blue-50/50 px-3 py-2">
-                                      <div className="flex items-center gap-2 min-w-0">
-                                        <FileText className="h-4 w-4 text-blue-600 shrink-0" weight="duotone" />
-                                        <span className="text-xs truncate">{file.name}</span>
-                                        <span className="text-[10px] text-muted-foreground shrink-0">({(file.size / 1024).toFixed(0)} KB)</span>
-                                      </div>
-                                      <button type="button" onClick={() => setPrescriptionDocs(prev => prev.filter((_, i) => i !== idx))} className="text-destructive hover:text-destructive/80 p-1 shrink-0">
-                                        <X className="h-3.5 w-3.5" weight="bold" />
-                                      </button>
-                                    </div>
-                                  ))}
+                              <div className="flex items-center justify-between gap-2">
+                                <div className="flex items-center gap-2">
+                                  <Pill className="h-5 w-5 text-blue-600" weight="duotone" />
+                                  <h4 className="font-semibold text-sm">Doctor's Prescription</h4>
                                 </div>
+                                <button
+                                  type="button"
+                                  onClick={() => { setPrescriptionUploadLater(prev => { const next = !prev; if (next) setPrescriptionDocs([]); return next; }); }}
+                                  className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full border transition-colors ${prescriptionUploadLater ? 'bg-amber-50 border-amber-300 text-amber-700 dark:bg-amber-950/30 dark:border-amber-700 dark:text-amber-400' : 'bg-amber-50/40 border-amber-200 text-amber-600 hover:bg-amber-50 hover:border-amber-300 dark:bg-amber-950/10 dark:border-amber-800/50 dark:text-amber-500'}`}
+                                >
+                                  <Clock className="h-3.5 w-3.5" weight="duotone" />
+                                  {prescriptionUploadLater ? 'Upload Later (selected)' : 'Upload Later'}
+                                </button>
+                              </div>
+                              {prescriptionUploadLater ? (
+                                <div className="rounded-lg border border-amber-200 dark:border-amber-800/40 bg-amber-50 dark:bg-amber-950/20 p-3 text-xs space-y-1">
+                                  <p className="font-medium text-amber-900 dark:text-amber-200">Prescription upload deferred</p>
+                                  <p className="text-amber-800 dark:text-amber-300">Our team will contact you via email/WhatsApp to collect the prescription before dispatch.</p>
+                                </div>
+                              ) : (
+                                <>
+                                  <div className="rounded-lg border border-blue-200 dark:border-blue-800/40 bg-blue-50 dark:bg-blue-950/20 p-3 text-xs space-y-1.5">
+                                    <p className="font-medium text-blue-900 dark:text-blue-200">Why we need this & what to upload:</p>
+                                    <ul className="list-disc list-inside text-blue-800 dark:text-blue-300 space-y-1">
+                                      <li>Customs and destination country health authorities require a valid prescription to permit medicine imports — without it, the shipment will be seized.</li>
+                                      <li>Must be issued by a registered doctor with their registration number printed on the letterhead.</li>
+                                      <li>The prescription must not cover more than a 90-day medicine supply — larger quantities are not permitted for personal import.</li>
+                                      <li>The recipient (consignee) name on the prescription must exactly match the delivery address name.</li>
+                                    </ul>
+                                  </div>
+                                  {prescriptionDocs.length > 0 && (
+                                    <div className="space-y-2">
+                                      {prescriptionDocs.map((file, idx) => (
+                                        <div key={idx} className="flex items-center justify-between rounded-lg border border-blue-200 bg-blue-50/50 px-3 py-2">
+                                          <div className="flex items-center gap-2 min-w-0">
+                                            <FileText className="h-4 w-4 text-blue-600 shrink-0" weight="duotone" />
+                                            <span className="text-xs truncate">{file.name}</span>
+                                            <span className="text-[10px] text-muted-foreground shrink-0">({(file.size / 1024).toFixed(0)} KB)</span>
+                                          </div>
+                                          <button type="button" onClick={() => setPrescriptionDocs(prev => prev.filter((_, i) => i !== idx))} className="text-destructive hover:text-destructive/80 p-1 shrink-0">
+                                            <X className="h-3.5 w-3.5" weight="bold" />
+                                          </button>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  )}
+                                  <label className="flex items-center justify-center gap-2 rounded-xl border-2 border-dashed border-blue-400/30 bg-blue-50/50 hover:bg-blue-100/50 p-3.5 cursor-pointer transition-colors">
+                                    <input type="file" accept="image/*,.pdf" multiple className="hidden" onChange={(e) => { if (e.target.files) setPrescriptionDocs(prev => [...prev, ...Array.from(e.target.files!)]); }} />
+                                    <Upload className="h-4 w-4 text-blue-600" weight="duotone" />
+                                    <span className="text-sm font-medium text-blue-600">Upload Prescription</span>
+                                    <span className="text-xs text-muted-foreground">(PDF, JPG, PNG)</span>
+                                  </label>
+                                </>
                               )}
-                              <label className="flex items-center justify-center gap-2 rounded-xl border-2 border-dashed border-blue-400/30 bg-blue-50/50 hover:bg-blue-100/50 p-3.5 cursor-pointer transition-colors">
-                                <input type="file" accept="image/*,.pdf" multiple className="hidden" onChange={(e) => { if (e.target.files) setPrescriptionDocs(prev => [...prev, ...Array.from(e.target.files!)]); }} />
-                                <Upload className="h-4 w-4 text-blue-600" weight="duotone" />
-                                <span className="text-sm font-medium text-blue-600">Upload Prescription</span>
-                                <span className="text-xs text-muted-foreground">(PDF, JPG, PNG)</span>
-                              </label>
                             </div>
 
                             {/* ── Section 2: Medicine Purchase Bill ── */}
