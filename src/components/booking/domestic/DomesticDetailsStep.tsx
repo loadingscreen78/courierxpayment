@@ -4,7 +4,7 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Slider } from '@/components/ui/slider';
-import { FileText, Gift, Package, Ruler, Scale, IndianRupee } from 'lucide-react';
+import { FileText, Gift, Package, Ruler, Scale, IndianRupee, Laptop } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { DomesticBookingData, DomesticShipmentType } from '@/lib/domestic/types';
 import { DOMESTIC_LIMITS, DOCUMENT_WEIGHT_SLABS } from '@/lib/domestic/types';
@@ -63,6 +63,7 @@ const DomesticDetailsStepComponent = ({ data, onUpdate, lockedType }: Props) => 
               {[
                 { type: 'document' as const, icon: FileText, label: 'Documents', desc: 'Up to 1 kg', emoji: '📄' },
                 { type: 'gift' as const, icon: Gift, label: 'Gift / Parcel', desc: 'Up to 60 kg', emoji: '🎁' },
+                { type: 'laptop' as const, icon: Laptop, label: 'Laptop', desc: 'Up to 5 kg', emoji: '💻' },
               ].map(opt => (
                 <button
                   key={opt.type}
@@ -117,6 +118,43 @@ const DomesticDetailsStepComponent = ({ data, onUpdate, lockedType }: Props) => 
                   )}>{slab.label}</p>
                 </button>
               ))}
+            </div>
+          ) : data.shipmentType === 'laptop' ? (
+            <div className="space-y-3">
+              <div className="text-center py-3 bg-muted/30 rounded-lg">
+                <span className="text-4xl font-bold font-typewriter text-coke-red">
+                  {data.weightKg}
+                </span>
+                <span className="text-sm text-muted-foreground ml-1">kg</span>
+              </div>
+              <Slider
+                value={[data.weightKg]}
+                onValueChange={([v]) => onUpdate({ weightKg: v })}
+                min={0.5}
+                max={5}
+                step={0.5}
+                className="py-2"
+              />
+              <div className="flex justify-between text-xs text-muted-foreground">
+                <span>0.5 kg</span>
+                <span>5 kg</span>
+              </div>
+              <div className="grid grid-cols-4 gap-2">
+                {[1, 1.5, 2, 2.5].map(w => (
+                  <button
+                    key={w}
+                    onClick={() => onUpdate({ weightKg: w })}
+                    className={cn(
+                      'py-2 rounded-lg border text-sm font-medium transition-all',
+                      data.weightKg === w
+                        ? 'border-coke-red bg-coke-red/5 text-coke-red'
+                        : 'border-border hover:border-coke-red/30'
+                    )}
+                  >
+                    {w} kg
+                  </button>
+                ))}
+              </div>
             </div>
           ) : (
             <div className="space-y-3">
@@ -238,7 +276,7 @@ const DomesticDetailsStepComponent = ({ data, onUpdate, lockedType }: Props) => 
                 scheduleSync({ contentDescription: e.target.value });
               }}
               onBlur={() => onUpdate({ contentDescription: localDescription })}
-              placeholder={data.shipmentType === 'document' ? 'e.g. Legal documents, certificates...' : 'e.g. Clothing, electronics, books...'}
+              placeholder={data.shipmentType === 'document' ? 'e.g. Legal documents, certificates...' : data.shipmentType === 'laptop' ? 'e.g. Dell Inspiron 15 laptop, S/N: ABC123...' : 'e.g. Clothing, electronics, books...'}
               rows={2}
               maxLength={500}
             />

@@ -4,7 +4,7 @@
  * Gifts/Duty: up to 60 kg, max ₹49,000 declared value
  */
 
-export type DomesticShipmentType = 'document' | 'gift';
+export type DomesticShipmentType = 'document' | 'gift' | 'laptop';
 
 export interface DomesticAddress {
   fullName: string;
@@ -111,6 +111,7 @@ export const DOCUMENT_WEIGHT_SLABS = [
 export const DOMESTIC_LIMITS = {
   document: { maxWeightKg: 1, maxValue: 49000 },
   gift: { maxWeightKg: 30, maxValue: 49000 },
+  laptop: { maxWeightKg: 5, maxValue: 100000 },
 } as const;
 
 export const MARKUP_MULTIPLIER = 2.65;

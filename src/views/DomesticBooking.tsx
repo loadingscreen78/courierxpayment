@@ -51,10 +51,10 @@ const DomesticBooking = () => {
   const [data, setData] = useState<DomesticBookingData>(() => {
     const typeParam = searchParams.get('type');
     const shipmentType: DomesticShipmentType =
-      typeParam === 'gift' ? 'gift' : 'document';
+      typeParam === 'gift' ? 'gift' : typeParam === 'laptop' ? 'laptop' : 'document';
     return { ...initialData, shipmentType };
   });
-  const lockedType = searchParams.get('type') === 'document' || searchParams.get('type') === 'gift';
+  const lockedType = searchParams.get('type') === 'document' || searchParams.get('type') === 'gift' || searchParams.get('type') === 'laptop';
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 

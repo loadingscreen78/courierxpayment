@@ -15,8 +15,8 @@ const rateCheckSchema = z.object({
   lengthCm: z.number().positive(),
   widthCm: z.number().positive(),
   heightCm: z.number().positive(),
-  declaredValue: z.number().nonnegative().max(49000),
-  shipmentType: z.enum(['document', 'gift']),
+  declaredValue: z.number().nonnegative().max(100000),
+  shipmentType: z.enum(['document', 'gift', 'laptop']),
 });
 
 export async function POST(request: NextRequest) {

@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { ArrowLeft, ArrowRight, CircleNotch, UserPlus, Pill, FileText, Gift, Truck, Globe, User, Envelope, Phone, MapPin, Info, AirplaneTilt, Warning, X, IdentificationCard, Upload, IdentificationBadge, House, Plus, Trash, MagnifyingGlass, CaretUpDown, Check, PencilSimple, CaretDown, CaretRight, ShieldCheck, EnvelopeSimple, Camera, Package } from '@phosphor-icons/react';
+import { ArrowLeft, ArrowRight, CircleNotch, UserPlus, Pill, FileText, Gift, Truck, Globe, User, Envelope, Phone, MapPin, Info, AirplaneTilt, Warning, X, IdentificationCard, Upload, IdentificationBadge, House, Plus, Trash, MagnifyingGlass, CaretUpDown, Check, PencilSimple, CaretDown, CaretRight, ShieldCheck, EnvelopeSimple, Camera, Package, Laptop } from '@phosphor-icons/react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
@@ -58,15 +58,19 @@ const internationalRateSchema = z.object({
 });
 
 const domesticRateSchema = z.object({
-  shipmentType: z.enum(['document', 'gift'], { required_error: 'Select shipment type' }),
+  shipmentType: z.enum(['document', 'gift', 'laptop'], { required_error: 'Select shipment type' }),
   pickupPincode: z.string().regex(/^\d{6}$/, 'Enter valid 6-digit pincode'),
   deliveryPincode: z.string().regex(/^\d{6}$/, 'Enter valid 6-digit pincode'),
   weightKg: z.coerce.number().min(0.05, 'Min 50g').max(10, 'Max 10 kg for guest booking'),
   lengthCm: z.coerce.number().min(1, 'Required').max(150).optional(),
   widthCm: z.coerce.number().min(1, 'Required').max(150).optional(),
   heightCm: z.coerce.number().min(1, 'Required').max(150).optional(),
-  declaredValue: z.coerce.number().min(0).max(49000).optional().default(0),
+  declaredValue: z.coerce.number().min(0).max(100000).optional().default(0),
   prohibitedItemsConfirmed: z.boolean().refine(val => val === true, { message: 'You must confirm your package does not contain prohibited items' }),
+  // Laptop-specific fields
+  laptopBrand: z.string().optional(),
+  laptopSerialNumber: z.string().optional(),
+  hasOriginalPackaging: z.boolean().optional(),
 }).superRefine((data, ctx) => {
   if (data.shipmentType === 'document') {
     if (data.weightKg > 2.5) ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Documents max 2.5 kg', path: ['weightKg'] });
@@ -77,6 +81,15 @@ const domesticRateSchema = z.object({
     if (!data.heightCm) ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Required', path: ['heightCm'] });
     if (data.weightKg > 10) ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Guest booking max 10 kg. Open an account for heavier shipments.', path: ['weightKg'] });
     if (data.declaredValue > 49000) ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Max declared value ₹49,000', path: ['declaredValue'] });
+  }
+  if (data.shipmentType === 'laptop') {
+    if (!data.lengthCm) ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Required', path: ['lengthCm'] });
+    if (!data.widthCm) ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Required', path: ['widthCm'] });
+    if (!data.heightCm) ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Required', path: ['heightCm'] });
+    if (data.weightKg > 5) ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Laptop shipments max 5 kg', path: ['weightKg'] });
+    if (data.declaredValue > 100000) ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Max declared value ₹1,00,000', path: ['declaredValue'] });
+    if (!data.laptopBrand || data.laptopBrand.length < 2) ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Laptop brand is required', path: ['laptopBrand'] });
+    if (!data.laptopSerialNumber || data.laptopSerialNumber.length < 3) ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Serial number is required for laptop shipments', path: ['laptopSerialNumber'] });
   }
 });
 
@@ -111,6 +124,7 @@ const shipmentTypeOptions = {
   domestic: [
     { value: 'document' as const, label: 'Document', icon: FileText, desc: 'Documents & paperwork' },
     { value: 'gift' as const, label: 'Gift / Parcel', icon: Gift, desc: 'Gifts, clothing, items' },
+    { value: 'laptop' as const, label: 'Laptop', icon: Laptop, desc: 'Laptops & notebooks (up to 5 kg)' },
   ],
 };
 
@@ -383,7 +397,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
   // ── Domestic rate form ──
   const domForm = useForm<DomesticRateValues>({
     resolver: zodResolver(domesticRateSchema),
-    defaultValues: { shipmentType: 'document', pickupPincode: '', deliveryPincode: '', weightKg: undefined as any, lengthCm: undefined as any, widthCm: undefined as any, heightCm: undefined as any, declaredValue: 0, prohibitedItemsConfirmed: false },
+    defaultValues: { shipmentType: undefined, pickupPincode: '', deliveryPincode: '', weightKg: undefined as any, lengthCm: undefined as any, widthCm: undefined as any, heightCm: undefined as any, declaredValue: 0, prohibitedItemsConfirmed: false, laptopBrand: '', laptopSerialNumber: '', hasOriginalPackaging: false },
   });
   const detailsForm = useForm<SenderReceiverValues>({
     resolver: zodResolver(senderReceiverSchema),
@@ -408,7 +422,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
   // Watch domestic shipment type
   const watchedDomType = domForm.watch('shipmentType');
   const isDocumentDom = watchedDomType === 'document';
-  const [domTypeExplicitlySelected, setDomTypeExplicitlySelected] = useState(false);
+  const isLaptopDom = watchedDomType === 'laptop';
 
   // ── Pre-fill from rate calculator localStorage data ──
   useEffect(() => {
@@ -422,7 +436,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
       if (!isInternational && data.mode === 'domestic') {
         if (data.pickupPincode) domForm.setValue('pickupPincode', data.pickupPincode);
         if (data.deliveryPincode) domForm.setValue('deliveryPincode', data.deliveryPincode);
-        if (data.shipmentType) { domForm.setValue('shipmentType', data.shipmentType); setDomTypeExplicitlySelected(true); }
+        if (data.shipmentType) domForm.setValue('shipmentType', data.shipmentType);
         if (data.weightKg) domForm.setValue('weightKg', data.weightKg);
         if (data.lengthCm) domForm.setValue('lengthCm', data.lengthCm);
         if (data.widthCm) domForm.setValue('widthCm', data.widthCm);
@@ -605,9 +619,10 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
     setIsDomesticLoading(true);
     // For documents: use default envelope dimensions and set declared value to ₹100
     const isDoc = values.shipmentType === 'document';
-    const lengthCm = values.lengthCm ?? (isDoc ? 30 : 1);
-    const widthCm = values.widthCm ?? (isDoc ? 25 : 1);
-    const heightCm = values.heightCm ?? (isDoc ? 2 : 1);
+    const isLaptop = values.shipmentType === 'laptop';
+    const lengthCm = values.lengthCm ?? (isDoc ? 30 : isLaptop ? 40 : 1);
+    const widthCm = values.widthCm ?? (isDoc ? 25 : isLaptop ? 30 : 1);
+    const heightCm = values.heightCm ?? (isDoc ? 2 : isLaptop ? 10 : 1);
     const declaredValue = isDoc ? 100 : (values.declaredValue ?? 0);
     const enrichedValues = { ...values, lengthCm, widthCm, heightCm, declaredValue };
     setRateFormData(enrichedValues);
@@ -888,6 +903,17 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
       detailsForm.handleSubmit(handleFinalSubmit)();
       return;
     }
+    // For domestic laptop flow: skip content step, auto-set description with laptop details and submit
+    if (!isInternational && (rateFormData as DomesticRateValues)?.shipmentType === 'laptop') {
+      const laptopData = rateFormData as DomesticRateValues;
+      const brand = laptopData.laptopBrand || 'Laptop';
+      const serial = laptopData.laptopSerialNumber || '';
+      const value = laptopData.declaredValue || 0;
+      const desc = `${brand} Laptop (S/N: ${serial}) x1 @ ₹${value.toLocaleString('en-IN')} [HSN: 84713020]`;
+      detailsForm.setValue('contentDescription', desc);
+      detailsForm.handleSubmit(handleFinalSubmit)();
+      return;
+    }
     setAddressSubStep('content');
   };
 
@@ -1140,19 +1166,19 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                     <FormField control={domForm.control} name="shipmentType" render={({ field }) => (
                       <FormItem>
                         <FormLabel>What are you shipping?</FormLabel>
-                        <div className="grid grid-cols-2 gap-2">
+                        <div className="grid grid-cols-3 gap-2">
                           {shipmentTypeOptions.domestic.map(opt => (
                             <button
                               key={opt.value}
                               type="button"
-                              onClick={() => { feedbackPresets.select(); setDomTypeExplicitlySelected(true); field.onChange(opt.value); }}
+                              onClick={() => { feedbackPresets.select(); field.onChange(opt.value); }}
                               className={`p-3 rounded-lg border text-left transition-all ${
-                                domTypeExplicitlySelected && field.value === opt.value
+                                field.value === opt.value
                                   ? 'border-coke-red bg-coke-red/5 ring-1 ring-coke-red/20'
                                   : 'border-border hover:border-muted-foreground/30'
                               }`}
                             >
-                              <opt.icon className={`h-5 w-5 mb-1 ${domTypeExplicitlySelected && field.value === opt.value ? 'text-coke-red' : 'text-muted-foreground'}`} weight="duotone" />
+                              <opt.icon className={`h-5 w-5 mb-1 ${field.value === opt.value ? 'text-coke-red' : 'text-muted-foreground'}`} weight="duotone" />
                               <p className="text-sm font-medium">{opt.label}</p>
                               <p className="text-[11px] sm:text-xs text-muted-foreground leading-tight">{opt.desc}</p>
                             </button>
@@ -1235,6 +1261,23 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                                 <SelectItem value="2.5">Up to 2.5 kg</SelectItem>
                               </SelectContent>
                             </Select>
+                          ) : isLaptopDom ? (
+                            <Select onValueChange={(v) => field.onChange(Number(v))} value={field.value ? String(field.value) : ''}>
+                              <FormControl>
+                                <SelectTrigger><SelectValue placeholder="Select weight" /></SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="1">Up to 1 kg</SelectItem>
+                                <SelectItem value="1.5">Up to 1.5 kg</SelectItem>
+                                <SelectItem value="2">Up to 2 kg</SelectItem>
+                                <SelectItem value="2.5">Up to 2.5 kg</SelectItem>
+                                <SelectItem value="3">Up to 3 kg</SelectItem>
+                                <SelectItem value="3.5">Up to 3.5 kg</SelectItem>
+                                <SelectItem value="4">Up to 4 kg</SelectItem>
+                                <SelectItem value="4.5">Up to 4.5 kg</SelectItem>
+                                <SelectItem value="5">Up to 5 kg</SelectItem>
+                              </SelectContent>
+                            </Select>
                           ) : (
                             <Select onValueChange={(v) => field.onChange(Number(v))} value={field.value ? String(field.value) : ''}>
                               <FormControl>
@@ -1263,8 +1306,8 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                       )} />
                     </div>
 
-                    {/* Dimensions with measurement instructions — only shown for gift/parcel shipments */}
-                    {watchedDomType === 'gift' && (
+                    {/* Dimensions with measurement instructions — only shown for gift/parcel and laptop shipments */}
+                    {(watchedDomType === 'gift' || watchedDomType === 'laptop') && (
                     <div>
                       <div className="flex items-center justify-between mb-1">
                         <p className="text-sm font-medium">Package Dimensions (cm)</p>
@@ -1301,6 +1344,78 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                     </div>
                     )}
 
+                    {/* Laptop-specific fields — brand, serial number, packaging, declared value */}
+                    {isLaptopDom && (
+                    <div className="space-y-4">
+                      <div className="flex items-start gap-2.5 rounded-lg border border-blue-200/60 bg-blue-50 dark:bg-blue-950/20 dark:border-blue-700/30 p-3">
+                        <Info className="h-4 w-4 text-blue-600 shrink-0 mt-0.5" weight="fill" />
+                        <p className="text-xs text-blue-900 dark:text-blue-200">
+                          Laptops are high-value electronics. Please provide accurate details for safe handling and insurance purposes. Ensure the laptop is powered off and packed securely.
+                        </p>
+                      </div>
+                      <div className="grid grid-cols-1 xs:grid-cols-2 gap-3">
+                        <FormField control={domForm.control} name="laptopBrand" render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Laptop Brand</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value || ''}>
+                              <FormControl>
+                                <SelectTrigger><SelectValue placeholder="Select brand" /></SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="Apple">Apple (MacBook)</SelectItem>
+                                <SelectItem value="Dell">Dell</SelectItem>
+                                <SelectItem value="HP">HP</SelectItem>
+                                <SelectItem value="Lenovo">Lenovo</SelectItem>
+                                <SelectItem value="Asus">Asus</SelectItem>
+                                <SelectItem value="Acer">Acer</SelectItem>
+                                <SelectItem value="MSI">MSI</SelectItem>
+                                <SelectItem value="Samsung">Samsung</SelectItem>
+                                <SelectItem value="Microsoft">Microsoft (Surface)</SelectItem>
+                                <SelectItem value="Other">Other</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )} />
+                        <FormField control={domForm.control} name="laptopSerialNumber" render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Serial Number</FormLabel>
+                            <FormControl>
+                              <Input {...field} placeholder="e.g. C02X1234ABCD" />
+                            </FormControl>
+                            <p className="text-[10px] text-muted-foreground">Found on the bottom of your laptop or in Settings → About</p>
+                            <FormMessage />
+                          </FormItem>
+                        )} />
+                      </div>
+                      <FormField control={domForm.control} name="declaredValue" render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Declared Value (₹)</FormLabel>
+                          <FormControl>
+                            <Input {...field} type="number" min={0} max={100000} placeholder="e.g. 50000" />
+                          </FormControl>
+                          <p className="text-[10px] text-muted-foreground">Enter the approximate market value of the laptop. Max ₹1,00,000.</p>
+                          <FormMessage />
+                        </FormItem>
+                      )} />
+                      <FormField control={domForm.control} name="hasOriginalPackaging" render={({ field }) => (
+                        <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-lg border border-border p-3 bg-muted/30">
+                          <FormControl>
+                            <Checkbox checked={field.value} onCheckedChange={field.onChange} />
+                          </FormControl>
+                          <div className="space-y-1 leading-none">
+                            <FormLabel className="text-sm font-medium cursor-pointer">
+                              I have the original laptop box/packaging
+                            </FormLabel>
+                            <p className="text-[10px] text-muted-foreground">
+                              Original packaging provides better protection. If not available, we recommend using bubble wrap and a rigid outer box.
+                            </p>
+                          </div>
+                        </FormItem>
+                      )} />
+                    </div>
+                    )}
+
                     {/* Prohibited Items Confirmation */}
                     <FormField control={domForm.control} name="prohibitedItemsConfirmed" render={({ field }) => (
                       <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-lg border border-border p-4 bg-muted/30">
@@ -1309,10 +1424,16 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                         </FormControl>
                         <div className="space-y-1 leading-none">
                           <FormLabel className="text-sm font-medium cursor-pointer">
-                            I confirm this package does not contain prohibited items
+                            {isLaptopDom
+                              ? 'I confirm the laptop is powered off and does not have a damaged/swollen battery'
+                              : 'I confirm this package does not contain prohibited items'
+                            }
                           </FormLabel>
                           <p className="text-xs text-muted-foreground">
-                            Gold, silver, precious metals, chemicals, narcotics, batteries, currency, physical cash, credit/debit cards, or any restricted substances.
+                            {isLaptopDom
+                              ? 'The laptop must be completely powered off (not in sleep mode). Laptops with damaged, swollen, or leaking batteries cannot be shipped. Remove any external peripherals.'
+                              : 'Gold, silver, precious metals, chemicals, narcotics, batteries, currency, physical cash, credit/debit cards, or any restricted substances.'
+                            }
                           </p>
                           <FormMessage />
                         </div>
@@ -1633,13 +1754,13 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
             <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto">
               {(isInternational
                 ? (['pickup', 'receiver', 'content'] as const)
-                : (!isInternational && (rateFormData as DomesticRateValues)?.shipmentType === 'document')
+                : (!isInternational && ['document', 'laptop'].includes((rateFormData as DomesticRateValues)?.shipmentType))
                   ? (['pickup', 'receiver'] as const)
                   : (['pickup', 'receiver', 'content'] as const)
               ).map((s, i, arr) => {
                 const stepOrder = isInternational
                   ? ['pickup', 'receiver', 'content']
-                  : (!isInternational && (rateFormData as DomesticRateValues)?.shipmentType === 'document')
+                  : (!isInternational && ['document', 'laptop'].includes((rateFormData as DomesticRateValues)?.shipmentType))
                     ? ['pickup', 'receiver']
                     : ['pickup', 'receiver', 'content'];
                 // Map 'sender' sub-step to 'pickup' for progress indicator purposes
@@ -1647,7 +1768,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                 const currentIdx = stepOrder.indexOf(normalizedSubStep);
                 const labels = isInternational
                   ? ['Sender KYC', 'Receiver', isMedicineFlow ? 'FDA Documents' : 'Contents']
-                  : (!isInternational && (rateFormData as DomesticRateValues)?.shipmentType === 'document')
+                  : (!isInternational && ['document', 'laptop'].includes((rateFormData as DomesticRateValues)?.shipmentType))
                     ? ['Pickup Address', 'Recipient Address']
                     : ['Pickup Address', 'Recipient Address', 'Contents'];
                 return (
@@ -2253,7 +2374,10 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                             <ArrowLeft className="h-4 w-4 shrink-0" /> <span className="truncate">{isInternational ? 'Sender KYC' : 'Pickup'}</span>
                           </Button>
                           <Button type="button" onClick={() => { feedbackPresets.stepChange(); handleReceiverNext(); }} className="flex-1 bg-coke-red hover:bg-red-600 text-white gap-1.5 min-h-[48px] text-sm">
-                            {(!isInternational && (rateFormData as DomesticRateValues)?.shipmentType === 'document') ? <><span className="truncate">Continue to Summary</span> <ArrowRight className="h-4 w-4 shrink-0" /></> : isMedicineFlow ? <><span className="truncate">Next: FDA Documents</span> <ArrowRight className="h-4 w-4 shrink-0" /></> : <><span className="truncate">Next: Contents</span> <ArrowRight className="h-4 w-4 shrink-0" /></>}
+                            {(!isInternational && (rateFormData as DomesticRateValues)?.shipmentType === 'document') ? <><span className="truncate">Continue to Summary</span> <ArrowRight className="h-4 w-4 shrink-0" /></>
+                            : (!isInternational && (rateFormData as DomesticRateValues)?.shipmentType === 'laptop') ? <><span className="truncate">Continue to Summary</span> <ArrowRight className="h-4 w-4 shrink-0" /></>
+                            : isMedicineFlow ? <><span className="truncate">Next: FDA Documents</span> <ArrowRight className="h-4 w-4 shrink-0" /></>
+                            : <><span className="truncate">Next: Contents</span> <ArrowRight className="h-4 w-4 shrink-0" /></>}
                           </Button>
                         </div>
                       </motion.div>

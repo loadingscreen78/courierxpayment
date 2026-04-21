@@ -15,7 +15,7 @@ const rateCheckSchema = z.object({
   widthCm: z.number().positive(),
   heightCm: z.number().positive(),
   declaredValue: z.number().nonnegative().max(49000),
-  shipmentType: z.enum(['document', 'gift']),
+  shipmentType: z.enum(['document', 'gift', 'laptop']),
   isGuest: z.boolean().optional().default(false),
 });
 

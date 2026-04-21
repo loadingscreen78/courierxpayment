@@ -669,6 +669,12 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
               'Use a rigid envelope or stiff cardboard folder — no bending.',
               'Seal in a zip-lock bag first to protect from moisture.',
               'Tape all edges firmly. Attach label on a flat, visible surface.',
+            ] : isDomestic && rateFormData?.shipmentType === 'laptop' ? [
+              'Power off the laptop completely — not sleep mode.',
+              'Remove the charger and accessories; pack them separately in a padded pouch.',
+              'Wrap the laptop in anti-static bubble wrap (at least 3 layers).',
+              'Place in a rigid box with foam padding on all 6 sides — no movement inside.',
+              'Seal all seams with strong tape. Attach the AWB label on the top surface.',
             ] : [
               'Use a sturdy corrugated box that fits your items snugly.',
               'Wrap each item individually in bubble wrap; fill gaps with packing material.',

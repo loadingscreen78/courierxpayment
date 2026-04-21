@@ -16,12 +16,12 @@ const addressSchema = z.object({
 });
 
 const bookingSchema = z.object({
-  shipmentType: z.enum(['document', 'gift']),
+  shipmentType: z.enum(['document', 'gift', 'laptop']),
   weightKg: z.number().positive(),
   lengthCm: z.number().positive(),
   widthCm: z.number().positive(),
   heightCm: z.number().positive(),
-  declaredValue: z.number().nonnegative().max(49000),
+  declaredValue: z.number().nonnegative().max(100000),
   contentDescription: z.string().min(1).max(500),
   pickupAddress: addressSchema,
   deliveryAddress: addressSchema,
