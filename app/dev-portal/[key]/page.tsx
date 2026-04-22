@@ -24,7 +24,7 @@ export default function DevPortalGate() {
       const res = await fetch('/api/dev-access/verify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ passphrase, portalKey }),
+        body: JSON.stringify({ passphrase }),
       });
 
       if (res.ok) {
