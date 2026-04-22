@@ -34,68 +34,96 @@ type RateTier = 'express' | 'economy' | 'saver';
 const COMING_SOON_CARRIERS = ['ShipGlobal'];
 
 const WEIGHT_OPTIONS_KG = [
-  { label: '500 g', value: 0.5 },
-  { label: '1 kg', value: 1 },
-  { label: '1.5 kg', value: 1.5 },
-  { label: '2 kg', value: 2 },
-  { label: '2.5 kg', value: 2.5 },
-  { label: '3 kg', value: 3 },
-  { label: '4 kg', value: 4 },
-  { label: '5 kg', value: 5 },
-  { label: '6 kg', value: 6 },
-  { label: '7 kg', value: 7 },
-  { label: '8 kg', value: 8 },
-  { label: '9 kg', value: 9 },
+  { label: '500 g', value: 0.5 }, { label: '1 kg', value: 1 },
+  { label: '1.5 kg', value: 1.5 }, { label: '2 kg', value: 2 },
+  { label: '2.5 kg', value: 2.5 }, { label: '3 kg', value: 3 },
+  { label: '4 kg', value: 4 }, { label: '5 kg', value: 5 },
+  { label: '6 kg', value: 6 }, { label: '7 kg', value: 7 },
+  { label: '8 kg', value: 8 }, { label: '9 kg', value: 9 },
   { label: '10 kg', value: 10 },
 ];
-
 const WEIGHT_OPTIONS_G = [
-  { label: '500 g', value: 500 },
-  { label: '1 kg', value: 1000 },
-  { label: '1.5 kg', value: 1500 },
-  { label: '2 kg', value: 2000 },
-  { label: '2.5 kg', value: 2500 },
-  { label: '3 kg', value: 3000 },
-  { label: '4 kg', value: 4000 },
-  { label: '5 kg', value: 5000 },
-  { label: '6 kg', value: 6000 },
-  { label: '7 kg', value: 7000 },
-  { label: '8 kg', value: 8000 },
-  { label: '9 kg', value: 9000 },
+  { label: '500 g', value: 500 }, { label: '1 kg', value: 1000 },
+  { label: '1.5 kg', value: 1500 }, { label: '2 kg', value: 2000 },
+  { label: '2.5 kg', value: 2500 }, { label: '3 kg', value: 3000 },
+  { label: '4 kg', value: 4000 }, { label: '5 kg', value: 5000 },
+  { label: '6 kg', value: 6000 }, { label: '7 kg', value: 7000 },
+  { label: '8 kg', value: 8000 }, { label: '9 kg', value: 9000 },
   { label: '10 kg', value: 10000 },
 ];
 
-// ── Neumorphism tokens ────────────────────────────────────────────────
-const NEU_BG = '#eef0f5';
-const neuCard: React.CSSProperties = {
-  background: NEU_BG,
-  boxShadow: '8px 8px 20px rgba(163,177,198,0.6), -6px -6px 16px rgba(255,255,255,0.9)',
-  borderRadius: '20px',
-};
-const neuInset: React.CSSProperties = {
-  background: NEU_BG,
-  boxShadow: 'inset 4px 4px 10px rgba(163,177,198,0.5), inset -3px -3px 8px rgba(255,255,255,0.8)',
-  borderRadius: '12px',
-};
-const neuFlat: React.CSSProperties = {
-  background: 'linear-gradient(145deg, #f5f7fa, #e8eaf0)',
-  boxShadow: '4px 4px 10px rgba(163,177,198,0.5), -2px -2px 6px rgba(255,255,255,0.9)',
-  borderRadius: '12px',
-};
+// ── Classify couriers into Express / Economy / Saver ──────────────────
+// Express: air couriers (BlueDart Air, Delhivery Air, DTDC Air, Xpressbees Air, etc.)
+// Economy: surface couriers with ≤5 day delivery (Delhivery Surface, DTDC Surface)
+// Saver: surface couriers with >5 day delivery or cheapest surface options
+function classifyCouriers(couriers: CourierOption[]): Record<RateTier, CourierOption[]> {
+  const express: CourierOption[] = [];
+  const economy: CourierOption[] = [];
+  const saver: CourierOption[] = [];
+
+  for (const c of couriers) {
+    if (c.mode === 'air') {
+      express.push(c);
+    } else {
+      // Surface: split by delivery speed
+      const days = c.estimated_delivery_days || 7;
+      if (days <= 5) {
+        economy.push(c);
+      } else {
+        saver.push(c);
+      }
+    }
+  }
+
+  // If no saver couriers, move the cheapest economy ones to saver
+  if (saver.length === 0 && economy.length > 1) {
+    const sorted = [...economy].sort((a, b) => a.customer_price - b.customer_price);
+    const half = Math.ceil(sorted.length / 2);
+    const cheapHalf = sorted.slice(0, half);
+    const restHalf = sorted.slice(half);
+    if (restHalf.length > 0) {
+      return { express, economy: restHalf, saver: cheapHalf };
+    }
+  }
+
+  // If no economy, move slower express to economy
+  if (economy.length === 0 && express.length > 1) {
+    const sorted = [...express].sort((a, b) => a.customer_price - b.customer_price);
+    return { express: [sorted[sorted.length - 1]], economy: sorted.slice(0, -1), saver };
+  }
+
+  return { express, economy, saver };
+}
+
+// ── Compute estimated arrival date from business days ─────────────────
+function getEstimatedArrival(days: number, mode: 'air' | 'surface'): string {
+  // If API didn't return days, use realistic defaults per mode
+  const effectiveDays = (!days || days <= 0)
+    ? (mode === 'air' ? 2 : 5)
+    : days;
+  const d = new Date();
+  let added = 0;
+  while (added < effectiveDays) {
+    d.setDate(d.getDate() + 1);
+    // Skip Sundays (Indian couriers mostly deliver on Saturdays)
+    if (d.getDay() !== 0) added++;
+  }
+  return d.toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' });
+}
 
 // ── Animated BG ───────────────────────────────────────────────────────
 const AnimatedBackground = () => (
   <div className="absolute inset-0 overflow-hidden pointer-events-none">
-    <motion.div className="absolute -top-40 -right-40 w-96 h-96 bg-coke-red/8 rounded-full blur-3xl"
+    <motion.div className="absolute -top-40 -right-40 w-96 h-96 bg-coke-red/5 rounded-full blur-3xl"
       animate={{ scale: [1, 1.2, 1], opacity: [0.15, 0.3, 0.15] }}
       transition={{ duration: 10, repeat: Infinity, ease: 'easeInOut' }} />
-    <motion.div className="absolute -bottom-40 -left-40 w-96 h-96 bg-blue-400/8 rounded-full blur-3xl"
+    <motion.div className="absolute -bottom-40 -left-40 w-96 h-96 bg-coke-red/5 rounded-full blur-3xl"
       animate={{ scale: [1.2, 1, 1.2], opacity: [0.15, 0.3, 0.15] }}
       transition={{ duration: 10, repeat: Infinity, ease: 'easeInOut', delay: 3 }} />
   </div>
 );
 
-// ── Pincode Finder modal ──────────────────────────────────────────────
+// ── Pincode Finder (State → District → Pincodes) ─────────────────────
 interface PincodeResult { pincode: string; offices: string[]; district: string; state: string; }
 
 const PincodeFinder = ({ onSelect, onClose }: { onSelect: (p: string) => void; onClose: () => void }) => {
@@ -129,16 +157,15 @@ const PincodeFinder = ({ onSelect, onClose }: { onSelect: (p: string) => void; o
     : pincodes;
 
   return (
-    <div ref={ref} className="absolute z-[9999] left-0 top-full mt-2 w-72 overflow-hidden"
-      style={{ ...neuCard, border: '1px solid rgba(163,177,198,0.3)' }}>
-      <div className="px-4 pt-4 pb-3 border-b border-black/5">
+    <div ref={ref} className="absolute z-[9999] left-0 top-full mt-2 w-72 rounded-2xl border border-border bg-card shadow-2xl overflow-hidden">
+      <div className="px-4 pt-4 pb-3 border-b border-border/50">
         <div className="flex items-center justify-between mb-3">
           <p className="text-sm font-semibold">Find Pincode</p>
-          <button onClick={onClose} className="text-xs text-muted-foreground w-6 h-6 flex items-center justify-center rounded-full" style={neuFlat}>✕</button>
+          <button onClick={onClose} className="text-xs text-muted-foreground hover:text-foreground w-6 h-6 flex items-center justify-center rounded-full border border-border">✕</button>
         </div>
         <div className="relative mb-2">
           <select value={selState} onChange={e => { setSelState(e.target.value); setSelDistrict(''); }}
-            className="w-full h-9 px-3 pr-8 text-sm appearance-none cursor-pointer focus:outline-none" style={neuInset}>
+            className="w-full h-9 px-3 pr-8 rounded-lg border border-border bg-background text-sm appearance-none cursor-pointer focus:outline-none focus:border-coke-red">
             <option value="">Select State</option>
             {STATES.map(s => <option key={s} value={s}>{s}</option>)}
           </select>
@@ -146,7 +173,7 @@ const PincodeFinder = ({ onSelect, onClose }: { onSelect: (p: string) => void; o
         </div>
         <div className="relative">
           <select value={selDistrict} onChange={e => setSelDistrict(e.target.value)} disabled={!selState}
-            className="w-full h-9 px-3 pr-8 text-sm appearance-none cursor-pointer focus:outline-none disabled:opacity-50" style={neuInset}>
+            className="w-full h-9 px-3 pr-8 rounded-lg border border-border bg-background text-sm appearance-none cursor-pointer focus:outline-none focus:border-coke-red disabled:opacity-50">
             <option value="">Select District</option>
             {districts.map(d => <option key={d} value={d}>{d}</option>)}
           </select>
@@ -157,13 +184,13 @@ const PincodeFinder = ({ onSelect, onClose }: { onSelect: (p: string) => void; o
         {loading && <div className="flex items-center justify-center gap-2 py-5 text-sm text-muted-foreground"><CircleNotch className="h-4 w-4 animate-spin" /> Loading...</div>}
         {!loading && selDistrict && pincodes.length > 0 && (
           <>
-            <div className="px-3 pt-2 pb-1 sticky top-0 bg-white/80 backdrop-blur-sm z-10">
+            <div className="px-3 pt-2 pb-1 sticky top-0 bg-card z-10">
               <input type="text" placeholder="Filter area or pincode..." value={filter} onChange={e => setFilter(e.target.value)}
-                className="w-full text-xs px-2 py-1.5 rounded-lg focus:outline-none" style={neuInset} />
+                className="w-full text-xs px-2 py-1.5 rounded-lg border border-border bg-background focus:outline-none focus:border-coke-red" />
             </div>
             {filtered.map((p, i) => (
               <button key={i} onClick={() => { onSelect(p.pincode); onClose(); }}
-                className="w-full text-left px-4 py-2.5 hover:bg-coke-red/5 transition-colors border-b border-black/5 last:border-0">
+                className="w-full text-left px-4 py-2.5 hover:bg-coke-red/5 transition-colors border-b border-border/30 last:border-0">
                 <div className="flex items-center justify-between">
                   <span className="font-bold text-sm text-coke-red">{p.pincode}</span>
                   <span className="text-[10px] text-muted-foreground">{p.district}</span>
@@ -197,10 +224,9 @@ const PincodeInput = ({ value, onChange, label }: { value: string; onChange: (v:
   return (
     <div className="space-y-1.5 relative">
       <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">{label}</Label>
-      <input type="text" inputMode="numeric" maxLength={6} placeholder="e.g. 110001" value={value}
+      <Input type="text" inputMode="numeric" maxLength={6} placeholder="e.g. 110001" value={value}
         onChange={e => onChange(e.target.value.replace(/\D/g, '').slice(0, 6))}
-        className="w-full h-12 px-4 text-lg font-bold font-typewriter focus:outline-none focus:ring-2 focus:ring-coke-red/30 transition-all"
-        style={neuInset} />
+        className="h-12 text-lg font-bold font-typewriter" />
       {locationInfo && (
         <p className="text-xs text-muted-foreground flex items-center gap-1">
           <MapPinLine size={12} weight="bold" className="text-coke-red" />
@@ -208,7 +234,7 @@ const PincodeInput = ({ value, onChange, label }: { value: string; onChange: (v:
         </p>
       )}
       <button type="button" onClick={() => setShowFinder(v => !v)}
-        className="flex items-center gap-1.5 text-xs text-coke-red font-medium px-3 py-1.5 transition-all" style={neuFlat}>
+        className="flex items-center gap-1.5 text-xs text-coke-red font-medium px-3 py-1.5 rounded-lg border border-coke-red/20 hover:bg-coke-red/5 transition-all">
         <MagnifyingGlass size={12} weight="bold" /> Find pincode
       </button>
       {showFinder && <PincodeFinder onSelect={p => { onChange(p); setShowFinder(false); }} onClose={() => setShowFinder(false)} />}
@@ -220,8 +246,7 @@ const PincodeInput = ({ value, onChange, label }: { value: string; onChange: (v:
 const WeightDropdown = ({ value, onChange, options }: { value: number; onChange: (v: number) => void; options: { label: string; value: number }[] }) => (
   <div className="relative">
     <select value={value} onChange={e => onChange(Number(e.target.value))}
-      className="w-full h-12 px-4 pr-10 text-base font-semibold appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-coke-red/30 transition-all"
-      style={neuInset}>
+      className="w-full h-12 px-4 pr-10 rounded-lg border border-border bg-background text-base font-semibold appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-coke-red/20 focus:border-coke-red transition-all">
       {options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
     </select>
     <CaretDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
@@ -231,90 +256,102 @@ const WeightDropdown = ({ value, onChange, options }: { value: number; onChange:
 // ── Domestic/International Toggle ─────────────────────────────────────
 const ShippingModeToggle = ({ mode, onChange }: { mode: ShippingMode; onChange: (m: ShippingMode) => void }) => (
   <div className="flex items-center justify-center">
-    <div className="flex p-1.5 gap-1.5" style={{ ...neuInset, borderRadius: '18px' }}>
-      <motion.button onClick={() => onChange('domestic')} whileTap={{ scale: 0.97 }}
-        className="flex items-center gap-2.5 px-6 py-3 rounded-[14px] text-sm font-bold transition-all"
-        style={mode === 'domestic' ? {
-          background: 'linear-gradient(135deg, #d63031 0%, #c0392b 100%)',
-          boxShadow: '3px 3px 10px rgba(214,48,49,0.4), -1px -1px 4px rgba(255,255,255,0.2)',
-          color: '#fff',
-        } : { background: 'transparent', color: '#888' }}>
-        <div className={cn('w-8 h-8 rounded-lg flex items-center justify-center', mode === 'domestic' ? 'bg-white/20' : 'bg-orange-100')}>
-          <House size={18} weight="bold" className={mode === 'domestic' ? 'text-white' : 'text-orange-500'} />
-        </div>
+    <div className="relative inline-flex items-center bg-muted/60 rounded-2xl p-1.5 border border-border shadow-sm">
+      <motion.div className="absolute top-1.5 bottom-1.5 rounded-xl bg-coke-red shadow-lg"
+        initial={false}
+        animate={{ left: mode === 'domestic' ? '6px' : '50%', right: mode === 'international' ? '6px' : '50%' }}
+        transition={{ type: 'spring', damping: 25, stiffness: 300 }} />
+      <button onClick={() => onChange('domestic')}
+        className={cn("relative z-10 flex items-center gap-2.5 px-6 py-3 rounded-xl text-sm font-bold transition-colors",
+          mode === 'domestic' ? "text-white" : "text-muted-foreground hover:text-foreground")}>
+        <House size={18} weight="bold" />
         <div className="text-left">
           <p className="leading-none">Domestic</p>
-          <p className={cn('text-[10px] font-normal mt-0.5', mode === 'domestic' ? 'text-white/70' : 'text-muted-foreground')}>Within India</p>
+          <p className={cn("text-[10px] font-normal", mode === 'domestic' ? "text-white/70" : "text-muted-foreground")}>Within India</p>
         </div>
-      </motion.button>
-      <motion.button onClick={() => onChange('international')} whileTap={{ scale: 0.97 }}
-        className="flex items-center gap-2.5 px-6 py-3 rounded-[14px] text-sm font-bold transition-all"
-        style={mode === 'international' ? {
-          background: 'linear-gradient(135deg, #0984e3 0%, #0773c5 100%)',
-          boxShadow: '3px 3px 10px rgba(9,132,227,0.4), -1px -1px 4px rgba(255,255,255,0.2)',
-          color: '#fff',
-        } : { background: 'transparent', color: '#888' }}>
-        <div className={cn('w-8 h-8 rounded-lg flex items-center justify-center', mode === 'international' ? 'bg-white/20' : 'bg-blue-100')}>
-          <Globe size={18} weight="bold" className={mode === 'international' ? 'text-white' : 'text-blue-500'} />
-        </div>
+      </button>
+      <button onClick={() => onChange('international')}
+        className={cn("relative z-10 flex items-center gap-2.5 px-6 py-3 rounded-xl text-sm font-bold transition-colors",
+          mode === 'international' ? "text-white" : "text-muted-foreground hover:text-foreground")}>
+        <Globe size={18} weight="bold" />
         <div className="text-left">
           <p className="leading-none">International</p>
-          <p className={cn('text-[10px] font-normal mt-0.5', mode === 'international' ? 'text-white/70' : 'text-muted-foreground')}>150+ Countries</p>
+          <p className={cn("text-[10px] font-normal", mode === 'international' ? "text-white/70" : "text-muted-foreground")}>150+ Countries</p>
         </div>
-      </motion.button>
+      </button>
     </div>
   </div>
 );
 
-// ── Rate Tier Card ────────────────────────────────────────────────────
-const TIER_META = {
-  express: { label: 'Express', Icon: AirplaneTilt, color: '#d63031', grad: 'linear-gradient(135deg,#d63031,#c0392b)', desc: 'Fastest delivery' },
-  economy: { label: 'Economy', Icon: Truck, color: '#0984e3', grad: 'linear-gradient(135deg,#0984e3,#0773c5)', desc: 'Best balance' },
-  saver:   { label: 'Saver',   Icon: Package, color: '#00b894', grad: 'linear-gradient(135deg,#00b894,#00a381)', desc: 'Most affordable' },
-} as const;
-
-const TierCard = ({ tier, price, days, courierName, isSelected, onSelect, index, onBook }: {
-  tier: RateTier; price: number; days: string; courierName: string;
-  isSelected: boolean; onSelect: () => void; index: number; onBook: () => void;
+// ── Domestic Courier Card ─────────────────────────────────────────────
+const DomCourierCard = ({ courier, isSelected, onSelect, index, onBook }: {
+  courier: CourierOption; isSelected: boolean; onSelect: () => void; index: number; onBook: () => void;
 }) => {
-  const { label, Icon, color, grad, desc } = TIER_META[tier];
+  const isAir = courier.mode === 'air';
+  const ModeIcon = isAir ? AirplaneTilt : Truck;
+  const arrivalDate = getEstimatedArrival(courier.estimated_delivery_days, courier.mode);
+  const daysText = courier.estimated_delivery_days > 0
+    ? `${courier.estimated_delivery_days} business day${courier.estimated_delivery_days !== 1 ? 's' : ''}`
+    : (isAir ? '1–3 business days' : '4–7 business days');
+
   return (
-    <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4, delay: index * 0.1 }} whileHover={{ y: -6 }}
-      onClick={onSelect} className="cursor-pointer"
-      style={isSelected ? { ...neuCard, boxShadow: `8px 8px 20px rgba(163,177,198,0.6), -6px -6px 16px rgba(255,255,255,0.9), inset 0 0 0 2.5px ${color}` } : neuCard}>
-      <div className="h-1.5 rounded-t-[20px]" style={{ background: grad }} />
-      <div className="px-5 pb-5 pt-4 space-y-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: grad, boxShadow: `2px 2px 8px ${color}40` }}>
-              <Icon size={20} weight="bold" className="text-white" />
-            </div>
-            <div>
-              <p className="font-bold text-base" style={{ color }}>{label}</p>
-              <p className="text-[11px] text-muted-foreground">{desc}</p>
-            </div>
+    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3, delay: index * 0.06 }}
+      whileHover={{ y: -4 }}
+      onClick={onSelect}
+      className={cn(
+        "relative rounded-2xl border-2 p-4 sm:p-5 transition-all duration-200 flex flex-col h-full cursor-pointer",
+        isSelected
+          ? "border-coke-red bg-coke-red/5 shadow-lg shadow-coke-red/10"
+          : "border-border bg-card hover:border-coke-red/30 hover:shadow-md"
+      )}>
+      {courier.is_recommended && (
+        <div className="absolute -top-2.5 -right-2.5 z-10">
+          <Badge className="bg-coke-red text-white border-0 shadow-md px-2.5 py-0.5 text-[10px]">
+            <Star size={10} weight="fill" className="mr-1" /> Best Value
+          </Badge>
+        </div>
+      )}
+      {isSelected && (
+        <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }}
+          className="absolute top-3 left-3 w-5 h-5 rounded-full bg-coke-red flex items-center justify-center">
+          <Check size={12} weight="bold" className="text-white" />
+        </motion.div>
+      )}
+      <div className="text-center space-y-3 flex-1 flex flex-col">
+        <div className={cn("w-10 h-10 mx-auto rounded-xl flex items-center justify-center",
+          isSelected ? "bg-coke-red text-white" : "bg-muted")}>
+          <ModeIcon size={20} weight="bold" />
+        </div>
+        <div>
+          <h3 className="font-bold text-sm font-typewriter leading-tight">{courier.courier_name}</h3>
+          <p className="text-[10px] text-muted-foreground mt-0.5 capitalize">{courier.mode}</p>
+        </div>
+        <div className="py-2 border-y border-border/50">
+          <p className={cn("text-2xl font-bold", isSelected ? "text-coke-red" : "text-foreground")}>
+            ₹{courier.customer_price.toLocaleString('en-IN')}
+          </p>
+          <p className="text-[10px] text-muted-foreground">incl. all taxes</p>
+        </div>
+        <div className="space-y-1">
+          <div className="flex items-center justify-center gap-1.5 text-xs text-muted-foreground">
+            <Clock size={12} weight="bold" />
+            <span>By {arrivalDate}</span>
           </div>
-          {isSelected && (
-            <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }}
-              className="w-6 h-6 rounded-full flex items-center justify-center" style={{ background: grad }}>
-              <Check size={14} weight="bold" className="text-white" />
-            </motion.div>
-          )}
+          <p className="text-[10px] text-muted-foreground">{daysText}</p>
         </div>
-        <div className="py-3 text-center rounded-xl" style={neuInset}>
-          <p className="text-3xl font-bold font-typewriter" style={{ color }}>₹{price.toLocaleString('en-IN')}</p>
-          <p className="text-[11px] text-muted-foreground mt-0.5">incl. all taxes</p>
-        </div>
-        <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
-          <Clock size={14} weight="bold" /><span>{days}</span>
-        </div>
-        <p className="text-[11px] text-center text-muted-foreground truncate">{courierName}</p>
-        <motion.button whileTap={{ scale: 0.97 }} onClick={e => { e.stopPropagation(); onBook(); }}
-          className="w-full py-2.5 text-sm font-semibold text-white rounded-xl"
-          style={{ background: grad, boxShadow: `2px 2px 8px ${color}40`, borderRadius: '12px' }}>
-          Book {label} <ArrowRight size={14} weight="bold" className="inline ml-1" />
-        </motion.button>
+        {courier.rating > 0 && (
+          <div className="flex items-center justify-center gap-1 text-xs text-muted-foreground">
+            <Star size={10} weight="fill" className="text-amber-400" />
+            <span>{courier.rating.toFixed(1)}</span>
+          </div>
+        )}
+        <div className="flex-1" />
+        <Button size="sm" onClick={e => { e.stopPropagation(); onBook(); }}
+          className={cn("w-full min-h-[40px] text-xs transition-all",
+            isSelected ? "bg-coke-red hover:bg-coke-red/90 text-white" : "bg-charcoal hover:bg-charcoal/90 text-white")}>
+          Book Now <CaretRight size={14} weight="bold" className="ml-1" />
+        </Button>
       </div>
     </motion.div>
   );
@@ -328,13 +365,14 @@ const CarrierCard = ({ option, isSelected, onSelect, index }: {
   const isComingSoon = COMING_SOON_CARRIERS.includes(option.carrier);
   return (
     <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5, delay: index * 0.1 }} whileHover={isComingSoon ? {} : { y: -8 }}
-      onClick={isComingSoon ? undefined : onSelect} className="relative cursor-pointer"
-      style={isComingSoon ? { ...neuCard, opacity: 0.6 } : isSelected
-        ? { ...neuCard, boxShadow: '8px 8px 20px rgba(163,177,198,0.6), -6px -6px 16px rgba(255,255,255,0.9), inset 0 0 0 2.5px #d63031' }
-        : neuCard}>
+      transition={{ duration: 0.4, delay: index * 0.1 }} whileHover={isComingSoon ? {} : { y: -6 }}
+      onClick={isComingSoon ? undefined : onSelect}
+      className={cn("relative rounded-2xl border-2 p-6 transition-all duration-200 cursor-pointer",
+        isComingSoon ? "border-border bg-muted/40 opacity-60 cursor-not-allowed"
+          : isSelected ? "border-coke-red bg-coke-red/5 shadow-lg shadow-coke-red/10"
+          : "border-border bg-card hover:border-coke-red/30 hover:shadow-md")}>
       {isComingSoon && (
-        <div className="absolute inset-0 z-20 rounded-[20px] flex items-center justify-center bg-white/60 backdrop-blur-[2px]">
+        <div className="absolute inset-0 z-20 rounded-2xl flex items-center justify-center bg-background/60 backdrop-blur-[2px]">
           <Badge className="bg-charcoal text-white border-0 shadow-lg px-4 py-2 text-sm gap-2">
             <Lock size={14} weight="bold" /> COMING SOON
           </Badge>
@@ -342,21 +380,25 @@ const CarrierCard = ({ option, isSelected, onSelect, index }: {
       )}
       {option.isRecommended && !isComingSoon && (
         <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="absolute -top-3 -right-3 z-10">
-          <Badge className="bg-gradient-to-r from-amber-500 to-orange-500 text-white border-0 shadow-lg px-3 py-1 text-xs">
-            ★ Best Value
-          </Badge>
+          <Badge className="bg-coke-red text-white border-0 shadow-md px-3 py-1 text-xs">★ Best Value</Badge>
         </motion.div>
       )}
-      <div className="p-6 text-center space-y-4">
-        <div className="w-14 h-14 mx-auto rounded-2xl flex items-center justify-center"
-          style={isSelected ? { background: 'linear-gradient(135deg,#d63031,#c0392b)', boxShadow: '3px 3px 8px rgba(214,48,49,0.3)' } : neuFlat}>
-          <Truck size={28} weight="bold" className={isSelected ? 'text-white' : 'text-muted-foreground'} />
+      {isSelected && !isComingSoon && (
+        <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }}
+          className="absolute top-4 left-4 w-6 h-6 rounded-full bg-coke-red flex items-center justify-center">
+          <Check size={14} weight="bold" className="text-white" />
+        </motion.div>
+      )}
+      <div className="text-center space-y-4">
+        <div className={cn("w-14 h-14 mx-auto rounded-2xl flex items-center justify-center",
+          isSelected ? "bg-coke-red text-white" : "bg-muted")}>
+          <Truck size={28} weight="bold" />
         </div>
         <div>
           <h3 className="font-bold text-base font-typewriter">{info.name}</h3>
           <p className="text-xs text-muted-foreground">{info.fullName}</p>
         </div>
-        <div className="py-3 rounded-xl" style={neuInset}>
+        <div className="py-3 border-y border-border/50">
           <p className={cn('text-3xl font-bold', isComingSoon ? 'text-muted-foreground' : 'text-coke-red')}>₹{option.price.toLocaleString()}</p>
           <p className="text-xs text-muted-foreground mt-1">incl. all taxes</p>
         </div>
@@ -368,21 +410,19 @@ const CarrierCard = ({ option, isSelected, onSelect, index }: {
           if (!facts) return null;
           return (
             <div className="space-y-1.5 text-left">
-              <div className="flex items-center gap-2 text-xs"><Globe size={11} weight="bold" className="text-blue-500 shrink-0" /><span>{facts.countriesOrPincodes}</span></div>
-              <div className="flex items-center gap-2 text-xs"><Check size={11} weight="bold" className="text-green-500 shrink-0" /><span>Real-time tracking</span></div>
-              <div className="flex items-center gap-2 text-xs"><Check size={11} weight="bold" className="text-green-500 shrink-0" /><span>{facts.speciality.split(',')[0]}</span></div>
+              <div className="flex items-center gap-2 text-xs"><Globe size={11} weight="bold" className="text-coke-red shrink-0" /><span>{facts.countriesOrPincodes}</span></div>
+              <div className="flex items-center gap-2 text-xs"><Check size={11} weight="bold" className="text-candlestick-green shrink-0" /><span>Real-time tracking</span></div>
+              <div className="flex items-center gap-2 text-xs"><Check size={11} weight="bold" className="text-candlestick-green shrink-0" /><span>{facts.speciality.split(',')[0]}</span></div>
             </div>
           );
         })()}
         {isComingSoon ? (
-          <button disabled className="w-full py-2.5 rounded-xl text-sm font-semibold opacity-50" style={neuFlat}>
-            <Lock size={14} weight="bold" className="inline mr-1" /> Coming Soon
-          </button>
+          <Button variant="outline" className="w-full opacity-50" disabled><Lock size={14} weight="bold" className="mr-1" /> Coming Soon</Button>
         ) : (
-          <button onClick={onSelect} className="w-full py-2.5 rounded-xl text-sm font-semibold transition-all"
-            style={isSelected ? { background: 'linear-gradient(135deg,#d63031,#c0392b)', color: '#fff', boxShadow: '3px 3px 8px rgba(214,48,49,0.3)', borderRadius: '12px' } : neuFlat}>
-            {isSelected ? <><Check size={14} weight="bold" className="inline mr-1" /> Selected</> : <>Select <CaretRight size={14} weight="bold" className="inline ml-1" /></>}
-          </button>
+          <Button variant={isSelected ? "default" : "outline"}
+            className={cn("w-full transition-all", isSelected && "bg-coke-red hover:bg-coke-red/90 text-white")}>
+            {isSelected ? <><Check size={14} weight="bold" className="mr-1" /> Selected</> : <>Select <CaretRight size={14} weight="bold" className="ml-1" /></>}
+          </Button>
         )}
       </div>
     </motion.div>
@@ -392,66 +432,37 @@ const CarrierCard = ({ option, isSelected, onSelect, index }: {
 // ── Summary Card ──────────────────────────────────────────────────────
 const SummaryCard = ({ title, price, transitLabel, onBook }: { title: string; price: number; transitLabel: string; onBook: () => void }) => (
   <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
-    className="relative overflow-hidden p-8"
-    style={{ ...neuCard, background: 'linear-gradient(135deg,#2d3436 0%,#1e272e 100%)' }}>
+    className="relative overflow-hidden rounded-2xl bg-charcoal text-white p-8">
     <div className="absolute top-0 right-0 w-48 h-48 bg-coke-red/20 rounded-full blur-3xl pointer-events-none" />
     <div className="relative z-10 space-y-5">
       <div>
         <p className="text-white/50 text-sm">Your Selection</p>
-        <h3 className="text-xl font-bold font-typewriter text-white mt-1">{title}</h3>
+        <h3 className="text-xl font-bold font-typewriter mt-1">{title}</h3>
       </div>
       <div className="py-4 border-y border-white/10">
         <p className="text-white/50 text-sm">Estimated Total</p>
-        <p className="text-4xl font-bold text-white mt-1">₹{price.toLocaleString('en-IN')}</p>
+        <p className="text-4xl font-bold mt-1">₹{price.toLocaleString('en-IN')}</p>
         <p className="text-white/30 text-xs mt-1">All fees included</p>
       </div>
       <div className="grid grid-cols-2 gap-3">
-        <div className="rounded-xl p-3" style={{ background: 'rgba(255,255,255,0.07)' }}>
+        <div className="rounded-xl p-3 bg-white/5">
           <Clock size={16} weight="bold" className="text-coke-red mb-1" />
           <p className="text-white/50 text-xs">Transit Time</p>
-          <p className="font-semibold text-white text-sm">{transitLabel}</p>
+          <p className="font-semibold text-sm">{transitLabel}</p>
         </div>
-        <div className="rounded-xl p-3" style={{ background: 'rgba(255,255,255,0.07)' }}>
-          <Shield size={16} weight="bold" className="text-green-400 mb-1" />
+        <div className="rounded-xl p-3 bg-white/5">
+          <Shield size={16} weight="bold" className="text-candlestick-green mb-1" />
           <p className="text-white/50 text-xs">Insurance</p>
-          <p className="font-semibold text-white text-sm">Included</p>
+          <p className="font-semibold text-sm">Included</p>
         </div>
       </div>
-      <button onClick={onBook} className="w-full py-4 text-base font-bold text-white rounded-xl"
-        style={{ background: 'linear-gradient(135deg,#d63031,#c0392b)', boxShadow: '3px 3px 12px rgba(214,48,49,0.4)', borderRadius: '14px' }}>
-        <Package size={16} weight="bold" className="inline mr-2" />
-        Book This Shipment
-        <ArrowRight size={16} weight="bold" className="inline ml-2" />
-      </button>
+      <Button size="lg" onClick={onBook} className="w-full h-14 text-base bg-coke-red hover:bg-coke-red/90 shadow-lg shadow-coke-red/30">
+        <Package size={18} weight="bold" className="mr-2" /> Book This Shipment <ArrowRight size={18} weight="bold" className="ml-2" />
+      </Button>
       <p className="text-center text-white/30 text-xs">Sign up or log in to complete your booking</p>
     </div>
   </motion.div>
 );
-
-// ── Build rate tiers from courier list ────────────────────────────────
-function buildRateTiers(couriers: CourierOption[]) {
-  if (!couriers.length) return { express: null, economy: null, saver: null };
-  const sorted = [...couriers].sort((a, b) => (a.estimated_delivery_days || 99) - (b.estimated_delivery_days || 99));
-  const byCost = [...couriers].sort((a, b) => a.customer_price - b.customer_price);
-  const airC = sorted.filter(c => c.mode === 'air');
-  const expressCourier = airC[0] || sorted[0];
-  const saverCourier = byCost[0];
-  const remaining = couriers.filter(c => c.courier_company_id !== expressCourier.courier_company_id && c.courier_company_id !== saverCourier.courier_company_id);
-  const economyCourier = remaining.length > 0
-    ? remaining.sort((a, b) => a.customer_price - b.customer_price)[Math.floor(remaining.length / 2)]
-    : (expressCourier.courier_company_id !== saverCourier.courier_company_id ? byCost[Math.floor(byCost.length / 2)] : null);
-  const fmtDays = (c: CourierOption) => {
-    const d = c.estimated_delivery_days;
-    if (!d || d <= 0) return c.mode === 'air' ? '1–3 days' : '4–7 days';
-    return `${d} day${d !== 1 ? 's' : ''}`;
-  };
-  return {
-    express: expressCourier ? { price: expressCourier.customer_price, days: fmtDays(expressCourier), name: expressCourier.courier_name, courier: expressCourier } : null,
-    economy: economyCourier ? { price: economyCourier.customer_price, days: fmtDays(economyCourier), name: economyCourier.courier_name, courier: economyCourier } : null,
-    saver: saverCourier && saverCourier.courier_company_id !== expressCourier?.courier_company_id
-      ? { price: saverCourier.customer_price, days: fmtDays(saverCourier), name: saverCourier.courier_name, courier: saverCourier } : null,
-  };
-}
 
 // ── Main Component ────────────────────────────────────────────────────
 const PublicRateCalculator = () => {
@@ -480,7 +491,8 @@ const PublicRateCalculator = () => {
   const [domesticCouriers, setDomesticCouriers] = useState<CourierOption[]>([]);
   const [domesticLoading, setDomesticLoading] = useState(false);
   const [domesticError, setDomesticError] = useState<string | null>(null);
-  const [selectedTier, setSelectedTier] = useState<RateTier | null>(null);
+  const [activeTier, setActiveTier] = useState<RateTier>('express');
+  const [selectedDomCourier, setSelectedDomCourier] = useState<CourierOption | null>(null);
 
   // International computed
   const selectedCountry = useMemo(() => destinationCountry ? getCountry(destinationCountry) : null, [destinationCountry, getCountry]);
@@ -502,33 +514,32 @@ const PublicRateCalculator = () => {
   // Domestic fetch
   const fetchDomesticRates = async () => {
     if (!/^\d{6}$/.test(pickupPincode) || !/^\d{6}$/.test(deliveryPincode)) return;
-    setDomesticLoading(true); setDomesticError(null); setDomesticCouriers([]); setSelectedTier(null);
+    setDomesticLoading(true); setDomesticError(null); setDomesticCouriers([]); setSelectedDomCourier(null);
     try {
       const res = await fetch('/api/public/domestic-rates', { method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ pickupPincode, deliveryPincode, weightKg: domesticWeightKg, lengthCm: domesticLength, widthCm: domesticWidth, heightCm: domesticHeight, declaredValue: 5000, shipmentType: 'gift' }) });
       const result = await res.json();
       if (!result.success) { setDomesticError(result.error || 'Failed to fetch rates'); return; }
       setDomesticCouriers(result.couriers || []);
+      setActiveTier('express');
     } catch { setDomesticError('Network error. Please try again.'); }
     finally { setDomesticLoading(false); }
   };
 
-  const rateTiers = useMemo(() => buildRateTiers(domesticCouriers), [domesticCouriers]);
-  const selectedTierData = selectedTier && rateTiers[selectedTier] ? rateTiers[selectedTier] : null;
+  const classified = useMemo(() => classifyCouriers(domesticCouriers), [domesticCouriers]);
+  const activeCouriers = classified[activeTier] || [];
 
-  const handleBookTier = (tier: RateTier) => {
-    const td = rateTiers[tier];
-    if (!td) return;
+  const handleBookDomCourier = (courier: CourierOption) => {
     localStorage.setItem('publicRateCalcData', JSON.stringify({
       mode: 'domestic', pickupPincode, deliveryPincode, weightKg: domesticWeightKg,
       lengthCm: domesticLength, widthCm: domesticWidth, heightCm: domesticHeight,
-      shipmentType: 'gift', selectedCourier: td.courier, timestamp: Date.now(),
+      shipmentType: 'gift', selectedCourier: courier, timestamp: Date.now(),
     }));
     router.push('/public/book/domestic');
   };
 
   return (
-    <div className="min-h-screen flex flex-col" style={{ background: NEU_BG }}>
+    <div className="min-h-screen flex flex-col bg-background">
       <LandingHeader />
       <main className="flex-1 relative">
         <AnimatedBackground />
@@ -537,7 +548,7 @@ const PublicRateCalculator = () => {
           <div className="container max-w-5xl relative z-10">
             <motion.div initial={{ opacity: 0, y: 30 }} animate={isHeroInView ? { opacity: 1, y: 0 } : {}} transition={{ duration: 0.6 }} className="text-center space-y-5">
               <motion.div initial={{ scale: 0 }} animate={isHeroInView ? { scale: 1 } : {}} transition={{ type: 'spring', delay: 0.2 }}
-                className="inline-flex items-center gap-2 px-5 py-2 text-coke-red text-sm font-semibold" style={neuCard}>
+                className="inline-flex items-center gap-2 px-5 py-2 rounded-full bg-coke-red/10 text-coke-red text-sm font-semibold">
                 <Sparkle className="h-4 w-4" /> Rate Calculator
               </motion.div>
               <h1 className="text-3xl md:text-5xl font-bold font-typewriter">
@@ -554,13 +565,13 @@ const PublicRateCalculator = () => {
             {/* ═══ DOMESTIC ═══ */}
             {shippingMode === 'domestic' && (
               <motion.div key="dom" initial={{ opacity: 0, x: -30 }} animate={{ opacity: 1, x: 0 }}>
-                <div className="p-6 md:p-8" style={neuCard}>
+                <div className="rounded-2xl border-2 border-border bg-card shadow-lg p-6 md:p-8">
                   <div className="grid lg:grid-cols-2 gap-8">
                     {/* Left: Pincodes */}
                     <div className="space-y-5">
                       <div className="flex items-center gap-2 text-base font-semibold">
-                        <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: 'linear-gradient(135deg,#d63031,#c0392b)' }}>
-                          <MapPin size={16} weight="bold" className="text-white" />
+                        <div className="w-8 h-8 rounded-lg bg-coke-red/10 flex items-center justify-center">
+                          <MapPin size={16} weight="bold" className="text-coke-red" />
                         </div>
                         Pickup & Delivery
                       </div>
@@ -572,8 +583,8 @@ const PublicRateCalculator = () => {
                     {/* Right: Weight & Dimensions */}
                     <div className="space-y-5">
                       <div className="flex items-center gap-2 text-base font-semibold">
-                        <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: 'linear-gradient(135deg,#0984e3,#0773c5)' }}>
-                          <Scales size={16} weight="bold" className="text-white" />
+                        <div className="w-8 h-8 rounded-lg bg-coke-red/10 flex items-center justify-center">
+                          <Scales size={16} weight="bold" className="text-coke-red" />
                         </div>
                         Package Details
                       </div>
@@ -585,9 +596,8 @@ const PublicRateCalculator = () => {
                         {[{ l: 'L (cm)', v: domesticLength, s: setDomesticLength }, { l: 'W (cm)', v: domesticWidth, s: setDomesticWidth }, { l: 'H (cm)', v: domesticHeight, s: setDomesticHeight }].map(d => (
                           <div key={d.l} className="space-y-1">
                             <Label className="text-xs text-muted-foreground">{d.l}</Label>
-                            <input type="number" inputMode="numeric" min={1} max={150} value={d.v}
-                              onChange={e => d.s(Math.max(1, Number(e.target.value) || 1))}
-                              className="w-full h-10 px-3 font-typewriter text-sm focus:outline-none focus:ring-2 focus:ring-coke-red/30" style={neuInset} />
+                            <Input type="number" inputMode="numeric" min={1} max={150} value={d.v}
+                              onChange={e => d.s(Math.max(1, Number(e.target.value) || 1))} className="font-typewriter h-10" />
                           </div>
                         ))}
                       </div>
@@ -595,51 +605,90 @@ const PublicRateCalculator = () => {
                   </div>
                   {/* Check Rates */}
                   <div className="mt-6 flex justify-center">
-                    <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
-                      onClick={fetchDomesticRates}
+                    <Button size="lg" onClick={fetchDomesticRates}
                       disabled={!/^\d{6}$/.test(pickupPincode) || !/^\d{6}$/.test(deliveryPincode) || domesticLoading}
-                      className="h-14 px-10 text-base font-bold text-white rounded-2xl disabled:opacity-50 flex items-center gap-2"
-                      style={{ background: 'linear-gradient(135deg,#d63031,#c0392b)', boxShadow: '4px 4px 14px rgba(214,48,49,0.35)', borderRadius: '16px' }}>
+                      className="h-14 px-10 text-base bg-coke-red hover:bg-coke-red/90 shadow-lg shadow-coke-red/20 gap-2">
                       {domesticLoading ? <><CircleNotch size={20} className="animate-spin" /> Checking...</> : <><Truck size={20} weight="bold" /> Check Rates</>}
-                    </motion.button>
+                    </Button>
                   </div>
                 </div>
 
-                {/* Error */}
                 {domesticError && (
                   <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mt-6">
                     <Alert variant="destructive"><Warning size={16} weight="bold" /><AlertDescription>{domesticError}</AlertDescription></Alert>
                   </motion.div>
                 )}
 
-                {/* Rate Tier Results */}
+                {/* Rate Results with Express/Economy/Saver tabs */}
                 {domesticCouriers.length > 0 && (
                   <div className="mt-10 space-y-6">
                     <div className="text-center">
                       <h2 className="text-2xl md:text-3xl font-bold font-typewriter">Choose Your <span className="text-coke-red">Plan</span></h2>
                       <p className="text-muted-foreground mt-2">{pickupPincode} → {deliveryPincode} · {domesticWeightKg} kg</p>
                     </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 max-w-4xl mx-auto">
-                      {rateTiers.express && (
-                        <TierCard tier="express" price={rateTiers.express.price} days={rateTiers.express.days}
-                          courierName={rateTiers.express.name} isSelected={selectedTier === 'express'}
-                          onSelect={() => setSelectedTier('express')} index={0} onBook={() => handleBookTier('express')} />
-                      )}
-                      {rateTiers.economy && (
-                        <TierCard tier="economy" price={rateTiers.economy.price} days={rateTiers.economy.days}
-                          courierName={rateTiers.economy.name} isSelected={selectedTier === 'economy'}
-                          onSelect={() => setSelectedTier('economy')} index={1} onBook={() => handleBookTier('economy')} />
-                      )}
-                      {rateTiers.saver && (
-                        <TierCard tier="saver" price={rateTiers.saver.price} days={rateTiers.saver.days}
-                          courierName={rateTiers.saver.name} isSelected={selectedTier === 'saver'}
-                          onSelect={() => setSelectedTier('saver')} index={2} onBook={() => handleBookTier('saver')} />
-                      )}
+
+                    {/* Express / Economy / Saver Tabs */}
+                    <div className="flex justify-center">
+                      <div className="flex gap-1 p-1 bg-muted/50 rounded-xl border border-border">
+                        {([
+                          { key: 'express' as RateTier, label: 'Express', Icon: AirplaneTilt, count: classified.express.length },
+                          { key: 'economy' as RateTier, label: 'Economy', Icon: Truck, count: classified.economy.length },
+                          { key: 'saver' as RateTier, label: 'Saver', Icon: Package, count: classified.saver.length },
+                        ]).map(tab => (
+                          <button key={tab.key} onClick={() => { setActiveTier(tab.key); setSelectedDomCourier(null); }}
+                            disabled={tab.count === 0}
+                            className={cn(
+                              "flex items-center gap-1.5 py-2.5 px-5 rounded-lg text-sm font-semibold transition-all disabled:opacity-40 disabled:cursor-not-allowed",
+                              activeTier === tab.key
+                                ? "bg-coke-red text-white shadow-sm"
+                                : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                            )}>
+                            <tab.Icon size={14} weight="bold" />
+                            {tab.label}
+                            <span className={cn("text-[10px] px-1.5 py-0.5 rounded-full",
+                              activeTier === tab.key ? "bg-white/20 text-white" : "bg-muted text-muted-foreground")}>
+                              {tab.count}
+                            </span>
+                          </button>
+                        ))}
+                      </div>
                     </div>
-                    {selectedTierData && (
+
+                    {/* Tier description */}
+                    <div className="text-center">
+                      {activeTier === 'express' && <p className="text-sm text-muted-foreground">Air delivery — fastest option, typically 1–3 business days</p>}
+                      {activeTier === 'economy' && <p className="text-sm text-muted-foreground">Surface delivery — balanced speed & price, typically 3–5 business days</p>}
+                      {activeTier === 'saver' && <p className="text-sm text-muted-foreground">Budget surface delivery — most affordable, typically 5–8 business days</p>}
+                    </div>
+
+                    {/* Courier Cards Grid */}
+                    {activeCouriers.length > 0 ? (
+                      <div className={cn(
+                        "grid gap-4",
+                        activeCouriers.length === 1 ? "grid-cols-1 max-w-sm mx-auto"
+                          : activeCouriers.length === 2 ? "grid-cols-1 sm:grid-cols-2 max-w-2xl mx-auto"
+                          : activeCouriers.length === 3 ? "grid-cols-1 sm:grid-cols-2 md:grid-cols-3 max-w-4xl mx-auto"
+                          : "grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4"
+                      )}>
+                        {activeCouriers.map((c, i) => (
+                          <DomCourierCard key={c.courier_company_id} courier={c}
+                            isSelected={selectedDomCourier?.courier_company_id === c.courier_company_id}
+                            onSelect={() => setSelectedDomCourier(c)} index={i}
+                            onBook={() => handleBookDomCourier(c)} />
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-center py-10 text-muted-foreground text-sm">
+                        No {activeTier} options available for this route. Try another tier.
+                      </div>
+                    )}
+
+                    {/* Summary */}
+                    {selectedDomCourier && (
                       <div className="max-w-3xl mx-auto">
-                        <SummaryCard title={selectedTierData.name} price={selectedTierData.price}
-                          transitLabel={selectedTierData.days} onBook={() => handleBookTier(selectedTier!)} />
+                        <SummaryCard title={selectedDomCourier.courier_name} price={selectedDomCourier.customer_price}
+                          transitLabel={`By ${getEstimatedArrival(selectedDomCourier.estimated_delivery_days, selectedDomCourier.mode)}`}
+                          onBook={() => handleBookDomCourier(selectedDomCourier)} />
                       </div>
                     )}
                     <p className="text-xs text-center text-muted-foreground">Prices include pickup charges. Pickup will be raised automatically after booking.</p>
@@ -649,9 +698,9 @@ const PublicRateCalculator = () => {
                 {/* Empty state */}
                 {domesticCouriers.length === 0 && !domesticLoading && !domesticError && (
                   <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mt-10">
-                    <div className="py-14 text-center space-y-5" style={neuCard}>
+                    <div className="rounded-2xl border-2 border-dashed border-border bg-card py-14 text-center space-y-5">
                       <motion.div animate={{ y: [0, -10, 0] }} transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
-                        className="w-20 h-20 mx-auto rounded-2xl flex items-center justify-center" style={neuFlat}>
+                        className="w-20 h-20 mx-auto rounded-2xl bg-muted flex items-center justify-center">
                         <House size={40} weight="bold" className="text-muted-foreground" />
                       </motion.div>
                       <div>
@@ -674,12 +723,12 @@ const PublicRateCalculator = () => {
             {/* ═══ INTERNATIONAL ═══ */}
             {shippingMode === 'international' && (
               <motion.div key="intl" initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }}>
-                <div className="p-6 md:p-8" style={neuCard}>
+                <div className="rounded-2xl border-2 border-border bg-card shadow-lg p-6 md:p-8">
                   <div className="grid lg:grid-cols-2 gap-8">
                     <div className="space-y-4">
                       <div className="flex items-center gap-2 text-base font-semibold">
-                        <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: 'linear-gradient(135deg,#0984e3,#0773c5)' }}>
-                          <Package size={16} weight="bold" className="text-white" />
+                        <div className="w-8 h-8 rounded-lg bg-coke-red/10 flex items-center justify-center">
+                          <Package size={16} weight="bold" className="text-coke-red" />
                         </div>
                         What are you shipping?
                       </div>
@@ -691,10 +740,8 @@ const PublicRateCalculator = () => {
                         ]).map(opt => (
                           <motion.button key={opt.value} whileTap={{ scale: 0.97 }}
                             onClick={() => { setIntlShipmentType(opt.value); if (opt.value === 'document' && weightGrams > 1000) setWeightGrams(1000); }}
-                            className="flex flex-col items-center gap-2 p-3 text-center transition-all"
-                            style={intlShipmentType === opt.value
-                              ? { ...neuCard, boxShadow: '8px 8px 20px rgba(163,177,198,0.6), -6px -6px 16px rgba(255,255,255,0.9), inset 0 0 0 2px #d63031' }
-                              : neuFlat}>
+                            className={cn("flex flex-col items-center gap-2 p-3 rounded-xl border-2 text-center transition-all",
+                              intlShipmentType === opt.value ? "border-coke-red bg-coke-red/5 shadow-sm" : "border-border hover:border-coke-red/30")}>
                             <opt.icon size={22} weight="bold" className={intlShipmentType === opt.value ? 'text-coke-red' : 'text-muted-foreground'} />
                             <div>
                               <p className={cn('font-semibold text-sm', intlShipmentType === opt.value ? 'text-coke-red' : 'text-foreground')}>{opt.label}</p>
@@ -704,8 +751,8 @@ const PublicRateCalculator = () => {
                         ))}
                       </div>
                       <div className="flex items-center gap-2 text-base font-semibold pt-2">
-                        <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: 'linear-gradient(135deg,#d63031,#c0392b)' }}>
-                          <MapPin size={16} weight="bold" className="text-white" />
+                        <div className="w-8 h-8 rounded-lg bg-coke-red/10 flex items-center justify-center">
+                          <MapPin size={16} weight="bold" className="text-coke-red" />
                         </div>
                         Where are you shipping to?
                       </div>
@@ -718,10 +765,8 @@ const PublicRateCalculator = () => {
                             if (!c) return null;
                             return (
                               <motion.button key={code} whileTap={{ scale: 0.95 }} onClick={() => setDestinationCountry(code)}
-                                className="flex items-center gap-2 px-3 py-2 text-sm font-medium transition-all"
-                                style={destinationCountry === code
-                                  ? { ...neuCard, boxShadow: '8px 8px 20px rgba(163,177,198,0.6), -6px -6px 16px rgba(255,255,255,0.9), inset 0 0 0 2px #d63031' }
-                                  : neuFlat}>
+                                className={cn("flex items-center gap-2 px-3 py-2 rounded-xl border-2 text-sm font-medium transition-all",
+                                  destinationCountry === code ? "border-coke-red bg-coke-red/10" : "border-border hover:border-coke-red/30")}>
                                 <span className="text-lg">{c.flag}</span><span>{c.name}</span>
                               </motion.button>
                             );
@@ -731,16 +776,16 @@ const PublicRateCalculator = () => {
                     </div>
                     <div className="space-y-4">
                       <div className="flex items-center gap-2 text-base font-semibold">
-                        <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={neuFlat}>
-                          <Scales size={16} weight="bold" className="text-blue-500" />
+                        <div className="w-8 h-8 rounded-lg bg-coke-red/10 flex items-center justify-center">
+                          <Scales size={16} weight="bold" className="text-coke-red" />
                         </div>
                         Package Weight
                       </div>
                       <WeightDropdown value={weightGrams} onChange={v => { if (intlShipmentType === 'document' && v > 1000) setWeightGrams(1000); else setWeightGrams(v); }} options={WEIGHT_OPTIONS_G} />
                       {intlShipmentType === 'document' && <p className="text-xs text-amber-600 flex items-center gap-1"><Warning size={12} weight="bold" /> Documents max 1 kg</p>}
                       <div className="flex items-center gap-2 text-base font-semibold pt-2">
-                        <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={neuFlat}>
-                          <Cube size={16} weight="bold" className="text-blue-500" />
+                        <div className="w-8 h-8 rounded-lg bg-coke-red/10 flex items-center justify-center">
+                          <Cube size={16} weight="bold" className="text-coke-red" />
                         </div>
                         Dimensions (cm)
                       </div>
@@ -748,9 +793,8 @@ const PublicRateCalculator = () => {
                         {[{ l: 'L', v: intlLength, s: setIntlLength }, { l: 'W', v: intlWidth, s: setIntlWidth }, { l: 'H', v: intlHeight, s: setIntlHeight }].map(d => (
                           <div key={d.l} className="space-y-1">
                             <Label className="text-xs text-muted-foreground">{d.l} (cm)</Label>
-                            <input type="number" inputMode="numeric" min={1} max={150} value={d.v}
-                              onChange={e => d.s(Math.max(1, Number(e.target.value) || 1))}
-                              className="w-full h-10 px-3 font-typewriter text-sm focus:outline-none focus:ring-2 focus:ring-coke-red/30" style={neuInset} />
+                            <Input type="number" inputMode="numeric" min={1} max={150} value={d.v}
+                              onChange={e => d.s(Math.max(1, Number(e.target.value) || 1))} className="font-typewriter h-10" />
                           </div>
                         ))}
                       </div>
@@ -805,9 +849,9 @@ const PublicRateCalculator = () => {
                 )}
                 {(!destinationCountry || courierOptions.length === 0) && isCountryServed !== false && (
                   <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mt-10">
-                    <div className="py-14 text-center space-y-5" style={neuCard}>
+                    <div className="rounded-2xl border-2 border-dashed border-border bg-card py-14 text-center space-y-5">
                       <motion.div animate={{ y: [0, -10, 0] }} transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
-                        className="w-20 h-20 mx-auto rounded-2xl flex items-center justify-center" style={neuFlat}>
+                        className="w-20 h-20 mx-auto rounded-2xl bg-muted flex items-center justify-center">
                         <Cube size={40} weight="bold" className="text-muted-foreground" />
                       </motion.div>
                       <div>
