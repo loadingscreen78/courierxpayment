@@ -102,7 +102,6 @@ const CXBCPartnerManagement = () => {
       let resolvedUserId = application.user_id;
 
       if (!resolvedUserId) {
-        // Look up existing auth user by email via profiles table
         const { data: profile, error: profileError } = await supabase
           .from('profiles')
           .select('user_id')
@@ -122,21 +121,46 @@ const CXBCPartnerManagement = () => {
         throw new Error('NO_LINKED_USER');
       }
 
-      const { error: partnerError } = await supabase.from('cxbc_partners').insert({
-        user_id: resolvedUserId, business_name: application.business_name,
-        owner_name: application.owner_name, email: application.email, phone: application.phone,
-        pan_number: application.pan_number, gst_number: application.gst_number,
-        address: application.address, city: application.city, state: application.state,
-        pincode: application.pincode, zone: application.zone,
-        kyc_pan_url: application.kyc_pan_url, kyc_aadhaar_url: application.kyc_aadhaar_url,
-        shop_photo_url: application.shop_photo_url, status: 'approved', approved_at: new Date().toISOString(),
-      });
-      if (partnerError) throw partnerError;
+      // Check if partner record already exists (by user_id or email)
+      const { data: existingPartner } = await supabase
+        .from('cxbc_partners')
+        .select('id, status')
+        .or(`user_id.eq.${resolvedUserId},email.eq.${application.email}`)
+        .maybeSingle();
+
+      if (existingPartner) {
+        // Already exists — just update status to approved and link user_id
+        const { error: updatePartnerErr } = await supabase
+          .from('cxbc_partners')
+          .update({ status: 'approved', user_id: resolvedUserId, approved_at: new Date().toISOString() })
+          .eq('id', existingPartner.id);
+        if (updatePartnerErr) throw updatePartnerErr;
+      } else {
+        // Create new partner record
+        const { error: partnerError } = await supabase.from('cxbc_partners').insert({
+          user_id: resolvedUserId, business_name: application.business_name,
+          owner_name: application.owner_name, email: application.email, phone: application.phone,
+          pan_number: application.pan_number, gst_number: application.gst_number,
+          address: application.address, city: application.city, state: application.state,
+          pincode: application.pincode, zone: application.zone,
+          kyc_pan_url: application.kyc_pan_url, kyc_aadhaar_url: application.kyc_aadhaar_url,
+          shop_photo_url: application.shop_photo_url, status: 'approved', approved_at: new Date().toISOString(),
+        });
+        if (partnerError) throw partnerError;
+      }
+
+      // Update application status
       const { error: updateError } = await supabase.from('cxbc_partner_applications')
         .update({ status: 'approved', reviewed_at: new Date().toISOString() }).eq('id', application.id);
       if (updateError) throw updateError;
+
+      return { userId: resolvedUserId };
     },
-    onSuccess: () => { toast.success('Partner approved successfully'); queryClient.invalidateQueries({ queryKey: ['cxbc-applications'] }); setSelectedApplication(null); },
+    onSuccess: () => {
+      toast.success('Partner approved successfully — they can now access the CXBC panel');
+      queryClient.invalidateQueries({ queryKey: ['cxbc-applications'] });
+      setSelectedApplication(null);
+    },
     onError: (error) => {
       if (error.message === 'NO_LINKED_USER') {
         toast.warning('This application has no linked user account. The applicant must sign up first, or create the partner directly using "Create Partner".');
