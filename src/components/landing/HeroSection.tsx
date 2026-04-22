@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { Sparkle, Package, MagnifyingGlass } from '@phosphor-icons/react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { HeroCTAForm } from './HeroCTAForm';
+import { appEvents, EVENTS } from '@/lib/events';
 
 const rotatingWords = ['Essentials', 'Medicines', 'Documents', 'Gifts', 'Parcels'];
 
@@ -148,6 +149,16 @@ export const HeroSection = () => {
   const closeLightbox = useCallback(() => {
     setLightboxOpen(false);
   }, []);
+
+  // Listen for global events to open lightbox from other components (e.g., header)
+  useEffect(() => {
+    const unsubShip = appEvents.on(EVENTS.OPEN_SHIP_LIGHTBOX, () => openLightbox('ship'));
+    const unsubTrack = appEvents.on(EVENTS.OPEN_TRACK_LIGHTBOX, () => openLightbox('track'));
+    return () => {
+      unsubShip();
+      unsubTrack();
+    };
+  }, [openLightbox]);
 
   return (
     <section className="relative min-h-[80vh] sm:min-h-[90vh] flex items-center overflow-x-clip">

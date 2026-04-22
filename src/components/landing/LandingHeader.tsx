@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
+import { appEvents, EVENTS } from '@/lib/events';
 
 export const LandingHeader = () => {
   const router = useRouter();
@@ -258,7 +259,7 @@ export const LandingHeader = () => {
                   </span>
                   <button
                     className="flex-1 w-full h-11 rounded-xl text-sm font-semibold bg-coke-red hover:bg-red-600 text-white transition-colors flex items-center justify-center gap-1.5"
-                    onClick={() => { router.push('/public/book'); setMobileMenuOpen(false); }}
+                    onClick={() => { appEvents.emit(EVENTS.OPEN_SHIP_LIGHTBOX); setMobileMenuOpen(false); }}
                   >
                     Book as Guest
                   </button>
