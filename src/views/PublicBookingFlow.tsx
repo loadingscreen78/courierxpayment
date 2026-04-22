@@ -1474,9 +1474,12 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                       </FormItem>
                     )} />
 
-                    <Button type="submit" className="w-full bg-coke-red hover:bg-red-600 text-white gap-2 py-4 min-h-[52px] text-sm sm:text-base" disabled={isDomesticLoading} onClick={() => feedbackPresets.tap()}>
+                    <Button type="submit" className="w-full bg-coke-red hover:bg-red-600 text-white gap-2 py-4 min-h-[52px] text-sm sm:text-base" disabled={isDomesticLoading || !domTypeUserSelected} onClick={() => feedbackPresets.tap()}>
                       {isDomesticLoading ? <><CircleNotch className="h-4 w-4 animate-spin" /> Fetching Rates...</> : <>Calculate Rates <ArrowRight className="h-4 w-4" /></>}
                     </Button>
+                    {!domTypeUserSelected && (
+                      <p className="text-xs text-muted-foreground text-center">Please select what you are shipping above to continue</p>
+                    )}
                   </form>
                 </Form>
               )}
