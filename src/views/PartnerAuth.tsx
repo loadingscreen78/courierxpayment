@@ -102,31 +102,29 @@ const PartnerAuth = () => {
     sessionStorage.removeItem('explicit_logout');
   }
 
-  // Handle redirect after sign in (for already-logged-in users)
+  // Handle redirect after sign in (for already-logged-in approved partners only)
   useEffect(() => {
     const handleRedirect = async () => {
       if (!user) return;
       if (isLoading) return;
-      
+
+      // Only auto-redirect if they're already an approved partner
+      // Don't redirect to /cxbc/apply — let them stay on login page
       const { data: sessionData } = await supabase.auth.getSession();
-      if (sessionData.session) {
+      if (!sessionData.session) return;
+
+      const { partner } = await cxbcDualLookup(user.id, user.email ?? undefined);
+      if (partner) {
         cx.setAuth(sessionData.session.access_token, sessionData.session.refresh_token);
         cx.setUserId(user.id);
-      }
-
-      const { partner, applicationStatus } = await cxbcDualLookup(user.id, user.email ?? undefined);
-      if (partner) {
         cx.setCxbcPartner(true);
         window.location.href = '/cxbc/dashboard';
-      } else if (applicationStatus === 'pending' || applicationStatus === 'under_review') {
-        // Stay on page — show status
-      } else {
-        window.location.href = '/cxbc/apply';
       }
+      // If not a partner — stay on login page, don't redirect anywhere
     };
-    
+
     handleRedirect();
-  }, [user, isLoading]);
+  }, [user]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const emailPasswordForm = useForm<EmailPasswordFormValues>({ 
     resolver: zodResolver(emailPasswordSchema), 
