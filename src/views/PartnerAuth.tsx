@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -13,6 +13,7 @@ import { Form, FormControl, FormField, FormItem, FormMessage } from '@/component
 import { useToast } from '@/hooks/use-toast';
 import { useSeo } from '@/hooks/useSeo';
 import { supabase } from '@/integrations/supabase/client';
+import { cx } from '@/lib/cookies';
 const logoMain = { src: '/lovable-uploads/logo.png' };
 import { motion } from 'framer-motion';
 import { useGoogleGsi } from '@/hooks/useGoogleGsi';
@@ -77,7 +78,6 @@ async function cxbcDualLookup(userId: string, userEmail: string | undefined) {
 }
 
 const PartnerAuth = () => {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const { user, signInWithEmail, signInWithGoogle } = useAuth();
   const { toast } = useToast();
@@ -102,28 +102,31 @@ const PartnerAuth = () => {
     sessionStorage.removeItem('explicit_logout');
   }
 
-  // Handle redirect after sign in
+  // Handle redirect after sign in (for already-logged-in users)
   useEffect(() => {
     const handleRedirect = async () => {
       if (!user) return;
       if (isLoading) return;
       
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (sessionData.session) {
+        cx.setAuth(sessionData.session.access_token, sessionData.session.refresh_token);
+        cx.setUserId(user.id);
+      }
+
       const { partner, applicationStatus } = await cxbcDualLookup(user.id, user.email ?? undefined);
-      if (partner) { router.replace('/cxbc'); }
-      else if (applicationStatus === 'pending') {
-        toast({ title: 'Your application is Pending', description: 'Your partner application is being reviewed. We\'ll notify you once approved.' });
-      } else if (applicationStatus === 'under_review') {
-        toast({ title: 'Your application is Under Review', description: 'Your partner application is being reviewed. We\'ll notify you once approved.' });
-      } else if (applicationStatus === 'rejected') {
-        toast({ title: 'Application Rejected', description: 'Your application was rejected. You can re-apply.', variant: 'destructive' });
-        router.replace('/cxbc/apply');
+      if (partner) {
+        cx.setCxbcPartner(true);
+        window.location.href = '/cxbc/dashboard';
+      } else if (applicationStatus === 'pending' || applicationStatus === 'under_review') {
+        // Stay on page — show status
       } else {
-        router.replace('/cxbc/apply');
+        window.location.href = '/cxbc/apply';
       }
     };
     
     handleRedirect();
-  }, [user, router, toast, isLoading]);
+  }, [user, isLoading]);
 
   const emailPasswordForm = useForm<EmailPasswordFormValues>({ 
     resolver: zodResolver(emailPasswordSchema), 
@@ -141,29 +144,36 @@ const PartnerAuth = () => {
       return; 
     }
     
-    toast({ title: 'Welcome!', description: 'Signed in.' });
-    
+    // Get the session immediately — onAuthStateChange may not have fired yet
+    const { data: sessionData } = await supabase.auth.getSession();
     const { data: { user: currentUser } } = await supabase.auth.getUser();
-    if (!currentUser) { setIsLoading(false); return; }
+
+    if (!currentUser || !sessionData.session) { setIsLoading(false); return; }
+
+    // Explicitly set auth cookies NOW before any redirect
+    // (onAuthStateChange is async and may not have fired yet)
+    cx.setAuth(sessionData.session.access_token, sessionData.session.refresh_token);
+    cx.setUserId(currentUser.id);
 
     const { partner, applicationStatus } = await cxbcDualLookup(currentUser.id, currentUser.email ?? undefined);
     if (partner) { 
+      cx.setCxbcPartner(true);
       setIsLoading(false);
-      window.location.href = '/cxbc';
+      window.location.href = '/cxbc/dashboard';
       return;
     } else { 
       if (applicationStatus === 'pending') {
-        toast({ title: 'Your application is Pending', description: 'Your partner application is being reviewed. We\'ll notify you once approved.' });
+        toast({ title: 'Application Pending', description: 'Your partner application is being reviewed. We\'ll notify you once approved.' });
         setIsLoading(false);
       } else if (applicationStatus === 'under_review') {
-        toast({ title: 'Your application is Under Review', description: 'Your partner application is being reviewed. We\'ll notify you once approved.' });
+        toast({ title: 'Application Under Review', description: 'Your partner application is being reviewed. We\'ll notify you once approved.' });
         setIsLoading(false);
       } else if (applicationStatus === 'rejected') {
         toast({ title: 'Application Rejected', description: 'Your application was rejected. You can re-apply.', variant: 'destructive' });
         setIsLoading(false);
         window.location.href = '/cxbc/apply';
       } else {
-        toast({ title: 'Welcome!', description: 'Apply to become a CXBC partner to access the portal.' });
+        toast({ title: 'Not a Partner Yet', description: 'Apply to become a CXBC partner to access the portal.' });
         setIsLoading(false);
         window.location.href = '/cxbc/apply';
       }
@@ -181,28 +191,31 @@ const PartnerAuth = () => {
       return;
     }
 
+    const { data: sessionData } = await supabase.auth.getSession();
     const { data: { user: currentUser } } = await supabase.auth.getUser();
-    if (!currentUser) { 
-      setIsLoading(false); 
-      return; 
-    }
+    if (!currentUser || !sessionData.session) { setIsLoading(false); return; }
+
+    // Explicitly set auth cookies before redirect
+    cx.setAuth(sessionData.session.access_token, sessionData.session.refresh_token);
+    cx.setUserId(currentUser.id);
 
     const { partner, applicationStatus } = await cxbcDualLookup(currentUser.id, currentUser.email ?? undefined);
     if (partner) {
+      cx.setCxbcPartner(true);
       setIsLoading(false);
-      window.location.href = '/cxbc';
+      window.location.href = '/cxbc/dashboard';
     } else if (applicationStatus === 'pending') {
-      toast({ title: 'Your application is Pending', description: 'Your partner application is being reviewed. We\'ll notify you once approved.' });
+      toast({ title: 'Application Pending', description: 'Your partner application is being reviewed. We\'ll notify you once approved.' });
       setIsLoading(false);
     } else if (applicationStatus === 'under_review') {
-      toast({ title: 'Your application is Under Review', description: 'Your partner application is being reviewed. We\'ll notify you once approved.' });
+      toast({ title: 'Application Under Review', description: 'Your partner application is being reviewed. We\'ll notify you once approved.' });
       setIsLoading(false);
     } else if (applicationStatus === 'rejected') {
       toast({ title: 'Application Rejected', description: 'Your application was rejected. You can re-apply.', variant: 'destructive' });
       setIsLoading(false);
       window.location.href = '/cxbc/apply';
     } else {
-      toast({ title: 'Welcome!', description: 'Apply to become a CXBC partner to access the portal.' });
+      toast({ title: 'Not a Partner Yet', description: 'Apply to become a CXBC partner to access the portal.' });
       setIsLoading(false);
       window.location.href = '/cxbc/apply';
     }

@@ -20,7 +20,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Check profile account_status
+    // Check profile account status
     const { data: profile, error: profileError } = await supabaseAdmin
       .from('profiles')
       .select('account_status, full_name')
@@ -35,6 +35,18 @@ export async function POST(req: NextRequest) {
     }
 
     const status = profile.account_status || 'active';
+
+    // Check if user is an approved CXBC partner — always allow them through
+    const { data: cxbcPartner } = await supabaseAdmin
+      .from('cxbc_partners')
+      .select('id')
+      .eq('user_id', user.id)
+      .eq('status', 'approved')
+      .maybeSingle();
+
+    if (cxbcPartner) {
+      return NextResponse.json({ allowed: true, status: 'cxbc_partner' });
+    }
 
     if (status === 'pending') {
       // Allow pending users to access the dashboard — they'll see a KYC completion banner
