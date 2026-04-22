@@ -259,7 +259,7 @@ export const LandingHeader = () => {
                   </span>
                   <button
                     className="flex-1 w-full h-11 rounded-xl text-sm font-semibold bg-coke-red hover:bg-red-600 text-white transition-colors flex items-center justify-center gap-1.5"
-                    onClick={() => { appEvents.emit(EVENTS.OPEN_SHIP_LIGHTBOX); setMobileMenuOpen(false); }}
+                    onClick={() => appEvents.emit(EVENTS.OPEN_SHIP_LIGHTBOX)}
                   >
                     Book as Guest
                   </button>
