@@ -20,21 +20,17 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Check profile account status
-    const { data: profile, error: profileError } = await supabaseAdmin
+    // Check profile — if no profile or column missing, allow through
+    const { data: profile } = await supabaseAdmin
       .from('profiles')
-      .select('account_status, full_name')
+      .select('full_name')
       .eq('user_id', user.id)
-      .single();
+      .maybeSingle();
 
-    if (profileError || !profile) {
-      return NextResponse.json({ 
-        allowed: true, // If no profile yet, allow (they're in onboarding)
-        status: 'unknown'
-      });
+    if (!profile) {
+      // No profile yet — allow (onboarding)
+      return NextResponse.json({ allowed: true, status: 'unknown' });
     }
-
-    const status = profile.account_status || 'active';
 
     // Check if user is an approved CXBC partner — always allow them through
     const { data: cxbcPartner } = await supabaseAdmin
@@ -48,35 +44,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ allowed: true, status: 'cxbc_partner' });
     }
 
-    if (status === 'pending') {
-      // Allow pending users to access the dashboard — they'll see a KYC completion banner
-      return NextResponse.json({
-        allowed: true,
-        status: 'pending',
-        message: 'Complete your KYC to unlock lower shipping rates and full account features.'
-      });
-    }
-
-    if (status === 'rejected') {
-      return NextResponse.json({
-        allowed: false,
-        status: 'rejected',
-        message: 'Your account application was not approved. Please contact support for more information.'
-      });
-    }
-
-    if (status === 'suspended') {
-      return NextResponse.json({
-        allowed: false,
-        status: 'suspended',
-        message: 'Your account has been suspended. Please contact support.'
-      });
-    }
-
-    return NextResponse.json({
-      allowed: true,
-      status: 'active'
-    });
+    // Default: allow all authenticated users
+    return NextResponse.json({ allowed: true, status: 'active' });
   } catch (err: any) {
     console.error('[check-account-status] Error:', err);
     return NextResponse.json({ error: err.message || 'Internal error' }, { status: 500 });
