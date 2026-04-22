@@ -1,9 +1,29 @@
 "use client";
 
-import Link from 'next/link';
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { Construction } from 'lucide-react';
+import Link from 'next/link';
+import { useDevAccess } from '@/hooks/useDevAccess';
 
 export default function SignupPage() {
+  const router = useRouter();
+  const { hasDev, loading } = useDevAccess();
+
+  useEffect(() => {
+    if (!loading && hasDev) {
+      router.replace('/register');
+    }
+  }, [loading, hasDev, router]);
+
+  if (loading || hasDev) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <p className="text-muted-foreground">Redirecting...</p>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-background px-4">
       <div className="max-w-md w-full text-center space-y-6">
@@ -12,21 +32,13 @@ export default function SignupPage() {
         </div>
         <div className="space-y-2">
           <h1 className="text-2xl font-bold text-foreground">Sign Up Coming Soon</h1>
-          <p className="text-muted-foreground">
-            This feature is currently under development.
-          </p>
+          <p className="text-muted-foreground">This feature is currently under development.</p>
         </div>
         <div className="flex flex-col sm:flex-row gap-3 justify-center">
-          <Link
-            href="/"
-            className="inline-flex items-center justify-center px-6 py-3 rounded-xl bg-coke-red hover:bg-red-600 text-white font-semibold transition-colors"
-          >
+          <Link href="/" className="inline-flex items-center justify-center px-6 py-3 rounded-xl bg-coke-red hover:bg-red-600 text-white font-semibold transition-colors">
             Go Home
           </Link>
-          <Link
-            href="/public/book"
-            className="inline-flex items-center justify-center px-6 py-3 rounded-xl border border-border hover:bg-muted/60 font-semibold transition-colors"
-          >
+          <Link href="/public/book" className="inline-flex items-center justify-center px-6 py-3 rounded-xl border border-border hover:bg-muted/60 font-semibold transition-colors">
             Book as Guest
           </Link>
         </div>

@@ -25,7 +25,12 @@ const PUBLIC_ROUTES = [
   '/rate-calculator',
   '/open-account',
   '/partner/login',
+  '/dev-portal',
+  '/signup',
 ];
+
+/** Auth routes that are disabled for public but accessible with dev cookie */
+const DISABLED_AUTH_ROUTES = ['/auth', '/register', '/open-account', '/signup'];
 
 /** Routes that require admin role */
 const ADMIN_ROUTES = ['/admin'];
@@ -36,17 +41,34 @@ function isPublicRoute(pathname: string): boolean {
   );
 }
 
+function isDisabledAuthRoute(pathname: string): boolean {
+  return DISABLED_AUTH_ROUTES.some(
+    (route) => pathname === route || pathname.startsWith(route + '/')
+  );
+}
+
 function isAdminRoute(pathname: string): boolean {
   return ADMIN_ROUTES.some(
     (route) => pathname === route || pathname.startsWith(route + '/')
   );
 }
 
+function hasDevAccess(request: NextRequest): boolean {
+  return !!readCookieFromRequest(request, 'cx_dev_access');
+}
+
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const response = NextResponse.next();
 
-  // Always allow public routes and API/static
+  // Dev portal gate page — always allow
+  if (pathname.startsWith('/dev-portal')) {
+    return response;
+  }
+
+  // Disabled auth routes: if user has dev cookie, let them through.
+  // Otherwise the page itself shows "under development".
+  // (Public routes are always allowed, so this just passes through.)
   if (isPublicRoute(pathname)) {
     return response;
   }
@@ -54,9 +76,18 @@ export function middleware(request: NextRequest) {
   // Read auth cookie
   const accessToken = readCookieFromRequest(request, COOKIE_KEYS.ACCESS_TOKEN);
 
-  // If no token and trying to access protected route → redirect to home
-  // (account system is currently disabled / under development)
+  // If no token and trying to access protected route:
+  // - Dev team (has dev cookie) → redirect to /auth so they can sign in
+  // - Everyone else → redirect to home
   if (!accessToken) {
+    if (hasDevAccess(request)) {
+      const redirectUrl = request.nextUrl.clone();
+      redirectUrl.pathname = '/auth';
+      setCookieOnResponse(response, COOKIE_KEYS.REDIRECT_TO, pathname, {
+        maxAge: 15 * 60,
+      });
+      return NextResponse.redirect(redirectUrl);
+    }
     const redirectUrl = request.nextUrl.clone();
     redirectUrl.pathname = '/';
     return NextResponse.redirect(redirectUrl);
