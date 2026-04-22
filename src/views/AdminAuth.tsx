@@ -13,7 +13,7 @@ import { Form, FormControl, FormField, FormItem, FormMessage } from '@/component
 import { useToast } from '@/hooks/use-toast';
 import { useSeo } from '@/hooks/useSeo';
 import { supabase } from '@/integrations/supabase/client';
-import { cookies } from '@/lib/cookies';
+import { cx } from '@/lib/cookies';
 const logoMain = { src: '/lovable-uploads/logo.png' };
 import { motion } from 'framer-motion';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
@@ -65,7 +65,7 @@ const AdminAuth = () => {
       const { data: roles } = await supabase.from('user_roles').select('role').eq('user_id', user.id);
       const hasAdminAccess = roles?.some(r => r.role === 'admin' || r.role === 'warehouse_operator');
       if (hasAdminAccess) { 
-        cookies.setAdminSession(true);
+        cx.setAdminSession(true);
         router.replace('/admin'); 
       }
       else { 
@@ -164,7 +164,7 @@ const AdminAuth = () => {
     const hasAdminAccess = roles?.some(r => r.role === 'admin' || r.role === 'warehouse_operator');
     if (hasAdminAccess) { 
       setIsLoading(false);
-      cookies.setAdminSession(true);
+      cx.setAdminSession(true);
       window.location.href = '/admin';
       return;
     } else { 
