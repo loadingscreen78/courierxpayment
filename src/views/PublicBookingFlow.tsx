@@ -995,8 +995,8 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
           </Button>
           <div className="min-w-0">
             <h1 className="text-lg sm:text-2xl font-bold flex items-center gap-2 truncate">
-              {isInternational ? <Globe className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600 shrink-0" weight="duotone" /> : <FileText className="h-5 w-5 sm:h-6 sm:w-6 text-green-600 shrink-0" weight="duotone" />}
-              {isInternational ? 'International Shipping' : 'Domestic Document Shipping'}
+              {isInternational ? <Globe className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600 shrink-0" weight="duotone" /> : <Truck className="h-5 w-5 sm:h-6 sm:w-6 text-green-600 shrink-0" weight="duotone" />}
+              {isInternational ? 'International Shipping' : 'Domestic Shipping'}
             </h1>
             <p className="text-muted-foreground text-xs sm:text-sm">Guest booking — standard rates apply</p>
           </div>
