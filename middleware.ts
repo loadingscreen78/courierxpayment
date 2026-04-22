@@ -35,6 +35,9 @@ const DISABLED_AUTH_ROUTES = ['/auth', '/register', '/open-account', '/signup'];
 /** Routes that require admin role */
 const ADMIN_ROUTES = ['/admin'];
 
+/** Admin routes that are publicly accessible (no auth needed) */
+const PUBLIC_ADMIN_ROUTES = ['/admin/login'];
+
 function isPublicRoute(pathname: string): boolean {
   return PUBLIC_ROUTES.some(
     (route) => pathname === route || pathname.startsWith(route + '/')
@@ -73,6 +76,11 @@ export function middleware(request: NextRequest) {
     return response;
   }
 
+  // Admin login is always accessible regardless of auth state
+  if (PUBLIC_ADMIN_ROUTES.some(r => pathname === r || pathname.startsWith(r + '/'))) {
+    return response;
+  }
+
   // Read auth cookie
   const accessToken = readCookieFromRequest(request, COOKIE_KEYS.ACCESS_TOKEN);
 
@@ -94,7 +102,8 @@ export function middleware(request: NextRequest) {
   }
 
   // Admin route guard — check admin cookie marker
-  if (isAdminRoute(pathname)) {
+  // Skip guard for /admin/login itself to prevent redirect loops
+  if (isAdminRoute(pathname) && !PUBLIC_ADMIN_ROUTES.some(r => pathname === r || pathname.startsWith(r + '/'))) {
     const isAdmin = readCookieFromRequest(request, COOKIE_KEYS.ADMIN_SESSION);
     if (isAdmin !== '1') {
       const redirectUrl = request.nextUrl.clone();
