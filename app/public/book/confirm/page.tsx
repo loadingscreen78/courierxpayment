@@ -224,13 +224,10 @@ function ConfirmContent() {
           )}
 
           {/* Account upsell */}
-          <div className="rounded-xl border border-candlestick-green/30 bg-candlestick-green/5 p-4 text-left">
-            <p className="text-sm">
-              <span className="font-semibold">Want lower rates next time?</span> Open a free account to save 25% on every shipment.
+          <div className="rounded-xl border border-amber-300/30 bg-amber-50/50 dark:bg-amber-900/10 p-4 text-left">
+            <p className="text-sm text-muted-foreground">
+              Account-based bookings with lower rates are coming soon. Stay tuned!
             </p>
-            <Button size="sm" variant="outline" className="mt-3 gap-1.5" onClick={() => router.push('/open-account')}>
-              <UserPlus className="h-3.5 w-3.5" /> Open Account
-            </Button>
           </div>
 
           <div className="flex gap-3">

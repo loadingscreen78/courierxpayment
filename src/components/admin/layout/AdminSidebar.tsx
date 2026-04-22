@@ -52,7 +52,7 @@ export const AdminSidebar = ({ isMobile = false, onNavigate }: AdminSidebarProps
 
   const handleSignOut = async () => {
     await signOut();
-    router.replace('/auth');
+    router.replace('/');
   };
 
   const displayName = user?.email?.split('@')[0] || 'Admin';

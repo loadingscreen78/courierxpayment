@@ -2950,14 +2950,11 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                 </button>
               </div>
               <p className="text-sm text-muted-foreground">
-                Guest bookings are limited to 10 kg. To ship heavier packages, open a free account and enjoy lower rates.
+                Guest bookings are limited to 10 kg. Account-based bookings with higher limits are coming soon.
               </p>
               <div className="flex gap-3 pt-2">
                 <Button variant="outline" onClick={() => setShowWeightLimitModal(false)} className="flex-1">
                   Go Back
-                </Button>
-                <Button onClick={() => router.push('/register')} className="flex-1 bg-coke-red hover:bg-red-600 text-white gap-1.5">
-                  <UserPlus className="h-4 w-4" /> Open Account
                 </Button>
               </div>
             </motion.div>

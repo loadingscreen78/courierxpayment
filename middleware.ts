@@ -54,16 +54,12 @@ export function middleware(request: NextRequest) {
   // Read auth cookie
   const accessToken = readCookieFromRequest(request, COOKIE_KEYS.ACCESS_TOKEN);
 
-  // If no token and trying to access protected route → redirect to auth
+  // If no token and trying to access protected route → redirect to home
+  // (account system is currently disabled / under development)
   if (!accessToken) {
-    // Save where they were trying to go
     const redirectUrl = request.nextUrl.clone();
-    redirectUrl.pathname = '/auth';
-    const res = NextResponse.redirect(redirectUrl);
-    setCookieOnResponse(res, COOKIE_KEYS.REDIRECT_TO, pathname, {
-      maxAge: 15 * 60,
-    });
-    return res;
+    redirectUrl.pathname = '/';
+    return NextResponse.redirect(redirectUrl);
   }
 
   // Admin route guard — check admin cookie marker

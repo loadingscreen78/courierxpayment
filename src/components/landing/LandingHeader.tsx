@@ -167,19 +167,19 @@ export const LandingHeader = () => {
             </div>
           ) : (
             <>
-              <Link
-                href="/auth"
-                className="px-4 py-2 text-[15px] font-medium text-muted-foreground hover:text-foreground transition-colors rounded-xl hover:bg-muted/60"
+              <span
+                className="px-4 py-2 text-[15px] font-medium text-muted-foreground/50 cursor-not-allowed rounded-xl"
+                title="Coming soon — under development"
               >
                 Sign In
-              </Link>
+              </span>
 
-              <Link
-                href="/register"
-                className="flex items-center gap-1.5 ml-1 px-5 py-2.5 text-[15px] font-semibold bg-[#c85050] hover:bg-[#b04545] text-white rounded-xl transition-colors shadow-md shadow-[#c85050]/20"
+              <span
+                className="flex items-center gap-1.5 ml-1 px-5 py-2.5 text-[15px] font-semibold bg-gray-400 text-white/80 rounded-xl cursor-not-allowed opacity-60"
+                title="Coming soon — under development"
               >
                 Open Account
-              </Link>
+              </span>
             </>
           )}
         </div>
@@ -252,18 +252,15 @@ export const LandingHeader = () => {
                   Go to Dashboard
                 </button>
               ) : (
-                <div className="flex gap-2">
+                <div className="flex flex-col gap-2 items-center">
+                  <span className="text-xs text-muted-foreground bg-muted/60 rounded-lg px-3 py-2 w-full text-center">
+                    Account sign-in is currently under development
+                  </span>
                   <button
-                    className="flex-1 h-11 rounded-xl text-sm font-medium border border-border hover:bg-muted/60 transition-colors"
-                    onClick={() => { router.push('/auth'); setMobileMenuOpen(false); }}
+                    className="flex-1 w-full h-11 rounded-xl text-sm font-semibold bg-coke-red hover:bg-red-600 text-white transition-colors flex items-center justify-center gap-1.5"
+                    onClick={() => { router.push('/public/book'); setMobileMenuOpen(false); }}
                   >
-                    Sign In
-                  </button>
-                  <button
-                    className="flex-1 h-11 rounded-xl text-sm font-semibold bg-[#c85050] hover:bg-[#b04545] text-white transition-colors flex items-center justify-center gap-1.5"
-                    onClick={() => { router.push('/register'); setMobileMenuOpen(false); }}
-                  >
-                    Open Account
+                    Book as Guest
                   </button>
                 </div>
               )}

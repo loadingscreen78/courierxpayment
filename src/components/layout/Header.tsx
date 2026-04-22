@@ -26,7 +26,7 @@ export const Header = () => {
 
   const handleSignOut = async () => {
     await signOut();
-    router.replace('/auth');
+    router.replace('/');
   };
 
   const displayName = profile?.full_name || user?.email?.split('@')[0] || 'User';

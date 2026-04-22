@@ -20,7 +20,7 @@ export const CXBCRoute = ({ children }: CXBCRouteProps) => {
 
   useEffect(() => {
     if (!authLoading && !user) {
-      router.replace('/auth');
+      router.replace('/');
     }
   }, [authLoading, user, router]);
 

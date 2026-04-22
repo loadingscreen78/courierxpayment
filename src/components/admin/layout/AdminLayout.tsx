@@ -35,7 +35,7 @@ export const AdminLayout = ({ children }: AdminLayoutProps) => {
 
   const handleSignOut = async () => {
     await signOut();
-    router.replace('/auth');
+    router.replace('/');
   };
 
   const getRoleBadge = () => {

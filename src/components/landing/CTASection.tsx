@@ -127,10 +127,11 @@ export const CTASection = () => {
                   <Button 
                     variant="outline" 
                     size="lg" 
-                    className="border-border text-foreground hover:bg-accent transition-all duration-300"
-                    onClick={() => router.push('/register')}
+                    className="border-border text-muted-foreground cursor-not-allowed opacity-60"
+                    disabled
+                    title="Account opening is under development"
                   >
-                    Open Account — Save 25%
+                    Open Account — Coming Soon
                   </Button>
                 </motion.div>
               </div>

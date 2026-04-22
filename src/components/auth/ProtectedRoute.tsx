@@ -41,9 +41,9 @@ export const ProtectedRoute = ({
 
   useEffect(() => {
     if (settled && !user) {
-      router.replace(`/auth?from=${encodeURIComponent(pathname)}`);
+      router.replace('/');
     }
-  }, [settled, user, pathname, router]);
+  }, [settled, user, router]);
 
   useEffect(() => {
     if (!loading && requireKyc && profile && !profile.aadhaar_verified) {

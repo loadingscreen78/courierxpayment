@@ -488,6 +488,7 @@ const PublicRateCalculator = () => {
   const [domesticLength, setDomesticLength] = useState(10);
   const [domesticWidth, setDomesticWidth] = useState(10);
   const [domesticHeight, setDomesticHeight] = useState(10);
+  const [showDomDimensions, setShowDomDimensions] = useState(false);
   const [domesticCouriers, setDomesticCouriers] = useState<CourierOption[]>([]);
   const [domesticLoading, setDomesticLoading] = useState(false);
   const [domesticError, setDomesticError] = useState<string | null>(null);
@@ -532,7 +533,6 @@ const PublicRateCalculator = () => {
   const handleBookDomCourier = (courier: CourierOption) => {
     localStorage.setItem('publicRateCalcData', JSON.stringify({
       mode: 'domestic', pickupPincode, deliveryPincode, weightKg: domesticWeightKg,
-      lengthCm: domesticLength, widthCm: domesticWidth, heightCm: domesticHeight,
       shipmentType: 'gift', selectedCourier: courier, timestamp: Date.now(),
     }));
     router.push('/public/book/domestic');
@@ -592,15 +592,23 @@ const PublicRateCalculator = () => {
                         <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Weight</Label>
                         <WeightDropdown value={domesticWeightKg} onChange={setDomesticWeightKg} options={WEIGHT_OPTIONS_KG} />
                       </div>
-                      <div className="grid grid-cols-3 gap-2">
-                        {[{ l: 'L (cm)', v: domesticLength, s: setDomesticLength }, { l: 'W (cm)', v: domesticWidth, s: setDomesticWidth }, { l: 'H (cm)', v: domesticHeight, s: setDomesticHeight }].map(d => (
-                          <div key={d.l} className="space-y-1">
-                            <Label className="text-xs text-muted-foreground">{d.l}</Label>
-                            <Input type="number" inputMode="numeric" min={1} max={150} value={d.v}
-                              onChange={e => d.s(Math.max(1, Number(e.target.value) || 1))} className="font-typewriter h-10" />
-                          </div>
-                        ))}
-                      </div>
+                      <button type="button" onClick={() => setShowDomDimensions(v => !v)}
+                        className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors">
+                        <Cube size={12} weight="bold" />
+                        <span>{showDomDimensions ? 'Hide' : 'Add'} dimensions (optional)</span>
+                        <CaretDown size={10} className={cn("transition-transform", showDomDimensions && "rotate-180")} />
+                      </button>
+                      {showDomDimensions && (
+                        <div className="grid grid-cols-3 gap-2">
+                          {[{ l: 'L (cm)', v: domesticLength, s: setDomesticLength }, { l: 'W (cm)', v: domesticWidth, s: setDomesticWidth }, { l: 'H (cm)', v: domesticHeight, s: setDomesticHeight }].map(d => (
+                            <div key={d.l} className="space-y-1">
+                              <Label className="text-xs text-muted-foreground">{d.l}</Label>
+                              <Input type="number" inputMode="numeric" min={1} max={150} value={d.v}
+                                onChange={e => d.s(Math.max(1, Number(e.target.value) || 1))} className="font-typewriter h-10" />
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   </div>
                   {/* Check Rates */}

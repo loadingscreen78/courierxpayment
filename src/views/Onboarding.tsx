@@ -48,7 +48,7 @@ const Onboarding = () => {
   // Redirect if not authenticated
   useEffect(() => {
     if (!loading && !user) {
-      router.replace('/auth');
+      router.replace('/');
     }
   }, [user, loading, router]);
 
