@@ -277,7 +277,7 @@ const CXBCApply = () => {
 
         {/* Info Section */}
         <div className="mt-8 text-center text-sm text-muted-foreground">
-          <p>Already a partner? <a href="/auth" className="text-primary hover:underline">Login here</a></p>
+          <p>Already a partner? <a href="/partner/login" className="text-primary hover:underline">Login here</a></p>
         </div>
       </main>
     </div>
