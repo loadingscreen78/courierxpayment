@@ -348,6 +348,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
   const [courierFilterTab, setCourierFilterTab] = useState<'express' | 'economy' | 'saver'>('express');
   const [showReceiverPinFinder, setShowReceiverPinFinder] = useState(false);
   const [isDomesticLoading, setIsDomesticLoading] = useState(false);
+  const [domTypeUserSelected, setDomTypeUserSelected] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [senderReceiverData, setSenderReceiverData] = useState<any>(null);
   const [addressSubStep, setAddressSubStep] = useState<'pickup' | 'sender' | 'receiver' | 'content'>('pickup');
@@ -401,7 +402,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
   // ── Domestic rate form ──
   const domForm = useForm<DomesticRateValues>({
     resolver: zodResolver(domesticRateSchema),
-    defaultValues: { shipmentType: undefined, pickupPincode: '', deliveryPincode: '', weightKg: undefined as any, lengthCm: undefined as any, widthCm: undefined as any, heightCm: undefined as any, declaredValue: 0, prohibitedItemsConfirmed: false, laptopBrand: '', laptopSerialNumber: '', hasOriginalPackaging: false },
+    defaultValues: { shipmentType: 'document', pickupPincode: '', deliveryPincode: '', weightKg: undefined as any, lengthCm: undefined as any, widthCm: undefined as any, heightCm: undefined as any, declaredValue: 0, prohibitedItemsConfirmed: false, laptopBrand: '', laptopSerialNumber: '', hasOriginalPackaging: false },
   });
   const detailsForm = useForm<SenderReceiverValues>({
     resolver: zodResolver(senderReceiverSchema),
@@ -1216,14 +1217,14 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                             <button
                               key={opt.value}
                               type="button"
-                              onClick={() => { feedbackPresets.select(); field.onChange(opt.value); }}
+                              onClick={() => { feedbackPresets.select(); setDomTypeUserSelected(true); field.onChange(opt.value); }}
                               className={`p-3 rounded-lg border text-left transition-all ${
-                                field.value === opt.value
+                                domTypeUserSelected && field.value === opt.value
                                   ? 'border-coke-red bg-coke-red/5 ring-1 ring-coke-red/20'
                                   : 'border-border hover:border-muted-foreground/30'
                               }`}
                             >
-                              <opt.icon className={`h-5 w-5 mb-1 ${field.value === opt.value ? 'text-coke-red' : 'text-muted-foreground'}`} weight="duotone" />
+                              <opt.icon className={`h-5 w-5 mb-1 ${domTypeUserSelected && field.value === opt.value ? 'text-coke-red' : 'text-muted-foreground'}`} weight="duotone" />
                               <p className="text-sm font-medium">{opt.label}</p>
                               <p className="text-[11px] sm:text-xs text-muted-foreground leading-tight">{opt.desc}</p>
                             </button>
@@ -1276,9 +1277,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                       )} />
                     </div>
 
-                    {/* Weight, dimensions, and remaining fields — only shown after shipment type is selected */}
-                    {watchedDomType && (
-                    <>
+                    {/* Weight, dimensions, and remaining fields */}
                     {/* Weight only — no declared value in step 1 */}
                     <div>
                       <FormField control={domForm.control} name="weightKg" render={({ field }) => (
@@ -1475,11 +1474,9 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                       </FormItem>
                     )} />
 
-                    <Button type="submit" className="w-full bg-coke-red hover:bg-red-600 text-white gap-2 py-4 min-h-[52px] text-sm sm:text-base" disabled={isDomesticLoading || !watchedDomType} onClick={() => feedbackPresets.tap()}>
+                    <Button type="submit" className="w-full bg-coke-red hover:bg-red-600 text-white gap-2 py-4 min-h-[52px] text-sm sm:text-base" disabled={isDomesticLoading} onClick={() => feedbackPresets.tap()}>
                       {isDomesticLoading ? <><CircleNotch className="h-4 w-4 animate-spin" /> Fetching Rates...</> : <>Calculate Rates <ArrowRight className="h-4 w-4" /></>}
                     </Button>
-                    </>
-                    )}
                   </form>
                 </Form>
               )}
