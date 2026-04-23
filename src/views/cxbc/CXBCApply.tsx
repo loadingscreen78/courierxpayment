@@ -11,6 +11,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 const logoMain = { src: '/lovable-uploads/logo.png' };
 import { BusinessInfoStep } from "@/components/cxbc/apply/BusinessInfoStep";
+import { BankDetailsStep } from "@/components/cxbc/apply/BankDetailsStep";
 import { KYCDocumentsStep } from "@/components/cxbc/apply/KYCDocumentsStep";
 import { ReviewStep } from "@/components/cxbc/apply/ReviewStep";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -30,12 +31,24 @@ export interface CXBCApplicationData {
   kycAadhaarUrl: string;
   kycPanUrl: string;
   shopPhotoUrl: string;
+  // Bank details
+  bankAccountNumber: string;
+  bankAccountHolderName: string;
+  bankIfsc: string;
+  bankAccountType: string;
+  bankName: string;
+  bankBranch: string;
+  bankAddress: string;
+  bankCity: string;
+  bankState: string;
+  bankMicr: string;
 }
 
 const steps = [
   { id: 1, title: "Business Info", description: "Tell us about your business" },
-  { id: 2, title: "KYC Documents", description: "Upload required documents" },
-  { id: 3, title: "Review & Submit", description: "Review your application" },
+  { id: 2, title: "Bank Details", description: "Your payout bank account" },
+  { id: 3, title: "KYC Documents", description: "Upload required documents" },
+  { id: 4, title: "Review & Submit", description: "Review your application" },
 ];
 
 const CXBCApply = () => {
@@ -60,6 +73,16 @@ const CXBCApply = () => {
     kycAadhaarUrl: "",
     kycPanUrl: "",
     shopPhotoUrl: "",
+    bankAccountNumber: "",
+    bankAccountHolderName: "",
+    bankIfsc: "",
+    bankAccountType: "savings",
+    bankName: "",
+    bankBranch: "",
+    bankAddress: "",
+    bankCity: "",
+    bankState: "",
+    bankMicr: "",
   });
 
   const updateFormData = (data: Partial<CXBCApplicationData>) => {
@@ -67,7 +90,7 @@ const CXBCApply = () => {
   };
 
   const handleNext = () => {
-    if (currentStep < 3) {
+    if (currentStep < 4) {
       setCurrentStep(prev => prev + 1);
     }
   };
@@ -124,7 +147,18 @@ const CXBCApply = () => {
           shop_photo_url: formData.shopPhotoUrl || null,
           status: "pending",
           user_id: user?.id ?? null,
-        });
+          // Bank details
+          bank_account_number: formData.bankAccountNumber || null,
+          bank_account_holder_name: formData.bankAccountHolderName || null,
+          bank_ifsc: formData.bankIfsc || null,
+          bank_account_type: formData.bankAccountType || null,
+          bank_name: formData.bankName || null,
+          bank_branch: formData.bankBranch || null,
+          bank_address: formData.bankAddress || null,
+          bank_city: formData.bankCity || null,
+          bank_state: formData.bankState || null,
+          bank_micr: formData.bankMicr || null,
+        } as any);
 
       if (error) throw error;
 
@@ -158,7 +192,7 @@ const CXBCApply = () => {
     }
   };
 
-  const progress = (currentStep / 3) * 100;
+  const progress = (currentStep / 4) * 100;
 
   if (isSubmitted) {
     return (
@@ -275,6 +309,14 @@ const CXBCApply = () => {
                   />
                 )}
                 {currentStep === 2 && (
+                  <BankDetailsStep
+                    data={formData}
+                    onUpdate={updateFormData}
+                    onNext={handleNext}
+                    onBack={handleBack}
+                  />
+                )}
+                {currentStep === 3 && (
                   <KYCDocumentsStep 
                     data={formData} 
                     onUpdate={updateFormData}
@@ -282,7 +324,7 @@ const CXBCApply = () => {
                     onBack={handleBack}
                   />
                 )}
-                {currentStep === 3 && (
+                {currentStep === 4 && (
                   <ReviewStep 
                     data={formData}
                     onBack={handleBack}

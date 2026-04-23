@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ArrowLeft, Send, Building2, User, MapPin, FileText, Loader2 } from "lucide-react";
+import { ArrowLeft, Send, Building2, User, MapPin, FileText, Loader2, Landmark } from "lucide-react";
 import { CXBCApplicationData } from "@/views/cxbc/CXBCApply";
 import { useState } from "react";
 
@@ -104,7 +104,49 @@ export const ReviewStep = ({ data, onBack, onSubmit, isSubmitting }: ReviewStepP
 
       <Separator />
 
-      {/* Documents */}
+      {/* Bank Details */}
+      <div className="space-y-3">
+        <div className="flex items-center gap-2 text-sm font-medium">
+          <Landmark className="h-4 w-4 text-primary" />
+          Bank Details
+        </div>
+        <div className="bg-muted/50 rounded-lg p-4 space-y-2 text-sm">
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">Account Holder</span>
+            <span className="font-medium">{data.bankAccountHolderName}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">Account Number</span>
+            <span className="font-mono font-medium">
+              {"•".repeat(Math.max(0, data.bankAccountNumber.length - 4))}{data.bankAccountNumber.slice(-4)}
+            </span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">Account Type</span>
+            <span className="font-medium capitalize">{data.bankAccountType}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">IFSC Code</span>
+            <span className="font-mono font-medium">{data.bankIfsc}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">Bank</span>
+            <span className="font-medium">{data.bankName}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">Branch</span>
+            <span className="font-medium">{data.bankBranch}</span>
+          </div>
+          {data.bankCity && (
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Branch Location</span>
+              <span className="font-medium">{data.bankCity}, {data.bankState}</span>
+            </div>
+          )}
+        </div>
+      </div>
+
+      <Separator />
       <div className="space-y-3">
         <div className="flex items-center gap-2 text-sm font-medium">
           <FileText className="h-4 w-4 text-primary" />
