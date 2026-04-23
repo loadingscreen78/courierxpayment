@@ -238,10 +238,15 @@ const PinInput = ({ value, onChange, meta, placeholder, showAssistance }: {
         )}
       </div>
       <AnimatePresence>
-        {meta.district && !meta.error && (
+        {(meta.state || meta.district) && !meta.error && (
           <motion.p initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="text-xs text-emerald-600 pl-1 flex items-center gap-1">
             <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500" />
-            {meta.district}, {meta.state}
+            {meta.areas?.[0] && meta.areas[0] !== meta.district && meta.areas[0] !== meta.state
+              ? `${meta.areas[0]}, ${meta.district && meta.district !== meta.state ? `${meta.district}, ` : ''}${meta.state}`
+              : meta.district && meta.district !== meta.state
+                ? `${meta.district}, ${meta.state}`
+                : meta.state
+            }
           </motion.p>
         )}
         {meta.error && (
