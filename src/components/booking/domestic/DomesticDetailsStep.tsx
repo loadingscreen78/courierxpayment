@@ -4,10 +4,13 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Slider } from '@/components/ui/slider';
-import { FileText, Gift, Package, Ruler, Scale, IndianRupee, Laptop } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Button } from '@/components/ui/button';
+import { FileText, Gift, Package, Ruler, Scale, IndianRupee, Laptop, ShieldAlert, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { DomesticBookingData, DomesticShipmentType } from '@/lib/domestic/types';
 import { DOMESTIC_LIMITS, DOCUMENT_WEIGHT_SLABS } from '@/lib/domestic/types';
+import { AnimatePresence, motion } from 'framer-motion';
 
 interface Props {
   data: DomesticBookingData;
@@ -17,6 +20,7 @@ interface Props {
 
 const DomesticDetailsStepComponent = ({ data, onUpdate, lockedType }: Props) => {
   const limits = DOMESTIC_LIMITS[data.shipmentType];
+  const [showProhibitedModal, setShowProhibitedModal] = useState(false);
 
   // Local state for text inputs to prevent parent re-renders on every keystroke
   const [localDeclaredValue, setLocalDeclaredValue] = useState(String(data.declaredValue));
@@ -285,6 +289,99 @@ const DomesticDetailsStepComponent = ({ data, onUpdate, lockedType }: Props) => 
           </div>
         </CardContent>
       </Card>
+
+      {/* Prohibited Items Declaration */}
+      <div
+        className={cn(
+          'flex flex-row items-start gap-3 rounded-xl border p-4 cursor-pointer transition-all',
+          data.prohibitedItemsConfirmed
+            ? 'border-green-500/40 bg-green-500/5'
+            : 'border-border bg-muted/30 hover:border-coke-red/30'
+        )}
+        onClick={() => {
+          if (!data.prohibitedItemsConfirmed) setShowProhibitedModal(true);
+        }}
+      >
+        <Checkbox
+          checked={!!data.prohibitedItemsConfirmed}
+          onCheckedChange={(checked) => {
+            if (checked && !data.prohibitedItemsConfirmed) {
+              setShowProhibitedModal(true);
+            } else if (!checked) {
+              onUpdate({ prohibitedItemsConfirmed: false });
+            }
+          }}
+          onClick={(e) => e.stopPropagation()}
+          className="mt-0.5"
+        />
+        <div className="space-y-1 leading-none">
+          <p className="text-sm font-medium">
+            I confirm this package does not contain prohibited items
+          </p>
+          <p className="text-xs text-muted-foreground">
+            Gold, silver, precious metals, chemicals, narcotics, batteries, currency, physical cash, credit/debit cards, or any restricted substances.
+          </p>
+        </div>
+      </div>
+
+      {/* Prohibited Items Modal */}
+      <AnimatePresence>
+        {showProhibitedModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
+            onClick={() => setShowProhibitedModal(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-card rounded-2xl border border-border shadow-xl max-w-lg w-full p-6 space-y-4 max-h-[80vh] overflow-y-auto"
+            >
+              <div className="flex items-start justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-red-100 dark:bg-red-950/40 flex items-center justify-center">
+                    <ShieldAlert className="h-5 w-5 text-coke-red" />
+                  </div>
+                  <h3 className="font-semibold text-lg">Prohibited Items Declaration</h3>
+                </div>
+                <button onClick={() => setShowProhibitedModal(false)} className="text-muted-foreground hover:text-foreground">
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+              <div className="space-y-3 text-sm text-muted-foreground">
+                <p className="font-medium text-foreground">By proceeding, I confirm that my shipment does NOT contain:</p>
+                <ul className="space-y-2 list-disc pl-5">
+                  <li><span className="font-semibold text-foreground">Precious metals & valuables</span> — Gold, silver, platinum, gemstones, jewelry, or currency notes</li>
+                  <li><span className="font-semibold text-foreground">Financial instruments</span> — Credit/debit cards, cheques, demand drafts, or physical cash</li>
+                  <li><span className="font-semibold text-foreground">Hazardous materials</span> — Chemicals, flammables, explosives, or radioactive substances</li>
+                  <li><span className="font-semibold text-foreground">Controlled substances</span> — Narcotics, drugs, or any substance prohibited by law</li>
+                  <li><span className="font-semibold text-foreground">Batteries (standalone)</span> — Loose lithium-ion or lead-acid batteries not installed in a device</li>
+                  <li><span className="font-semibold text-foreground">Perishables</span> — Food items, plants, or biological materials</li>
+                  <li><span className="font-semibold text-foreground">Original documents</span> — Passports, land deeds, or irreplaceable legal documents</li>
+                </ul>
+                <p className="text-xs bg-muted/50 rounded-lg p-3">
+                  Shipping prohibited items may result in package seizure, fines, or legal action. CourierX reserves the right to inspect and reject any shipment found to contain prohibited items.
+                </p>
+              </div>
+              <div className="flex gap-3 pt-2">
+                <Button variant="outline" onClick={() => setShowProhibitedModal(false)} className="flex-1">
+                  Cancel
+                </Button>
+                <Button className="flex-1 bg-coke-red hover:bg-red-600 text-white" onClick={() => {
+                  onUpdate({ prohibitedItemsConfirmed: true });
+                  setShowProhibitedModal(false);
+                }}>
+                  I Confirm & Agree
+                </Button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

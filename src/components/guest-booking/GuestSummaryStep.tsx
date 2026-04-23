@@ -133,6 +133,19 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
   const [aadhaarVerified, setAadhaarVerified] = useState(false);
   const [aadhaarLoading, setAadhaarLoading] = useState(false);
   const [aadhaarError, setAadhaarError] = useState('');
+
+  // ── Multi-doc KYC state ──
+  type GuestDocType = 'aadhaar' | 'pan' | 'passport' | 'voter_id';
+  const [selectedDocType, setSelectedDocType] = useState<GuestDocType>('aadhaar');
+  const [panInput, setPanInput] = useState('');
+  const [panError, setPanError] = useState('');
+  const [passportInput, setPassportInput] = useState('');
+  const [passportDob, setPassportDob] = useState('');
+  const [passportError, setPassportError] = useState('');
+  const [voterIdInput, setVoterIdInput] = useState('');
+  const [voterIdError, setVoterIdError] = useState('');
+  const [docVerified, setDocVerified] = useState(false);
+  const [docVerifiedLabel, setDocVerifiedLabel] = useState('');
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [couponCode, setCouponCode] = useState('');
   const [couponDiscount, setCouponDiscount] = useState(0);
@@ -246,7 +259,7 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
     }
   }, [extractedAadhaarNumber]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Aadhaar handlers ──
+  // ── KYC handlers ──
 
   const handleAadhaarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const raw = e.target.value.replace(/\D/g, '').slice(0, 12);
@@ -255,29 +268,43 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
     setAadhaarError('');
   };
 
-  const handleVerifyAadhaar = async () => {
-    if (aadhaarInput.length !== 12) {
-      setAadhaarError('Enter a valid 12-digit Aadhaar number');
-      return;
-    }
-    if (!validateVerhoeff(aadhaarInput)) {
-      setAadhaarError('Invalid Aadhaar number');
-      return;
-    }
+  const handleVerifyDoc = async () => {
     setAadhaarLoading(true);
-    setAadhaarError('');
+    setAadhaarError(''); setPanError(''); setPassportError(''); setVoterIdError('');
     try {
-      // For guest flow: we validate the Aadhaar format client-side
-      // Full DigiLocker verification requires auth — guest gets format validation + declaration
-      await new Promise(r => setTimeout(r, 1500)); // Simulate verification
-      setAadhaarVerified(true);
-      toast({ title: 'Aadhaar Verified', description: 'Your Aadhaar number has been validated.' });
+      await new Promise(r => setTimeout(r, 1200));
+      if (selectedDocType === 'aadhaar') {
+        if (aadhaarInput.length !== 12) { setAadhaarError('Enter a valid 12-digit Aadhaar number'); return; }
+        if (!validateVerhoeff(aadhaarInput)) { setAadhaarError('Invalid Aadhaar number'); return; }
+        setAadhaarVerified(true);
+        setDocVerified(true);
+        setDocVerifiedLabel(`XXXX XXXX ${aadhaarInput.slice(-4)}`);
+        toast({ title: 'Aadhaar Verified', description: 'Your Aadhaar number has been validated.' });
+      } else if (selectedDocType === 'pan') {
+        if (!/^[A-Z]{5}[0-9]{4}[A-Z]$/.test(panInput.toUpperCase())) { setPanError('Invalid PAN format (e.g. ABCDE1234F)'); return; }
+        setDocVerified(true);
+        setDocVerifiedLabel(`PAN: ${panInput.slice(0, 3)}XXXXXXX`);
+        toast({ title: 'PAN Verified', description: 'Your PAN has been validated.' });
+      } else if (selectedDocType === 'passport') {
+        if (!/^[A-Z][0-9]{7}$/.test(passportInput.toUpperCase())) { setPassportError('Invalid passport number (e.g. A1234567)'); return; }
+        if (!passportDob) { setPassportError('Date of birth is required'); return; }
+        setDocVerified(true);
+        setDocVerifiedLabel(`Passport: ${passportInput.slice(0, 2)}XXXXX`);
+        toast({ title: 'Passport Verified', description: 'Your passport details have been validated.' });
+      } else if (selectedDocType === 'voter_id') {
+        if (voterIdInput.trim().length < 6) { setVoterIdError('Enter a valid EPIC number'); return; }
+        setDocVerified(true);
+        setDocVerifiedLabel(`Voter ID: ${voterIdInput.slice(0, 3)}XXXXX`);
+        toast({ title: 'Voter ID Verified', description: 'Your Voter ID has been validated.' });
+      }
     } catch {
       setAadhaarError('Verification failed. Please try again.');
     } finally {
       setAadhaarLoading(false);
     }
   };
+
+  const handleVerifyAadhaar = handleVerifyDoc;
 
   // ── Coupon handler ──
 
@@ -314,8 +341,8 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
   // ── Payment handler ──
 
   const handlePayNow = async () => {
-    if (!aadhaarVerified) {
-      toast({ title: 'Aadhaar Required', description: 'Please verify your Aadhaar number to proceed with payment.', variant: 'destructive' });
+    if (!aadhaarVerified && !docVerified) {
+      toast({ title: 'Identity Verification Required', description: 'Please verify your identity document to proceed.', variant: 'destructive' });
       return;
     }
     if (!termsAccepted) {
@@ -332,8 +359,12 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
       formData.append('rateFormData', JSON.stringify(rateFormData));
       formData.append('selectedCourier', JSON.stringify(selectedCourier));
       formData.append('couponCode', couponApplied ? couponCode : '');
-      // Always send Aadhaar number for verification
-      formData.append('aadhaarNumber', aadhaarInput);
+      // Always send identity doc info for verification
+      formData.append('aadhaarNumber', selectedDocType === 'aadhaar' ? aadhaarInput : '');
+      formData.append('kycDocTypeGuest', selectedDocType);
+      if (selectedDocType === 'pan') formData.append('kycDocValueGuest', panInput.toUpperCase());
+      if (selectedDocType === 'passport') { formData.append('kycDocValueGuest', passportInput.toUpperCase()); formData.append('kycDocDobGuest', passportDob); }
+      if (selectedDocType === 'voter_id') formData.append('kycDocValueGuest', voterIdInput.toUpperCase());
       if (isDomestic && kycDocFile) {
         formData.append('kycDocument', kycDocFile);
         formData.append('kycDocType', kycDocType);
@@ -881,7 +912,7 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
         </div>
       )}
 
-      {/* ── Identity Verification — Aadhaar for all shipments (international + domestic) ── */}
+      {/* ── Identity Verification — multi-document ── */}
       <div className="bg-card rounded-xl border-2 border-blue-400/50 dark:border-blue-600/40 overflow-hidden shadow-sm shadow-blue-500/10">
         <div className="bg-blue-50/80 dark:bg-blue-950/30 px-5 py-3 border-b border-blue-200/60 dark:border-blue-800/40">
           <h2 className="font-semibold text-base flex items-center gap-2 text-blue-900 dark:text-blue-200">
@@ -892,67 +923,123 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
         </div>
         <div className="p-5 space-y-4">
 
-          {/* ── Why we need Aadhaar — compact legal context ── */}
-          <div className="rounded-lg border border-blue-200 dark:border-blue-800/40 bg-blue-50/60 dark:bg-blue-950/20 p-3 space-y-2">
+          {/* Why KYC */}
+          <div className="rounded-lg border border-blue-200 dark:border-blue-800/40 bg-blue-50/60 dark:bg-blue-950/20 p-3 space-y-1.5">
             <p className="text-xs font-semibold text-blue-900 dark:text-blue-200 flex items-center gap-1.5">
               <Info className="h-3.5 w-3.5 shrink-0 text-blue-600" weight="fill" />
               Why is KYC required?
             </p>
             <p className="text-xs text-blue-800 dark:text-blue-300 leading-relaxed">
               {isDomestic
-                ? 'As per courier industry regulations, identity verification is required for all shipments to prevent misuse and ensure safe delivery. Aadhaar is the standard KYC document accepted across all courier partners.'
-                : <>Under the <span className="font-medium">Courier Imports &amp; Exports (Clearance) Regulations</span> and CBIC guidelines, all courier providers must verify sender identity before processing international shipments. Aadhaar is the government-approved KYC document under the <span className="font-medium">Prevention of Money Laundering Act (PMLA)</span> and UIDAI framework.</>
-              }
+                ? 'Identity verification is required for all shipments as per courier regulations.'
+                : <>Under <span className="font-medium">CBIC Courier Regulations</span> and PMLA, sender identity must be verified before international dispatch.</>}
             </p>
-            <div className="flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-blue-700 dark:text-blue-400">
-              <span className="flex items-center gap-1"><span className="w-1 h-1 rounded-full bg-blue-500 shrink-0" />Only last 4 digits stored — UIDAI compliant</span>
-              <span className="flex items-center gap-1"><span className="w-1 h-1 rounded-full bg-blue-500 shrink-0" />One-time per booking, not linked to any account</span>
-              {!isDomestic && <span className="flex items-center gap-1"><span className="w-1 h-1 rounded-full bg-blue-500 shrink-0" />Required by Indian customs for export clearance</span>}
-            </div>
           </div>
 
-          {/* ── Aadhaar input / verified state ── */}
-          {aadhaarVerified ? (
+          {/* Verified state */}
+          {(aadhaarVerified || docVerified) ? (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex items-center gap-3 p-3 rounded-lg bg-candlestick-green/5 border border-candlestick-green/20">
               <CheckCircle className="h-5 w-5 text-candlestick-green" weight="fill" />
               <div>
-                <p className="text-sm font-medium text-candlestick-green">Aadhaar Verified</p>
-                <p className="text-xs text-muted-foreground font-mono">XXXX XXXX {aadhaarInput.slice(-4)}</p>
+                <p className="text-sm font-medium text-candlestick-green">Identity Verified</p>
+                <p className="text-xs text-muted-foreground font-mono">{docVerifiedLabel}</p>
               </div>
+              <button className="ml-auto text-xs text-muted-foreground hover:text-foreground" onClick={() => { setDocVerified(false); setAadhaarVerified(false); setDocVerifiedLabel(''); }}>
+                Change
+              </button>
             </motion.div>
           ) : (
             <>
-              <p className="text-sm text-muted-foreground">
-                {extractedAadhaarNumber
-                  ? 'Aadhaar number auto-filled from your uploaded document. Please confirm and click Verify.'
-                  : 'Enter your 12-digit Aadhaar number to verify your identity and proceed.'}
-              </p>
-              <div className="flex gap-2">
-                <Input
-                  type="text"
-                  inputMode="numeric"
-                  maxLength={14}
-                  placeholder="XXXX XXXX XXXX"
-                  className="font-mono tracking-widest text-center flex-1"
-                  value={formattedAadhaar}
-                  onChange={handleAadhaarChange}
-                />
-                <Button
-                  onClick={() => { feedbackPresets.tap(); handleVerifyAadhaar(); }}
-                  disabled={aadhaarLoading || aadhaarInput.length !== 12}
-                  className="bg-blue-600 hover:bg-blue-700 text-white shrink-0"
-                >
-                  {aadhaarLoading ? <CircleNotch className="h-4 w-4 animate-spin" /> : 'Verify'}
-                </Button>
+              {/* Document type selector */}
+              <div className="grid grid-cols-2 gap-2">
+                {([
+                  { type: 'aadhaar', label: 'Aadhaar' },
+                  { type: 'pan', label: 'PAN Card' },
+                  { type: 'passport', label: 'Passport' },
+                  { type: 'voter_id', label: 'Voter ID' },
+                ] as { type: typeof selectedDocType; label: string }[]).map(doc => (
+                  <button
+                    key={doc.type}
+                    onClick={() => { setSelectedDocType(doc.type); setAadhaarError(''); setPanError(''); setPassportError(''); setVoterIdError(''); }}
+                    className={`py-2.5 px-3 rounded-lg border text-xs font-medium transition-all text-left ${selectedDocType === doc.type ? 'border-blue-500 bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300' : 'border-border bg-muted/30 text-muted-foreground hover:border-blue-300'}`}
+                  >
+                    {doc.label}
+                  </button>
+                ))}
               </div>
-              {aadhaarError && (
-                <p className="text-xs text-destructive flex items-center gap-1">
-                  <Warning className="h-3 w-3" weight="fill" /> {aadhaarError}
-                </p>
+
+              {/* Aadhaar input */}
+              {selectedDocType === 'aadhaar' && (
+                <div className="space-y-2">
+                  <p className="text-xs text-muted-foreground">
+                    {extractedAadhaarNumber ? 'Auto-filled from your uploaded document. Confirm and verify.' : 'Enter your 12-digit Aadhaar number.'}
+                  </p>
+                  <div className="flex gap-2">
+                    <Input type="text" inputMode="numeric" maxLength={14} placeholder="XXXX XXXX XXXX"
+                      className="font-mono tracking-widest text-center flex-1"
+                      value={formattedAadhaar} onChange={handleAadhaarChange} />
+                    <Button onClick={() => { feedbackPresets.tap(); handleVerifyDoc(); }}
+                      disabled={aadhaarLoading || aadhaarInput.length !== 12}
+                      className="bg-blue-600 hover:bg-blue-700 text-white shrink-0">
+                      {aadhaarLoading ? <CircleNotch className="h-4 w-4 animate-spin" /> : 'Verify'}
+                    </Button>
+                  </div>
+                  {aadhaarError && <p className="text-xs text-destructive flex items-center gap-1"><Warning className="h-3 w-3" weight="fill" /> {aadhaarError}</p>}
+                </div>
               )}
-              <p className="text-xs text-muted-foreground">
-                Verified via UIDAI checksum. We never store your full Aadhaar number.
-              </p>
+
+              {/* PAN input */}
+              {selectedDocType === 'pan' && (
+                <div className="space-y-2">
+                  <div className="flex gap-2">
+                    <Input placeholder="ABCDE1234F" maxLength={10}
+                      className="font-mono tracking-widest uppercase flex-1"
+                      value={panInput} onChange={e => { setPanInput(e.target.value.toUpperCase()); setPanError(''); }} />
+                    <Button onClick={() => { feedbackPresets.tap(); handleVerifyDoc(); }}
+                      disabled={aadhaarLoading || panInput.length < 10}
+                      className="bg-blue-600 hover:bg-blue-700 text-white shrink-0">
+                      {aadhaarLoading ? <CircleNotch className="h-4 w-4 animate-spin" /> : 'Verify'}
+                    </Button>
+                  </div>
+                  {panError && <p className="text-xs text-destructive flex items-center gap-1"><Warning className="h-3 w-3" weight="fill" /> {panError}</p>}
+                </div>
+              )}
+
+              {/* Passport input */}
+              {selectedDocType === 'passport' && (
+                <div className="space-y-2">
+                  <Input placeholder="Passport number (e.g. A1234567)" maxLength={8}
+                    className="font-mono tracking-widest uppercase"
+                    value={passportInput} onChange={e => { setPassportInput(e.target.value.toUpperCase()); setPassportError(''); }} />
+                  <Input type="date" value={passportDob} onChange={e => { setPassportDob(e.target.value); setPassportError(''); }} />
+                  {passportError && <p className="text-xs text-destructive flex items-center gap-1"><Warning className="h-3 w-3" weight="fill" /> {passportError}</p>}
+                  <Button onClick={() => { feedbackPresets.tap(); handleVerifyDoc(); }}
+                    disabled={aadhaarLoading || !passportInput || !passportDob}
+                    className="w-full bg-blue-600 hover:bg-blue-700 text-white">
+                    {aadhaarLoading ? <CircleNotch className="h-4 w-4 animate-spin mr-2" /> : null}
+                    Verify Passport
+                  </Button>
+                </div>
+              )}
+
+              {/* Voter ID input */}
+              {selectedDocType === 'voter_id' && (
+                <div className="space-y-2">
+                  <div className="flex gap-2">
+                    <Input placeholder="EPIC number (e.g. ABC1234567)"
+                      className="font-mono tracking-widest uppercase flex-1"
+                      value={voterIdInput} onChange={e => { setVoterIdInput(e.target.value.toUpperCase()); setVoterIdError(''); }} />
+                    <Button onClick={() => { feedbackPresets.tap(); handleVerifyDoc(); }}
+                      disabled={aadhaarLoading || voterIdInput.length < 6}
+                      className="bg-blue-600 hover:bg-blue-700 text-white shrink-0">
+                      {aadhaarLoading ? <CircleNotch className="h-4 w-4 animate-spin" /> : 'Verify'}
+                    </Button>
+                  </div>
+                  {voterIdError && <p className="text-xs text-destructive flex items-center gap-1"><Warning className="h-3 w-3" weight="fill" /> {voterIdError}</p>}
+                </div>
+              )}
+
+              <p className="text-xs text-muted-foreground">Format validated client-side. Document numbers are never stored.</p>
             </>
           )}
         </div>

@@ -31,6 +31,7 @@ const initialData: DomesticBookingData = {
   heightCm: 5,
   declaredValue: 500,
   contentDescription: '',
+  prohibitedItemsConfirmed: false,
   pickupAddress: {
     fullName: '', phone: '', addressLine1: '', addressLine2: '',
     city: '', state: '', pincode: '',
@@ -74,7 +75,7 @@ const DomesticBooking = () => {
   const canGoNext = (): boolean => {
     switch (step) {
       case 1:
-        return data.weightKg > 0 && data.declaredValue > 0 && data.contentDescription.length > 0;
+        return data.weightKg > 0 && data.declaredValue > 0 && data.contentDescription.length > 0 && data.prohibitedItemsConfirmed;
       case 2:
         return isAddressValid(data.pickupAddress) && isAddressValid(data.deliveryAddress);
       case 3:

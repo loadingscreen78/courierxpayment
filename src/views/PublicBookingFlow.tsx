@@ -378,6 +378,10 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
   const [intlDimUnit, setIntlDimUnit] = useState<'cm' | 'in'>('cm');
   // ── Laptop declaration modal ──
   const [showLaptopDeclarationModal, setShowLaptopDeclarationModal] = useState(false);
+  // ── Weight & dimensions declaration modal (domestic) ──
+  const [showWeightDimDeclarationModal, setShowWeightDimDeclarationModal] = useState(false);
+  // ── Weight & dimensions declaration modal (international) ──
+  const [showIntlWeightDimDeclarationModal, setShowIntlWeightDimDeclarationModal] = useState(false);
   // ── Serial number lookup ──
   const [serialLookupLoading, setSerialLookupLoading] = useState(false);
   const [serialLookupResult, setSerialLookupResult] = useState<{ found: boolean; brand?: string; model?: string; message?: string } | null>(null);
@@ -1022,6 +1026,8 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
     setDimUnit('cm');
     setIntlDimUnit('cm');
     setShowLaptopDeclarationModal(false);
+    setShowWeightDimDeclarationModal(false);
+    setShowIntlWeightDimDeclarationModal(false);
     setSerialLookupResult(null);
     clearOcr();
     detailsForm.reset();
@@ -1266,20 +1272,33 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                       )}
                     </div>
 
-                    {/* Prohibited Items Confirmation */}
+                    {/* Weight & Dimensions Declaration */}
                     <FormField control={intlForm.control} name="prohibitedItemsConfirmed" render={({ field }) => (
-                      <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-lg border border-border p-4 bg-muted/30">
-                        <FormControl>
-                          <Checkbox checked={field.value} onCheckedChange={field.onChange} />
-                        </FormControl>
-                        <div className="space-y-1 leading-none">
-                          <FormLabel className="text-sm font-medium cursor-pointer">
-                            I confirm this package does not contain prohibited items
-                          </FormLabel>
-                          <p className="text-xs text-muted-foreground">
-                            Gold, silver, precious metals, chemicals, narcotics, batteries, currency, physical cash, credit/debit cards, or any restricted substances.
-                          </p>
-                          <FormMessage />
+                      <FormItem>
+                        <div
+                          className={`flex flex-row items-start gap-3 rounded-lg border p-4 cursor-pointer transition-all ${field.value ? 'border-green-500/40 bg-green-500/5' : 'border-border bg-muted/30 hover:border-coke-red/30'}`}
+                          onClick={() => { if (!field.value) setShowIntlWeightDimDeclarationModal(true); }}
+                        >
+                          <FormControl>
+                            <Checkbox
+                              checked={field.value}
+                              onCheckedChange={(checked) => {
+                                if (checked && !field.value) setShowIntlWeightDimDeclarationModal(true);
+                                else if (!checked) field.onChange(false);
+                              }}
+                              onClick={(e) => e.stopPropagation()}
+                              className="mt-0.5"
+                            />
+                          </FormControl>
+                          <div className="space-y-1 leading-none">
+                            <FormLabel className="text-sm font-medium cursor-pointer">
+                              I declare the weight & dimensions are accurate
+                            </FormLabel>
+                            <p className="text-xs text-muted-foreground">
+                              Incorrect weight or dimensions may result in additional charges or shipment hold. Click to review and accept the declaration.
+                            </p>
+                            <FormMessage />
+                          </div>
                         </div>
                       </FormItem>
                     )} />
@@ -1625,26 +1644,33 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                     </div>
                     )}
 
-                    {/* Prohibited Items Confirmation */}
+                    {/* Weight & Dimensions Declaration */}
                     <FormField control={domForm.control} name="prohibitedItemsConfirmed" render={({ field }) => (
-                      <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-lg border border-border p-4 bg-muted/30">
-                        <FormControl>
-                          <Checkbox checked={field.value} onCheckedChange={field.onChange} />
-                        </FormControl>
-                        <div className="space-y-1 leading-none">
-                          <FormLabel className="text-sm font-medium cursor-pointer">
-                            {isLaptopDom
-                              ? 'I confirm the laptop is powered off and does not have a damaged/swollen battery'
-                              : 'I confirm this package does not contain prohibited items'
-                            }
-                          </FormLabel>
-                          <p className="text-xs text-muted-foreground">
-                            {isLaptopDom
-                              ? 'The laptop must be completely powered off (not in sleep mode). Laptops with damaged, swollen, or leaking batteries cannot be shipped. Remove any external peripherals.'
-                              : 'Gold, silver, precious metals, chemicals, narcotics, batteries, currency, physical cash, credit/debit cards, or any restricted substances.'
-                            }
-                          </p>
-                          <FormMessage />
+                      <FormItem>
+                        <div
+                          className={`flex flex-row items-start gap-3 rounded-lg border p-4 cursor-pointer transition-all ${field.value ? 'border-green-500/40 bg-green-500/5' : 'border-border bg-muted/30 hover:border-coke-red/30'}`}
+                          onClick={() => { if (!field.value) setShowWeightDimDeclarationModal(true); }}
+                        >
+                          <FormControl>
+                            <Checkbox
+                              checked={field.value}
+                              onCheckedChange={(checked) => {
+                                if (checked && !field.value) setShowWeightDimDeclarationModal(true);
+                                else if (!checked) field.onChange(false);
+                              }}
+                              onClick={(e) => e.stopPropagation()}
+                              className="mt-0.5"
+                            />
+                          </FormControl>
+                          <div className="space-y-1 leading-none">
+                            <FormLabel className="text-sm font-medium cursor-pointer">
+                              I declare the weight & dimensions are accurate
+                            </FormLabel>
+                            <p className="text-xs text-muted-foreground">
+                              Incorrect weight or dimensions may result in additional charges or shipment hold. Click to review and accept the declaration.
+                            </p>
+                            <FormMessage />
+                          </div>
                         </div>
                       </FormItem>
                     )} />
@@ -3156,6 +3182,122 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
               <div className="flex gap-3 pt-2">
                 <Button variant="outline" onClick={() => setShowWeightLimitModal(false)} className="flex-1">
                   Go Back
+                </Button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ═══════════════ Weight & Dimensions Declaration Modal (Domestic) ═══════════════ */}
+      <AnimatePresence>
+        {showWeightDimDeclarationModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
+            onClick={() => setShowWeightDimDeclarationModal(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-card rounded-2xl border border-border shadow-xl max-w-lg w-full p-6 space-y-4 max-h-[80vh] overflow-y-auto"
+            >
+              <div className="flex items-start justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-950/40 flex items-center justify-center">
+                    <ShieldCheck className="h-5 w-5 text-blue-600" weight="duotone" />
+                  </div>
+                  <h3 className="font-semibold text-lg">Weight & Dimensions Declaration</h3>
+                </div>
+                <button onClick={() => setShowWeightDimDeclarationModal(false)} className="text-muted-foreground hover:text-foreground">
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+              <div className="space-y-3 text-sm text-muted-foreground">
+                <p className="font-medium text-foreground">By proceeding, I declare and confirm the following:</p>
+                <ul className="space-y-2 list-disc pl-5">
+                  <li>The <span className="font-semibold text-foreground">weight entered is the actual packed weight</span> of the shipment, measured on a calibrated scale.</li>
+                  <li>The <span className="font-semibold text-foreground">dimensions (L × W × H) are the outer dimensions</span> of the packed box or envelope, not the item inside.</li>
+                  <li>I understand that courier charges are based on the <span className="font-semibold text-foreground">higher of actual weight or volumetric weight</span> (L×W×H ÷ 5000).</li>
+                  <li>If the actual weight or dimensions at pickup differ from what I declared, <span className="font-semibold text-foreground">additional charges will apply</span> and will be deducted from my wallet.</li>
+                  <li>Deliberate under-declaration of weight or dimensions may result in <span className="font-semibold text-foreground">shipment hold or cancellation</span> without refund.</li>
+                  <li>I accept full responsibility for any discrepancies between declared and actual measurements.</li>
+                </ul>
+                <p className="text-xs bg-muted/50 rounded-lg p-3">
+                  Tip: Weigh your packed parcel on a kitchen or postal scale. Measure the longest side as Length, next as Width, and shortest as Height.
+                </p>
+              </div>
+              <div className="flex gap-3 pt-2">
+                <Button variant="outline" onClick={() => setShowWeightDimDeclarationModal(false)} className="flex-1">
+                  Cancel
+                </Button>
+                <Button className="flex-1 bg-coke-red hover:bg-red-600 text-white" onClick={() => {
+                  domForm.setValue('prohibitedItemsConfirmed', true);
+                  setShowWeightDimDeclarationModal(false);
+                }}>
+                  I Accept & Declare
+                </Button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ═══════════════ Weight & Dimensions Declaration Modal (International) ═══════════════ */}
+      <AnimatePresence>
+        {showIntlWeightDimDeclarationModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
+            onClick={() => setShowIntlWeightDimDeclarationModal(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-card rounded-2xl border border-border shadow-xl max-w-lg w-full p-6 space-y-4 max-h-[80vh] overflow-y-auto"
+            >
+              <div className="flex items-start justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-950/40 flex items-center justify-center">
+                    <ShieldCheck className="h-5 w-5 text-blue-600" weight="duotone" />
+                  </div>
+                  <h3 className="font-semibold text-lg">Weight & Dimensions Declaration</h3>
+                </div>
+                <button onClick={() => setShowIntlWeightDimDeclarationModal(false)} className="text-muted-foreground hover:text-foreground">
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+              <div className="space-y-3 text-sm text-muted-foreground">
+                <p className="font-medium text-foreground">By proceeding, I declare and confirm the following:</p>
+                <ul className="space-y-2 list-disc pl-5">
+                  <li>The <span className="font-semibold text-foreground">weight entered is the actual packed weight</span> of the shipment, measured on a calibrated scale.</li>
+                  <li>The <span className="font-semibold text-foreground">dimensions (L × W × H) are the outer dimensions</span> of the packed box or envelope, not the item inside.</li>
+                  <li>I understand that international courier charges are based on the <span className="font-semibold text-foreground">higher of actual weight or volumetric weight</span> (L×W×H ÷ 5000).</li>
+                  <li>If the actual weight or dimensions at pickup differ from what I declared, <span className="font-semibold text-foreground">additional charges will apply</span> and will be deducted from my wallet.</li>
+                  <li>For international shipments, customs authorities may re-weigh and re-measure the package. Any discrepancies are my responsibility.</li>
+                  <li>Deliberate under-declaration may result in <span className="font-semibold text-foreground">customs detention, fines, or shipment return</span> at my cost.</li>
+                </ul>
+                <p className="text-xs bg-muted/50 rounded-lg p-3">
+                  Tip: Weigh your packed parcel on a kitchen or postal scale. Measure the longest side as Length, next as Width, and shortest as Height.
+                </p>
+              </div>
+              <div className="flex gap-3 pt-2">
+                <Button variant="outline" onClick={() => setShowIntlWeightDimDeclarationModal(false)} className="flex-1">
+                  Cancel
+                </Button>
+                <Button className="flex-1 bg-coke-red hover:bg-red-600 text-white" onClick={() => {
+                  intlForm.setValue('prohibitedItemsConfirmed', true);
+                  setShowIntlWeightDimDeclarationModal(false);
+                }}>
+                  I Accept & Declare
                 </Button>
               </div>
             </motion.div>

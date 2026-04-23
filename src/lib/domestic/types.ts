@@ -25,6 +25,8 @@ export interface DomesticBookingData {
   heightCm: number;
   declaredValue: number;
   contentDescription: string;
+  // Declarations
+  prohibitedItemsConfirmed: boolean;
   // Addresses
   pickupAddress: DomesticAddress;
   deliveryAddress: DomesticAddress;
