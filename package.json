@@ -48,6 +48,7 @@
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
     "cookies-next": "^4.3.0",
+    "country-flag-icons": "^1.6.16",
     "date-fns": "^3.6.0",
     "dotted-map": "^3.1.0",
     "embla-carousel-react": "^8.6.0",

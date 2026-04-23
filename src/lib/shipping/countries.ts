@@ -416,9 +416,9 @@ export const searchCountries = (query: string): Country[] => {
 };
 
 export const regionLabels: Record<Region, string> = {
-  'americas': '🌎 Americas',
-  'europe': '🌍 Europe',
-  'middle-east': '🕌 Middle East',
-  'asia-pacific': '🌏 Asia & Pacific',
-  'africa': '🌍 Africa',
+  'americas': 'Americas',
+  'europe': 'Europe',
+  'middle-east': 'Middle East',
+  'asia-pacific': 'Asia & Pacific',
+  'africa': 'Africa',
 };

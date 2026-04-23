@@ -1,5 +1,6 @@
 import { useState, useMemo, forwardRef } from 'react';
 import { Check, ChevronsUpDown, AlertCircle } from 'lucide-react';
+import { Globe, Mountains, Buildings, Compass, Tree } from '@phosphor-icons/react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import {
@@ -18,6 +19,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { useCountries } from '@/hooks/useCountries';
 import { Region } from '@/lib/shipping/countries';
+import { FlagIcon } from '@/components/ui/FlagIcon';
 
 interface CountrySelectorProps {
   value: string;
@@ -26,6 +28,17 @@ interface CountrySelectorProps {
   disabled?: boolean;
   className?: string;
 }
+
+// SVG continent icons from Phosphor
+const regionIcons: Record<Region, React.ReactNode> = {
+  'asia-pacific': <Globe className="h-3.5 w-3.5" weight="duotone" />,
+  'middle-east': <Mountains className="h-3.5 w-3.5" weight="duotone" />,
+  'europe': <Buildings className="h-3.5 w-3.5" weight="duotone" />,
+  'americas': <Compass className="h-3.5 w-3.5" weight="duotone" />,
+  'africa': <Tree className="h-3.5 w-3.5" weight="duotone" />,
+};
+
+const regionOrder: Region[] = ['asia-pacific', 'middle-east', 'europe', 'americas', 'africa'];
 
 export const CountrySelector = forwardRef<HTMLButtonElement, CountrySelectorProps>(({
   value,
@@ -41,8 +54,6 @@ export const CountrySelector = forwardRef<HTMLButtonElement, CountrySelectorProp
     if (!value) return null;
     return getCountry(value);
   }, [value, getCountry]);
-
-  const regionOrder: Region[] = ['asia-pacific', 'middle-east', 'europe', 'americas', 'africa'];
 
   const commitSelection = (countryCode: string, isServed: boolean) => {
     if (!isServed) return;
@@ -68,7 +79,7 @@ export const CountrySelector = forwardRef<HTMLButtonElement, CountrySelectorProp
         >
           {selectedCountry ? (
             <span className="flex items-center gap-2">
-              <span className="text-lg">{selectedCountry.flag}</span>
+              <FlagIcon code={selectedCountry.code} />
               <span>{selectedCountry.name}</span>
               {!selectedCountry.isServed && (
                 <Badge variant="destructive" className="ml-2 text-xs">
@@ -94,7 +105,15 @@ export const CountrySelector = forwardRef<HTMLButtonElement, CountrySelectorProp
               if (countries.length === 0) return null;
 
               return (
-                <CommandGroup key={region} heading={regionLabels[region]}>
+                <CommandGroup
+                  key={region}
+                  heading={
+                    <span className="flex items-center gap-1.5 text-muted-foreground">
+                      {regionIcons[region]}
+                      {regionLabels[region]}
+                    </span>
+                  }
+                >
                   {countries.map((country) => (
                     <CommandItem
                       key={country.code}
@@ -106,7 +125,7 @@ export const CountrySelector = forwardRef<HTMLButtonElement, CountrySelectorProp
                         !country.isServed && 'opacity-50 cursor-not-allowed'
                       )}
                     >
-                      <span className="text-lg">{country.flag}</span>
+                      <FlagIcon code={country.code} />
                       <span className="flex-1">{country.name}</span>
                       {!country.isServed && (
                         <AlertCircle className="h-4 w-4 text-destructive" />
