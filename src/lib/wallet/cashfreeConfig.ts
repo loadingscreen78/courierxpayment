@@ -14,6 +14,12 @@ export const CASHFREE_VERIFICATION_BASE =
     ? 'https://sandbox.cashfree.com/verification'
     : 'https://supabase.courierx.in/cashfree-kyc/verification';
 
+// Direct Cashfree base — used for OKYC endpoints not proxied through VPS
+export const CASHFREE_VERIFICATION_DIRECT =
+  process.env.CASHFREE_ENV === 'sandbox'
+    ? 'https://sandbox.cashfree.com/verification'
+    : 'https://api.cashfree.com/verification';
+
 export const CASHFREE_SDK_MODE =
   process.env.CASHFREE_ENV === 'sandbox' ? 'sandbox' : 'production';
 

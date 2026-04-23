@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -58,6 +58,15 @@ const steps = [
 const CXBCApply = () => {
   const router = useRouter();
   const [currentStep, setCurrentStep] = useState(1);
+
+  // Jump to KYC step if returning from DigiLocker redirect
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("kyc") === "digilocker") {
+      setCurrentStep(3); // KYC step
+    }
+  }, []);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [existingApplicationStatus, setExistingApplicationStatus] = useState<string | null>(null);

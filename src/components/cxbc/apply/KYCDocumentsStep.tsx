@@ -578,3 +578,424 @@ function DocumentUpload({ label, value, onChange, hint }: DocumentUploadProps) {
     </div>
   );
 }
+
+export const KYCDocumentsStep = ({ data, onUpdate, onNext, onBack }: KYCDocumentsStepProps) => {
+  const [method, setMethod] = useState<VerifyMethod>("otp");
+
+  // -- OTP state --------------------------------------------------------------
+  const [otpStep, setOtpStep] = useState<AadhaarOtpStep>(data.aadhaarVerified ? "verified" : "input");
+  const [aadhaarNumber, setAadhaarNumber] = useState("");
+  const [referenceId, setReferenceId] = useState("");
+  const [otp, setOtp] = useState(["", "", "", "", "", ""]);
+  const [otpLoading, setOtpLoading] = useState(false);
+  const [verifyLoading, setVerifyLoading] = useState(false);
+  const [otpError, setOtpError] = useState("");
+  const [resendTimer, setResendTimer] = useState(0);
+  const otpRefs = useRef<(HTMLInputElement | null)[]>([]);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // -- DigiLocker state -------------------------------------------------------
+  const [dlStep, setDlStep] = useState<DigiLockerStep>(data.aadhaarVerified ? "verified" : "idle");
+  const [dlVerificationId, setDlVerificationId] = useState("");
+  const [dlReferenceId, setDlReferenceId] = useState<string | undefined>(undefined);
+  const [dlLoading, setDlLoading] = useState(false);
+  const [dlPollLoading, setDlPollLoading] = useState(false);
+  const [dlError, setDlError] = useState("");
+
+  // -- Document upload state --------------------------------------------------
+  const [panFile, setPanFile] = useState<string>(data.kycPanUrl || "");
+  const [shopPhoto, setShopPhoto] = useState<string>(data.shopPhotoUrl || "");
+  const [docErrors, setDocErrors] = useState<{ pan?: string }>({});
+
+  // -- On mount: check if returning from DigiLocker redirect -----------------
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("kyc") === "digilocker") {
+      const vid = params.get("vid") || sessionStorage.getItem("cxbc_dl_vid") || "";
+      if (vid) {
+        setMethod("digilocker");
+        setDlVerificationId(vid);
+        setDlStep("initiated");
+      }
+    }
+  }, []);
+
+  // -- Timer ------------------------------------------------------------------
+  useEffect(() => {
+    return () => { if (timerRef.current) clearInterval(timerRef.current); };
+  }, []);
+
+  const startResendTimer = () => {
+    setResendTimer(30);
+    timerRef.current = setInterval(() => {
+      setResendTimer((t) => { if (t <= 1) { clearInterval(timerRef.current!); return 0; } return t - 1; });
+    }, 1000);
+  };
+
+  const formatAadhaar = (val: string) =>
+    val.replace(/\D/g, "").slice(0, 12).replace(/(\d{4})(?=\d)/g, "$1 ").trim();
+
+  // -- OTP: Send --------------------------------------------------------------
+  const handleSendOtp = async () => {
+    const digits = aadhaarNumber.replace(/\s/g, "");
+    if (!/^\d{12}$/.test(digits)) { setOtpError("Please enter a valid 12-digit Aadhaar number."); return; }
+    setOtpError(""); setOtpLoading(true);
+    try {
+      const res = await fetch("/api/cxbc/aadhaar-otp/send", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ aadhaarNumber: digits }),
+      });
+      const json = await res.json();
+      if (!res.ok || !json.success) { setOtpError(json.error || "Failed to send OTP."); return; }
+      setReferenceId(json.referenceId);
+      setOtpStep("otp");
+      startResendTimer();
+    } catch { setOtpError("Network error. Please check your connection."); }
+    finally { setOtpLoading(false); }
+  };
+
+  // -- OTP: Input handlers ----------------------------------------------------
+  const handleOtpChange = (i: number, v: string) => {
+    if (!/^\d*$/.test(v)) return;
+    const next = [...otp]; next[i] = v.slice(-1); setOtp(next);
+    if (v && i < 5) otpRefs.current[i + 1]?.focus();
+  };
+  const handleOtpKeyDown = (i: number, e: React.KeyboardEvent) => {
+    if (e.key === "Backspace" && !otp[i] && i > 0) otpRefs.current[i - 1]?.focus();
+  };
+  const handleOtpPaste = (e: React.ClipboardEvent) => {
+    const p = e.clipboardData.getData("text").replace(/\D/g, "").slice(0, 6);
+    if (p.length === 6) { setOtp(p.split("")); otpRefs.current[5]?.focus(); }
+    e.preventDefault();
+  };
+
+  // -- OTP: Verify ------------------------------------------------------------
+  const handleVerifyOtp = async () => {
+    const otpStr = otp.join("");
+    if (otpStr.length !== 6) { setOtpError("Please enter the complete 6-digit OTP."); return; }
+    setOtpError(""); setVerifyLoading(true);
+    try {
+      const res = await fetch("/api/cxbc/aadhaar-otp/verify", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ referenceId, otp: otpStr }),
+      });
+      const json = await res.json();
+      if (!res.ok || !json.success) { setOtpError(json.error || "Invalid OTP."); return; }
+      onUpdate({ aadhaarVerified: true, aadhaarVerifiedName: json.verifiedName, aadhaarMasked: json.maskedAadhaar });
+      setOtpStep("verified");
+    } catch { setOtpError("Network error. Please check your connection."); }
+    finally { setVerifyLoading(false); }
+  };
+
+  const resetOtp = () => {
+    setOtpStep("input"); setOtp(["","","","","",""]); setOtpError("");
+    onUpdate({ aadhaarVerified: false, aadhaarVerifiedName: "", aadhaarMasked: "" });
+  };
+
+  // -- DigiLocker: Initiate ---------------------------------------------------
+  const handleDigiLockerInitiate = async () => {
+    setDlError(""); setDlLoading(true);
+    try {
+      const res = await fetch("/api/cxbc/digilocker/initiate", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+      });
+      const json = await res.json();
+      if (!res.ok || !json.success) { setDlError(json.error || "Failed to initiate DigiLocker."); return; }
+      setDlVerificationId(json.verificationId);
+      setDlReferenceId(json.referenceId);
+      sessionStorage.setItem("cxbc_dl_vid", json.verificationId);
+      if (json.referenceId) sessionStorage.setItem("cxbc_dl_rid", String(json.referenceId));
+      window.open(json.digilockerUrl, "_blank", "noopener,noreferrer");
+      setDlStep("initiated");
+    } catch { setDlError("Network error. Please check your connection."); }
+    finally { setDlLoading(false); }
+  };
+
+  // -- DigiLocker: Poll / Fetch -----------------------------------------------
+  const handleDigiLockerFetch = async () => {
+    const vid = dlVerificationId || sessionStorage.getItem("cxbc_dl_vid") || "";
+    const rid = dlReferenceId || sessionStorage.getItem("cxbc_dl_rid") || undefined;
+    if (!vid) { setDlError("Verification ID missing. Please start again."); return; }
+    setDlError(""); setDlPollLoading(true);
+    try {
+      const res = await fetch("/api/cxbc/digilocker/fetch", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ verificationId: vid, referenceId: rid }),
+      });
+      const json = await res.json();
+      if (res.status === 202) { setDlError("DigiLocker verification not completed yet. Please finish the DigiLocker flow and try again."); return; }
+      if (!res.ok || !json.success) { setDlError(json.error || "Verification failed."); return; }
+      onUpdate({ aadhaarVerified: true, aadhaarVerifiedName: json.verifiedName, aadhaarMasked: json.maskedAadhaar });
+      setDlStep("verified");
+      sessionStorage.removeItem("cxbc_dl_vid");
+      sessionStorage.removeItem("cxbc_dl_rid");
+    } catch { setDlError("Network error. Please check your connection."); }
+    finally { setDlPollLoading(false); }
+  };
+
+  const resetDigiLocker = () => {
+    setDlStep("idle"); setDlError(""); setDlVerificationId(""); setDlReferenceId(undefined);
+    onUpdate({ aadhaarVerified: false, aadhaarVerifiedName: "", aadhaarMasked: "" });
+    sessionStorage.removeItem("cxbc_dl_vid");
+    sessionStorage.removeItem("cxbc_dl_rid");
+  };
+
+  // -- Document upload --------------------------------------------------------
+  const handleFileChange = (type: "pan" | "shop") => (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]; if (!file) return;
+    const url = `pending-upload:${file.name}`;
+    if (type === "pan") { setPanFile(url); onUpdate({ kycPanUrl: url }); }
+    else { setShopPhoto(url); onUpdate({ shopPhotoUrl: url }); }
+  };
+  const getFileName = (url: string) =>
+    url.startsWith("pending-upload:") ? url.replace("pending-upload:", "") : url.split("/").pop() || "Uploaded";
+
+  // -- Proceed ----------------------------------------------------------------
+  const handleNext = () => {
+    const errors: { pan?: string } = {};
+    if (!panFile) errors.pan = "PAN card is required";
+    setDocErrors(errors);
+    if (!data.aadhaarVerified) { setOtpError("Please complete Aadhaar verification first."); return; }
+    if (Object.keys(errors).length === 0) onNext();
+  };
+
+  const isVerified = data.aadhaarVerified;
+  const otpFilled = otp.every((d) => d !== "");
+
+  return (
+    <div className="space-y-8">
+
+      {/* -- Section 1: Aadhaar Verification ------------------------------- */}
+      <div className="space-y-4">
+        <div className="flex items-center gap-2">
+          <div className="flex items-center justify-center w-6 h-6 rounded-full bg-primary text-primary-foreground text-xs font-bold shrink-0">1</div>
+          <span className="text-sm font-semibold text-foreground">Aadhaar Verification</span>
+          {isVerified && <span className="ml-auto flex items-center gap-1 text-xs font-medium text-green-600"><CheckCircle2 className="h-3.5 w-3.5" /> Verified</span>}
+        </div>
+
+        {/* Verified card — shown for both methods */}
+        {isVerified ? (
+          <div className="rounded-2xl border-2 border-green-200 bg-green-50 p-5">
+            <div className="flex items-center gap-3">
+              <div className="shrink-0 w-10 h-10 rounded-full bg-green-100 flex items-center justify-center">
+                <CheckCircle2 className="h-5 w-5 text-green-600" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-green-800">Aadhaar Verified Successfully</p>
+                {data.aadhaarVerifiedName && <p className="text-sm text-green-700 mt-0.5 font-medium">{data.aadhaarVerifiedName}</p>}
+                {data.aadhaarMasked && <p className="text-xs text-green-600 font-mono mt-0.5">{data.aadhaarMasked}</p>}
+              </div>
+              <button type="button" onClick={method === "digilocker" ? resetDigiLocker : resetOtp}
+                className="text-xs text-green-600 hover:text-green-800 underline underline-offset-2 shrink-0">
+                Re-verify
+              </button>
+            </div>
+          </div>
+        ) : (
+          <>
+            {/* Method tabs */}
+            <div className="flex rounded-xl border border-border overflow-hidden">
+              <button type="button" onClick={() => setMethod("otp")}
+                className={cn("flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-medium transition-colors",
+                  method === "otp" ? "bg-primary text-primary-foreground" : "bg-background text-muted-foreground hover:bg-muted/50")}>
+                <Smartphone className="h-4 w-4" /> Aadhaar OTP
+              </button>
+              <button type="button" onClick={() => setMethod("digilocker")}
+                className={cn("flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-medium transition-colors border-l border-border",
+                  method === "digilocker" ? "bg-primary text-primary-foreground" : "bg-background text-muted-foreground hover:bg-muted/50")}>
+                <ShieldCheck className="h-4 w-4" /> DigiLocker
+              </button>
+            </div>
+
+            {/* -- OTP Method -- */}
+            {method === "otp" && (
+              <div className="rounded-2xl border border-border bg-card p-5 space-y-4">
+                {otpStep === "input" && (
+                  <>
+                    <div className="flex items-start gap-3">
+                      <div className="mt-0.5 shrink-0 w-9 h-9 rounded-xl bg-blue-50 flex items-center justify-center">
+                        <ShieldCheck className="h-5 w-5 text-blue-600" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-foreground">Verify with Aadhaar OTP</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">OTP sent to your Aadhaar-linked mobile number</p>
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-foreground">Aadhaar Number *</label>
+                      <div className="relative">
+                        <input inputMode="numeric" placeholder="XXXX  XXXX  XXXX"
+                          value={formatAadhaar(aadhaarNumber)}
+                          onChange={(e) => { setOtpError(""); setAadhaarNumber(e.target.value.replace(/\D/g, "").slice(0, 12)); }}
+                          className="w-full h-11 px-3 pr-10 rounded-xl border border-border bg-background font-mono text-base tracking-[0.2em] focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors"
+                          maxLength={14} />
+                        <Lock className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/40" />
+                      </div>
+                      <p className="text-xs text-muted-foreground flex items-center gap-1"><Lock className="h-3 w-3" /> Never stored — used only for OTP delivery</p>
+                    </div>
+                    {otpError && <Alert variant="destructive" className="py-2.5"><AlertCircle className="h-4 w-4" /><AlertDescription className="text-sm">{otpError}</AlertDescription></Alert>}
+                    <Button type="button" onClick={handleSendOtp} disabled={otpLoading || aadhaarNumber.length < 12} className="w-full h-11">
+                      {otpLoading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Sending OTP...</> : "Send OTP to Aadhaar-linked Mobile"}
+                    </Button>
+                  </>
+                )}
+
+                {otpStep === "otp" && (
+                  <>
+                    <div className="text-center space-y-1">
+                      <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-blue-50 mb-1">
+                        <ShieldCheck className="h-6 w-6 text-blue-600" />
+                      </div>
+                      <p className="text-sm font-semibold">Enter OTP</p>
+                      <p className="text-xs text-muted-foreground">Sent to your Aadhaar-linked mobile number</p>
+                    </div>
+                    <div className="flex justify-center gap-2.5" onPaste={handleOtpPaste}>
+                      {otp.map((digit, i) => (
+                        <input key={i} ref={(el) => { otpRefs.current[i] = el; }}
+                          type="text" inputMode="numeric" maxLength={1} value={digit}
+                          onChange={(e) => handleOtpChange(i, e.target.value)}
+                          onKeyDown={(e) => handleOtpKeyDown(i, e)}
+                          className={cn("w-11 text-center text-xl font-bold rounded-xl border-2 bg-background focus:outline-none transition-all",
+                            digit ? "border-primary text-foreground" : "border-border text-muted-foreground", "focus:border-primary")}
+                          style={{ height: "52px" }} />
+                      ))}
+                    </div>
+                    {otpError && <Alert variant="destructive" className="py-2.5"><AlertCircle className="h-4 w-4" /><AlertDescription className="text-sm">{otpError}</AlertDescription></Alert>}
+                    <Button type="button" onClick={handleVerifyOtp} disabled={verifyLoading || !otpFilled} className="w-full h-11">
+                      {verifyLoading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Verifying...</> : <><ShieldCheck className="mr-2 h-4 w-4" />Verify OTP</>}
+                    </Button>
+                    <div className="flex items-center justify-between text-xs text-muted-foreground pt-1">
+                      <button type="button" onClick={() => { setOtpStep("input"); setOtp(["","","","","",""]); setOtpError(""); }} className="hover:text-foreground transition-colors">? Change number</button>
+                      {resendTimer > 0 ? <span>Resend in {resendTimer}s</span> : (
+                        <button type="button" onClick={handleSendOtp} disabled={otpLoading} className="flex items-center gap-1 hover:text-foreground transition-colors">
+                          <RefreshCw className="h-3 w-3" /> Resend OTP
+                        </button>
+                      )}
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+
+            {/* -- DigiLocker Method -- */}
+            {method === "digilocker" && (
+              <div className="rounded-2xl border border-border bg-card p-5 space-y-4">
+                {dlStep === "idle" && (
+                  <>
+                    <div className="flex items-start gap-3">
+                      <div className="mt-0.5 shrink-0 w-9 h-9 rounded-xl bg-indigo-50 flex items-center justify-center">
+                        <ShieldCheck className="h-5 w-5 text-indigo-600" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-foreground">Verify via DigiLocker</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">Government-approved verification — no document upload needed</p>
+                      </div>
+                    </div>
+                    <div className="rounded-xl bg-indigo-50 border border-indigo-100 p-4 space-y-2">
+                      {["Authenticate with your DigiLocker account", "Allow Aadhaar document access", "Return here — we fetch your details automatically"].map((s, i) => (
+                        <div key={i} className="flex items-center gap-2.5 text-sm text-indigo-800">
+                          <span className="w-5 h-5 rounded-full bg-indigo-200 text-indigo-700 text-xs font-bold flex items-center justify-center shrink-0">{i + 1}</span>
+                          {s}
+                        </div>
+                      ))}
+                    </div>
+                    {dlError && <Alert variant="destructive" className="py-2.5"><AlertCircle className="h-4 w-4" /><AlertDescription className="text-sm">{dlError}</AlertDescription></Alert>}
+                    <Button type="button" onClick={handleDigiLockerInitiate} disabled={dlLoading} className="w-full h-11">
+                      {dlLoading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Opening DigiLocker...</> : <><ExternalLink className="mr-2 h-4 w-4" />Verify via DigiLocker</>}
+                    </Button>
+                  </>
+                )}
+
+                {dlStep === "initiated" && (
+                  <>
+                    <div className="text-center space-y-2 py-2">
+                      <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-indigo-50 mb-1">
+                        <ExternalLink className="h-6 w-6 text-indigo-600" />
+                      </div>
+                      <p className="text-sm font-semibold text-foreground">DigiLocker Opened</p>
+                      <p className="text-xs text-muted-foreground">Complete the verification in the DigiLocker window, then click below</p>
+                    </div>
+                    {dlError && <Alert variant="destructive" className="py-2.5"><AlertCircle className="h-4 w-4" /><AlertDescription className="text-sm">{dlError}</AlertDescription></Alert>}
+                    <Button type="button" onClick={handleDigiLockerFetch} disabled={dlPollLoading} className="w-full h-11">
+                      {dlPollLoading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Checking status...</> : <><CheckCircle2 className="mr-2 h-4 w-4" />I've completed DigiLocker verification</>}
+                    </Button>
+                    <button type="button" onClick={resetDigiLocker} className="w-full text-xs text-muted-foreground hover:text-foreground transition-colors text-center">
+                      ? Start again
+                    </button>
+                  </>
+                )}
+              </div>
+            )}
+          </>
+        )}
+      </div>
+
+      {/* -- Divider -------------------------------------------------------- */}
+      <div className="relative">
+        <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-border" /></div>
+        <div className="relative flex justify-center"><span className="bg-background px-3 text-xs text-muted-foreground">Document Upload</span></div>
+      </div>
+
+      {/* -- Section 2: Documents ------------------------------------------- */}
+      <div className="space-y-4">
+        <div className="flex items-center gap-2">
+          <div className="flex items-center justify-center w-6 h-6 rounded-full bg-primary text-primary-foreground text-xs font-bold shrink-0">2</div>
+          <span className="text-sm font-semibold text-foreground">Upload Documents</span>
+        </div>
+
+        <Alert className="border-amber-200 bg-amber-50 py-2.5">
+          <AlertCircle className="h-4 w-4 text-amber-600" />
+          <AlertDescription className="text-amber-700 text-xs">Upload clear, readable copies. Accepted: JPG, PNG, PDF (max 5MB each).</AlertDescription>
+        </Alert>
+
+        {/* PAN Card */}
+        <div className="rounded-2xl border border-border bg-card p-4 space-y-3">
+          <div className="flex items-center justify-between">
+            <Label htmlFor="pan-upload" className="text-sm font-medium flex items-center gap-2">
+              PAN Card * {panFile && <CheckCircle2 className="h-4 w-4 text-green-500" />}
+            </Label>
+            {panFile && <span className="text-xs text-muted-foreground truncate max-w-[160px]">{getFileName(panFile)}</span>}
+          </div>
+          <label htmlFor="pan-upload" className={cn("flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed p-5 cursor-pointer transition-colors",
+            panFile ? "border-green-300 bg-green-50 hover:bg-green-100" : "border-border hover:border-primary/50 hover:bg-muted/30")}>
+            {panFile ? <><FileCheck className="h-6 w-6 text-green-500" /><span className="text-xs text-green-600 font-medium">Uploaded — click to replace</span></>
+              : <><div className="w-8 h-8 rounded-lg bg-muted flex items-center justify-center"><span className="text-base">??</span></div><span className="text-xs text-muted-foreground">Click to upload PAN card</span></>}
+            <input id="pan-upload" type="file" accept="image/*,.pdf" className="hidden" onChange={handleFileChange("pan")} />
+          </label>
+          {docErrors.pan && <p className="text-xs text-destructive">{docErrors.pan}</p>}
+        </div>
+
+        {/* Shop Photo */}
+        <div className="rounded-2xl border border-border bg-card p-4 space-y-3">
+          <div className="flex items-center justify-between">
+            <Label htmlFor="shop-upload" className="text-sm font-medium flex items-center gap-2">
+              Shop Photo <span className="text-xs font-normal text-muted-foreground">(Optional)</span>
+              {shopPhoto && <CheckCircle2 className="h-4 w-4 text-green-500" />}
+            </Label>
+            {shopPhoto && <span className="text-xs text-muted-foreground truncate max-w-[160px]">{getFileName(shopPhoto)}</span>}
+          </div>
+          <label htmlFor="shop-upload" className={cn("flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed p-5 cursor-pointer transition-colors",
+            shopPhoto ? "border-green-300 bg-green-50 hover:bg-green-100" : "border-border hover:border-primary/50 hover:bg-muted/30")}>
+            {shopPhoto ? <><FileCheck className="h-6 w-6 text-green-500" /><span className="text-xs text-green-600 font-medium">Uploaded — click to replace</span></>
+              : <><div className="w-8 h-8 rounded-lg bg-muted flex items-center justify-center"><span className="text-base">??</span></div><span className="text-xs text-muted-foreground">Click to upload shop front photo</span></>}
+            <input id="shop-upload" type="file" accept="image/*" className="hidden" onChange={handleFileChange("shop")} />
+          </label>
+        </div>
+      </div>
+
+      {/* -- Navigation ----------------------------------------------------- */}
+      <div className="flex gap-3 pt-2">
+        <Button type="button" variant="outline" onClick={onBack} className="flex-1"><ArrowLeft className="mr-2 h-4 w-4" /> Back</Button>
+        <Button type="button" onClick={handleNext} className="flex-1" disabled={!isVerified || !panFile}>
+          Review Application <ArrowRight className="ml-2 h-4 w-4" />
+        </Button>
+      </div>
+      {(!isVerified || !panFile) && (
+        <p className="text-xs text-center text-muted-foreground -mt-2">
+          {!isVerified ? "Complete Aadhaar verification to continue" : "Upload PAN card to continue"}
+        </p>
+      )}
+    </div>
+  );
+};
