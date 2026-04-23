@@ -42,7 +42,7 @@ export const CountrySelector = forwardRef<HTMLButtonElement, CountrySelectorProp
     return getCountry(value);
   }, [value, getCountry]);
 
-  const regionOrder: Region[] = ['middle-east', 'asia-pacific', 'europe', 'americas', 'africa'];
+  const regionOrder: Region[] = ['asia-pacific', 'middle-east', 'europe', 'americas', 'africa'];
 
   const commitSelection = (countryCode: string, isServed: boolean) => {
     if (!isServed) return;

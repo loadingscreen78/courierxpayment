@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { getAllCountriesForDropdown } from '@/lib/shipping/countries';
+import { CountrySelector } from '@/components/shipping/CountrySelector';
 import { STATES, DISTRICTS_BY_STATE } from '@/lib/indian-districts';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
@@ -263,9 +264,6 @@ export const HeroCTAForm = ({ defaultTab = 'ship' }: { defaultTab?: 'ship' | 'tr
   const [pickupPin, setPickupPin] = useState('');
   const [dropPin, setDropPin] = useState('');
   const [destCountry, setDestCountry] = useState('');
-  const [countrySearch, setCountrySearch] = useState('');
-  const [showCountryDropdown, setShowCountryDropdown] = useState(false);
-  const countryRef = useRef<HTMLDivElement>(null);
 
   const pickupMeta = usePinLookup(pickupPin);
   const dropMeta = usePinLookup(dropPin);
@@ -277,21 +275,9 @@ export const HeroCTAForm = ({ defaultTab = 'ship' }: { defaultTab?: 'ship' | 'tr
   const isDomestic = shipType === 'domestic';
 
   useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      if (countryRef.current && !countryRef.current.contains(e.target as Node)) setShowCountryDropdown(false);
-    };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, []);
-
-  useEffect(() => {
     router.prefetch('/public/book/domestic');
     router.prefetch('/public/book/international');
   }, [router]);
-
-  const filteredCountries = countrySearch.length > 0
-    ? countryOptions.filter(c => c.name.toLowerCase().includes(countrySearch.toLowerCase()))
-    : countryOptions;
 
   const handleShipNow = () => {
     const params = new URLSearchParams();
@@ -402,37 +388,12 @@ export const HeroCTAForm = ({ defaultTab = 'ship' }: { defaultTab?: 'ship' | 'tr
                   <label className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">Pickup (India)</label>
                   <PinInput value={pickupPin} onChange={setPickupPin} meta={pickupMeta} placeholder="Pincode" showAssistance />
                   <label className="text-xs font-semibold text-muted-foreground uppercase tracking-widest block pt-1">Destination Country</label>
-                  <div className="relative" ref={countryRef}>
-                    <Globe className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/60" weight="bold" />
-                    <Input
-                      type="text"
-                      placeholder="Search country..."
-                      value={destCountry ? countryOptions.find(c => c.code === destCountry)?.name || countrySearch : countrySearch}
-                      onChange={e => { setCountrySearch(e.target.value); setDestCountry(''); setShowCountryDropdown(true); }}
-                      onFocus={() => setShowCountryDropdown(true)}
-                      className="pl-9 h-11 rounded-xl border-border/60 bg-background text-sm focus:border-coke-red focus:ring-coke-red/20 placeholder:text-muted-foreground/50"
-                    />
-                    {showCountryDropdown && filteredCountries.length > 0 && (
-                      <div className="absolute z-[9999] top-full mt-1 w-full max-h-64 overflow-y-auto rounded-xl border border-border/60 bg-card shadow-xl">
-                        {filteredCountries.map(c => (
-                          <button
-                            key={c.code}
-                            onClick={() => { if (!c.isServed || c.isSanctioned) return; setDestCountry(c.code); setCountrySearch(c.name); setShowCountryDropdown(false); }}
-                            disabled={!c.isServed || c.isSanctioned}
-                            className={cn(
-                              "w-full flex items-center gap-2 px-3 py-2 text-sm transition-colors text-left",
-                              (!c.isServed || c.isSanctioned) ? "opacity-40 cursor-not-allowed" : "hover:bg-muted/50 cursor-pointer"
-                            )}
-                          >
-                            <span className="text-base shrink-0">{c.flag}</span>
-                            <span className="text-foreground truncate flex-1 min-w-0">{c.name}</span>
-                            {c.isSanctioned && <span className="shrink-0 text-[10px] font-semibold px-1.5 py-0.5 rounded bg-destructive/10 text-destructive border border-destructive/20">Sanctioned</span>}
-                            {!c.isServed && !c.isSanctioned && <span className="shrink-0 text-[10px] font-medium px-1.5 py-0.5 rounded bg-muted text-muted-foreground">Unavailable</span>}
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                  </div>
+                  <CountrySelector
+                    value={destCountry}
+                    onValueChange={setDestCountry}
+                    placeholder="Search country..."
+                    className="h-11 rounded-xl border-border/60 text-sm"
+                  />
                   <Button
                     className="w-full h-11 bg-coke-red hover:bg-red-700 text-white font-semibold rounded-xl text-sm gap-2 mt-1 shadow-md shadow-coke-red/15 transition-all hover:shadow-lg hover:shadow-coke-red/25"
                     onClick={handleShipNow}
