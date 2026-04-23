@@ -136,7 +136,13 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
 
   // ── Multi-doc KYC state ──
   type GuestDocType = 'aadhaar' | 'pan' | 'passport' | 'voter_id';
+  type AadhaarVerifyMethod = 'digilocker' | 'format_check';
   const [selectedDocType, setSelectedDocType] = useState<GuestDocType>('aadhaar');
+  const [aadhaarMethod, setAadhaarMethod] = useState<AadhaarVerifyMethod>('digilocker');
+  const [digilockerUrl, setDigilockerUrl] = useState('');
+  const [digilockerVerificationId, setDigilockerVerificationId] = useState('');
+  const [digilockerReferenceId, setDigilockerReferenceId] = useState('');
+  const [digilockerStep, setDigilockerStep] = useState<'idle' | 'redirect' | 'verifying'>('idle');
   const [panInput, setPanInput] = useState('');
   const [panError, setPanError] = useState('');
   const [passportInput, setPassportInput] = useState('');
@@ -242,19 +248,14 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
 
   const pickupInfo = useMemo(() => getPickupInfo(), []);
 
-  // ── Auto-verify Aadhaar if extracted from OCR ──
-  // When extractedAadhaarNumber is provided (from Tesseract OCR), auto-fill and auto-verify
+  // ── Auto-fill Aadhaar from OCR — but do NOT auto-verify, user must choose method ──
   useEffect(() => {
-    if (extractedAadhaarNumber && !aadhaarVerified && !aadhaarLoading) {
+    if (extractedAadhaarNumber && !docVerified) {
       const raw = extractedAadhaarNumber.replace(/\D/g, '');
       if (raw.length === 12) {
-        // Always fill the field so user can see/correct it
         setAadhaarInput(raw);
         setFormattedAadhaar(formatAadhaar(raw));
-        // Auto-verify only if Verhoeff checksum passes
-        if (validateVerhoeff(raw)) {
-          setAadhaarVerified(true);
-        }
+        // Don't auto-verify — user must explicitly choose DigiLocker or format check
       }
     }
   }, [extractedAadhaarNumber]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -272,27 +273,52 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
     setAadhaarLoading(true);
     setAadhaarError(''); setPanError(''); setPassportError(''); setVoterIdError('');
     try {
-      await new Promise(r => setTimeout(r, 1200));
       if (selectedDocType === 'aadhaar') {
         if (aadhaarInput.length !== 12) { setAadhaarError('Enter a valid 12-digit Aadhaar number'); return; }
         if (!validateVerhoeff(aadhaarInput)) { setAadhaarError('Invalid Aadhaar number'); return; }
-        setAadhaarVerified(true);
-        setDocVerified(true);
-        setDocVerifiedLabel(`XXXX XXXX ${aadhaarInput.slice(-4)}`);
-        toast({ title: 'Aadhaar Verified', description: 'Your Aadhaar number has been validated.' });
+
+        if (aadhaarMethod === 'digilocker') {
+          // Initiate DigiLocker flow
+          const sessionId = `guest_${Date.now().toString(36)}`;
+          const res = await fetch('/api/kyc/guest-digilocker', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ aadhaarNumber: aadhaarInput, sessionId }),
+          });
+          const data = await res.json();
+          if (!res.ok || !data.digilockerUrl) {
+            setAadhaarError(data.error || 'Failed to initiate DigiLocker. Try format check instead.');
+            return;
+          }
+          setDigilockerUrl(data.digilockerUrl);
+          setDigilockerVerificationId(data.verificationId || '');
+          setDigilockerReferenceId(data.referenceId || '');
+          setDigilockerStep('redirect');
+          return; // Don't set verified yet — wait for redirect back
+        } else {
+          // Format check only
+          await new Promise(r => setTimeout(r, 800));
+          setAadhaarVerified(true);
+          setDocVerified(true);
+          setDocVerifiedLabel(`XXXX XXXX ${aadhaarInput.slice(-4)}`);
+          toast({ title: 'Aadhaar Validated', description: 'Format verified. Proceeding with booking.' });
+        }
       } else if (selectedDocType === 'pan') {
         if (!/^[A-Z]{5}[0-9]{4}[A-Z]$/.test(panInput.toUpperCase())) { setPanError('Invalid PAN format (e.g. ABCDE1234F)'); return; }
+        await new Promise(r => setTimeout(r, 800));
         setDocVerified(true);
         setDocVerifiedLabel(`PAN: ${panInput.slice(0, 3)}XXXXXXX`);
         toast({ title: 'PAN Verified', description: 'Your PAN has been validated.' });
       } else if (selectedDocType === 'passport') {
         if (!/^[A-Z][0-9]{7}$/.test(passportInput.toUpperCase())) { setPassportError('Invalid passport number (e.g. A1234567)'); return; }
         if (!passportDob) { setPassportError('Date of birth is required'); return; }
+        await new Promise(r => setTimeout(r, 800));
         setDocVerified(true);
         setDocVerifiedLabel(`Passport: ${passportInput.slice(0, 2)}XXXXX`);
         toast({ title: 'Passport Verified', description: 'Your passport details have been validated.' });
       } else if (selectedDocType === 'voter_id') {
         if (voterIdInput.trim().length < 6) { setVoterIdError('Enter a valid EPIC number'); return; }
+        await new Promise(r => setTimeout(r, 800));
         setDocVerified(true);
         setDocVerifiedLabel(`Voter ID: ${voterIdInput.slice(0, 3)}XXXXX`);
         toast({ title: 'Voter ID Verified', description: 'Your Voter ID has been validated.' });
@@ -303,6 +329,34 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
       setAadhaarLoading(false);
     }
   };
+
+  // Called after DigiLocker redirect returns
+  const handleCompleteDigiLocker = useCallback(async () => {
+    setDigilockerStep('verifying');
+    setAadhaarLoading(true);
+    try {
+      const params = digilockerReferenceId
+        ? `reference_id=${digilockerReferenceId}`
+        : `verification_id=${digilockerVerificationId}`;
+      const res = await fetch(`/api/kyc/guest-digilocker?${params}`);
+      const data = await res.json();
+      if (data.verified) {
+        setAadhaarVerified(true);
+        setDocVerified(true);
+        setDocVerifiedLabel(data.maskedAadhaar || `XXXX XXXX ${aadhaarInput.slice(-4)}`);
+        setDigilockerStep('idle');
+        toast({ title: 'Aadhaar Verified via DigiLocker', description: `Welcome, ${data.verifiedName || 'verified'}` });
+      } else {
+        setAadhaarError(data.error || 'DigiLocker verification not completed. Try again or use format check.');
+        setDigilockerStep('idle');
+      }
+    } catch {
+      setAadhaarError('Failed to complete DigiLocker verification.');
+      setDigilockerStep('idle');
+    } finally {
+      setAadhaarLoading(false);
+    }
+  }, [digilockerReferenceId, digilockerVerificationId, aadhaarInput, toast]);
 
   const handleVerifyAadhaar = handleVerifyDoc;
 
@@ -970,21 +1024,65 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
 
               {/* Aadhaar input */}
               {selectedDocType === 'aadhaar' && (
-                <div className="space-y-2">
-                  <p className="text-xs text-muted-foreground">
-                    {extractedAadhaarNumber ? 'Auto-filled from your uploaded document. Confirm and verify.' : 'Enter your 12-digit Aadhaar number.'}
-                  </p>
-                  <div className="flex gap-2">
-                    <Input type="text" inputMode="numeric" maxLength={14} placeholder="XXXX XXXX XXXX"
-                      className="font-mono tracking-widest text-center flex-1"
-                      value={formattedAadhaar} onChange={handleAadhaarChange} />
-                    <Button onClick={() => { feedbackPresets.tap(); handleVerifyDoc(); }}
-                      disabled={aadhaarLoading || aadhaarInput.length !== 12}
-                      className="bg-blue-600 hover:bg-blue-700 text-white shrink-0">
-                      {aadhaarLoading ? <CircleNotch className="h-4 w-4 animate-spin" /> : 'Verify'}
-                    </Button>
+                <div className="space-y-3">
+                  {/* Method toggle */}
+                  <div className="grid grid-cols-2 gap-1.5 p-1 bg-muted rounded-lg">
+                    {([
+                      { m: 'digilocker', label: '🔐 DigiLocker (OTP)', desc: 'Verify via Aadhaar-linked mobile OTP' },
+                      { m: 'format_check', label: '🔢 Format Check', desc: 'Basic format validation only' },
+                    ] as { m: AadhaarVerifyMethod; label: string; desc: string }[]).map(opt => (
+                      <button key={opt.m} onClick={() => { setAadhaarMethod(opt.m); setAadhaarError(''); setDigilockerStep('idle'); }}
+                        className={`py-2 px-2 rounded-md text-xs font-medium transition-all text-left ${aadhaarMethod === opt.m ? 'bg-background shadow text-foreground' : 'text-muted-foreground hover:text-foreground'}`}>
+                        <div>{opt.label}</div>
+                        <div className="text-[10px] font-normal opacity-70 mt-0.5">{opt.desc}</div>
+                      </button>
+                    ))}
                   </div>
-                  {aadhaarError && <p className="text-xs text-destructive flex items-center gap-1"><Warning className="h-3 w-3" weight="fill" /> {aadhaarError}</p>}
+
+                  {/* DigiLocker redirect step */}
+                  {aadhaarMethod === 'digilocker' && digilockerStep === 'redirect' && (
+                    <div className="space-y-3 p-3 rounded-lg bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800/40">
+                      <p className="text-xs text-blue-800 dark:text-blue-300">Click below to open DigiLocker. After completing verification, come back and click "I've completed DigiLocker".</p>
+                      <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white text-xs" onClick={() => window.open(digilockerUrl, '_blank')}>
+                        Open DigiLocker ↗
+                      </Button>
+                      <Button variant="outline" size="sm" className="w-full text-xs" onClick={handleCompleteDigiLocker} disabled={aadhaarLoading}>
+                        {aadhaarLoading ? <CircleNotch className="h-3.5 w-3.5 animate-spin mr-1.5" /> : null}
+                        I've completed DigiLocker — Fetch Result
+                      </Button>
+                      <button className="text-xs text-muted-foreground underline w-full text-center" onClick={() => setDigilockerStep('idle')}>Cancel</button>
+                    </div>
+                  )}
+
+                  {/* DigiLocker verifying */}
+                  {aadhaarMethod === 'digilocker' && digilockerStep === 'verifying' && (
+                    <div className="flex items-center gap-2 p-3 rounded-lg bg-muted text-sm text-muted-foreground">
+                      <CircleNotch className="h-4 w-4 animate-spin" /> Fetching verified data from DigiLocker...
+                    </div>
+                  )}
+
+                  {/* Aadhaar number input (shown when idle) */}
+                  {digilockerStep === 'idle' && (
+                    <>
+                      {extractedAadhaarNumber && (
+                        <p className="text-xs text-muted-foreground">Auto-filled from your uploaded document. Confirm and verify.</p>
+                      )}
+                      <div className="flex gap-2">
+                        <Input type="text" inputMode="numeric" maxLength={14} placeholder="XXXX XXXX XXXX"
+                          className="font-mono tracking-widest text-center flex-1"
+                          value={formattedAadhaar} onChange={handleAadhaarChange} />
+                        <Button onClick={() => { feedbackPresets.tap(); handleVerifyDoc(); }}
+                          disabled={aadhaarLoading || aadhaarInput.length !== 12}
+                          className="bg-blue-600 hover:bg-blue-700 text-white shrink-0">
+                          {aadhaarLoading ? <CircleNotch className="h-4 w-4 animate-spin" /> : aadhaarMethod === 'digilocker' ? 'Start' : 'Verify'}
+                        </Button>
+                      </div>
+                      {aadhaarError && <p className="text-xs text-destructive flex items-center gap-1"><Warning className="h-3 w-3" weight="fill" /> {aadhaarError}</p>}
+                      <p className="text-xs text-muted-foreground">
+                        {aadhaarMethod === 'digilocker' ? 'You\'ll be redirected to DigiLocker to verify with your Aadhaar-linked mobile OTP.' : 'Format validated client-side via Verhoeff checksum.'}
+                      </p>
+                    </>
+                  )}
                 </div>
               )}
 
