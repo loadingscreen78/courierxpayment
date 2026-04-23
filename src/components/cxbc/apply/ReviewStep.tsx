@@ -150,13 +150,25 @@ export const ReviewStep = ({ data, onBack, onSubmit, isSubmitting }: ReviewStepP
       <div className="space-y-3">
         <div className="flex items-center gap-2 text-sm font-medium">
           <FileText className="h-4 w-4 text-primary" />
-          Uploaded Documents
+          KYC Verification
         </div>
         <div className="bg-muted/50 rounded-lg p-4 space-y-2 text-sm">
-          <div className="flex justify-between">
-            <span className="text-muted-foreground">Aadhaar Card</span>
-            <span className="font-medium text-green-600">{getFileName(data.kycAadhaarUrl)}</span>
+          <div className="flex justify-between items-center">
+            <span className="text-muted-foreground">Aadhaar</span>
+            {data.aadhaarVerified ? (
+              <span className="flex items-center gap-1 font-medium text-green-600">
+                ✓ {data.aadhaarMasked || "Verified"}
+              </span>
+            ) : (
+              <span className="text-destructive text-xs">Not verified</span>
+            )}
           </div>
+          {data.aadhaarVerifiedName && (
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Verified Name</span>
+              <span className="font-medium">{data.aadhaarVerifiedName}</span>
+            </div>
+          )}
           <div className="flex justify-between">
             <span className="text-muted-foreground">PAN Card</span>
             <span className="font-medium text-green-600">{getFileName(data.kycPanUrl)}</span>

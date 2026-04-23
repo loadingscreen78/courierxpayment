@@ -42,6 +42,10 @@ export interface CXBCApplicationData {
   bankCity: string;
   bankState: string;
   bankMicr: string;
+  // Aadhaar verification
+  aadhaarVerified: boolean;
+  aadhaarVerifiedName: string;
+  aadhaarMasked: string;
 }
 
 const steps = [
@@ -83,6 +87,9 @@ const CXBCApply = () => {
     bankCity: "",
     bankState: "",
     bankMicr: "",
+    aadhaarVerified: false,
+    aadhaarVerifiedName: "",
+    aadhaarMasked: "",
   });
 
   const updateFormData = (data: Partial<CXBCApplicationData>) => {
