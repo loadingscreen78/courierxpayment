@@ -1,26 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-
-const SANDBOX_BASE = 'https://api.sandbox.co.in';
-
-async function getSandboxToken(): Promise<string> {
-  const res = await fetch(`${SANDBOX_BASE}/authenticate`, {
-    method: 'POST',
-    headers: {
-      'x-api-key': process.env.SANDBOX_API_KEY!,
-      'x-api-secret': process.env.SANDBOX_API_SECRET!,
-    },
-  });
-  const data = await res.json();
-  if (!res.ok || !data?.data?.access_token) {
-    throw new Error(data?.message || 'Failed to authenticate with Sandbox');
-  }
-  return data.data.access_token;
-}
+import { CASHFREE_VERIFICATION_BASE } from '@/lib/wallet/cashfreeConfig';
 
 /**
  * POST /api/cxbc/aadhaar-otp/send
+ * Sends OTP to the Aadhaar-linked mobile via Cashfree Secure ID OKYC API.
  * Body: { aadhaarNumber: string }
- * Sends OTP to the Aadhaar-linked mobile via sandbox.co.in OKYC API.
  * Returns: { referenceId: string }
  */
 export async function POST(req: NextRequest) {
@@ -31,23 +15,25 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Invalid Aadhaar number. Must be 12 digits.' }, { status: 400 });
     }
 
-    const apiKey = process.env.SANDBOX_API_KEY;
-    const apiSecret = process.env.SANDBOX_API_SECRET;
-    if (!apiKey || !apiSecret) {
+    const appId = process.env.CASHFREE_KYC_CLIENT_ID?.trim();
+    const secretKey = process.env.CASHFREE_KYC_CLIENT_SECRET?.trim();
+
+    if (!appId || !secretKey) {
       return NextResponse.json({ error: 'Aadhaar verification service not configured.' }, { status: 500 });
     }
 
-    const token = await getSandboxToken();
+    const verificationId = `cxbc_aadhaar_${Date.now()}`;
 
-    const res = await fetch(`${SANDBOX_BASE}/kyc/aadhaar/okyc/otp`, {
+    const res = await fetch(`${CASHFREE_VERIFICATION_BASE}/aadhaar/okyc/generate-otp`, {
       method: 'POST',
       headers: {
-        'Authorization': token,
-        'x-api-key': apiKey,
         'Content-Type': 'application/json',
+        'x-client-id': appId,
+        'x-client-secret': secretKey,
+        'x-api-version': '2023-12-01',
       },
       body: JSON.stringify({
-        '@entity': 'in.co.sandbox.kyc.aadhaar.okyc.otp.request',
+        verification_id: verificationId,
         aadhaar_number: aadhaarNumber,
         consent: 'Y',
         reason: 'CXBC Partner KYC verification for onboarding',
@@ -55,19 +41,19 @@ export async function POST(req: NextRequest) {
     });
 
     const data = await res.json();
-    console.log('[aadhaar-otp/send]', res.status, JSON.stringify(data).slice(0, 200));
+    console.log('[cxbc/aadhaar-otp/send]', res.status, JSON.stringify(data).slice(0, 300));
 
-    if (!res.ok || data?.code !== 200) {
-      const msg = data?.message || data?.error || 'Failed to send OTP';
+    if (!res.ok) {
+      const msg = data?.message || data?.error || `Cashfree error ${res.status}`;
       return NextResponse.json({ error: msg }, { status: 400 });
     }
 
-    return NextResponse.json({
-      success: true,
-      referenceId: data.data?.reference_id,
-    });
+    // Cashfree returns reference_id to correlate the OTP verify call
+    const referenceId = data?.reference_id ?? data?.referenceId ?? verificationId;
+
+    return NextResponse.json({ success: true, referenceId });
   } catch (err: any) {
-    console.error('[aadhaar-otp/send]', err);
+    console.error('[cxbc/aadhaar-otp/send]', err);
     return NextResponse.json({ error: err.message || 'Internal server error' }, { status: 500 });
   }
 }

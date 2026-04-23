@@ -1,70 +1,53 @@
 import { NextRequest, NextResponse } from 'next/server';
-
-const SANDBOX_BASE = 'https://api.sandbox.co.in';
-
-async function getSandboxToken(): Promise<string> {
-  const res = await fetch(`${SANDBOX_BASE}/authenticate`, {
-    method: 'POST',
-    headers: {
-      'x-api-key': process.env.SANDBOX_API_KEY!,
-      'x-api-secret': process.env.SANDBOX_API_SECRET!,
-    },
-  });
-  const data = await res.json();
-  if (!res.ok || !data?.data?.access_token) {
-    throw new Error(data?.message || 'Failed to authenticate with Sandbox');
-  }
-  return data.data.access_token;
-}
+import { CASHFREE_VERIFICATION_BASE } from '@/lib/wallet/cashfreeConfig';
 
 /**
  * POST /api/cxbc/aadhaar-otp/verify
+ * Verifies OTP via Cashfree Secure ID OKYC and returns verified Aadhaar details.
  * Body: { referenceId: string, otp: string }
- * Verifies OTP and returns verified Aadhaar details.
  */
 export async function POST(req: NextRequest) {
   try {
     const { referenceId, otp } = await req.json();
 
     if (!referenceId || !otp) {
-      return NextResponse.json({ error: 'Missing referenceId or OTP' }, { status: 400 });
+      return NextResponse.json({ error: 'Missing referenceId or OTP.' }, { status: 400 });
     }
     if (!/^\d{6}$/.test(otp)) {
-      return NextResponse.json({ error: 'OTP must be 6 digits' }, { status: 400 });
+      return NextResponse.json({ error: 'OTP must be 6 digits.' }, { status: 400 });
     }
 
-    const apiKey = process.env.SANDBOX_API_KEY;
-    const apiSecret = process.env.SANDBOX_API_SECRET;
-    if (!apiKey || !apiSecret) {
+    const appId = process.env.CASHFREE_KYC_CLIENT_ID?.trim();
+    const secretKey = process.env.CASHFREE_KYC_CLIENT_SECRET?.trim();
+
+    if (!appId || !secretKey) {
       return NextResponse.json({ error: 'Aadhaar verification service not configured.' }, { status: 500 });
     }
 
-    const token = await getSandboxToken();
-
-    const res = await fetch(`${SANDBOX_BASE}/kyc/aadhaar/okyc/otp/verify`, {
+    const res = await fetch(`${CASHFREE_VERIFICATION_BASE}/aadhaar/okyc/verify-otp`, {
       method: 'POST',
       headers: {
-        'Authorization': token,
-        'x-api-key': apiKey,
         'Content-Type': 'application/json',
+        'x-client-id': appId,
+        'x-client-secret': secretKey,
+        'x-api-version': '2023-12-01',
       },
       body: JSON.stringify({
-        '@entity': 'in.co.sandbox.kyc.aadhaar.okyc.request',
         reference_id: referenceId,
         otp,
       }),
     });
 
     const data = await res.json();
-    console.log('[aadhaar-otp/verify]', res.status, JSON.stringify(data).slice(0, 300));
+    console.log('[cxbc/aadhaar-otp/verify]', res.status, JSON.stringify(data).slice(0, 400));
 
-    if (!res.ok || data?.code !== 200) {
-      const msg = data?.message || data?.error || 'OTP verification failed';
+    if (!res.ok) {
+      const msg = data?.message || data?.error || 'OTP verification failed.';
       return NextResponse.json({ error: msg }, { status: 400 });
     }
 
-    const kycData = data.data;
-    const addr = kycData?.address || {};
+    // Parse address from Cashfree response
+    const addr = data?.address || data?.split_address || {};
     const fullAddress = [
       addr.house, addr.street, addr.landmark,
       addr.vtc, addr.subdist, addr.dist,
@@ -73,16 +56,14 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      verifiedName: kycData?.name || '',
-      dob: kycData?.dob || '',
-      gender: kycData?.gender || '',
-      address: fullAddress,
-      pincode: addr?.pincode || '',
-      state: addr?.state || '',
-      maskedAadhaar: kycData?.maskedNumber || '',
+      verifiedName: data?.name || data?.full_name || '',
+      dob: data?.dob || data?.date_of_birth || '',
+      gender: data?.gender || '',
+      address: fullAddress || data?.address_string || '',
+      maskedAadhaar: data?.masked_aadhaar_number || data?.uid || '',
     });
   } catch (err: any) {
-    console.error('[aadhaar-otp/verify]', err);
+    console.error('[cxbc/aadhaar-otp/verify]', err);
     return NextResponse.json({ error: err.message || 'Internal server error' }, { status: 500 });
   }
 }
