@@ -12,11 +12,11 @@ import { Button } from "@/components/ui/button";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
-  ArrowLeft, ArrowRight, Loader2, CheckCircle2, AlertCircle, Info, Landmark,
+  ArrowLeft, ArrowRight, Loader2, CheckCircle2, AlertCircle, Landmark,
 } from "lucide-react";
 import { CXBCApplicationData } from "@/views/cxbc/CXBCApply";
+import { cn } from "@/lib/utils";
 
 interface IFSCData {
   BANK: string;
@@ -143,15 +143,7 @@ export const BankDetailsStep = ({ data, onUpdate, onNext, onBack }: BankDetailsS
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
 
-        {/* Info Banner */}
-        <Alert className="border-blue-200 bg-blue-50 text-blue-800">
-          <Info className="h-4 w-4 text-blue-600 shrink-0" />
-          <AlertDescription className="text-blue-700 text-sm">
-            Your bank details are used for commission payouts. Enter your IFSC code to auto-fill branch information instantly.
-          </AlertDescription>
-        </Alert>
-
-        {/* Section: Account Details */}
+        {/* Section: Account Details (includes IFSC) */}
         <div className="space-y-4">
           <div className="flex items-center gap-2 text-sm font-semibold text-muted-foreground uppercase tracking-wide">
             <Landmark className="h-4 w-4" />
@@ -161,7 +153,7 @@ export const BankDetailsStep = ({ data, onUpdate, onNext, onBack }: BankDetailsS
           <FormField
             control={form.control}
             name="bankAccountHolderName"
-            render={({ field }) => (
+            render={({ field, fieldState }) => (
               <FormItem>
                 <FormLabel>Account Holder Name *</FormLabel>
                 <FormControl>
@@ -169,7 +161,10 @@ export const BankDetailsStep = ({ data, onUpdate, onNext, onBack }: BankDetailsS
                     placeholder="Name as printed on passbook / cheque"
                     {...field}
                     onChange={(e) => field.onChange(e.target.value.toUpperCase())}
-                    className="font-medium tracking-wide"
+                    className={cn(
+                      "font-medium tracking-wide",
+                      fieldState.error && "border-red-400 focus-visible:ring-red-300"
+                    )}
                   />
                 </FormControl>
                 <p className="text-xs text-muted-foreground">Must match the name on your bank account exactly</p>
@@ -181,12 +176,12 @@ export const BankDetailsStep = ({ data, onUpdate, onNext, onBack }: BankDetailsS
           <FormField
             control={form.control}
             name="bankAccountType"
-            render={({ field }) => (
+            render={({ field, fieldState }) => (
               <FormItem>
                 <FormLabel>Account Type *</FormLabel>
                 <Select onValueChange={field.onChange} defaultValue={field.value}>
                   <FormControl>
-                    <SelectTrigger>
+                    <SelectTrigger className={cn(fieldState.error && "border-red-400 focus-visible:ring-red-300")}>
                       <SelectValue placeholder="Select account type" />
                     </SelectTrigger>
                   </FormControl>
@@ -204,7 +199,7 @@ export const BankDetailsStep = ({ data, onUpdate, onNext, onBack }: BankDetailsS
             <FormField
               control={form.control}
               name="bankAccountNumber"
-              render={({ field }) => (
+              render={({ field, fieldState }) => (
                 <FormItem>
                   <FormLabel>Account Number *</FormLabel>
                   <FormControl>
@@ -213,7 +208,10 @@ export const BankDetailsStep = ({ data, onUpdate, onNext, onBack }: BankDetailsS
                       inputMode="numeric"
                       maxLength={18}
                       {...field}
-                      className="font-mono tracking-widest"
+                      className={cn(
+                        "font-mono tracking-widest",
+                        fieldState.error && "border-red-400 focus-visible:ring-red-300"
+                      )}
                     />
                   </FormControl>
                   <FormMessage />
@@ -224,7 +222,7 @@ export const BankDetailsStep = ({ data, onUpdate, onNext, onBack }: BankDetailsS
             <FormField
               control={form.control}
               name="confirmAccountNumber"
-              render={({ field }) => (
+              render={({ field, fieldState }) => (
                 <FormItem>
                   <FormLabel>Confirm Account Number *</FormLabel>
                   <FormControl>
@@ -234,7 +232,10 @@ export const BankDetailsStep = ({ data, onUpdate, onNext, onBack }: BankDetailsS
                       maxLength={18}
                       onPaste={(e) => e.preventDefault()}
                       {...field}
-                      className="font-mono tracking-widest"
+                      className={cn(
+                        "font-mono tracking-widest",
+                        fieldState.error && "border-red-400 focus-visible:ring-red-300"
+                      )}
                     />
                   </FormControl>
                   <p className="text-xs text-muted-foreground">Paste is disabled for security</p>
@@ -243,19 +244,12 @@ export const BankDetailsStep = ({ data, onUpdate, onNext, onBack }: BankDetailsS
               )}
             />
           </div>
-        </div>
 
-        {/* Section: IFSC & Auto-fetch */}
-        <div className="space-y-4">
-          <div className="flex items-center gap-2 text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-            <span className="text-base">🏦</span>
-            Bank Branch Details
-          </div>
-
+          {/* IFSC Code — merged into Account Details */}
           <FormField
             control={form.control}
             name="bankIfsc"
-            render={({ field }) => (
+            render={({ field, fieldState }) => (
               <FormItem>
                 <FormLabel>IFSC Code *</FormLabel>
                 <div className="relative">
@@ -265,30 +259,31 @@ export const BankDetailsStep = ({ data, onUpdate, onNext, onBack }: BankDetailsS
                       maxLength={11}
                       {...field}
                       onChange={(e) => field.onChange(e.target.value.toUpperCase())}
-                      className="font-mono tracking-widest pr-10"
+                      className={cn(
+                        "font-mono tracking-widest pr-10",
+                        (fieldState.error || ifscError) && "border-red-400 focus-visible:ring-red-300"
+                      )}
                     />
                   </FormControl>
                   <div className="absolute right-3 top-1/2 -translate-y-1/2">
                     {ifscLoading && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
                     {!ifscLoading && ifscData && <CheckCircle2 className="h-4 w-4 text-green-500" />}
-                    {!ifscLoading && ifscError && <AlertCircle className="h-4 w-4 text-destructive" />}
+                    {!ifscLoading && ifscError && <AlertCircle className="h-4 w-4 text-red-400" />}
                   </div>
                 </div>
                 <p className="text-xs text-muted-foreground">
                   11-character code found on your cheque book or passbook (e.g. HDFC0001234)
                 </p>
+                {ifscError && (
+                  <p className="text-xs text-red-500 flex items-center gap-1 mt-1">
+                    <AlertCircle className="h-3 w-3" />
+                    {ifscError}
+                  </p>
+                )}
                 <FormMessage />
               </FormItem>
             )}
           />
-
-          {/* IFSC Error */}
-          {ifscError && (
-            <Alert variant="destructive" className="py-2">
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription className="text-sm">{ifscError}</AlertDescription>
-            </Alert>
-          )}
 
           {/* Auto-fetched Bank Details Card */}
           {ifscData && (
@@ -337,20 +332,10 @@ export const BankDetailsStep = ({ data, onUpdate, onNext, onBack }: BankDetailsS
             </div>
           )}
 
-          {/* Placeholder when IFSC not yet entered */}
-          {!ifscData && !ifscLoading && !ifscError && (
-            <div className="rounded-xl border border-dashed border-muted-foreground/30 bg-muted/20 p-5 text-center">
-              <Landmark className="h-8 w-8 text-muted-foreground/40 mx-auto mb-2" />
-              <p className="text-sm text-muted-foreground">
-                Enter your IFSC code above to auto-fetch bank name, branch, and address
-              </p>
-            </div>
-          )}
-
           {ifscLoading && (
-            <div className="rounded-xl border border-dashed border-blue-200 bg-blue-50/50 p-5 text-center">
-              <Loader2 className="h-6 w-6 animate-spin text-blue-400 mx-auto mb-2" />
-              <p className="text-sm text-blue-600">Fetching bank details...</p>
+            <div className="flex items-center gap-2 text-sm text-muted-foreground px-1">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Fetching bank details...
             </div>
           )}
         </div>
