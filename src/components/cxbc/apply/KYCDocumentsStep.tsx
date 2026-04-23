@@ -774,7 +774,7 @@ export const KYCDocumentsStep = ({ data, onUpdate, onNext, onBack }: KYCDocument
           {isVerified && <span className="ml-auto flex items-center gap-1 text-xs font-medium text-green-600"><CheckCircle2 className="h-3.5 w-3.5" /> Verified</span>}
         </div>
 
-        {/* Verified card — shown for both methods */}
+        {/* Verified card - shown for both methods */}
         {isVerified ? (
           <div className="rounded-2xl border-2 border-green-200 bg-green-50 p-5">
             <div className="flex items-center gap-3">
@@ -832,7 +832,7 @@ export const KYCDocumentsStep = ({ data, onUpdate, onNext, onBack }: KYCDocument
                           maxLength={14} />
                         <Lock className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/40" />
                       </div>
-                      <p className="text-xs text-muted-foreground flex items-center gap-1"><Lock className="h-3 w-3" /> Never stored — used only for OTP delivery</p>
+                      <p className="text-xs text-muted-foreground flex items-center gap-1"><Lock className="h-3 w-3" /> Never stored - used only for OTP delivery</p>
                     </div>
                     {otpError && <Alert variant="destructive" className="py-2.5"><AlertCircle className="h-4 w-4" /><AlertDescription className="text-sm">{otpError}</AlertDescription></Alert>}
                     <Button type="button" onClick={handleSendOtp} disabled={otpLoading || aadhaarNumber.length < 12} className="w-full h-11">
@@ -889,11 +889,11 @@ export const KYCDocumentsStep = ({ data, onUpdate, onNext, onBack }: KYCDocument
                       </div>
                       <div>
                         <p className="text-sm font-medium text-foreground">Verify via DigiLocker</p>
-                        <p className="text-xs text-muted-foreground mt-0.5">Government-approved verification — no document upload needed</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">Government-approved verification - no document upload needed</p>
                       </div>
                     </div>
                     <div className="rounded-xl bg-indigo-50 border border-indigo-100 p-4 space-y-2">
-                      {["Authenticate with your DigiLocker account", "Allow Aadhaar document access", "Return here — we fetch your details automatically"].map((s, i) => (
+                      {["Authenticate with your DigiLocker account", "Allow Aadhaar document access", "Return here - we fetch your details automatically"].map((s, i) => (
                         <div key={i} className="flex items-center gap-2.5 text-sm text-indigo-800">
                           <span className="w-5 h-5 rounded-full bg-indigo-200 text-indigo-700 text-xs font-bold flex items-center justify-center shrink-0">{i + 1}</span>
                           {s}
@@ -959,7 +959,7 @@ export const KYCDocumentsStep = ({ data, onUpdate, onNext, onBack }: KYCDocument
           </div>
           <label htmlFor="pan-upload" className={cn("flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed p-5 cursor-pointer transition-colors",
             panFile ? "border-green-300 bg-green-50 hover:bg-green-100" : "border-border hover:border-primary/50 hover:bg-muted/30")}>
-            {panFile ? <><FileCheck className="h-6 w-6 text-green-500" /><span className="text-xs text-green-600 font-medium">Uploaded — click to replace</span></>
+            {panFile ? <><FileCheck className="h-6 w-6 text-green-500" /><span className="text-xs text-green-600 font-medium">Uploaded - click to replace</span></>
               : <><div className="w-8 h-8 rounded-lg bg-muted flex items-center justify-center"><span className="text-base">??</span></div><span className="text-xs text-muted-foreground">Click to upload PAN card</span></>}
             <input id="pan-upload" type="file" accept="image/*,.pdf" className="hidden" onChange={handleFileChange("pan")} />
           </label>
@@ -977,7 +977,7 @@ export const KYCDocumentsStep = ({ data, onUpdate, onNext, onBack }: KYCDocument
           </div>
           <label htmlFor="shop-upload" className={cn("flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed p-5 cursor-pointer transition-colors",
             shopPhoto ? "border-green-300 bg-green-50 hover:bg-green-100" : "border-border hover:border-primary/50 hover:bg-muted/30")}>
-            {shopPhoto ? <><FileCheck className="h-6 w-6 text-green-500" /><span className="text-xs text-green-600 font-medium">Uploaded — click to replace</span></>
+            {shopPhoto ? <><FileCheck className="h-6 w-6 text-green-500" /><span className="text-xs text-green-600 font-medium">Uploaded - click to replace</span></>
               : <><div className="w-8 h-8 rounded-lg bg-muted flex items-center justify-center"><span className="text-base">??</span></div><span className="text-xs text-muted-foreground">Click to upload shop front photo</span></>}
             <input id="shop-upload" type="file" accept="image/*" className="hidden" onChange={handleFileChange("shop")} />
           </label>
