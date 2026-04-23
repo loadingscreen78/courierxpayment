@@ -1,10 +1,11 @@
 "use client";
 
-import { ReactNode, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { ReactNode } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAdminAuth } from '@/hooks/useAdminAuth';
 import { Loader2 } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
 
 interface AdminRouteProps {
   children: ReactNode;
@@ -16,21 +17,14 @@ export const AdminRoute = ({ children, requireAdmin = false }: AdminRouteProps) 
   const { hasAdminAccess, isAdmin, isLoading: roleLoading } = useAdminAuth();
   const router = useRouter();
 
+  // Only redirect to login if auth is fully loaded and user is not logged in
   useEffect(() => {
     if (!authLoading && !user) {
       router.replace('/admin/login');
     }
   }, [authLoading, user, router]);
 
-  useEffect(() => {
-    if (!authLoading && !roleLoading && user) {
-      const hasRequiredRole = requireAdmin ? isAdmin : hasAdminAccess;
-      if (!hasRequiredRole) {
-        router.replace('/admin/login');
-      }
-    }
-  }, [authLoading, roleLoading, user, requireAdmin, isAdmin, hasAdminAccess, router]);
-
+  // Show spinner while loading
   if (authLoading || roleLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#0f0f12]">
@@ -42,12 +36,12 @@ export const AdminRoute = ({ children, requireAdmin = false }: AdminRouteProps) 
     );
   }
 
-  if (!user) {
-    return null;
-  }
+  // Not logged in
+  if (!user) return null;
 
   const hasRequiredRole = requireAdmin ? isAdmin : hasAdminAccess;
 
+  // No role — show access denied, don't redirect (avoids loop)
   if (!hasRequiredRole) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#0f0f12]">
@@ -56,10 +50,13 @@ export const AdminRoute = ({ children, requireAdmin = false }: AdminRouteProps) 
             <span className="text-3xl">🔒</span>
           </div>
           <h1 className="text-2xl font-typewriter font-bold text-white">Access Denied</h1>
-          <p className="text-gray-400 max-w-md">
-            You don&apos;t have permission to access this area. 
-            Please contact an administrator if you believe this is an error.
-          </p>
+          <p className="text-gray-400 max-w-md">You don&apos;t have admin privileges.</p>
+          <button
+            onClick={() => router.replace('/admin/login')}
+            className="mt-4 px-6 py-2 rounded-xl bg-red-600 text-white text-sm hover:bg-red-700 transition-colors"
+          >
+            Back to Login
+          </button>
         </div>
       </div>
     );
