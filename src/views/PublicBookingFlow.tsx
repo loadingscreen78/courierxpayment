@@ -61,7 +61,7 @@ const domesticRateSchema = z.object({
   shipmentType: z.enum(['document', 'gift', 'laptop'], { required_error: 'Select shipment type' }),
   pickupPincode: z.string().regex(/^\d{6}$/, 'Enter valid 6-digit pincode'),
   deliveryPincode: z.string().regex(/^\d{6}$/, 'Enter valid 6-digit pincode'),
-  weightKg: z.coerce.number().min(0.05, 'Min 50g').max(10, 'Max 10 kg for guest booking'),
+  weightKg: z.coerce.number().min(0.05, 'Min 50g').max(12, 'Max 12 kg for guest booking'),
   lengthCm: z.coerce.number().min(1, 'Required').max(150).optional(),
   widthCm: z.coerce.number().min(1, 'Required').max(150).optional(),
   heightCm: z.coerce.number().min(1, 'Required').max(150).optional(),
@@ -71,6 +71,7 @@ const domesticRateSchema = z.object({
   laptopBrand: z.string().optional(),
   laptopSerialNumber: z.string().optional(),
   hasOriginalPackaging: z.boolean().optional(),
+  laptopDeclarationAccepted: z.boolean().optional(),
 }).superRefine((data, ctx) => {
   if (data.shipmentType === 'document') {
     if (data.weightKg > 1) ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Documents max 1 kg', path: ['weightKg'] });
@@ -79,7 +80,7 @@ const domesticRateSchema = z.object({
     if (!data.lengthCm) ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Required', path: ['lengthCm'] });
     if (!data.widthCm) ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Required', path: ['widthCm'] });
     if (!data.heightCm) ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Required', path: ['heightCm'] });
-    if (data.weightKg > 10) ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Guest booking max 10 kg. Open an account for heavier shipments.', path: ['weightKg'] });
+    if (data.weightKg > 12) ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Guest booking max 12 kg.', path: ['weightKg'] });
     if (data.declaredValue > 49000) ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Max declared value ₹49,000', path: ['declaredValue'] });
   }
   if (data.shipmentType === 'laptop') {
@@ -90,6 +91,7 @@ const domesticRateSchema = z.object({
     if (data.declaredValue > 100000) ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Max declared value ₹1,00,000', path: ['declaredValue'] });
     if (!data.laptopBrand || data.laptopBrand.length < 2) ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Laptop brand is required', path: ['laptopBrand'] });
     if (!data.laptopSerialNumber || data.laptopSerialNumber.length < 3) ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Serial number is required for laptop shipments', path: ['laptopSerialNumber'] });
+    if (!data.laptopDeclarationAccepted) ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'You must accept the laptop shipping declaration', path: ['laptopDeclarationAccepted'] });
   }
 });
 
@@ -371,6 +373,14 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
   const [controlledDrugsConfirmed, setControlledDrugsConfirmed] = useState(false);
   const [intlZipLookup, setIntlZipLookup] = useState<{ loading: boolean; city: string; state: string; error: string }>({ loading: false, city: '', state: '', error: '' });
   const [showWeightLimitModal, setShowWeightLimitModal] = useState(false);
+  // ── Dimension unit toggle (cm default, inches option) ──
+  const [dimUnit, setDimUnit] = useState<'cm' | 'in'>('cm');
+  const [intlDimUnit, setIntlDimUnit] = useState<'cm' | 'in'>('cm');
+  // ── Laptop declaration modal ──
+  const [showLaptopDeclarationModal, setShowLaptopDeclarationModal] = useState(false);
+  // ── Serial number lookup ──
+  const [serialLookupLoading, setSerialLookupLoading] = useState(false);
+  const [serialLookupResult, setSerialLookupResult] = useState<{ found: boolean; brand?: string; model?: string; message?: string } | null>(null);
   // ── Separate pickup phone (auto-populated from shipper phone, editable) ──
   const [pickupPhone, setPickupPhone] = useState('');
   const [pickupPhoneManuallyEdited, setPickupPhoneManuallyEdited] = useState(false);
@@ -402,7 +412,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
   // ── Domestic rate form ──
   const domForm = useForm<DomesticRateValues>({
     resolver: zodResolver(domesticRateSchema),
-    defaultValues: { shipmentType: 'document', pickupPincode: '', deliveryPincode: '', weightKg: undefined as any, lengthCm: undefined as any, widthCm: undefined as any, heightCm: undefined as any, declaredValue: 0, prohibitedItemsConfirmed: false, laptopBrand: '', laptopSerialNumber: '', hasOriginalPackaging: false },
+    defaultValues: { shipmentType: 'document', pickupPincode: '', deliveryPincode: '', weightKg: undefined as any, lengthCm: undefined as any, widthCm: undefined as any, heightCm: undefined as any, declaredValue: 0, prohibitedItemsConfirmed: false, laptopBrand: '', laptopSerialNumber: '', hasOriginalPackaging: false, laptopDeclarationAccepted: false },
   });
   const detailsForm = useForm<SenderReceiverValues>({
     resolver: zodResolver(senderReceiverSchema),
@@ -490,6 +500,11 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
   const watchedWidth = domForm.watch('widthCm');
   const watchedHeight = domForm.watch('heightCm');
   const watchedWeight = domForm.watch('weightKg');
+
+  // Helper: convert inches to cm for display
+  const inToCm = (inches: number) => Math.round(inches * 2.54 * 100) / 100;
+  const cmToIn = (cm: number) => Math.round(cm / 2.54 * 100) / 100;
+
   const volumetricWeight = (watchedLength && watchedWidth && watchedHeight)
     ? Number(((watchedLength * watchedWidth * watchedHeight) / 5000).toFixed(2))
     : 0;
@@ -597,25 +612,31 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
 
   // ── Handle international rate calculation ──
   const handleIntlRateSubmit = (values: InternationalRateValues) => {
+    // Convert inches to cm if user entered in inches
+    const lengthCm = intlDimUnit === 'in' ? Math.round(inToCm(values.lengthCm)) : values.lengthCm;
+    const widthCm = intlDimUnit === 'in' ? Math.round(inToCm(values.widthCm)) : values.widthCm;
+    const heightCm = intlDimUnit === 'in' ? Math.round(inToCm(values.heightCm)) : values.heightCm;
+    const convertedValues = { ...values, lengthCm, widthCm, heightCm };
+
     const guest = getCourierOptions({
-      destinationCountryCode: values.destinationCountry,
-      shipmentType: values.shipmentType,
-      weightGrams: values.weightGrams,
-      dimensions: { length: values.lengthCm, width: values.widthCm, height: values.heightCm },
-      declaredValue: values.declaredValue,
+      destinationCountryCode: convertedValues.destinationCountry,
+      shipmentType: convertedValues.shipmentType,
+      weightGrams: convertedValues.weightGrams,
+      dimensions: { length: convertedValues.lengthCm, width: convertedValues.widthCm, height: convertedValues.heightCm },
+      declaredValue: convertedValues.declaredValue,
     }, true);
 
     const account = getCourierOptions({
-      destinationCountryCode: values.destinationCountry,
-      shipmentType: values.shipmentType,
-      weightGrams: values.weightGrams,
-      dimensions: { length: values.lengthCm, width: values.widthCm, height: values.heightCm },
-      declaredValue: values.declaredValue,
+      destinationCountryCode: convertedValues.destinationCountry,
+      shipmentType: convertedValues.shipmentType,
+      weightGrams: convertedValues.weightGrams,
+      dimensions: { length: convertedValues.lengthCm, width: convertedValues.widthCm, height: convertedValues.heightCm },
+      declaredValue: convertedValues.declaredValue,
     }, false);
 
     setGuestCouriers(guest);
     setAccountCouriers(account);
-    setRateFormData(values);
+    setRateFormData(convertedValues);
     setStep(2);
   };
 
@@ -625,9 +646,13 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
     // For documents: use default envelope dimensions and set declared value to ₹100
     const isDoc = values.shipmentType === 'document';
     const isLaptop = values.shipmentType === 'laptop';
-    const lengthCm = values.lengthCm ?? (isDoc ? 30 : isLaptop ? 40 : 1);
-    const widthCm = values.widthCm ?? (isDoc ? 25 : isLaptop ? 30 : 1);
-    const heightCm = values.heightCm ?? (isDoc ? 2 : isLaptop ? 10 : 1);
+    // Convert inches to cm if user entered in inches
+    const rawL = values.lengthCm ?? (isDoc ? 30 : isLaptop ? 40 : 1);
+    const rawW = values.widthCm ?? (isDoc ? 25 : isLaptop ? 30 : 1);
+    const rawH = values.heightCm ?? (isDoc ? 2 : isLaptop ? 10 : 1);
+    const lengthCm = dimUnit === 'in' && !isDoc ? Math.round(inToCm(rawL)) : rawL;
+    const widthCm = dimUnit === 'in' && !isDoc ? Math.round(inToCm(rawW)) : rawW;
+    const heightCm = dimUnit === 'in' && !isDoc ? Math.round(inToCm(rawH)) : rawH;
     const declaredValue = isDoc ? 100 : (values.declaredValue ?? 0);
     const enrichedValues = { ...values, lengthCm, widthCm, heightCm, declaredValue };
     setRateFormData(enrichedValues);
@@ -873,6 +898,29 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
   const verifyEmailOtpRef = useRef(verifyEmailOtp);
   useEffect(() => { verifyEmailOtpRef.current = verifyEmailOtp; }, [verifyEmailOtp]);
 
+  // ── Serial number lookup against database ──
+  const handleSerialNumberLookup = useCallback(async (serialNumber: string) => {
+    if (!serialNumber || serialNumber.length < 3) {
+      setSerialLookupResult(null);
+      return;
+    }
+    setSerialLookupLoading(true);
+    setSerialLookupResult(null);
+    try {
+      const res = await fetch(`/api/domestic/serial-lookup?serial=${encodeURIComponent(serialNumber)}`);
+      const data = await res.json();
+      if (data.success && data.found) {
+        setSerialLookupResult({ found: true, brand: data.brand, model: data.model, message: data.message });
+      } else {
+        setSerialLookupResult({ found: false, message: 'Serial number not found in our database. Please ensure it is correct.' });
+      }
+    } catch {
+      setSerialLookupResult({ found: false, message: 'Could not verify serial number. Please ensure it is correct.' });
+    } finally {
+      setSerialLookupLoading(false);
+    }
+  }, []);
+
   // Countries that don't use postal codes
   const COUNTRIES_WITHOUT_POSTAL_CODES = new Set([
     'AE','QA','KW','BH','OM','YE','JO','IQ','LB','SY','AF','AO','BO','BW','BJ','BF','BI',
@@ -967,6 +1015,10 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
     setEmailOtpAttempts(0);
     setExtractedAadhaarNumber('');
     setIsUnderAge(false);
+    setDimUnit('cm');
+    setIntlDimUnit('cm');
+    setShowLaptopDeclarationModal(false);
+    setSerialLookupResult(null);
     clearOcr();
     detailsForm.reset();
   }, [clearOcr, detailsForm]);
@@ -1158,27 +1210,56 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
 
                     {/* Dimensions */}
                     <div>
-                      <p className="text-sm font-medium mb-2">Package Dimensions (cm)</p>
+                      <div className="flex items-center justify-between mb-2">
+                        <p className="text-sm font-medium">Package Dimensions</p>
+                        <div className="flex items-center bg-muted rounded-lg p-0.5 text-xs">
+                          <button type="button" onClick={() => {
+                            if (intlDimUnit === 'in') {
+                              const l = intlForm.getValues('lengthCm');
+                              const w = intlForm.getValues('widthCm');
+                              const h = intlForm.getValues('heightCm');
+                              if (l) intlForm.setValue('lengthCm', Math.round(inToCm(l)));
+                              if (w) intlForm.setValue('widthCm', Math.round(inToCm(w)));
+                              if (h) intlForm.setValue('heightCm', Math.round(inToCm(h)));
+                            }
+                            setIntlDimUnit('cm');
+                          }} className={`px-2.5 py-1 rounded-md transition-all ${intlDimUnit === 'cm' ? 'bg-coke-red text-white shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}>cm</button>
+                          <button type="button" onClick={() => {
+                            if (intlDimUnit === 'cm') {
+                              const l = intlForm.getValues('lengthCm');
+                              const w = intlForm.getValues('widthCm');
+                              const h = intlForm.getValues('heightCm');
+                              if (l) intlForm.setValue('lengthCm', Math.round(cmToIn(l) * 10) / 10);
+                              if (w) intlForm.setValue('widthCm', Math.round(cmToIn(w) * 10) / 10);
+                              if (h) intlForm.setValue('heightCm', Math.round(cmToIn(h) * 10) / 10);
+                            }
+                            setIntlDimUnit('in');
+                          }} className={`px-2.5 py-1 rounded-md transition-all ${intlDimUnit === 'in' ? 'bg-coke-red text-white shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}>inches</button>
+                        </div>
+                      </div>
                       <div className="grid grid-cols-3 gap-3">
                         <FormField control={intlForm.control} name="lengthCm" render={({ field }) => (
                           <FormItem>
-                            <FormControl><Input {...field} type="number" inputMode="numeric" placeholder="Length" /></FormControl>
+                            <FormControl><Input {...field} type="number" inputMode="decimal" placeholder={intlDimUnit === 'cm' ? 'Length (cm)' : 'Length (in)'} /></FormControl>
                             <FormMessage />
                           </FormItem>
                         )} />
                         <FormField control={intlForm.control} name="widthCm" render={({ field }) => (
                           <FormItem>
-                            <FormControl><Input {...field} type="number" inputMode="numeric" placeholder="Width" /></FormControl>
+                            <FormControl><Input {...field} type="number" inputMode="decimal" placeholder={intlDimUnit === 'cm' ? 'Width (cm)' : 'Width (in)'} /></FormControl>
                             <FormMessage />
                           </FormItem>
                         )} />
                         <FormField control={intlForm.control} name="heightCm" render={({ field }) => (
                           <FormItem>
-                            <FormControl><Input {...field} type="number" inputMode="numeric" placeholder="Height" /></FormControl>
+                            <FormControl><Input {...field} type="number" inputMode="decimal" placeholder={intlDimUnit === 'cm' ? 'Height (cm)' : 'Height (in)'} /></FormControl>
                             <FormMessage />
                           </FormItem>
                         )} />
                       </div>
+                      {intlDimUnit === 'in' && (
+                        <p className="text-[10px] text-muted-foreground mt-1">Values will be converted to cm for shipping calculations.</p>
+                      )}
                     </div>
 
                     {/* Prohibited Items Confirmation */}
@@ -1252,7 +1333,16 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                             </div>
                           </FormControl>
                           {pickupLookup.loading && <p className="text-xs text-muted-foreground flex items-center gap-1"><CircleNotch className="h-3 w-3 animate-spin" /> Looking up...</p>}
-                          {pickupLookup.state && <p className="text-xs text-candlestick-green">{pickupLookup.district}, {pickupLookup.state}</p>}
+                          {pickupLookup.state && (
+                            <p className="text-xs text-candlestick-green">
+                              {pickupLookup.areas?.[0] && pickupLookup.areas[0] !== pickupLookup.district && pickupLookup.areas[0] !== pickupLookup.state
+                                ? `${pickupLookup.areas[0]}, ${pickupLookup.district !== pickupLookup.state ? `${pickupLookup.district}, ` : ''}${pickupLookup.state}`
+                                : pickupLookup.district !== pickupLookup.state
+                                  ? `${pickupLookup.district}, ${pickupLookup.state}`
+                                  : pickupLookup.state
+                              }
+                            </p>
+                          )}
                           {pickupLookup.error && <p className="text-xs text-destructive">{pickupLookup.error}</p>}
                           <FormMessage />
                         </FormItem>
@@ -1270,7 +1360,16 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                             </div>
                           </FormControl>
                           {deliveryLookup.loading && <p className="text-xs text-muted-foreground flex items-center gap-1"><CircleNotch className="h-3 w-3 animate-spin" /> Looking up...</p>}
-                          {deliveryLookup.state && <p className="text-xs text-candlestick-green">{deliveryLookup.district}, {deliveryLookup.state}</p>}
+                          {deliveryLookup.state && (
+                            <p className="text-xs text-candlestick-green">
+                              {deliveryLookup.areas?.[0] && deliveryLookup.areas[0] !== deliveryLookup.district && deliveryLookup.areas[0] !== deliveryLookup.state
+                                ? `${deliveryLookup.areas[0]}, ${deliveryLookup.district !== deliveryLookup.state ? `${deliveryLookup.district}, ` : ''}${deliveryLookup.state}`
+                                : deliveryLookup.district !== deliveryLookup.state
+                                  ? `${deliveryLookup.district}, ${deliveryLookup.state}`
+                                  : deliveryLookup.state
+                              }
+                            </p>
+                          )}
                           {deliveryLookup.error && <p className="text-xs text-destructive">{deliveryLookup.error}</p>}
                           <FormMessage />
                         </FormItem>
@@ -1329,11 +1428,10 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                                 <SelectItem value="8">Up to 8 kg</SelectItem>
                                 <SelectItem value="9">Up to 9 kg</SelectItem>
                                 <SelectItem value="10">Up to 10 kg</SelectItem>
+                                <SelectItem value="11">Up to 11 kg</SelectItem>
+                                <SelectItem value="12">Up to 12 kg</SelectItem>
                               </SelectContent>
                             </Select>
-                          )}
-                          {!isDocumentDom && (
-                            <p className="text-[11px] text-muted-foreground mt-1">Guest booking supports up to 10 kg. <button type="button" onClick={() => router.push('/register')} className="text-coke-red hover:underline font-medium">Open an account</button> for heavier shipments.</p>
                           )}
                           <FormMessage />
                         </FormItem>
@@ -1344,35 +1442,68 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                     {(watchedDomType === 'gift' || watchedDomType === 'laptop') && (
                     <div>
                       <div className="flex items-center justify-between mb-1">
-                        <p className="text-sm font-medium">Package Dimensions (cm)</p>
-                        <DimensionAssistant lengthCm={watchedLength || 0} widthCm={watchedWidth || 0} heightCm={watchedHeight || 0} />
+                        <p className="text-sm font-medium">Package Dimensions</p>
+                        <div className="flex items-center gap-2">
+                          <div className="flex items-center bg-muted rounded-lg p-0.5 text-xs">
+                            <button type="button" onClick={() => {
+                              if (dimUnit === 'in') {
+                                // Convert current inch values to cm
+                                const l = domForm.getValues('lengthCm');
+                                const w = domForm.getValues('widthCm');
+                                const h = domForm.getValues('heightCm');
+                                if (l) domForm.setValue('lengthCm', Math.round(inToCm(l)));
+                                if (w) domForm.setValue('widthCm', Math.round(inToCm(w)));
+                                if (h) domForm.setValue('heightCm', Math.round(inToCm(h)));
+                              }
+                              setDimUnit('cm');
+                            }} className={`px-2.5 py-1 rounded-md transition-all ${dimUnit === 'cm' ? 'bg-coke-red text-white shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}>cm</button>
+                            <button type="button" onClick={() => {
+                              if (dimUnit === 'cm') {
+                                // Convert current cm values to inches for display
+                                const l = domForm.getValues('lengthCm');
+                                const w = domForm.getValues('widthCm');
+                                const h = domForm.getValues('heightCm');
+                                if (l) domForm.setValue('lengthCm', Math.round(cmToIn(l) * 10) / 10);
+                                if (w) domForm.setValue('widthCm', Math.round(cmToIn(w) * 10) / 10);
+                                if (h) domForm.setValue('heightCm', Math.round(cmToIn(h) * 10) / 10);
+                              }
+                              setDimUnit('in');
+                            }} className={`px-2.5 py-1 rounded-md transition-all ${dimUnit === 'in' ? 'bg-coke-red text-white shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}>inches</button>
+                          </div>
+                          <DimensionAssistant lengthCm={dimUnit === 'in' ? inToCm(watchedLength || 0) : (watchedLength || 0)} widthCm={dimUnit === 'in' ? inToCm(watchedWidth || 0) : (watchedWidth || 0)} heightCm={dimUnit === 'in' ? inToCm(watchedHeight || 0) : (watchedHeight || 0)} />
+                        </div>
                       </div>
                       <div className="rounded-lg bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900/50 p-3 mb-3">
                         <p className="text-xs text-blue-800 dark:text-blue-300 flex items-start gap-1.5">
                           <Info className="h-3.5 w-3.5 shrink-0 mt-0.5" weight="fill" />
-                          <span>Measure the outer dimensions of your packed box using a measuring tape. Enter the longest side as Length, the next as Width, and the shortest as Height. Courier charges are based on the higher of actual weight or volumetric weight (L×W×H ÷ 5000).</span>
+                          <span>Measure the outer dimensions of your packed box. Enter the longest side as Length, the next as Width, and the shortest as Height.{dimUnit === 'in' ? ' Values will be converted to cm for shipping.' : ''} Courier charges are based on the higher of actual weight or volumetric weight (L×W×H ÷ 5000).</span>
                         </p>
                       </div>
                       <div className="grid grid-cols-3 gap-3">
                         <FormField control={domForm.control} name="lengthCm" render={({ field }) => (
-                          <FormItem><FormLabel className="text-xs">Length</FormLabel><FormControl><Input {...field} type="number" inputMode="numeric" placeholder="cm" /></FormControl><FormMessage /></FormItem>
+                          <FormItem><FormLabel className="text-xs">Length ({dimUnit})</FormLabel><FormControl><Input {...field} type="number" inputMode="decimal" placeholder={dimUnit === 'cm' ? 'e.g. 30' : 'e.g. 12'} /></FormControl><FormMessage /></FormItem>
                         )} />
                         <FormField control={domForm.control} name="widthCm" render={({ field }) => (
-                          <FormItem><FormLabel className="text-xs">Width</FormLabel><FormControl><Input {...field} type="number" inputMode="numeric" placeholder="cm" /></FormControl><FormMessage /></FormItem>
+                          <FormItem><FormLabel className="text-xs">Width ({dimUnit})</FormLabel><FormControl><Input {...field} type="number" inputMode="decimal" placeholder={dimUnit === 'cm' ? 'e.g. 20' : 'e.g. 8'} /></FormControl><FormMessage /></FormItem>
                         )} />
                         <FormField control={domForm.control} name="heightCm" render={({ field }) => (
-                          <FormItem><FormLabel className="text-xs">Height</FormLabel><FormControl><Input {...field} type="number" inputMode="numeric" placeholder="cm" /></FormControl><FormMessage /></FormItem>
+                          <FormItem><FormLabel className="text-xs">Height ({dimUnit})</FormLabel><FormControl><Input {...field} type="number" inputMode="decimal" placeholder={dimUnit === 'cm' ? 'e.g. 10' : 'e.g. 4'} /></FormControl><FormMessage /></FormItem>
                         )} />
                       </div>
                       {volumetricWeight > 0 && (
                         <div className="mt-2 text-xs text-muted-foreground space-y-0.5">
-                          <p>Volumetric weight: <span className="font-medium">{volumetricWeight} kg</span> ({watchedLength}×{watchedWidth}×{watchedHeight} ÷ 5000)</p>
-                          {chargeableWeight > (Number(watchedWeight) || 0) && (
-                            <p className="text-amber-600 dark:text-amber-400 flex items-center gap-1">
-                              <Warning className="h-3 w-3" weight="fill" />
-                              Volumetric weight exceeds actual weight — courier will charge for <span className="font-semibold">{chargeableWeight} kg</span>
-                            </p>
-                          )}
+                          <p>Volumetric weight: <span className="font-medium">{dimUnit === 'in' ? Number(((inToCm(watchedLength || 0) * inToCm(watchedWidth || 0) * inToCm(watchedHeight || 0)) / 5000).toFixed(2)) : volumetricWeight} kg</span> ({dimUnit === 'in' ? `${Math.round(inToCm(watchedLength || 0))}×${Math.round(inToCm(watchedWidth || 0))}×${Math.round(inToCm(watchedHeight || 0))}` : `${watchedLength}×${watchedWidth}×${watchedHeight}`} cm ÷ 5000)</p>
+                          {(() => {
+                            const effectiveVol = dimUnit === 'in'
+                              ? Number(((inToCm(watchedLength || 0) * inToCm(watchedWidth || 0) * inToCm(watchedHeight || 0)) / 5000).toFixed(2))
+                              : volumetricWeight;
+                            return effectiveVol > (Number(watchedWeight) || 0) ? (
+                              <p className="text-amber-600 dark:text-amber-400 flex items-center gap-1">
+                                <Warning className="h-3 w-3" weight="fill" />
+                                Volumetric weight exceeds actual weight — courier will charge for <span className="font-semibold">{effectiveVol} kg</span>
+                              </p>
+                            ) : null;
+                          })()}
                         </div>
                       )}
                     </div>
@@ -1384,7 +1515,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                       <div className="flex items-start gap-2.5 rounded-lg border border-blue-200/60 bg-blue-50 dark:bg-blue-950/20 dark:border-blue-700/30 p-3">
                         <Info className="h-4 w-4 text-blue-600 shrink-0 mt-0.5" weight="fill" />
                         <p className="text-xs text-blue-900 dark:text-blue-200">
-                          Laptops are high-value electronics. Please provide accurate details for safe handling and insurance purposes. Ensure the laptop is powered off and packed securely.
+                          Laptop shipping is available only for <span className="font-semibold">gifting purposes</span>. We do not accept laptops for resale or commercial purposes. Please provide accurate details for safe handling and insurance. Ensure the laptop is powered off and packed securely.
                         </p>
                       </div>
                       <div className="grid grid-cols-1 xs:grid-cols-2 gap-3">
@@ -1415,9 +1546,26 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                           <FormItem>
                             <FormLabel>Serial Number</FormLabel>
                             <FormControl>
-                              <Input {...field} placeholder="e.g. C02X1234ABCD" />
+                              <div className="relative">
+                                <Input {...field} placeholder="e.g. C02X1234ABCD" onChange={(e) => {
+                                  field.onChange(e);
+                                  setSerialLookupResult(null);
+                                }} />
+                                {field.value && field.value.length >= 3 && (
+                                  <button type="button" onClick={() => handleSerialNumberLookup(field.value || '')} className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-coke-red hover:underline font-medium" disabled={serialLookupLoading}>
+                                    {serialLookupLoading ? <CircleNotch className="h-3.5 w-3.5 animate-spin" /> : 'Verify'}
+                                  </button>
+                                )}
+                              </div>
                             </FormControl>
                             <p className="text-[10px] text-muted-foreground">Found on the bottom of your laptop or in Settings → About</p>
+                            {serialLookupResult && (
+                              <p className={`text-[11px] mt-1 ${serialLookupResult.found ? 'text-candlestick-green' : 'text-amber-600'}`}>
+                                {serialLookupResult.found
+                                  ? `✓ ${serialLookupResult.brand || ''} ${serialLookupResult.model || ''} — verified`
+                                  : serialLookupResult.message}
+                              </p>
+                            )}
                             <FormMessage />
                           </FormItem>
                         )} />
@@ -1428,7 +1576,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                           <FormControl>
                             <Input {...field} type="number" inputMode="numeric" min={0} max={100000} placeholder="e.g. 50000" />
                           </FormControl>
-                          <p className="text-[10px] text-muted-foreground">Enter the approximate market value of the laptop. Max ₹1,00,000.</p>
+                          <p className="text-[10px] text-muted-foreground">Approximate market value of the laptop. Max ₹1,00,000.</p>
                           <FormMessage />
                         </FormItem>
                       )} />
@@ -1444,6 +1592,29 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                             <p className="text-[10px] text-muted-foreground">
                               Original packaging provides better protection. If not available, we recommend using bubble wrap and a rigid outer box.
                             </p>
+                          </div>
+                        </FormItem>
+                      )} />
+                      {/* Laptop Declaration — opens modal with terms */}
+                      <FormField control={domForm.control} name="laptopDeclarationAccepted" render={({ field }) => (
+                        <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-lg border border-amber-200/60 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-700/30 p-3">
+                          <FormControl>
+                            <Checkbox checked={field.value} onCheckedChange={(checked) => {
+                              if (checked && !field.value) {
+                                setShowLaptopDeclarationModal(true);
+                              } else {
+                                field.onChange(checked);
+                              }
+                            }} />
+                          </FormControl>
+                          <div className="space-y-1 leading-none">
+                            <FormLabel className="text-sm font-medium cursor-pointer">
+                              I agree to the laptop shipping declaration & consent
+                            </FormLabel>
+                            <p className="text-[10px] text-muted-foreground">
+                              This laptop is being shipped as a personal gift, not for resale or commercial purposes.
+                            </p>
+                            <FormMessage />
                           </div>
                         </FormItem>
                       )} />
@@ -1624,24 +1795,41 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
               (() => {
                 // For documents: show only air services, fallback to Delhivery Surface
                 const isDocType = rateFormData && 'shipmentType' in rateFormData && rateFormData.shipmentType === 'document';
+                const pickupPin = rateFormData && 'pickupPincode' in rateFormData ? (rateFormData as DomesticRateValues).pickupPincode : '';
+                const deliveryPin = rateFormData && 'deliveryPincode' in rateFormData ? (rateFormData as DomesticRateValues).deliveryPincode : '';
+                // Determine if within same state using pincode lookup results
+                const isSameState = pickupLookup.state && deliveryLookup.state && pickupLookup.state === deliveryLookup.state;
+
                 let filteredDomestic = domesticCouriers;
                 if (isDocType) {
-                  const airOnly = domesticCouriers.filter((c: any) => c.mode === 'air');
-                  if (airOnly.length > 0) {
-                    filteredDomestic = airOnly;
+                  if (isSameState) {
+                    // Within state: show only surface options — Delhivery, BlueDart, ShadowFax
+                    const withinStateSurface = domesticCouriers.filter((c: any) => {
+                      const name = (c.courier_name || '').toLowerCase();
+                      return c.mode === 'surface' && (name.includes('delhivery') || name.includes('bluedart') || name.includes('blue dart') || name.includes('shadowfax') || name.includes('shadow fax'));
+                    });
+                    filteredDomestic = withinStateSurface.length > 0 ? withinStateSurface : domesticCouriers.filter((c: any) => c.mode === 'surface');
                   } else {
-                    const delhiverySurface = domesticCouriers.filter((c: any) =>
-                      c.courier_name?.toLowerCase().includes('delhivery') && c.mode === 'surface'
-                    );
-                    filteredDomestic = delhiverySurface;
+                    const airOnly = domesticCouriers.filter((c: any) => c.mode === 'air');
+                    if (airOnly.length > 0) {
+                      filteredDomestic = airOnly;
+                    } else {
+                      const delhiverySurface = domesticCouriers.filter((c: any) =>
+                        c.courier_name?.toLowerCase().includes('delhivery') && c.mode === 'surface'
+                      );
+                      filteredDomestic = delhiverySurface;
+                    }
                   }
+                } else if (isSameState) {
+                  // Within state for gift/parcel: show only surface options (no flights within state)
+                  filteredDomestic = domesticCouriers.filter((c: any) => c.mode === 'surface');
                 }
 
-                // Filter out weight slabs > 10kg (guest booking max) and large slabs
+                // Filter out weight slabs > 12kg (guest booking max) and large slabs
                 filteredDomestic = filteredDomestic.filter((c: any) => {
                   const name = (c.courier_name || '').toUpperCase();
-                  // Remove 10kg, 15kg, 20kg, 25kg, 30kg slabs — keep only smaller slabs
-                  if (/\b(10|15|20|25|30)\s*(K\.?G|KG)\b/.test(name)) return false;
+                  // Remove 15kg, 20kg, 25kg, 30kg slabs — keep only smaller slabs
+                  if (/\b(15|20|25|30)\s*(K\.?G|KG)\b/.test(name)) return false;
                   return true;
                 });
 
@@ -1657,6 +1845,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
 
                 // Determine which couriers to show based on active tab
                 const tabCouriers = isDocType ? filteredDomestic
+                  : isSameState ? filteredDomestic // Within state: show all surface (no tabs needed)
                   : courierFilterTab === 'express' ? expressCouriers
                   : courierFilterTab === 'economy' ? economyCouriers
                   : saverCouriers;
@@ -1696,13 +1885,21 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                   <div className="space-y-4">
                     {isDocType && (
                       <div className="flex items-center gap-2 text-xs text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/30 rounded-lg px-3 py-2">
-                        <AirplaneTilt className="h-4 w-4 shrink-0" weight="fill" />
-                        <span>Showing air service rates for document shipments</span>
+                        {isSameState ? <Truck className="h-4 w-4 shrink-0" weight="fill" /> : <AirplaneTilt className="h-4 w-4 shrink-0" weight="fill" />}
+                        <span>{isSameState ? 'Within-state shipment — showing surface delivery options' : 'Showing air service rates for document shipments'}</span>
                       </div>
                     )}
 
-                    {/* Filter tabs — only for gift/parcel */}
-                    {!isDocType && (
+                    {/* Within-state notice for gift/parcel */}
+                    {!isDocType && isSameState && (
+                      <div className="flex items-center gap-2 text-xs text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-950/30 rounded-lg px-3 py-2">
+                        <Truck className="h-4 w-4 shrink-0" weight="fill" />
+                        <span>Within-state shipment — only surface (ground) delivery options are available. No flight operations for within-state routes.</span>
+                      </div>
+                    )}
+
+                    {/* Filter tabs — only for gift/parcel and NOT within same state */}
+                    {!isDocType && !isSameState && (
                       <div className="flex p-1 bg-muted/50 rounded-xl gap-1">
                         {(['express', 'economy', 'saver'] as const).map(tab => {
                           const info = tabDescriptions[tab];
@@ -1730,7 +1927,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                     )}
 
                     {/* Tab description */}
-                    {!isDocType && tabDescriptions[courierFilterTab] && (
+                    {!isDocType && !isSameState && tabDescriptions[courierFilterTab] && (
                       <div className={`flex items-start gap-2 text-xs rounded-lg px-3 py-2 ${tabDescriptions[courierFilterTab].bg} ${tabDescriptions[courierFilterTab].color}`}>
                         {(() => { const I = tabDescriptions[courierFilterTab].icon; return <I className="h-4 w-4 shrink-0 mt-0.5" weight="fill" />; })()}
                         <div className="space-y-1">
@@ -2950,11 +3147,68 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                 </button>
               </div>
               <p className="text-sm text-muted-foreground">
-                Guest bookings are limited to 10 kg. Account-based bookings with higher limits are coming soon.
+                Guest bookings are limited to 12 kg. Account-based bookings with higher limits are coming soon.
               </p>
               <div className="flex gap-3 pt-2">
                 <Button variant="outline" onClick={() => setShowWeightLimitModal(false)} className="flex-1">
                   Go Back
+                </Button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ═══════════════ Laptop Declaration Modal ═══════════════ */}
+      <AnimatePresence>
+        {showLaptopDeclarationModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
+            onClick={() => setShowLaptopDeclarationModal(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-card rounded-2xl border border-border shadow-xl max-w-lg w-full p-6 space-y-4 max-h-[80vh] overflow-y-auto"
+            >
+              <div className="flex items-start justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-amber-100 dark:bg-amber-950/40 flex items-center justify-center">
+                    <ShieldCheck className="h-5 w-5 text-amber-600" weight="duotone" />
+                  </div>
+                  <h3 className="font-semibold text-lg">Laptop Shipping Declaration</h3>
+                </div>
+                <button onClick={() => setShowLaptopDeclarationModal(false)} className="text-muted-foreground hover:text-foreground">
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+              <div className="space-y-3 text-sm text-muted-foreground">
+                <p className="font-medium text-foreground">By proceeding, I declare and consent to the following:</p>
+                <ul className="space-y-2 list-disc pl-5">
+                  <li>This laptop is being shipped as a <span className="font-semibold text-foreground">personal gift</span> to the recipient. It is <span className="font-semibold text-foreground">not for resale, commercial distribution, or any business purpose</span>.</li>
+                  <li>The laptop is my personal property or has been purchased by me for gifting purposes.</li>
+                  <li>The serial number and brand details provided are accurate and match the actual device being shipped.</li>
+                  <li>The laptop is in working condition, powered off completely (not in sleep/hibernate mode), and does not have a damaged, swollen, or leaking battery.</li>
+                  <li>The declared value is an honest estimate of the laptop&apos;s current market value.</li>
+                  <li>I understand that CourierX reserves the right to inspect the package and reject shipment if the contents do not match the declaration.</li>
+                  <li>I accept full responsibility for any customs duties, taxes, or penalties that may arise from incorrect or misleading declarations.</li>
+                  <li>I understand that insurance claims may be denied if the declared information is found to be inaccurate.</li>
+                </ul>
+              </div>
+              <div className="flex gap-3 pt-2">
+                <Button variant="outline" onClick={() => setShowLaptopDeclarationModal(false)} className="flex-1">
+                  Cancel
+                </Button>
+                <Button className="flex-1 bg-coke-red hover:bg-red-600 text-white" onClick={() => {
+                  domForm.setValue('laptopDeclarationAccepted', true);
+                  setShowLaptopDeclarationModal(false);
+                }}>
+                  I Accept & Agree
                 </Button>
               </div>
             </motion.div>

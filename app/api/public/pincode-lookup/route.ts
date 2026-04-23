@@ -61,9 +61,9 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({
           success: true,
           state,
-          district: state,
-          areas: [state],
-          districts: [state],
+          district: '',
+          areas: [],
+          districts: [],
           postOffices: [],
           _fallback: true,
         });

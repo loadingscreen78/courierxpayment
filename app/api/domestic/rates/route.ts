@@ -14,7 +14,7 @@ const rateCheckSchema = z.object({
   lengthCm: z.number().positive(),
   widthCm: z.number().positive(),
   heightCm: z.number().positive(),
-  declaredValue: z.number().nonnegative().max(49000),
+  declaredValue: z.number().nonnegative().max(100000),
   shipmentType: z.enum(['document', 'gift', 'laptop']),
   isGuest: z.boolean().optional().default(false),
 });
@@ -97,6 +97,8 @@ export async function POST(request: NextRequest) {
         buildMock(6, 'DTDC Air', 75, 48, airDays, 3.8, 'air', false),
         buildMock(7, 'Xpressbees Surface', 38, 26, surfaceDays + 1, 3.9, 'surface', false),
         buildMock(8, 'Xpressbees Air', 65, 42, airDays, 3.9, 'air', false),
+        buildMock(9, 'BlueDart Surface', 55, 38, surfaceDays, 4.5, 'surface', false),
+        buildMock(10, 'ShadowFax Surface', 32, 24, surfaceDays + 1, 3.7, 'surface', false),
       ];
 
       // Sort by customer_price ascending and mark cheapest as recommended

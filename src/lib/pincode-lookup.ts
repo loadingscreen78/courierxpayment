@@ -140,9 +140,9 @@ export async function lookupPincode(pincode: string): Promise<PincodeData | null
   const state = getStateFromPincode(pincode);
   if (state) {
     return {
-      city: state,
+      city: '',
       state,
-      district: state,
+      district: '',
       area: '',
     };
   }

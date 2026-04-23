@@ -110,7 +110,7 @@ export const DOCUMENT_WEIGHT_SLABS = [
 // Constraints
 export const DOMESTIC_LIMITS = {
   document: { maxWeightKg: 1, maxValue: 49000 },
-  gift: { maxWeightKg: 30, maxValue: 49000 },
+  gift: { maxWeightKg: 12, maxValue: 49000 },
   laptop: { maxWeightKg: 5, maxValue: 100000 },
 } as const;
 
