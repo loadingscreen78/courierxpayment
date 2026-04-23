@@ -128,6 +128,26 @@ const CXBCApply = () => {
 
       if (error) throw error;
 
+      // Notify super admin via email (fire-and-forget)
+      fetch('/api/cxbc/notify-admin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ownerName: formData.ownerName,
+          businessName: formData.businessName,
+          email: formData.email,
+          phone: formData.phone,
+          zone: formData.zone,
+          city: formData.city,
+          state: formData.state,
+          pincode: formData.pincode,
+          panNumber: formData.panNumber,
+          gstNumber: formData.gstNumber || null,
+          address: formData.address,
+          submittedAt: new Date().toISOString(),
+        }),
+      }).catch((err) => console.warn('[CXBC] Admin notification email failed:', err));
+
       setIsSubmitted(true);
       toast.success("Application submitted successfully!");
     } catch (error: any) {
