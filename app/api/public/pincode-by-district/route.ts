@@ -1,11 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+const DATA_GOV_IN_RESOURCE = 'all-india-pincode-directory-till-last-month';
+
 /**
- * Fetch all pincodes for a given district + state using India Post API.
+ * Fetch all pincodes for a given district + state using data.gov.in API.
  * GET /api/public/pincode-by-district?state=Maharashtra&district=Mumbai
- * 
- * Uses the India Post postoffice search API which returns all post offices
- * matching a name. We search by district name to get comprehensive results.
  */
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
@@ -19,50 +18,43 @@ export async function GET(request: NextRequest) {
     );
   }
 
+  const apiKey = process.env.DATA_GOV_IN_API_KEY;
+  if (!apiKey) {
+    return NextResponse.json({ success: true, pincodes: [] });
+  }
+
   try {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 8000);
 
-    // Search by district name via India Post API
-    const res = await fetch(
-      `https://api.postalpincode.in/postoffice/${encodeURIComponent(district)}`,
-      {
-        signal: controller.signal,
-        next: { revalidate: 86400 }, // cache 24h
-      }
-    );
+    // Fetch by district name via data.gov.in API (limit 500 to get all pincodes)
+    const url = `https://api.data.gov.in/resource/${DATA_GOV_IN_RESOURCE}?api-key=${apiKey}&format=json&limit=500&filters%5Bdistrictname%5D=${encodeURIComponent(district)}&filters%5Bstatename%5D=${encodeURIComponent(state)}`;
+    const res = await fetch(url, {
+      signal: controller.signal,
+      next: { revalidate: 86400 }, // cache 24h
+    });
     clearTimeout(timeout);
 
     const data = await res.json();
-    const result = data?.[0];
 
-    if (result?.Status !== 'Success' || !result?.PostOffice?.length) {
+    if (!data?.records?.length) {
       return NextResponse.json({ success: true, pincodes: [] });
     }
-
-    // Filter to only matching state + district
-    const stateLower = state.toLowerCase();
-    const districtLower = district.toLowerCase();
-
-    const filtered = result.PostOffice.filter((po: any) => {
-      const poState = (po.State || '').toLowerCase();
-      const poDistrict = (po.District || '').toLowerCase();
-      return poState.includes(stateLower) || poDistrict.includes(districtLower);
-    });
 
     // Deduplicate by pincode, collect all post offices per pincode
     const pincodeMap = new Map<string, { pincode: string; offices: string[]; district: string; state: string }>();
 
-    for (const po of filtered) {
-      const pin = po.Pincode;
+    for (const r of data.records) {
+      const pin = r.pincode;
+      if (!pin) continue;
       if (pincodeMap.has(pin)) {
-        pincodeMap.get(pin)!.offices.push(po.Name);
+        if (r.officename) pincodeMap.get(pin)!.offices.push(r.officename);
       } else {
         pincodeMap.set(pin, {
           pincode: pin,
-          offices: [po.Name],
-          district: po.District,
-          state: po.State,
+          offices: r.officename ? [r.officename] : [],
+          district: r.districtname || district,
+          state: r.statename || state,
         });
       }
     }

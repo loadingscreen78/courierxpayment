@@ -1,4 +1,4 @@
-// Indian PIN Code lookup — India Post API with local fallback
+// Indian PIN Code lookup — data.gov.in API (All India Pincode Directory) with local fallback
 export interface PincodeData {
   city: string;
   state: string;
@@ -6,6 +6,34 @@ export interface PincodeData {
   area: string;
 }
 
+// data.gov.in API response shape
+export interface DataGovPincodeRecord {
+  circlename: string;
+  regionname: string;
+  divisionname: string;
+  officename: string;
+  pincode: string;
+  officetype: string;
+  deliverystatus: string;
+  districtname: string;
+  statename: string;
+  telephone: string;
+  relatedsuboffice: string;
+  relatedheadoffice: string;
+  longitude: string;
+  latitude: string;
+}
+
+export interface DataGovPincodeResponse {
+  status: string;
+  total: number;
+  count: number;
+  limit: number;
+  offset: number;
+  records: DataGovPincodeRecord[];
+}
+
+// Legacy shape kept for backward compat (India Post API)
 export interface PincodeResponse {
   Status: string;
   PostOffice: Array<{
@@ -70,7 +98,7 @@ export function getStateFromPincode(pincode: string): string | null {
 }
 
 /**
- * Lookup pincode via India Post API with a 4-second timeout.
+ * Lookup pincode via data.gov.in All India Pincode Directory API.
  * Falls back to local prefix mapping if the API is unavailable.
  */
 export async function lookupPincode(pincode: string): Promise<PincodeData | null> {
@@ -78,37 +106,41 @@ export async function lookupPincode(pincode: string): Promise<PincodeData | null
     return null;
   }
 
-  // Try India Post API first (with timeout)
-  try {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 4000);
+  // Try data.gov.in API first (with timeout)
+  const apiKey = process.env.DATA_GOV_IN_API_KEY;
+  if (apiKey) {
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 5000);
 
-    const response = await fetch(
-      `https://api.postalpincode.in/pincode/${pincode}`,
-      { signal: controller.signal },
-    );
-    clearTimeout(timeout);
+      const url = `https://api.data.gov.in/resource/all-india-pincode-directory-till-last-month?api-key=${apiKey}&format=json&limit=10&filters%5Bpincode%5D=${pincode}`;
+      const response = await fetch(url, { signal: controller.signal });
+      clearTimeout(timeout);
 
-    const data: PincodeResponse[] = await response.json();
+      const data: DataGovPincodeResponse = await response.json();
 
-    if (data[0]?.Status === 'Success' && data[0]?.PostOffice?.length) {
-      const postOffice = data[0].PostOffice[0];
-      return {
-        city: postOffice.District,
-        state: postOffice.State,
-        district: postOffice.District,
-        area: postOffice.Name,
-      };
+      if (data?.records?.length) {
+        const record = data.records[0];
+        const stateName = record.statename || '';
+        const districtName = record.districtname || '';
+        const officeName = record.officename || '';
+        return {
+          city: districtName || stateName,
+          state: stateName,
+          district: districtName,
+          area: officeName,
+        };
+      }
+    } catch (error) {
+      console.warn('[pincode-lookup] data.gov.in API failed, using local fallback:', (error as Error).message);
     }
-  } catch (error) {
-    console.warn('[pincode-lookup] India Post API failed, using local fallback:', (error as Error).message);
   }
 
   // Fallback: local prefix-based state resolution
   const state = getStateFromPincode(pincode);
   if (state) {
     return {
-      city: state, // best we can do without the API
+      city: state,
       state,
       district: state,
       area: '',

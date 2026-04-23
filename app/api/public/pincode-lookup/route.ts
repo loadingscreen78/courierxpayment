@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getStateFromPincode } from '@/lib/pincode-lookup';
 
+const DATA_GOV_IN_RESOURCE = 'all-india-pincode-directory-till-last-month';
+
 /**
- * Public pincode lookup — proxies India Post API to avoid CORS.
- * Falls back to local prefix-based state mapping if India Post is down.
+ * Public pincode lookup — uses data.gov.in All India Pincode Directory API.
+ * Falls back to local prefix-based state mapping if the API is down.
  * GET /api/public/pincode-lookup?pincode=110001
  * GET /api/public/pincode-lookup?query=Connaught
  */
@@ -11,42 +13,46 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const pincode = searchParams.get('pincode');
   const query = searchParams.get('query');
+  const apiKey = process.env.DATA_GOV_IN_API_KEY;
 
   try {
     if (pincode && /^\d{6}$/.test(pincode)) {
-      // Try India Post API with timeout
-      try {
-        const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 4000);
+      // Try data.gov.in API with timeout
+      if (apiKey) {
+        try {
+          const controller = new AbortController();
+          const timeout = setTimeout(() => controller.abort(), 5000);
 
-        const res = await fetch(`https://api.postalpincode.in/pincode/${pincode}`, {
-          signal: controller.signal,
-          next: { revalidate: 86400 }, // cache 24h
-        });
-        clearTimeout(timeout);
-
-        const data = await res.json();
-        const result = data?.[0];
-        if (result?.Status === 'Success' && result?.PostOffice?.length) {
-          const first = result.PostOffice[0];
-          const allAreas = result.PostOffice.map((po: any) => po.Name);
-          const allDistricts = [...new Set(result.PostOffice.map((po: any) => po.District))] as string[];
-          return NextResponse.json({
-            success: true,
-            state: first.State,
-            district: first.District,
-            areas: allAreas,
-            districts: allDistricts,
-            postOffices: result.PostOffice.map((po: any) => ({
-              name: po.Name,
-              pincode: po.Pincode,
-              district: po.District,
-              state: po.State,
-            })),
+          const url = `https://api.data.gov.in/resource/${DATA_GOV_IN_RESOURCE}?api-key=${apiKey}&format=json&limit=20&filters%5Bpincode%5D=${pincode}`;
+          const res = await fetch(url, {
+            signal: controller.signal,
+            next: { revalidate: 86400 }, // cache 24h
           });
+          clearTimeout(timeout);
+
+          const data = await res.json();
+          if (data?.records?.length) {
+            const records: any[] = data.records;
+            const first = records[0];
+            const allAreas = records.map((r: any) => r.officename).filter(Boolean);
+            const allDistricts = [...new Set(records.map((r: any) => r.districtname).filter(Boolean))] as string[];
+            return NextResponse.json({
+              success: true,
+              state: first.statename || '',
+              district: first.districtname || '',
+              areas: allAreas,
+              districts: allDistricts,
+              postOffices: records.map((r: any) => ({
+                name: r.officename,
+                pincode: r.pincode,
+                district: r.districtname,
+                state: r.statename,
+              })),
+            });
+          }
+        } catch (apiErr) {
+          console.warn('[pincode-lookup] data.gov.in API failed, using local fallback:', (apiErr as Error).message);
         }
-      } catch (apiErr) {
-        console.warn('[pincode-lookup] India Post API failed, using local fallback:', (apiErr as Error).message);
       }
 
       // Fallback: local prefix-based state resolution
@@ -67,26 +73,28 @@ export async function GET(request: NextRequest) {
     }
 
     if (query && query.length >= 3) {
-      const res = await fetch(`https://api.postalpincode.in/postoffice/${encodeURIComponent(query)}`, {
-        next: { revalidate: 86400 },
-      });
+      if (!apiKey) {
+        return NextResponse.json({ success: true, results: [] });
+      }
+      // Search by office name
+      const url = `https://api.data.gov.in/resource/${DATA_GOV_IN_RESOURCE}?api-key=${apiKey}&format=json&limit=30&filters%5Bofficename%5D=${encodeURIComponent(query)}`;
+      const res = await fetch(url, { next: { revalidate: 86400 } });
       const data = await res.json();
-      const result = data?.[0];
-      if (result?.Status !== 'Success' || !result?.PostOffice?.length) {
+      if (!data?.records?.length) {
         return NextResponse.json({ success: true, results: [] });
       }
       // Deduplicate by pincode, limit to 20
       const seen = new Set<string>();
       const results: any[] = [];
-      for (const po of result.PostOffice) {
-        const key = po.Pincode;
+      for (const r of data.records) {
+        const key = r.pincode;
         if (!seen.has(key) && results.length < 20) {
           seen.add(key);
           results.push({
-            name: po.Name,
-            pincode: po.Pincode,
-            district: po.District,
-            state: po.State,
+            name: r.officename,
+            pincode: r.pincode,
+            district: r.districtname,
+            state: r.statename,
           });
         }
       }
