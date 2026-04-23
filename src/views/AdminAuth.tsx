@@ -36,7 +36,13 @@ const AdminAuth = () => {
   const [forgotStep, setForgotStep] = useState<'idle' | 'form' | 'sent'>('idle');
   const [forgotEmail, setForgotEmail] = useState('');
   const [forgotLoading, setForgotLoading] = useState(false);
-  const [adminPinStep, setAdminPinStep] = useState<'warning' | 'pin' | 'verified'>('warning');
+  const [adminPinStep, setAdminPinStep] = useState<'warning' | 'pin' | 'verified'>(() => {
+    // If PIN was already verified this session, skip it
+    if (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('admin_pin_verified') === '1') {
+      return 'verified';
+    }
+    return 'warning';
+  });
   const [adminPin, setAdminPin] = useState(['', '', '', '']);
   const [adminPinError, setAdminPinError] = useState('');
   const [adminPinLoading, setAdminPinLoading] = useState(false);
@@ -160,6 +166,9 @@ const AdminAuth = () => {
       const data = await res.json();
 
       if (res.ok && data.success) {
+        if (typeof sessionStorage !== 'undefined') {
+          sessionStorage.setItem('admin_pin_verified', '1');
+        }
         setAdminPinStep('verified');
       } else if (data.locked) {
         toast({ title: 'Access Locked', description: 'Too many failed attempts. Redirecting...', variant: 'destructive' });

@@ -303,6 +303,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     // Mark explicit logout so Auth page ignores the `from` redirect param
     if (typeof sessionStorage !== 'undefined') {
       sessionStorage.setItem('explicit_logout', '1');
+      sessionStorage.removeItem('admin_pin_verified');
     }
     await supabase.auth.signOut();
     cx.clearAuth();
