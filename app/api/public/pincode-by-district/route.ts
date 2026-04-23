@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-const DATA_GOV_IN_RESOURCE = 'all-india-pincode-directory-till-last-month';
+const DATA_GOV_IN_RESOURCE = '6176ee09-3d56-4a3b-8115-21841576b2f6';
 
 /**
  * Fetch all pincodes for a given district + state using data.gov.in API.
@@ -34,7 +34,7 @@ export async function GET(request: NextRequest) {
     let allRecords: Record<string, string>[] = [];
 
     while (true) {
-      const url = `https://api.data.gov.in/resource/${DATA_GOV_IN_RESOURCE}?api-key=${apiKey}&format=json&limit=${PAGE_SIZE}&offset=${offset}&filters%5Bdistrictname%5D=${encodeURIComponent(district)}&filters%5Bstatename%5D=${encodeURIComponent(state)}`;
+      const url = `https://api.data.gov.in/resource/${DATA_GOV_IN_RESOURCE}?api-key=${apiKey}&format=json&limit=${PAGE_SIZE}&offset=${offset}&filters%5Bdistrictname%5D=${encodeURIComponent(district)}&filters%5Bstatename%5D=${encodeURIComponent(state.toUpperCase())}`;
       const res = await fetch(url, {
         signal: controller.signal,
         next: { revalidate: 86400 }, // cache 24h
