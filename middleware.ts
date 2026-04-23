@@ -27,6 +27,7 @@ const PUBLIC_ROUTES = [
   '/partner/login',
   '/dev-portal',
   '/signup',
+  '/cxbc',
 ];
 
 /** Auth routes that are disabled for public but accessible with dev cookie */
