@@ -154,12 +154,19 @@ const CXBCPartnerManagement = () => {
         .update({ status: 'approved', reviewed_at: new Date().toISOString() }).eq('id', application.id);
       if (updateError) throw updateError;
 
-      return { userId: resolvedUserId };
+      return { userId: resolvedUserId, application };
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      const application = data.application;
       toast.success('Partner approved successfully — they can now access the CXBC panel');
       queryClient.invalidateQueries({ queryKey: ['cxbc-applications'] });
       setSelectedApplication(null);
+      // Send approval email (fire-and-forget)
+      fetch('/api/cxbc/send-approval-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ applicationId: application.id }),
+      }).catch((err) => console.warn('[CXBC] Approval email failed:', err));
     },
     onError: (error) => {
       if (error.message === 'NO_LINKED_USER') {
