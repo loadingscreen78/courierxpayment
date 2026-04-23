@@ -323,9 +323,10 @@ export default function CXBCBooking() {
   const handleSubmit = async () => {
     if (!partner) return;
 
-    // Check wallet balance
-    if (partner.wallet_balance < basePrice) {
-      toast.error('Insufficient wallet balance. Please recharge.');
+    // Check wallet balance — must have enough to pay + keep ₹1000 minimum
+    const MIN_WALLET_BALANCE = 1000;
+    if (partner.wallet_balance - basePrice < MIN_WALLET_BALANCE) {
+      toast.error(`Insufficient wallet balance. You need ₹${(basePrice + MIN_WALLET_BALANCE).toLocaleString('en-IN')} (booking cost + ₹1,000 minimum balance).`);
       return;
     }
 
@@ -663,7 +664,7 @@ export default function CXBCBooking() {
             <Button 
               onClick={handleSubmit} 
               className="flex-1"
-              disabled={isSubmitting || (partner?.wallet_balance || 0) < basePrice}
+              disabled={isSubmitting || (partner?.wallet_balance || 0) - basePrice < 1000}
             >
               {isSubmitting ? (
                 <>
@@ -685,7 +686,8 @@ export default function CXBCBooking() {
           Wallet Balance: <span className="font-mono font-medium">{formatCurrency(partner?.wallet_balance || 0)}</span>
           {basePrice > 0 && (
             <span className="ml-2">
-              | Required: <span className="font-mono font-medium">{formatCurrency(basePrice)}</span>
+              | Required: <span className="font-mono font-medium">{formatCurrency(basePrice + 1000)}</span>
+              <span className="text-xs ml-1">(incl. ₹1,000 min. balance)</span>
             </span>
           )}
         </div>
