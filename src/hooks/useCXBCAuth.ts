@@ -35,100 +35,39 @@ export const useCXBCAuth = (): UseCXBCAuthReturn => {
       setIsLoading(true);
       setError(null);
 
-      // Step 1: Query by user_id first
-      const { data: byUserId, error: userIdError } = await supabase
-        .from('cxbc_partners')
-        .select('*')
-        .eq('user_id', user.id)
-        .eq('status', 'approved')
-        .maybeSingle();
+      // Get the current session token to pass to the API
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData?.session?.access_token;
 
-      if (userIdError) {
-        console.error('Error fetching partner by user_id:', userIdError);
-        setError(userIdError.message);
+      if (!token) {
         setIsApprovedPartner(false);
         setPartner(null);
         setApplicationStatus(null);
         return;
       }
 
-      if (byUserId) {
-        // Found by user_id — no linking needed
-        setIsApprovedPartner(true);
-        setPartner(byUserId);
+      // Use server-side API to bypass RLS
+      const res = await fetch('/api/cxbc/partner-status', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (!res.ok) {
+        setIsApprovedPartner(false);
+        setPartner(null);
         setApplicationStatus(null);
         return;
       }
 
-      // Step 2: Fallback — query by email if no match by user_id
-      if (user.email) {
-        const { data: byEmail, error: emailError } = await supabase
-          .from('cxbc_partners')
-          .select('*')
-          .eq('email', user.email)
-          .eq('status', 'approved')
-          .maybeSingle();
+      const data = await res.json();
 
-        if (emailError) {
-          console.error('Error fetching partner by email:', emailError);
-          setError(emailError.message);
-          setIsApprovedPartner(false);
-          setPartner(null);
-          setApplicationStatus(null);
-          return;
-        }
-
-        if (byEmail) {
-          // Step 3: Auto-link — update user_id if null or mismatched
-          if (!byEmail.user_id || byEmail.user_id !== user.id) {
-            const { error: updateError } = await supabase
-              .from('cxbc_partners')
-              .update({ user_id: user.id })
-              .eq('id', byEmail.id);
-
-            if (updateError) {
-              console.error('Error auto-linking partner user_id:', updateError);
-              // Still grant access even if linking fails — the partner is approved
-            } else {
-              byEmail.user_id = user.id;
-            }
-          }
-
-          setIsApprovedPartner(true);
-          setPartner(byEmail);
-          setApplicationStatus(null);
-          return;
-        }
-      }
-
-      // Step 4: No approved partner found — check applications by email
-      setIsApprovedPartner(false);
-      setPartner(null);
-
-      if (user.email) {
-        const { data: applications, error: appError } = await supabase
-          .from('cxbc_partner_applications')
-          .select('status, created_at')
-          .eq('email', user.email)
-          .in('status', ['pending', 'under_review', 'rejected'])
-          .order('created_at', { ascending: false })
-          .limit(1);
-
-        if (appError) {
-          console.error('Error fetching partner applications:', appError);
-          // Don't set error — application status is supplementary info
-          setApplicationStatus(null);
-          return;
-        }
-
-        if (applications && applications.length > 0) {
-          const latestStatus = applications[0].status as 'pending' | 'under_review' | 'rejected';
-          setApplicationStatus(latestStatus);
-        } else {
-          setApplicationStatus(null);
-        }
-      } else {
+      if (data.isPartner && data.partner) {
+        setIsApprovedPartner(true);
+        setPartner(data.partner as CXBCPartner);
         setApplicationStatus(null);
+      } else {
+        setIsApprovedPartner(false);
+        setPartner(null);
+        setApplicationStatus(data.applicationStatus ?? null);
       }
     } catch (err) {
       console.error('Error in useCXBCAuth:', err);

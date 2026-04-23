@@ -62,20 +62,25 @@ const AdminAuth = () => {
       if (!user || adminPinStep !== 'verified') return;
       if (isLoading) return;
       
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (sessionData.session) {
+        cx.setAuth(sessionData.session.access_token, sessionData.session.refresh_token);
+        cx.setUserId(user.id);
+      }
+
       const { data: roles } = await supabase.from('user_roles').select('role').eq('user_id', user.id);
       const hasAdminAccess = roles?.some(r => r.role === 'admin' || r.role === 'warehouse_operator');
       if (hasAdminAccess) { 
         cx.setAdminSession(true);
-        router.replace('/admin'); 
-      }
-      else { 
+        window.location.href = '/admin';
+      } else { 
         toast({ title: 'Access Denied', description: 'No admin privileges.', variant: 'destructive' }); 
         await supabase.auth.signOut(); 
       }
     };
     
     handleRedirect();
-  }, [user, adminPinStep, router, toast, isLoading]);
+  }, [user, adminPinStep, toast, isLoading]);
 
   const emailPasswordForm = useForm<EmailPasswordFormValues>({ 
     resolver: zodResolver(emailPasswordSchema), 
@@ -151,14 +156,17 @@ const AdminAuth = () => {
       return; 
     }
     
-    toast({ title: 'Welcome!', description: 'Signed in.' });
+    const { data: sessionData } = await supabase.auth.getSession();
+    const { data: { user: currentUser } } = await supabase.auth.getUser();
     
-    const { data: { user: currentUser }, error: userError } = await supabase.auth.getUser();
-    
-    if (!currentUser) {
+    if (!currentUser || !sessionData.session) {
       setIsLoading(false);
       return;
     }
+
+    // Set auth cookies explicitly before redirect (onAuthStateChange is async)
+    cx.setAuth(sessionData.session.access_token, sessionData.session.refresh_token);
+    cx.setUserId(currentUser.id);
     
     const { data: roles } = await supabase.from('user_roles').select('role').eq('user_id', currentUser.id);
     const hasAdminAccess = roles?.some(r => r.role === 'admin' || r.role === 'warehouse_operator');

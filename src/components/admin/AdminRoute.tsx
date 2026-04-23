@@ -1,7 +1,7 @@
 "use client";
 
 import { ReactNode, useEffect } from 'react';
-import { usePathname, useRouter } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAdminAuth } from '@/hooks/useAdminAuth';
 import { Loader2 } from 'lucide-react';
@@ -14,23 +14,22 @@ interface AdminRouteProps {
 export const AdminRoute = ({ children, requireAdmin = false }: AdminRouteProps) => {
   const { user, loading: authLoading } = useAuth();
   const { hasAdminAccess, isAdmin, isLoading: roleLoading } = useAdminAuth();
-  const pathname = usePathname();
   const router = useRouter();
 
   useEffect(() => {
     if (!authLoading && !user) {
-      router.replace(`/auth?panel=admin&from=${encodeURIComponent(pathname)}`);
+      router.replace('/admin/login');
     }
-  }, [authLoading, user, pathname, router]);
+  }, [authLoading, user, router]);
 
   useEffect(() => {
     if (!authLoading && !roleLoading && user) {
       const hasRequiredRole = requireAdmin ? isAdmin : hasAdminAccess;
       if (!hasRequiredRole) {
-        router.replace(`/auth?panel=admin&from=${encodeURIComponent(pathname)}`);
+        router.replace('/admin/login');
       }
     }
-  }, [authLoading, roleLoading, user, requireAdmin, isAdmin, hasAdminAccess, router, pathname]);
+  }, [authLoading, roleLoading, user, requireAdmin, isAdmin, hasAdminAccess, router]);
 
   if (authLoading || roleLoading) {
     return (
