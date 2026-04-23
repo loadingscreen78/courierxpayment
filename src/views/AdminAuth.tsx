@@ -56,7 +56,34 @@ const AdminAuth = () => {
     sessionStorage.removeItem('explicit_logout');
   }
 
-  // Handle redirect after sign in
+  // Auto-restore admin session if user already has a valid Supabase session + admin role
+  // This handles the case where cx_admin cookie expired but Supabase session is still valid
+  useEffect(() => {
+    const autoRestore = async () => {
+      if (!user) return;
+
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (!sessionData.session) return;
+
+      const { data: roles } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', user.id);
+
+      const hasAdminAccess = roles?.some(r => r.role === 'admin' || r.role === 'warehouse_operator');
+      if (hasAdminAccess) {
+        // Silently restore cookies and redirect — no PIN needed
+        cx.setAuth(sessionData.session.access_token, sessionData.session.refresh_token);
+        cx.setUserId(user.id);
+        cx.setAdminSession(true);
+        window.location.href = '/admin';
+      }
+    };
+
+    autoRestore();
+  }, [user]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Handle redirect after PIN + email/password sign in
   useEffect(() => {
     const handleRedirect = async () => {
       if (!user || adminPinStep !== 'verified') return;

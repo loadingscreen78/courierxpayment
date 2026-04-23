@@ -158,7 +158,7 @@ export const cx = {
   /** Store auth tokens from Supabase session */
   setAuth(accessToken: string, refreshToken: string): void {
     cx.set(COOKIE_KEYS.ACCESS_TOKEN, accessToken, {
-      maxAge: ONE_HOUR,
+      maxAge: SEVEN_DAYS,
       httpOnly: false, // client needs to read for Supabase SDK
       sameSite: 'lax',
     });
@@ -252,7 +252,7 @@ export const cx = {
 
   setAdminSession(active: boolean): void {
     if (active) {
-      cx.set(COOKIE_KEYS.ADMIN_SESSION, '1', { maxAge: ONE_HOUR });
+      cx.set(COOKIE_KEYS.ADMIN_SESSION, '1', { maxAge: SEVEN_DAYS });
     } else {
       cx.remove(COOKIE_KEYS.ADMIN_SESSION);
     }
@@ -396,7 +396,7 @@ export function cxServer(ctx: ServerCtx) {
 
     setAuth(accessToken: string, refreshToken: string): void {
       this.set(COOKIE_KEYS.ACCESS_TOKEN, accessToken, {
-        maxAge: ONE_HOUR,
+        maxAge: SEVEN_DAYS,
         httpOnly: true,
         sameSite: 'lax',
       });

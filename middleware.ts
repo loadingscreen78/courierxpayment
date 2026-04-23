@@ -82,13 +82,16 @@ export function middleware(request: NextRequest) {
     return response;
   }
 
-  // Read auth cookie
+  // Read auth cookie — accept either access token or refresh token
+  // (access token is 7 days but refresh token is 30 days as fallback)
   const accessToken = readCookieFromRequest(request, COOKIE_KEYS.ACCESS_TOKEN);
+  const refreshToken = readCookieFromRequest(request, COOKIE_KEYS.REFRESH_TOKEN);
+  const hasSession = !!(accessToken || refreshToken);
 
-  // If no token and trying to access protected route:
+  // If no session and trying to access protected route:
   // - Dev team (has dev cookie) → redirect to /auth so they can sign in
   // - Everyone else → redirect to home
-  if (!accessToken) {
+  if (!hasSession) {
     if (hasDevAccess(request)) {
       const redirectUrl = request.nextUrl.clone();
       redirectUrl.pathname = '/auth';
@@ -107,6 +110,8 @@ export function middleware(request: NextRequest) {
   if (isAdminRoute(pathname) && !PUBLIC_ADMIN_ROUTES.some(r => pathname === r || pathname.startsWith(r + '/'))) {
     const isAdmin = readCookieFromRequest(request, COOKIE_KEYS.ADMIN_SESSION);
     if (isAdmin !== '1') {
+      // Admin cookie expired but they may still have a valid session
+      // Redirect to login to re-establish the admin cookie (PIN not required again)
       const redirectUrl = request.nextUrl.clone();
       redirectUrl.pathname = '/admin/login';
       return NextResponse.redirect(redirectUrl);
