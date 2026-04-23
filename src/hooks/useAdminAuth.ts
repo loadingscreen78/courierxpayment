@@ -36,23 +36,31 @@ export const useAdminAuth = (): AdminAuthState => {
       }
 
       try {
-        const { data, error } = await supabase
-          .from('user_roles')
-          .select('role')
-          .eq('user_id', user.id);
+        // Get session token to pass to server-side API (bypasses RLS)
+        const { data: sessionData } = await supabase.auth.getSession();
+        const token = sessionData?.session?.access_token;
 
-        if (error) throw error;
+        if (!token) {
+          setState(prev => ({ ...prev, isLoading: false, hasAdminAccess: false }));
+          return;
+        }
 
-        const roles = (data || []).map(r => r.role as AppRole);
-        const isAdmin = roles.includes('admin');
-        const isWarehouseOperator = roles.includes('warehouse_operator');
+        const res = await fetch('/api/admin/check-access', {
+          headers: { Authorization: `Bearer ${token}` },
+        });
 
+        if (!res.ok) {
+          setState(prev => ({ ...prev, isLoading: false, hasAdminAccess: false }));
+          return;
+        }
+
+        const data = await res.json();
         setState({
-          isAdmin,
-          isWarehouseOperator,
-          hasAdminAccess: isAdmin || isWarehouseOperator,
+          isAdmin: data.isAdmin ?? false,
+          isWarehouseOperator: data.isWarehouseOperator ?? false,
+          hasAdminAccess: data.hasAccess ?? false,
           isLoading: false,
-          roles,
+          roles: data.roles ?? [],
         });
       } catch (error) {
         console.error('Error checking admin roles:', error);

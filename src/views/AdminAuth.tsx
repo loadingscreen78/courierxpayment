@@ -65,14 +65,14 @@ const AdminAuth = () => {
       const { data: sessionData } = await supabase.auth.getSession();
       if (!sessionData.session) return;
 
-      const { data: roles } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', user.id);
+      const token = sessionData.session.access_token;
+      const res = await fetch('/api/admin/check-access', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) return;
 
-      const hasAdminAccess = roles?.some(r => r.role === 'admin' || r.role === 'warehouse_operator');
-      if (hasAdminAccess) {
-        // Silently restore cookies and redirect — no PIN needed
+      const data = await res.json();
+      if (data.hasAccess) {
         cx.setAuth(sessionData.session.access_token, sessionData.session.refresh_token);
         cx.setUserId(user.id);
         cx.setAdminSession(true);
@@ -90,14 +90,18 @@ const AdminAuth = () => {
       if (isLoading) return;
       
       const { data: sessionData } = await supabase.auth.getSession();
-      if (sessionData.session) {
-        cx.setAuth(sessionData.session.access_token, sessionData.session.refresh_token);
-        cx.setUserId(user.id);
-      }
+      if (!sessionData.session) return;
 
-      const { data: roles } = await supabase.from('user_roles').select('role').eq('user_id', user.id);
-      const hasAdminAccess = roles?.some(r => r.role === 'admin' || r.role === 'warehouse_operator');
-      if (hasAdminAccess) { 
+      const token = sessionData.session.access_token;
+      cx.setAuth(token, sessionData.session.refresh_token);
+      cx.setUserId(user.id);
+
+      const res = await fetch('/api/admin/check-access', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = res.ok ? await res.json() : { hasAccess: false };
+
+      if (data.hasAccess) { 
         cx.setAdminSession(true);
         window.location.href = '/admin';
       } else { 
@@ -195,9 +199,12 @@ const AdminAuth = () => {
     cx.setAuth(sessionData.session.access_token, sessionData.session.refresh_token);
     cx.setUserId(currentUser.id);
     
-    const { data: roles } = await supabase.from('user_roles').select('role').eq('user_id', currentUser.id);
-    const hasAdminAccess = roles?.some(r => r.role === 'admin' || r.role === 'warehouse_operator');
-    if (hasAdminAccess) { 
+    const res = await fetch('/api/admin/check-access', {
+      headers: { Authorization: `Bearer ${sessionData.session.access_token}` },
+    });
+    const data = res.ok ? await res.json() : { hasAccess: false };
+
+    if (data.hasAccess) { 
       setIsLoading(false);
       cx.setAdminSession(true);
       window.location.href = '/admin';
