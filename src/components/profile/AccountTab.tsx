@@ -191,9 +191,9 @@ export const AccountTab = () => {
           <div className="flex items-center gap-2 mb-2">
             <Label>KYC Status</Label>
             <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-              kycData?.aadhaar_verified ? 'bg-success/20 text-success' : 'bg-destructive/20 text-destructive'
+              (kycData?.aadhaar_verified || kycData?.kyc_verified) ? 'bg-success/20 text-success' : 'bg-destructive/20 text-destructive'
             }`}>
-              {kycData?.aadhaar_verified ? 'Verified' : 'Pending'}
+              {(kycData?.aadhaar_verified || kycData?.kyc_verified) ? 'Verified' : 'Pending'}
             </span>
             {kycData?.kyc_completed_at && (
               <span className="text-xs text-muted-foreground">

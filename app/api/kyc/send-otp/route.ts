@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServiceRoleClient } from '@/lib/shipment-lifecycle/supabaseAdmin';
-import { CASHFREE_VERIFICATION_BASE } from '@/lib/wallet/cashfreeConfig';
+import { CASHFREE_VERIFICATION_BASE, CASHFREE_VERIFICATION_DIRECT } from '@/lib/wallet/cashfreeConfig';
 import crypto from 'crypto';
 
 /**
  * POST /api/kyc/send-otp
- * Step 1: Check if DigiLocker account exists for the given Aadhaar number.
- * Step 2: Create a DigiLocker consent URL and return it to the client.
+ * Aadhaar KYC — two modes:
+ *   method=digilocker  → create DigiLocker consent URL (existing flow)
+ *   method=uid_lookup  → verify Aadhaar UID directly via Cashfree OKYC
  */
 export async function POST(request: NextRequest) {
   try {
@@ -31,15 +32,16 @@ export async function POST(request: NextRequest) {
     // Check if already verified
     const { data: profile } = await supabase
       .from('profiles')
-      .select('aadhaar_verified')
+      .select('aadhaar_verified, kyc_verified')
       .eq('user_id', user.id)
       .single();
 
-    if (profile?.aadhaar_verified) {
-      return NextResponse.json({ error: 'Aadhaar already verified' }, { status: 400 });
+    if (profile?.aadhaar_verified || profile?.kyc_verified) {
+      return NextResponse.json({ error: 'KYC already completed' }, { status: 400 });
     }
 
-    const { aadhaarNumber } = await request.json();
+    const body = await request.json();
+    const { aadhaarNumber, method = 'digilocker' } = body;
 
     if (!aadhaarNumber || !/^\d{12}$/.test(aadhaarNumber)) {
       return NextResponse.json({ error: 'Invalid Aadhaar number' }, { status: 400 });
@@ -59,6 +61,53 @@ export async function POST(request: NextRequest) {
         { error: 'This Aadhaar number is already verified with another account. Each Aadhaar can only be linked to one account.' },
         { status: 409 }
       );
+    }
+
+    // ── UID Lookup (OKYC) path ──────────────────────────────────────────────
+    if (method === 'uid_lookup') {
+      const verificationId = `kyc_uid_${user.id.slice(0, 8)}_${Date.now()}`;
+      const cfHeaders = {
+        'Content-Type': 'application/json',
+        'x-client-id': appId,
+        'x-client-secret': secretKey,
+      };
+      const res = await fetch(`${CASHFREE_VERIFICATION_DIRECT}/aadhaar`, {
+        method: 'POST',
+        headers: cfHeaders,
+        body: JSON.stringify({ uid: aadhaarNumber, verification_id: verificationId }),
+      });
+      const data = await res.json();
+      console.log('[kyc/send-otp] UID lookup response:', res.status, JSON.stringify(data).slice(0, 200));
+
+      if (!res.ok || data?.status !== 'VALID') {
+        const msg = data?.message || data?.error || 'Aadhaar verification failed';
+        return NextResponse.json({ error: msg }, { status: 400 });
+      }
+
+      const addr = data.split_address || {};
+      const verifiedAddress = [
+        addr.house, addr.street, addr.landmark,
+        addr.vtc, addr.subdist, addr.dist,
+        addr.state, addr.pincode,
+      ].filter(Boolean).join(', ');
+
+      await supabase.from('profiles').update({
+        aadhaar_verified: true,
+        kyc_verified: true,
+        kyc_document_type: 'aadhaar',
+        kyc_verified_name: data.name || '',
+        aadhaar_address: verifiedAddress || null,
+        aadhaar_hash: aadhaarHash,
+        kyc_completed_at: new Date().toISOString(),
+      }).eq('user_id', user.id);
+
+      return NextResponse.json({
+        success: true,
+        method: 'uid_lookup',
+        verifiedName: data.name || '',
+        verifiedAddress,
+        maskedAadhaar: `XXXX XXXX ${aadhaarNumber.slice(-4)}`,
+      });
     }
 
     const verificationId = `kyc_${user.id.slice(0, 8)}_${Date.now()}`;

@@ -46,7 +46,7 @@ export const ProtectedRoute = ({
   }, [settled, user, router]);
 
   useEffect(() => {
-    if (!loading && requireKyc && profile && !profile.aadhaar_verified) {
+    if (!loading && requireKyc && profile && !profile.aadhaar_verified && !profile.kyc_verified) {
       router.replace(`/auth/kyc?from=${encodeURIComponent(pathname)}`);
     }
   }, [loading, requireKyc, profile, pathname, router]);
@@ -66,12 +66,12 @@ export const ProtectedRoute = ({
     return null;
   }
 
-  if (requireKyc && profile && !profile.aadhaar_verified) {
+  if (requireKyc && profile && !profile.aadhaar_verified && !profile.kyc_verified) {
     return null;
   }
 
   // KYC gate: show in-page lock screen instead of redirecting
-  if (kycGated && profile && !profile.aadhaar_verified) {
+  if (kycGated && profile && !profile.aadhaar_verified && !profile.kyc_verified) {
     return <KycGate section={kycGatedSection} />;
   }
 

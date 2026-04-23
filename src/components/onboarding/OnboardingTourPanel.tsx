@@ -102,7 +102,7 @@ export const OnboardingTourPanel = () => {
   const StepIcon = step.icon;
   const displayName = profile?.full_name?.split(' ')[0] || 'there';
   const isLastStep = currentStep === 3;
-  const kycDone = !!profile?.aadhaar_verified;
+  const kycDone = !!(profile?.aadhaar_verified || profile?.kyc_verified);
 
   const handleCta = () => {
     if (isLastStep) {

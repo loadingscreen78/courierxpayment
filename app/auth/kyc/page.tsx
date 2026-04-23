@@ -1,12 +1,12 @@
 "use client";
 
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
-import AadhaarKyc from '@/views/AadhaarKyc';
+import KycVerification from '@/views/KycVerification';
 
 export default function KycPage() {
   return (
     <ProtectedRoute>
-      <AadhaarKyc />
+      <KycVerification />
     </ProtectedRoute>
   );
 }

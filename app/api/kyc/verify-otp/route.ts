@@ -112,6 +112,9 @@ export async function POST(request: NextRequest) {
       .from('profiles')
       .update({
         aadhaar_verified: true,
+        kyc_verified: true,
+        kyc_document_type: 'aadhaar',
+        kyc_verified_name: verifiedName || null,
         aadhaar_address: verifiedAddress || null,
         kyc_completed_at: new Date().toISOString(),
         ...(aadhaarHash ? { aadhaar_hash: aadhaarHash } : {}),

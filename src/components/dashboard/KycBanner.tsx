@@ -13,7 +13,7 @@ export function KycBanner() {
   const router = useRouter();
 
   // Don't show if KYC is already completed
-  if (profile?.kyc_completed_at || profile?.aadhaar_verified) return null;
+  if (profile?.kyc_completed_at || profile?.aadhaar_verified || profile?.kyc_verified) return null;
 
   return (
     <motion.div

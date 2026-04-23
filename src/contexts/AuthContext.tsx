@@ -11,6 +11,8 @@ interface Profile {
   email: string | null;
   account_number: string | null;
   aadhaar_verified: boolean;
+  kyc_verified?: boolean;
+  kyc_document_type?: string | null;
   aadhaar_address: string | null;
   kyc_completed_at: string | null;
   preferred_otp_method: 'email' | 'whatsapp';
