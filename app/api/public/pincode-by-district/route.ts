@@ -20,7 +20,8 @@ export async function GET(request: NextRequest) {
 
   const apiKey = process.env.DATA_GOV_IN_API_KEY;
   if (!apiKey) {
-    return NextResponse.json({ success: true, pincodes: [] });
+    console.warn('[pincode-by-district] DATA_GOV_IN_API_KEY not set');
+    return NextResponse.json({ success: true, pincodes: [], debug: 'no_api_key' });
   }
 
   try {
@@ -28,7 +29,6 @@ export async function GET(request: NextRequest) {
     const timeout = setTimeout(() => controller.abort(), 20000);
 
     // Fetch all records via pagination (data.gov.in returns post office rows, not unique pincodes)
-    // A large district like Pune can have 2000+ post office rows, so we paginate with limit=1000
     const PAGE_SIZE = 1000;
     let offset = 0;
     let allRecords: Record<string, string>[] = [];
@@ -40,9 +40,9 @@ export async function GET(request: NextRequest) {
         next: { revalidate: 86400 }, // cache 24h
       });
       const data = await res.json();
+      console.log(`[pincode-by-district] offset=${offset} status=${data?.status} total=${data?.total} count=${data?.count} msg=${data?.message}`);
       const records: Record<string, string>[] = data?.records ?? [];
       allRecords = allRecords.concat(records);
-      // Stop if we got fewer records than the page size (last page)
       if (records.length < PAGE_SIZE) break;
       offset += PAGE_SIZE;
     }
@@ -50,7 +50,7 @@ export async function GET(request: NextRequest) {
     clearTimeout(timeout);
 
     if (!allRecords.length) {
-      return NextResponse.json({ success: true, pincodes: [] });
+      return NextResponse.json({ success: true, pincodes: [], debug: `fetched_0_records_for_${district}_${state}` });
     }
 
     // Deduplicate by pincode, collect all post offices per pincode
