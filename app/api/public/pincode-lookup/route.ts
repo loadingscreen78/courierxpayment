@@ -55,7 +55,35 @@ export async function GET(request: NextRequest) {
         }
       }
 
-      // Fallback: local prefix-based state resolution
+      // Fallback 1: India Post free public API (no key needed)
+      try {
+        const controller2 = new AbortController();
+        const timeout2 = setTimeout(() => controller2.abort(), 5000);
+        const ipRes = await fetch(`https://api.postalpincode.in/pincode/${pincode}`, {
+          signal: controller2.signal,
+          next: { revalidate: 86400 },
+        });
+        clearTimeout(timeout2);
+        const ipData = await ipRes.json();
+        if (ipData?.[0]?.Status === 'Success' && ipData[0]?.PostOffice?.length) {
+          const offices: any[] = ipData[0].PostOffice;
+          const first = offices[0];
+          const allAreas = offices.map((o: any) => o.Name).filter(Boolean);
+          return NextResponse.json({
+            success: true,
+            state: first.State || '',
+            district: first.District || '',
+            areas: allAreas,
+            districts: [...new Set(offices.map((o: any) => o.District).filter(Boolean))],
+            postOffices: offices.map((o: any) => ({ name: o.Name, pincode, district: o.District, state: o.State })),
+            _fallback: 'indiapost',
+          });
+        }
+      } catch (ipErr) {
+        console.warn('[pincode-lookup] India Post API failed:', (ipErr as Error).message);
+      }
+
+      // Fallback 2: local prefix-based state resolution (no district)
       const state = getStateFromPincode(pincode);
       if (state) {
         return NextResponse.json({
@@ -65,7 +93,7 @@ export async function GET(request: NextRequest) {
           areas: [],
           districts: [],
           postOffices: [],
-          _fallback: true,
+          _fallback: 'local',
         });
       }
 

@@ -732,6 +732,10 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
 
   // ── Validate sender KYC + pickup fields before sliding to receiver ──
   const handlePickupNext = async () => {
+    // Pre-fill district/state from lookup before validating (in case useEffect hasn't fired yet)
+    if (senderLookup.district) detailsForm.setValue('senderCity', senderLookup.district, { shouldValidate: false });
+    if (senderLookup.state) detailsForm.setValue('senderState', senderLookup.state, { shouldValidate: false });
+
     const pickupFields = ['senderName', 'senderPhone', 'senderEmail', 'senderAddress', 'senderCity', 'senderState', 'senderPincode'] as const;
     const fieldsToValidate = isInternational
       ? pickupFields
