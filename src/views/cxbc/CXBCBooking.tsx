@@ -642,6 +642,9 @@ export default function CXBCBooking() {
               walletBalance={partner?.wallet_balance || 0}
               isGstRegistered={isGstRegistered}
               partnerAddress={partnerAddress}
+              partnerId={partner?.id || ''}
+              partnerUserId={partner?.user_id || ''}
+              onRechargeComplete={refetch}
             />
           )}
         </div>
