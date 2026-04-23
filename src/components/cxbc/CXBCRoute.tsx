@@ -15,7 +15,7 @@ interface CXBCRouteProps {
 
 export const CXBCRoute = ({ children }: CXBCRouteProps) => {
   const { user, loading: authLoading } = useAuth();
-  const { isLoading, isApprovedPartner, error } = useCXBCAuth();
+  const { isLoading, isApprovedPartner, applicationStatus, error } = useCXBCAuth();
   const router = useRouter();
 
   useEffect(() => {
@@ -57,6 +57,7 @@ export const CXBCRoute = ({ children }: CXBCRouteProps) => {
   }
 
   if (!isApprovedPartner) {
+    const isAlreadyPartner = applicationStatus !== null;
     return (
       <div className="min-h-screen flex items-center justify-center bg-background p-4">
         <Card className="max-w-md w-full">
@@ -64,16 +65,21 @@ export const CXBCRoute = ({ children }: CXBCRouteProps) => {
             <Store className="h-12 w-12 mx-auto text-muted-foreground mb-2" />
             <CardTitle>Partner Access Required</CardTitle>
             <CardDescription>
-              You need to be an approved CXBC partner to access this portal.
+              {isAlreadyPartner
+                ? 'Your partner application is being reviewed. Login to the CXBC panel to check your status.'
+                : 'You need to be an approved CXBC partner to access this portal.'}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
-            <Button asChild className="w-full">
-              <Link href="/cxbc/apply">Apply to Become a Partner</Link>
-            </Button>
-            <Button asChild variant="outline" className="w-full">
-              <Link href="/dashboard">Go to Customer Dashboard</Link>
-            </Button>
+            {isAlreadyPartner ? (
+              <Button asChild className="w-full">
+                <Link href="/partner/login">Login to CXBC Panel</Link>
+              </Button>
+            ) : (
+              <Button asChild className="w-full">
+                <Link href="/cxbc/apply">Apply to Become a Partner</Link>
+              </Button>
+            )}
           </CardContent>
         </Card>
       </div>
