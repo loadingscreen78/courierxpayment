@@ -1834,18 +1834,110 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
                     </div>
 
                     {/* Agreement text */}
-                    <div className="rounded-lg border border-border bg-card p-4 space-y-2 text-xs text-muted-foreground leading-relaxed">
-                      <p className="font-semibold text-foreground text-sm">Shipping Agreement</p>
-                      <p>I, <span className="font-semibold text-foreground">{verifiedName || senderReceiver?.senderName}</span>{verifiedDob ? `, DOB: ${verifiedDob}` : ''}, confirm that:</p>
-                      <ul className="space-y-1.5 list-disc pl-4">
-                        <li>All information provided is <span className="font-medium text-foreground">true and accurate</span>.</li>
-                        <li>This shipment does <span className="font-medium text-foreground">not contain any prohibited, illegal, or restricted items</span> as per Indian law.</li>
-                        <li>I am solely responsible for the contents and any legal consequences arising from this shipment.</li>
-                        <li>I authorise CourierX to process this shipment and share necessary details with the courier partner.</li>
-                        <li>I have read and agree to the policies linked below.</li>
-                      </ul>
+                    <div className="rounded-lg border border-border bg-card p-4 space-y-3 text-xs text-muted-foreground leading-relaxed">
+                      {/* Header */}
+                      <div className="border-b border-border pb-2">
+                        <p className="font-bold text-foreground text-sm uppercase tracking-wide">Shipping Service Agreement</p>
+                        <p className="text-[10px] text-muted-foreground mt-0.5">
+                          Goldilocks Zone Private Limited · CIN: U52290OD2026PTC053323 · Rathagadasahi, Urali, Cuttack, Odisha – 753011
+                        </p>
+                      </div>
+
+                      {/* Parties */}
+                      <div className="space-y-1">
+                        <p className="text-[11px]">
+                          This Agreement is entered into between <span className="font-semibold text-foreground">Goldilocks Zone Private Limited</span>, operating under the trade name <span className="font-semibold text-foreground">CourierX™</span> (the &quot;Company&quot;), and:
+                        </p>
+                        <div className="bg-muted/40 rounded-md p-2 text-[11px] space-y-0.5">
+                          <p><span className="text-muted-foreground">Name:</span> <span className="font-semibold text-foreground">{verifiedName || senderReceiver?.senderName}</span></p>
+                          {verifiedDob && <p><span className="text-muted-foreground">DOB:</span> <span className="font-medium text-foreground">{verifiedDob}</span></p>}
+                          <p><span className="text-muted-foreground">Address:</span> <span className="font-medium text-foreground">{verifiedAddress || `${senderReceiver?.senderAddress}, ${senderReceiver?.senderCity} – ${senderReceiver?.senderPincode}`}</span></p>
+                        </div>
+                        <p className="text-[10px] text-muted-foreground">
+                          Identity verified via Aadhaar OTP authentication. This electronic execution constitutes a valid and binding legal signature under the <span className="font-medium">Information Technology Act, 2000 (Section 5 &amp; Section 10A)</span> and the <span className="font-medium">IT (Amendment) Act, 2008</span>.
+                        </p>
+                      </div>
+
+                      {/* Clauses */}
+                      <div className="space-y-2.5">
+
+                        {/* 1. Declaration */}
+                        <div>
+                          <p className="font-semibold text-foreground text-[11px]">1. Declaration of Shipment Contents</p>
+                          <ul className="list-disc pl-4 space-y-1 mt-1">
+                            <li>I warrant that the description, quantity, and declared value of goods are <span className="font-medium text-foreground">100% accurate</span>.</li>
+                            <li>This shipment does <span className="font-medium text-foreground">not contain any prohibited, illegal, hazardous, or restricted items</span> as per the Indian Postal Act, 1898; IATA Dangerous Goods Regulations; Narcotic Drugs &amp; Psychotropic Substances Act, 1985; Customs Act, 1962; or any other applicable law.</li>
+                            <li>I agree to indemnify the Company against any claims, fines, legal proceedings, or penalties arising from undeclared or illegal goods.</li>
+                          </ul>
+                        </div>
+
+                        {/* 2. Weight & Surcharges */}
+                        <div>
+                          <p className="font-semibold text-foreground text-[11px]">2. Weight, Dimensions &amp; Surcharges</p>
+                          <ul className="list-disc pl-4 space-y-1 mt-1">
+                            <li>The Company and its carrier partners reserve the right to re-weigh and re-measure shipments using calibrated equipment.</li>
+                            <li>If actual weight or volumetric dimensions exceed declared values, I am liable to pay the additional charges immediately upon demand.</li>
+                            <li>If additional charges remain unpaid for more than <span className="font-medium text-foreground">4 days</span> from the date of demand, the Company shall have a <span className="font-medium text-foreground">general lien</span> over the shipment and reserves the right to confiscate, sell, or destroy it to recover unpaid dues, without further liability to me.</li>
+                          </ul>
+                        </div>
+
+                        {/* 3. Liability & Insurance */}
+                        <div>
+                          <p className="font-semibold text-foreground text-[11px]">3. Limitation of Liability &amp; Insurance</p>
+                          <ul className="list-disc pl-4 space-y-1 mt-1">
+                            <li>I acknowledge that CourierX™ is a <span className="font-medium text-foreground">service aggregator</span> and is not directly responsible for loss or damage caused by third-party courier partners.</li>
+                            <li>In case of loss or damage, basic insurance coverage is limited to <span className="font-medium text-foreground">100% of shipment value plus courier charges, up to a maximum of ₹3,000</span> (whichever is higher), as provided by the opted courier partner.</li>
+                            <li>The Company will act as a facilitator for insurance claims; the final decision rests solely with the carrier.</li>
+                            <li>This clause is consistent with the <span className="font-medium">Consumer Protection Act, 2019</span> and the <span className="font-medium">Carriage by Air Act, 1972</span>.</li>
+                          </ul>
+                        </div>
+
+                        {/* 4. Inspection & KYC */}
+                        <div>
+                          <p className="font-semibold text-foreground text-[11px]">4. Inspection, KYC &amp; Compliance</p>
+                          <ul className="list-disc pl-4 space-y-1 mt-1">
+                            <li>The Company or any authorised government body (including Customs, Narcotics, and CBIC) may open and inspect any shipment at any time.</li>
+                            <li>I am responsible for providing all KYC documents required under the <span className="font-medium">Prevention of Money Laundering Act, 2002 (PMLA)</span>, <span className="font-medium">CBIC Courier Regulations, 2010</span>, and <span className="font-medium">Foreign Exchange Management Act, 1999 (FEMA)</span>.</li>
+                          </ul>
+                        </div>
+
+                        {/* 5. Packaging */}
+                        <div>
+                          <p className="font-semibold text-foreground text-[11px]">5. Packaging Responsibility</p>
+                          <p className="mt-1">I am solely responsible for ensuring contents are packed securely. The Company is not liable for damage resulting from inadequate packaging.</p>
+                        </div>
+
+                        {/* 6. Data & Privacy */}
+                        <div>
+                          <p className="font-semibold text-foreground text-[11px]">6. Data Processing &amp; Privacy</p>
+                          <p className="mt-1">I consent to the processing of my personal data (including Aadhaar-derived information) for shipment processing, regulatory compliance, and fraud prevention, in accordance with the <span className="font-medium">IT Act, 2000</span>, <span className="font-medium">SPDI Rules, 2011</span>, and the <span className="font-medium">Digital Personal Data Protection Act, 2023</span>.</p>
+                        </div>
+
+                        {/* 7. Governing Law */}
+                        <div>
+                          <p className="font-semibold text-foreground text-[11px]">7. Governing Law &amp; Jurisdiction</p>
+                          <p className="mt-1">This Agreement is governed by the laws of India. All disputes shall be subject to the exclusive jurisdiction of the courts in <span className="font-medium text-foreground">Cuttack, Odisha</span>, and resolved through binding arbitration under the <span className="font-medium">Arbitration &amp; Conciliation Act, 1996</span>.</p>
+                        </div>
+
+                        {/* 8. Force Majeure */}
+                        <div>
+                          <p className="font-semibold text-foreground text-[11px]">8. Force Majeure</p>
+                          <p className="mt-1">The Company shall not be responsible for delays caused by natural disasters, war, strikes, pandemics, or government restrictions beyond its control.</p>
+                        </div>
+                      </div>
+
+                      {/* Confirmation */}
+                      <div className="border-t border-border pt-2 space-y-1">
+                        <p className="text-[11px] font-medium text-foreground">By clicking &quot;I Agree &amp; Confirm&quot; below, I confirm that:</p>
+                        <ul className="list-disc pl-4 space-y-1">
+                          <li>I have read, understood, and agree to all clauses of this Agreement.</li>
+                          <li>I authorise CourierX™ to process this shipment and share necessary details with the courier partner.</li>
+                          <li>This digital acceptance is legally binding under the <span className="font-medium">IT Act, 2000</span>.</li>
+                        </ul>
+                      </div>
+
                       <div className="flex flex-wrap gap-x-3 gap-y-1 pt-1 border-t border-border/60">
-                        <a href="/terms" target="_blank" className="text-coke-red hover:underline font-medium">Terms & Conditions ↗</a>
+                        <a href="/terms" target="_blank" className="text-coke-red hover:underline font-medium">Terms &amp; Conditions ↗</a>
                         <a href="/shipping-policy" target="_blank" className="text-coke-red hover:underline font-medium">Shipping Policy ↗</a>
                         <a href="/refund-policy" target="_blank" className="text-coke-red hover:underline font-medium">Refund Policy ↗</a>
                         <a href="/privacy-policy" target="_blank" className="text-coke-red hover:underline font-medium">Privacy Policy ↗</a>

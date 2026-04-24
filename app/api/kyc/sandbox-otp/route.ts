@@ -65,7 +65,7 @@ export async function POST(request: NextRequest) {
           '@entity': 'in.co.sandbox.kyc.aadhaar.okyc.otp.request',
           aadhaar_number: aadhaarNumber,
           consent: 'Y',
-          reason: 'Identity verification for courier shipment booking',
+          reason: 'Identity verification for Shipping Service Agreement execution under IT Act 2000 — CourierX by Goldilocks Zone Pvt Ltd (CIN: U52290OD2026PTC053323)',
         }),
       });
       const data = await res.json();
