@@ -1494,17 +1494,6 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
               )}
 
               {editModal === 'contents' && (
-                      <Input value={editData.receiverCity || ''} onChange={(e) => setEditData(d => ({ ...d, receiverCity: e.target.value }))} className="h-10 mt-1" />
-                    </div>
-                    <div>
-                      <label className="text-xs font-medium">Zipcode</label>
-                      <Input value={editData.receiverZipcode || ''} onChange={(e) => setEditData(d => ({ ...d, receiverZipcode: e.target.value }))} className="h-10 mt-1" />
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {editModal === 'contents' && (
                 <div className="space-y-3">
                   <p className="text-xs text-muted-foreground">Add or edit items in your shipment.</p>
                   {editedItems.map((item, idx) => (
