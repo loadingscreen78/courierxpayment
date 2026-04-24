@@ -390,6 +390,42 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
   const [contentItemsTouched, setContentItemsTouched] = useState(false);
   // ── Laptop declaration modal ──
   const [showLaptopDeclarationModal, setShowLaptopDeclarationModal] = useState(false);
+  // ── Laptop serial number lookup ──
+  type SerialLookupStatus = 'idle' | 'loading' | 'found' | 'not_found' | 'previously_shipped' | 'error';
+  const [serialLookupStatus, setSerialLookupStatus] = useState<SerialLookupStatus>('idle');
+  const [serialLookupMessage, setSerialLookupMessage] = useState('');
+  const serialLookupTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const lookupSerialNumber = useCallback(async (serial: string) => {
+    if (serialLookupTimerRef.current) clearTimeout(serialLookupTimerRef.current);
+    if (!/^[A-Za-z0-9\-]{4,30}$/.test(serial)) {
+      setSerialLookupStatus('idle');
+      return;
+    }
+    setSerialLookupStatus('loading');
+    serialLookupTimerRef.current = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/domestic/serial-lookup?serial=${encodeURIComponent(serial)}`);
+        const data = await res.json();
+        if (!data.success) { setSerialLookupStatus('error'); setSerialLookupMessage('Could not verify serial number.'); return; }
+        if (data.found && data.brand) {
+          if (data.message?.includes('previously shipped')) {
+            setSerialLookupStatus('previously_shipped');
+            setSerialLookupMessage(`This serial (${data.brand}${data.model ? ' ' + data.model : ''}) was previously shipped via our service.`);
+          } else {
+            setSerialLookupStatus('found');
+            setSerialLookupMessage(`Verified: ${data.brand}${data.model ? ' ' + data.model : ''}`);
+          }
+        } else {
+          setSerialLookupStatus('not_found');
+          setSerialLookupMessage(data.message || 'Serial not in our database — you can still proceed.');
+        }
+      } catch {
+        setSerialLookupStatus('error');
+        setSerialLookupMessage('Could not verify serial number at this time.');
+      }
+    }, 600);
+  }, []);
   // ── Weight & dimensions declaration modal (domestic) ──
   const [showWeightDimDeclarationModal, setShowWeightDimDeclarationModal] = useState(false);
   // ── Weight & dimensions declaration modal (international) ──
@@ -1597,15 +1633,48 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                           <FormItem>
                             <FormLabel>Serial Number</FormLabel>
                             <FormControl>
-                              <Input
-                                {...field}
-                                placeholder="e.g. C02X1234ABCD"
-                                onChange={(e) => field.onChange(e.target.value.toUpperCase())}
-                                className={val.length >= 4 ? (isValidFormat ? 'border-candlestick-green focus-visible:ring-candlestick-green/30' : 'border-destructive focus-visible:ring-destructive/30') : ''}
-                              />
+                              <div className="relative">
+                                <Input
+                                  {...field}
+                                  placeholder="e.g. C02X1234ABCD"
+                                  onChange={(e) => {
+                                    const upper = e.target.value.toUpperCase();
+                                    field.onChange(upper);
+                                    setSerialLookupStatus('idle');
+                                    lookupSerialNumber(upper.trim());
+                                  }}
+                                  className={cn(
+                                    'pr-8',
+                                    val.length >= 4 && (isValidFormat ? 'border-candlestick-green focus-visible:ring-candlestick-green/30' : 'border-destructive focus-visible:ring-destructive/30'),
+                                    serialLookupStatus === 'previously_shipped' && 'border-amber-500 focus-visible:ring-amber-500/30',
+                                  )}
+                                />
+                                {serialLookupStatus === 'loading' && (
+                                  <CircleNotch className="absolute right-2.5 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />
+                                )}
+                                {serialLookupStatus === 'found' && (
+                                  <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-candlestick-green text-sm">✓</span>
+                                )}
+                                {serialLookupStatus === 'previously_shipped' && (
+                                  <Warning className="absolute right-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-amber-500" weight="fill" />
+                                )}
+                              </div>
                             </FormControl>
                             <p className="text-[10px] text-muted-foreground">Found on the bottom of your laptop or in Settings → About</p>
-                            {val.length >= 4 && (
+                            {/* Serial lookup status */}
+                            {serialLookupStatus === 'found' && (
+                              <p className="text-[11px] text-candlestick-green flex items-center gap-1 mt-0.5">✓ {serialLookupMessage}</p>
+                            )}
+                            {serialLookupStatus === 'not_found' && (
+                              <p className="text-[11px] text-muted-foreground mt-0.5">ℹ {serialLookupMessage}</p>
+                            )}
+                            {serialLookupStatus === 'previously_shipped' && (
+                              <p className="text-[11px] text-amber-600 flex items-center gap-1 mt-0.5">⚠ {serialLookupMessage}</p>
+                            )}
+                            {serialLookupStatus === 'error' && (
+                              <p className="text-[11px] text-muted-foreground mt-0.5">Could not verify — you can still proceed.</p>
+                            )}
+                            {serialLookupStatus === 'idle' && val.length >= 4 && (
                               <p className={`text-[11px] mt-0.5 ${isValidFormat ? 'text-candlestick-green' : 'text-destructive'}`}>
                                 {isValidFormat ? '✓ Valid format' : '✗ Use 4–30 alphanumeric characters only'}
                               </p>
@@ -2463,11 +2532,21 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                             <FormField control={detailsForm.control} name="senderCity" render={({ field }) => (
                               <FormItem>
                                 <FormLabel>District</FormLabel>
-                                <div className={`h-11 flex items-center px-3 rounded-md border text-sm ${senderLookup.district ? 'border-border bg-muted font-medium' : 'border-border bg-muted text-muted-foreground'}`}>
-                                  {senderLookup.loading
-                                    ? <span className="flex items-center gap-1.5 text-muted-foreground"><CircleNotch className="h-3.5 w-3.5 animate-spin" /> Fetching district...</span>
-                                    : senderLookup.district || (field.value || 'Auto-filled from pincode')}
-                                </div>
+                                {senderLookup.loading ? (
+                                  <div className="h-11 flex items-center px-3 rounded-md border text-sm border-border bg-muted text-muted-foreground">
+                                    <span className="flex items-center gap-1.5"><CircleNotch className="h-3.5 w-3.5 animate-spin" /> Fetching district...</span>
+                                  </div>
+                                ) : senderLookup.district ? (
+                                  <div className="h-11 flex items-center px-3 rounded-md border text-sm border-border bg-muted font-medium">
+                                    {senderLookup.district}
+                                  </div>
+                                ) : (
+                                  <Input
+                                    {...field}
+                                    placeholder="Enter district"
+                                    className="h-11"
+                                  />
+                                )}
                                 <FormMessage />
                               </FormItem>
                             )} />
@@ -2623,11 +2702,21 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                                 <FormField control={detailsForm.control} name="receiverCity" render={({ field }) => (
                                   <FormItem>
                                     <FormLabel>District</FormLabel>
-                                    <div className={`h-11 flex items-center px-3 rounded-md border text-sm ${receiverLookup.district ? 'border-border bg-muted font-medium' : 'border-border bg-muted text-muted-foreground'}`}>
-                                      {receiverLookup.loading
-                                        ? <span className="flex items-center gap-1.5 text-muted-foreground"><CircleNotch className="h-3.5 w-3.5 animate-spin" /> Fetching...</span>
-                                        : receiverLookup.district || (field.value || 'Auto-filled from pincode')}
-                                    </div>
+                                    {receiverLookup.loading ? (
+                                      <div className="h-11 flex items-center px-3 rounded-md border text-sm border-border bg-muted text-muted-foreground">
+                                        <span className="flex items-center gap-1.5"><CircleNotch className="h-3.5 w-3.5 animate-spin" /> Fetching...</span>
+                                      </div>
+                                    ) : receiverLookup.district ? (
+                                      <div className="h-11 flex items-center px-3 rounded-md border text-sm border-border bg-muted font-medium">
+                                        {receiverLookup.district}
+                                      </div>
+                                    ) : (
+                                      <Input
+                                        {...field}
+                                        placeholder="Enter district"
+                                        className="h-11"
+                                      />
+                                    )}
                                     <FormMessage />
                                   </FormItem>
                                 )} />
