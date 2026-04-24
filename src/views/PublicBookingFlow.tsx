@@ -378,6 +378,8 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
   const [intlDimUnit, setIntlDimUnit] = useState<'cm' | 'in'>('cm');
   // ── Gift weight unit toggle (kg default, grams option) ──
   const [giftWeightUnit, setGiftWeightUnit] = useState<'g' | 'kg'>('kg');
+  // ── Illegal items declaration (step 3 header) ──
+  const [noIllegalItemsDeclared, setNoIllegalItemsDeclared] = useState(false);
   // ── Laptop declaration modal ──
   const [showLaptopDeclarationModal, setShowLaptopDeclarationModal] = useState(false);
   // ── Weight & dimensions declaration modal (domestic) ──
@@ -1016,6 +1018,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
     setPassportAddress(null);
     setPassportUploadLater(false);
     setPickupPhone('');
+    setNoIllegalItemsDeclared(false);
     setPickupPhoneManuallyEdited(false);
     setEmailOtpState('idle');
     setEmailOtpCode(['', '', '', '', '', '']);
@@ -2068,8 +2071,74 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
         {/* ═══════════════ STEP 3: Sender & Receiver Details (4-Step Slider) ═══════════════ */}
         {step === 3 && (
           <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-5">
-            {/* Selected courier summary */}
-            {selectedCourier && (
+            {/* Selected courier + shipment summary (domestic only) */}
+            {selectedCourier && !isInternational && (() => {
+              const dom = rateFormData as DomesticRateValues;
+              const weightKg = dom?.weightKg ?? 0;
+              const l = dom?.lengthCm ?? 0;
+              const w = dom?.widthCm ?? 0;
+              const h = dom?.heightCm ?? 0;
+              const volWeight = l && w && h ? Number(((l * w * h) / 5000).toFixed(2)) : 0;
+              const chargeableWeight = Math.max(weightKg, volWeight);
+              const shipTypeLabel = dom?.shipmentType === 'gift' ? 'Gift / Parcel' : dom?.shipmentType === 'laptop' ? 'Laptop' : 'Document';
+              return (
+                <div className="rounded-xl border border-border bg-muted/30 overflow-hidden">
+                  {/* Courier + price row */}
+                  <div className="flex items-center justify-between px-4 py-3 border-b border-border/60">
+                    <div>
+                      <p className="text-xs text-muted-foreground">Selected Courier</p>
+                      <p className="font-semibold text-sm">{(selectedCourier as any).courier_name}</p>
+                    </div>
+                    <p className="text-xl font-bold">₹{((selectedCourier as any).customer_price)?.toLocaleString('en-IN')}</p>
+                  </div>
+                  {/* Shipment details grid */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-px bg-border/40">
+                    <div className="bg-card px-3 py-2.5">
+                      <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Type</p>
+                      <p className="text-xs font-semibold mt-0.5">{shipTypeLabel}</p>
+                    </div>
+                    <div className="bg-card px-3 py-2.5">
+                      <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Actual Weight</p>
+                      <p className="text-xs font-semibold mt-0.5">{weightKg} kg</p>
+                    </div>
+                    {l && w && h ? (
+                      <>
+                        <div className="bg-card px-3 py-2.5">
+                          <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Dimensions</p>
+                          <p className="text-xs font-semibold mt-0.5">{l}×{w}×{h} cm</p>
+                        </div>
+                        <div className="bg-card px-3 py-2.5">
+                          <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Vol. / Chargeable</p>
+                          <p className="text-xs font-semibold mt-0.5">
+                            {volWeight} kg / <span className={chargeableWeight > weightKg ? 'text-amber-600' : ''}>{chargeableWeight} kg</span>
+                          </p>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="bg-card px-3 py-2.5 col-span-2">
+                        <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Chargeable Weight</p>
+                        <p className="text-xs font-semibold mt-0.5">{chargeableWeight} kg</p>
+                      </div>
+                    )}
+                  </div>
+                  {/* Illegal items declaration */}
+                  <div
+                    className={`flex items-start gap-3 px-4 py-3 cursor-pointer transition-colors ${noIllegalItemsDeclared ? 'bg-green-500/5' : 'bg-card hover:bg-muted/20'}`}
+                    onClick={() => setNoIllegalItemsDeclared(v => !v)}
+                  >
+                    <div className={`mt-0.5 w-4 h-4 rounded border-2 flex items-center justify-center shrink-0 transition-colors ${noIllegalItemsDeclared ? 'bg-candlestick-green border-candlestick-green' : 'border-muted-foreground'}`}>
+                      {noIllegalItemsDeclared && <Check className="h-2.5 w-2.5 text-white" weight="bold" />}
+                    </div>
+                    <p className="text-xs text-muted-foreground leading-relaxed">
+                      I declare that this shipment does <span className="font-semibold text-foreground">not contain any illegal, prohibited, or restricted items</span> as per Indian law, including narcotics, weapons, counterfeit goods, or items banned by the Government of India.
+                    </p>
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* International: simple courier summary */}
+            {selectedCourier && isInternational && (
               <div className="bg-muted/50 rounded-xl border border-border p-4 flex items-center justify-between">
                 <div>
                   <p className="text-sm text-muted-foreground">Selected Courier</p>
