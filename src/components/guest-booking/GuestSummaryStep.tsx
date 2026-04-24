@@ -20,6 +20,7 @@ import { useToast } from '@/hooks/use-toast';
 import { loadCashfreeScript } from '@/lib/wallet/cashfreeLoader';
 import { calculateRate } from '@/lib/shipping/rateCalculator';
 import { getCountryByCode } from '@/lib/shipping/countries';
+import { getCourierLogo } from '@/lib/shipping/courierLogos';
 import { motion, AnimatePresence } from 'framer-motion';
 import { feedbackPresets } from '@/lib/haptics';
 import RouteMap from '@/components/guest-booking/RouteMap';
@@ -1000,17 +1001,31 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
         <div className="p-4 sm:p-5 space-y-4">
           {/* Courier + Price */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-            <div className="min-w-0">
-              <p className="font-semibold text-base sm:text-lg truncate">{courierName}</p>
-              <p className="text-xs sm:text-sm text-muted-foreground capitalize">
-                {mode} · {shipmentType}
-                {destinationCountryInfo && (
-                  <span> · {destinationCountryInfo.flag} {destinationCountryInfo.name}</span>
-                )}
-              </p>
+            <div className="flex items-center gap-3 min-w-0">
+              {(() => {
+                const logo = getCourierLogo(courierName);
+                return (
+                  <div className="w-11 h-11 rounded-xl bg-white border border-border/60 flex items-center justify-center shrink-0 overflow-hidden p-1">
+                    {logo ? (
+                      <img src={logo} alt={courierName} className="w-full h-full object-contain" />
+                    ) : (
+                      <Package className="h-5 w-5 text-muted-foreground" weight="duotone" />
+                    )}
+                  </div>
+                );
+              })()}
+              <div className="min-w-0">
+                <p className="font-semibold text-base sm:text-lg truncate">{courierName}</p>
+                <p className="text-xs sm:text-sm text-muted-foreground capitalize">
+                  {mode} · {shipmentType}
+                  {destinationCountryInfo && (
+                    <span> · {destinationCountryInfo.flag} {destinationCountryInfo.name}</span>
+                  )}
+                </p>
+              </div>
             </div>
             <div className="sm:text-right shrink-0">
-              <p className="text-xl sm:text-2xl font-bold">?{effectiveBasePrice.toLocaleString('en-IN')}</p>
+              <p className="text-xl sm:text-2xl font-bold text-emerald-600">₹{effectiveBasePrice.toLocaleString('en-IN')}</p>
               <p className="text-xs text-muted-foreground">all-inclusive</p>
             </div>
           </div>
@@ -1193,7 +1208,7 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
             <CheckCircle className="h-5 w-5 text-candlestick-green" weight="fill" />
             <div className="flex-1">
               <p className="text-sm font-medium text-candlestick-green">{couponCode.toUpperCase()} Applied</p>
-              <p className="text-xs text-muted-foreground">You saved ?{couponDiscount.toLocaleString('en-IN')}</p>
+              <p className="text-xs text-muted-foreground">You saved ₹{couponDiscount.toLocaleString('en-IN')}</p>
             </div>
             <button
               onClick={() => {
@@ -1279,25 +1294,25 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
           rateBreakdown.breakdown.map(item => (
             <div key={item.label} className="flex justify-between text-sm">
               <span className="text-muted-foreground">{item.label}</span>
-              <span>?{item.amount.toLocaleString('en-IN')}</span>
+              <span>₹{item.amount.toLocaleString('en-IN')}</span>
             </div>
           ))
         ) : (
           <div className="flex justify-between text-sm">
             <span className="text-muted-foreground">Shipping ({courierName})</span>
-            <span>?{basePrice.toLocaleString('en-IN')}</span>
+            <span>₹{basePrice.toLocaleString('en-IN')}</span>
           </div>
         )}
         {couponDiscount > 0 && (
           <div className="flex justify-between text-sm text-candlestick-green">
             <span>Coupon Discount</span>
-            <span>-?{couponDiscount.toLocaleString('en-IN')}</span>
+            <span>-₹{couponDiscount.toLocaleString('en-IN')}</span>
           </div>
         )}
         <div className="h-px bg-border my-1" />
         <div className="flex justify-between font-bold text-lg">
           <span>Total</span>
-          <span>?{finalPrice.toLocaleString('en-IN')}</span>
+          <span className="text-emerald-600">₹{finalPrice.toLocaleString('en-IN')}</span>
         </div>
       </div>
 
@@ -1326,7 +1341,7 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
         ) : (
           <>
             <ShieldCheck className="h-5 w-5 shrink-0" weight="bold" />
-            <span className="truncate">Complete Booking � ?{finalPrice.toLocaleString('en-IN')}</span>
+            <span className="truncate">Complete Booking · ₹{finalPrice.toLocaleString('en-IN')}</span>
           </>
         )}
       </Button>
@@ -1500,7 +1515,7 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
                         </div>
                       </div>
                       {item.name && item.unitPrice > 0 && (
-                        <p className="text-[11px] text-muted-foreground text-right">Item total: ?{(item.qty * item.unitPrice).toLocaleString('en-IN')}</p>
+                        <p className="text-[11px] text-muted-foreground text-right">Item total: ₹{(item.qty * item.unitPrice).toLocaleString('en-IN')}</p>
                       )}
                     </div>
                   ))}
@@ -1511,7 +1526,7 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
                   {editedItems.length > 0 && (
                     <div className="flex justify-between text-sm font-semibold border-t border-border pt-2">
                       <span>Total Declared Value</span>
-                      <span>?{editedItems.reduce((s, i) => s + i.qty * i.unitPrice, 0).toLocaleString('en-IN')}</span>
+                      <span>₹{editedItems.reduce((s, i) => s + i.qty * i.unitPrice, 0).toLocaleString('en-IN')}</span>
                     </div>
                   )}
                 </div>

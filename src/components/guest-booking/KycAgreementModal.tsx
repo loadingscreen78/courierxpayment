@@ -758,7 +758,7 @@ export default function KycAgreementModal(props: KycAgreementModalProps) {
                     <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Shipment Details</p>
                     <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs">
                       <div><span className="text-muted-foreground">Courier</span><p className="font-medium mt-0.5">{selectedCourier?.carrier || selectedCourier?.courier_name || '—'}</p></div>
-                      <div><span className="text-muted-foreground">Amount</span><p className="font-semibold mt-0.5 text-blue-700 dark:text-blue-400">₹{finalPrice.toLocaleString('en-IN')}</p></div>
+                      <div><span className="text-muted-foreground">Amount</span><p className="font-semibold mt-0.5 text-emerald-600 dark:text-emerald-400">₹{finalPrice.toLocaleString('en-IN')}</p></div>
                       <div><span className="text-muted-foreground">Recipient</span><p className="font-medium mt-0.5">{senderReceiver?.receiverName}</p></div>
                       <div><span className="text-muted-foreground">Destination</span><p className="font-medium mt-0.5">{senderReceiver?.receiverCity} - {senderReceiver?.receiverZipcode}</p></div>
                     </div>

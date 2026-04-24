@@ -8,6 +8,7 @@ import {
   House, Lock, FileText, Gift, MagnifyingGlass, CaretDown, MapPinLine,
   AirplaneTilt, CircleNotch, Lightning, Star,
 } from '@phosphor-icons/react';
+import { getCourierLogo } from '@/lib/shipping/courierLogos';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -293,6 +294,7 @@ const DomCourierCard = ({ courier, isSelected, onSelect, index, onBook }: {
   const daysText = courier.estimated_delivery_days > 0
     ? `${courier.estimated_delivery_days} business day${courier.estimated_delivery_days !== 1 ? 's' : ''}`
     : (isAir ? '1–3 business days' : '4–7 business days');
+  const logo = getCourierLogo(courier.courier_name);
 
   return (
     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
@@ -300,7 +302,7 @@ const DomCourierCard = ({ courier, isSelected, onSelect, index, onBook }: {
       whileHover={{ y: -4 }}
       onClick={onSelect}
       className={cn(
-        "relative rounded-2xl border-2 p-4 sm:p-5 transition-all duration-200 flex flex-col h-full cursor-pointer",
+        "relative rounded-2xl border-2 p-4 sm:p-5 transition-all duration-200 flex flex-col cursor-pointer",
         isSelected
           ? "border-coke-red bg-coke-red/5 shadow-lg shadow-coke-red/10"
           : "border-border bg-card hover:border-coke-red/30 hover:shadow-md"
@@ -314,45 +316,53 @@ const DomCourierCard = ({ courier, isSelected, onSelect, index, onBook }: {
       )}
       {isSelected && (
         <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }}
-          className="absolute top-3 left-3 w-5 h-5 rounded-full bg-coke-red flex items-center justify-center">
+          className="absolute top-3 right-3 w-5 h-5 rounded-full bg-coke-red flex items-center justify-center">
           <Check size={12} weight="bold" className="text-white" />
         </motion.div>
       )}
-      <div className="text-center space-y-3 flex-1 flex flex-col">
-        <div className={cn("w-10 h-10 mx-auto rounded-xl flex items-center justify-center",
-          isSelected ? "bg-coke-red text-white" : "bg-muted")}>
-          <ModeIcon size={20} weight="bold" />
+
+      {/* Logo + name row */}
+      <div className="flex items-center gap-3 mb-3">
+        <div className="w-11 h-11 rounded-xl bg-white border border-border/60 flex items-center justify-center shrink-0 overflow-hidden p-1">
+          {logo ? (
+            <img src={logo} alt={courier.courier_name} className="w-full h-full object-contain" />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center bg-muted rounded-lg">
+              <ModeIcon size={20} weight="bold" className="text-muted-foreground" />
+            </div>
+          )}
         </div>
-        <div>
-          <h3 className="font-bold text-sm font-typewriter leading-tight">{courier.courier_name}</h3>
+        <div className="min-w-0">
+          <h3 className="font-bold text-sm font-typewriter leading-tight truncate">{courier.courier_name}</h3>
           <p className="text-[10px] text-muted-foreground mt-0.5 capitalize">{courier.mode}</p>
         </div>
-        <div className="py-2 border-y border-border/50">
-          <p className={cn("text-2xl font-bold", isSelected ? "text-coke-red" : "text-foreground")}>
-            ₹{courier.customer_price.toLocaleString('en-IN')}
-          </p>
-          <p className="text-[10px] text-muted-foreground">incl. all taxes</p>
-        </div>
-        <div className="space-y-1">
-          <div className="flex items-center justify-center gap-1.5 text-xs text-muted-foreground">
-            <Clock size={12} weight="bold" />
-            <span>By {arrivalDate}</span>
-          </div>
-          <p className="text-[10px] text-muted-foreground">{daysText}</p>
-        </div>
-        {courier.rating > 0 && (
-          <div className="flex items-center justify-center gap-1 text-xs text-muted-foreground">
-            <Star size={10} weight="fill" className="text-amber-400" />
-            <span>{courier.rating.toFixed(1)}</span>
-          </div>
-        )}
-        <div className="flex-1" />
-        <Button size="sm" onClick={e => { e.stopPropagation(); onBook(); }}
-          className={cn("w-full min-h-[40px] text-xs transition-all",
-            isSelected ? "bg-coke-red hover:bg-coke-red/90 text-white" : "bg-charcoal hover:bg-charcoal/90 text-white")}>
-          Book Now <CaretRight size={14} weight="bold" className="ml-1" />
-        </Button>
       </div>
+
+      <div className="py-2 border-y border-border/50 mb-3">
+        <p className="text-2xl font-bold text-emerald-600">
+          ₹{courier.customer_price.toLocaleString('en-IN')}
+        </p>
+        <p className="text-[10px] text-muted-foreground">incl. all taxes</p>
+      </div>
+      <div className="space-y-1 mb-3">
+        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+          <Clock size={12} weight="bold" />
+          <span>By {arrivalDate}</span>
+        </div>
+        <p className="text-[10px] text-muted-foreground">{daysText}</p>
+      </div>
+      {courier.rating > 0 && (
+        <div className="flex items-center gap-1 text-xs text-muted-foreground mb-2">
+          <Star size={10} weight="fill" className="text-amber-400" />
+          <span>{courier.rating.toFixed(1)}</span>
+        </div>
+      )}
+      <div className="flex-1" />
+      <Button size="sm" onClick={e => { e.stopPropagation(); onBook(); }}
+        className={cn("w-full min-h-[40px] text-xs transition-all",
+          isSelected ? "bg-coke-red hover:bg-coke-red/90 text-white" : "bg-charcoal hover:bg-charcoal/90 text-white")}>
+        Book Now <CaretRight size={14} weight="bold" className="ml-1" />
+      </Button>
     </motion.div>
   );
 };
@@ -363,6 +373,7 @@ const CarrierCard = ({ option, isSelected, onSelect, index }: {
 }) => {
   const info = getCarrierInfo(option.carrier);
   const isComingSoon = COMING_SOON_CARRIERS.includes(option.carrier);
+  const logo = getCourierLogo(option.carrier);
   return (
     <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4, delay: index * 0.1 }} whileHover={isComingSoon ? {} : { y: -6 }}
@@ -385,46 +396,54 @@ const CarrierCard = ({ option, isSelected, onSelect, index }: {
       )}
       {isSelected && !isComingSoon && (
         <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }}
-          className="absolute top-4 left-4 w-6 h-6 rounded-full bg-coke-red flex items-center justify-center">
+          className="absolute top-4 right-4 w-6 h-6 rounded-full bg-coke-red flex items-center justify-center">
           <Check size={14} weight="bold" className="text-white" />
         </motion.div>
       )}
-      <div className="text-center space-y-4">
-        <div className={cn("w-14 h-14 mx-auto rounded-2xl flex items-center justify-center",
-          isSelected ? "bg-coke-red text-white" : "bg-muted")}>
-          <Truck size={28} weight="bold" />
+
+      {/* Logo + name row */}
+      <div className="flex items-center gap-3 mb-4">
+        <div className="w-14 h-14 rounded-2xl bg-white border border-border/60 flex items-center justify-center shrink-0 overflow-hidden p-1.5">
+          {logo ? (
+            <img src={logo} alt={info.name} className="w-full h-full object-contain" />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center bg-muted rounded-xl">
+              <Truck size={28} weight="bold" className="text-muted-foreground" />
+            </div>
+          )}
         </div>
         <div>
           <h3 className="font-bold text-base font-typewriter">{info.name}</h3>
           <p className="text-xs text-muted-foreground">{info.fullName}</p>
         </div>
-        <div className="py-3 border-y border-border/50">
-          <p className={cn('text-3xl font-bold', isComingSoon ? 'text-muted-foreground' : 'text-coke-red')}>₹{option.price.toLocaleString()}</p>
-          <p className="text-xs text-muted-foreground mt-1">incl. all taxes</p>
-        </div>
-        <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
-          <Clock size={14} weight="bold" /><span>{option.transitDays.min}–{option.transitDays.max} days</span>
-        </div>
-        {(() => {
-          const facts = getCourierFacts(option.carrier);
-          if (!facts) return null;
-          return (
-            <div className="space-y-1.5 text-left">
-              <div className="flex items-center gap-2 text-xs"><Globe size={11} weight="bold" className="text-coke-red shrink-0" /><span>{facts.countriesOrPincodes}</span></div>
-              <div className="flex items-center gap-2 text-xs"><Check size={11} weight="bold" className="text-candlestick-green shrink-0" /><span>Real-time tracking</span></div>
-              <div className="flex items-center gap-2 text-xs"><Check size={11} weight="bold" className="text-candlestick-green shrink-0" /><span>{facts.speciality.split(',')[0]}</span></div>
-            </div>
-          );
-        })()}
-        {isComingSoon ? (
-          <Button variant="outline" className="w-full opacity-50" disabled><Lock size={14} weight="bold" className="mr-1" /> Coming Soon</Button>
+      </div>
+
+      <div className="py-3 border-y border-border/50 mb-4">
+        <p className={cn('text-3xl font-bold', isComingSoon ? 'text-muted-foreground' : 'text-emerald-600')}>₹{option.price.toLocaleString()}</p>
+        <p className="text-xs text-muted-foreground mt-1">incl. all taxes</p>
+      </div>
+      <div className="flex items-center gap-2 text-sm text-muted-foreground mb-4">
+        <Clock size={14} weight="bold" /><span>{option.transitDays.min}–{option.transitDays.max} days</span>
+      </div>
+      {(() => {
+        const facts = getCourierFacts(option.carrier);
+        if (!facts) return null;
+        return (
+          <div className="space-y-1.5 text-left">
+            <div className="flex items-center gap-2 text-xs"><Globe size={11} weight="bold" className="text-coke-red shrink-0" /><span>{facts.countriesOrPincodes}</span></div>
+            <div className="flex items-center gap-2 text-xs"><Check size={11} weight="bold" className="text-candlestick-green shrink-0" /><span>Real-time tracking</span></div>
+            <div className="flex items-center gap-2 text-xs"><Check size={11} weight="bold" className="text-candlestick-green shrink-0" /><span>{facts.speciality.split(',')[0]}</span></div>
+          </div>
+        );
+      })()}
+      {isComingSoon ? (
+        <Button variant="outline" className="w-full opacity-50 mt-4" disabled><Lock size={14} weight="bold" className="mr-1" /> Coming Soon</Button>
         ) : (
           <Button variant={isSelected ? "default" : "outline"}
-            className={cn("w-full transition-all", isSelected && "bg-coke-red hover:bg-coke-red/90 text-white")}>
+            className={cn("w-full mt-4 transition-all", isSelected && "bg-coke-red hover:bg-coke-red/90 text-white")}>
             {isSelected ? <><Check size={14} weight="bold" className="mr-1" /> Selected</> : <>Select <CaretRight size={14} weight="bold" className="ml-1" /></>}
           </Button>
         )}
-      </div>
     </motion.div>
   );
 };

@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import {
   Truck, AirplaneTilt, Clock, Star, Check, CaretRight, Package,
 } from '@phosphor-icons/react';
+import { getCourierLogo } from '@/lib/shipping/courierLogos';
 
 export interface DomesticCourierData {
   courier_company_id: number;
@@ -36,16 +37,29 @@ export function DomesticCourierCard({
 }: DomesticCourierCardProps) {
   const isAir = courier.mode === 'air';
   const ModeIcon = isAir ? AirplaneTilt : Truck;
+  const logo = getCourierLogo(courier.courier_name);
+
+  const deliveryText = (() => {
+    const days = courier.estimated_delivery_days;
+    if (!days || days <= 0) return `${isAir ? '1–3' : '4–7'} days`;
+    const d = new Date();
+    let added = 0;
+    while (added < days) {
+      d.setDate(d.getDate() + 1);
+      if (d.getDay() !== 0 && d.getDay() !== 6) added++;
+    }
+    return `By ${d.toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' })}`;
+  })();
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 30 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4, delay: index * 0.08 }}
-      whileHover={{ y: -6, scale: 1.02 }}
+      whileHover={{ y: -4, scale: 1.01 }}
       onClick={onSelect}
       className={cn(
-        "relative rounded-2xl border-2 p-4 sm:p-5 transition-all duration-300 flex flex-col h-full cursor-pointer",
+        "relative rounded-2xl border-2 p-4 transition-all duration-300 flex flex-col cursor-pointer",
         isSelected
           ? "border-coke-red bg-coke-red/5 shadow-xl shadow-coke-red/10"
           : "border-border bg-card hover:border-coke-red/30 hover:shadow-lg"
@@ -64,94 +78,82 @@ export function DomesticCourierCard({
       <AnimatePresence>
         {isSelected && (
           <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ scale: 0 }}
-            className="absolute top-4 left-4 w-6 h-6 rounded-full bg-coke-red flex items-center justify-center">
-            <Check size={16} weight="bold" className="text-white" />
+            className="absolute top-3 right-3 w-5 h-5 rounded-full bg-coke-red flex items-center justify-center">
+            <Check size={12} weight="bold" className="text-white" />
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* Centered content */}
-      <div className="text-center space-y-3 flex-1 flex flex-col">
-        {/* Icon */}
-        <div className={cn(
-          "w-12 h-12 mx-auto rounded-xl flex items-center justify-center",
-          isSelected ? "bg-coke-red text-white" : "bg-muted"
-        )}>
-          <ModeIcon size={24} weight="bold" />
-        </div>
-
-        {/* Name & mode */}
-        <div>
-          <h3 className="font-bold text-sm sm:text-base font-typewriter leading-tight">{courier.courier_name}</h3>
-          <p className="text-[11px] text-muted-foreground mt-0.5 capitalize">{courier.mode} delivery</p>
-        </div>
-
-        {/* Price */}
-        <div className="py-2.5 border-y border-border/50">
-          <p className={cn("text-2xl sm:text-3xl font-bold", isSelected ? "text-coke-red" : "text-foreground")}>
-            ₹{courier.customer_price.toLocaleString('en-IN')}
-          </p>
-          <p className="text-[11px] text-muted-foreground mt-0.5">incl. all taxes</p>
-        </div>
-
-        {/* Delivery date — computed from actual estimated_delivery_days returned by courier API */}
-        <div className="flex items-center justify-center gap-1.5 text-sm">
-          <Clock size={14} weight="bold" className="text-muted-foreground" />
-          <span>
-            {(() => {
-              const days = courier.estimated_delivery_days;
-              if (!days || days <= 0) return `${courier.mode === 'air' ? '1–3' : '4–7'} days`;
-              const d = new Date();
-              // Add business days (skip weekends)
-              let added = 0;
-              while (added < days) {
-                d.setDate(d.getDate() + 1);
-                if (d.getDay() !== 0 && d.getDay() !== 6) added++;
-              }
-              return `By ${d.toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' })}`;
-            })()}
-          </span>
-        </div>
-        {/* Show raw days for clarity */}
-        <p className="text-[10px] text-muted-foreground text-center -mt-1">
-          {courier.estimated_delivery_days > 0 ? `${courier.estimated_delivery_days} business day${courier.estimated_delivery_days === 1 ? '' : 's'}` : ''}
-        </p>
-
-        {/* Rating */}
-        <div className="space-y-1.5 pt-1 text-left">
-          {courier.rating > 0 && (
-            <div className="flex items-center gap-2 text-xs text-foreground">
-              <Star size={12} weight="fill" className="text-amber-400 shrink-0" />
-              <span>{courier.rating.toFixed(1)} customer rating</span>
+      {/* Top row: logo + name + mode */}
+      <div className="flex items-center gap-3 mb-3">
+        <div className="w-12 h-12 rounded-xl bg-white border border-border/60 flex items-center justify-center shrink-0 overflow-hidden p-1">
+          {logo ? (
+            <img src={logo} alt={courier.courier_name} className="w-full h-full object-contain" />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center bg-muted rounded-lg">
+              <ModeIcon size={22} weight="bold" className="text-muted-foreground" />
             </div>
           )}
         </div>
-
-        {/* Spacer */}
-        <div className="flex-1" />
-
-        {/* Action button */}
-        {showBookButton ? (
-          <Button
-            size="sm"
-            className={cn("w-full mt-2 min-h-[44px] text-sm transition-all bg-coke-red hover:bg-coke-red/90 text-white")}
-            onClick={(e) => { e.stopPropagation(); onBook?.(); }}
-          >
-            Book Now <CaretRight size={16} weight="bold" className="ml-1" />
-          </Button>
-        ) : (
-          <Button
-            variant={isSelected ? "default" : "outline"}
-            size="sm"
-            className={cn("w-full mt-2 min-h-[44px] text-sm transition-all", isSelected && "bg-coke-red hover:bg-coke-red/90")}
-          >
-            {isSelected
-              ? <><Check size={16} weight="bold" className="mr-1" /> Selected</>
-              : <>Select <CaretRight size={16} weight="bold" className="ml-1" /></>
-            }
-          </Button>
-        )}
+        <div className="min-w-0 flex-1">
+          <h3 className="font-bold text-sm font-typewriter leading-tight truncate">{courier.courier_name}</h3>
+          <div className="flex items-center gap-1.5 mt-0.5">
+            <ModeIcon size={11} weight="bold" className="text-muted-foreground shrink-0" />
+            <p className="text-[11px] text-muted-foreground capitalize">{courier.mode} delivery</p>
+          </div>
+        </div>
       </div>
+
+      {/* Price */}
+      <div className="py-2.5 border-y border-border/50 mb-3">
+        <p className={cn("text-2xl sm:text-3xl font-bold", isSelected ? "text-emerald-600" : "text-emerald-600")}>
+          ₹{courier.customer_price.toLocaleString('en-IN')}
+        </p>
+        <p className="text-[11px] text-muted-foreground mt-0.5">incl. all taxes</p>
+      </div>
+
+      {/* Delivery info */}
+      <div className="flex items-center gap-1.5 text-sm mb-1">
+        <Clock size={13} weight="bold" className="text-muted-foreground shrink-0" />
+        <span className="text-sm font-medium">{deliveryText}</span>
+      </div>
+      {courier.estimated_delivery_days > 0 && (
+        <p className="text-[10px] text-muted-foreground mb-2">
+          {courier.estimated_delivery_days} business day{courier.estimated_delivery_days === 1 ? '' : 's'}
+        </p>
+      )}
+
+      {/* Rating */}
+      {courier.rating > 0 && (
+        <div className="flex items-center gap-1.5 text-xs text-foreground mb-2">
+          <Star size={11} weight="fill" className="text-amber-400 shrink-0" />
+          <span>{courier.rating.toFixed(1)} rating</span>
+        </div>
+      )}
+
+      <div className="flex-1" />
+
+      {/* Action button */}
+      {showBookButton ? (
+        <Button
+          size="sm"
+          className="w-full mt-2 min-h-[44px] text-sm bg-coke-red hover:bg-coke-red/90 text-white"
+          onClick={(e) => { e.stopPropagation(); onBook?.(); }}
+        >
+          Book Now <CaretRight size={16} weight="bold" className="ml-1" />
+        </Button>
+      ) : (
+        <Button
+          variant={isSelected ? "default" : "outline"}
+          size="sm"
+          className={cn("w-full mt-2 min-h-[44px] text-sm transition-all", isSelected && "bg-coke-red hover:bg-coke-red/90")}
+        >
+          {isSelected
+            ? <><Check size={16} weight="bold" className="mr-1" /> Selected</>
+            : <>Select <CaretRight size={16} weight="bold" className="ml-1" /></>
+          }
+        </Button>
+      )}
     </motion.div>
   );
 }

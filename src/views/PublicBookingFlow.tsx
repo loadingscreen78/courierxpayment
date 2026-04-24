@@ -26,6 +26,7 @@ import { usePincodeLookup } from '@/hooks/usePincodeLookup';
 import { DomesticCourierGrid } from '@/components/domestic/DomesticCourierGrid';
 import { DimensionAssistant } from '@/components/domestic/DimensionAssistant';
 import { PincodeFinder } from '@/components/domestic/PincodeFinder';
+import { getCourierLogo } from '@/lib/shipping/courierLogos';
 
 import { INDIAN_STATES } from '@/lib/pincode-lookup';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -1851,35 +1852,50 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                       <div key={option.carrier} className={`bg-card rounded-xl border border-border overflow-hidden transition-colors ${isComingSoon ? 'opacity-60' : 'hover:border-coke-red/30'}`}>
                         <div className="p-3 sm:p-4">
                           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                            <div className="min-w-0">
-                              <div className="flex items-center gap-2 flex-wrap">
-                                <h3 className="font-semibold text-sm sm:text-base truncate">{option.carrier}</h3>
-                                <span className="text-[10px] sm:text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground shrink-0">{option.serviceName}</span>
-                                {option.isRecommended && !isComingSoon && (
-                                  <span className="text-[10px] sm:text-xs px-2 py-0.5 rounded-full bg-candlestick-green/10 text-candlestick-green font-medium shrink-0">Best Value</span>
-                                )}
-                                {isComingSoon && (
-                                  <span className="text-[10px] sm:text-xs px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950/40 text-amber-600 font-medium shrink-0">Available Soon</span>
-                                )}
-                              </div>
-                              <p className="text-xs sm:text-sm text-muted-foreground mt-1">
-                                {(() => {
-                                  const min = option.transitDays.min;
-                                  const max = option.transitDays.max;
-                                  const d = new Date();
-                                  d.setDate(d.getDate() + max);
-                                  const dateStr = d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
-                                  return `${min}–${max} days · Est. by ${dateStr}`;
-                                })()}
-                              </p>
-                              <div className="flex flex-wrap gap-1 sm:gap-1.5 mt-2">
-                                {option.features.slice(0, 3).map(f => (
-                                  <span key={f} className="text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 rounded bg-muted/50 text-muted-foreground">{f}</span>
-                                ))}
+                            <div className="min-w-0 flex items-center gap-3">
+                              {/* Carrier logo */}
+                              {(() => {
+                                const logo = getCourierLogo(option.carrier);
+                                return (
+                                  <div className="w-12 h-12 rounded-xl bg-white border border-border/60 flex items-center justify-center shrink-0 overflow-hidden p-1">
+                                    {logo ? (
+                                      <img src={logo} alt={option.carrier} className="w-full h-full object-contain" />
+                                    ) : (
+                                      <Truck className="h-6 w-6 text-muted-foreground" weight="bold" />
+                                    )}
+                                  </div>
+                                );
+                              })()}
+                              <div className="min-w-0">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <h3 className="font-semibold text-sm sm:text-base truncate">{option.carrier}</h3>
+                                  <span className="text-[10px] sm:text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground shrink-0">{option.serviceName}</span>
+                                  {option.isRecommended && !isComingSoon && (
+                                    <span className="text-[10px] sm:text-xs px-2 py-0.5 rounded-full bg-candlestick-green/10 text-candlestick-green font-medium shrink-0">Best Value</span>
+                                  )}
+                                  {isComingSoon && (
+                                    <span className="text-[10px] sm:text-xs px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950/40 text-amber-600 font-medium shrink-0">Available Soon</span>
+                                  )}
+                                </div>
+                                <p className="text-xs sm:text-sm text-muted-foreground mt-1">
+                                  {(() => {
+                                    const min = option.transitDays.min;
+                                    const max = option.transitDays.max;
+                                    const d = new Date();
+                                    d.setDate(d.getDate() + max);
+                                    const dateStr = d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+                                    return `${min}–${max} days · Est. by ${dateStr}`;
+                                  })()}
+                                </p>
+                                <div className="flex flex-wrap gap-1 sm:gap-1.5 mt-2">
+                                  {option.features.slice(0, 3).map(f => (
+                                    <span key={f} className="text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 rounded bg-muted/50 text-muted-foreground">{f}</span>
+                                  ))}
+                                </div>
                               </div>
                             </div>
                             <div className="flex items-center justify-between sm:block sm:text-right shrink-0">
-                              <p className="text-xl sm:text-2xl font-bold">₹{option.price.toLocaleString('en-IN')}</p>
+                              <p className="text-xl sm:text-2xl font-bold text-emerald-600">₹{option.price.toLocaleString('en-IN')}</p>
                               {savings > 0 && !isComingSoon && (
                                 <p className="text-[10px] sm:text-xs text-candlestick-green mt-0.5">
                                   With account: <span className="font-semibold">₹{accountPrice.toLocaleString('en-IN')}</span>
@@ -2178,11 +2194,25 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                 <div className="rounded-xl border border-border bg-muted/30 overflow-hidden">
                   {/* Courier + price row */}
                   <div className="flex items-center justify-between px-4 py-3 border-b border-border/60">
-                    <div>
-                      <p className="text-xs text-muted-foreground">Selected Courier</p>
-                      <p className="font-semibold text-sm">{(selectedCourier as any).courier_name}</p>
+                    <div className="flex items-center gap-3">
+                      {(() => {
+                        const logo = getCourierLogo((selectedCourier as any).courier_name);
+                        return (
+                          <div className="w-10 h-10 rounded-lg bg-white border border-border/60 flex items-center justify-center shrink-0 overflow-hidden p-1">
+                            {logo ? (
+                              <img src={logo} alt={(selectedCourier as any).courier_name} className="w-full h-full object-contain" />
+                            ) : (
+                              <Truck className="h-5 w-5 text-muted-foreground" weight="bold" />
+                            )}
+                          </div>
+                        );
+                      })()}
+                      <div>
+                        <p className="text-xs text-muted-foreground">Selected Courier</p>
+                        <p className="font-semibold text-sm">{(selectedCourier as any).courier_name}</p>
+                      </div>
                     </div>
-                    <p className="text-xl font-bold">₹{((selectedCourier as any).customer_price)?.toLocaleString('en-IN')}</p>
+                    <p className="text-xl font-bold text-emerald-600">₹{((selectedCourier as any).customer_price)?.toLocaleString('en-IN')}</p>
                   </div>
                   {/* Shipment details grid */}
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-px bg-border/40">
@@ -2221,11 +2251,25 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
             {/* International: simple courier summary */}
             {selectedCourier && isInternational && (
               <div className="bg-muted/50 rounded-xl border border-border p-4 flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">Selected Courier</p>
-                  <p className="font-semibold">{(selectedCourier as any).carrier || (selectedCourier as any).courier_name}</p>
+                <div className="flex items-center gap-3">
+                  {(() => {
+                    const logo = getCourierLogo((selectedCourier as any).carrier || (selectedCourier as any).courier_name);
+                    return (
+                      <div className="w-10 h-10 rounded-lg bg-white border border-border/60 flex items-center justify-center shrink-0 overflow-hidden p-1">
+                        {logo ? (
+                          <img src={logo} alt={(selectedCourier as any).carrier} className="w-full h-full object-contain" />
+                        ) : (
+                          <Truck className="h-5 w-5 text-muted-foreground" weight="bold" />
+                        )}
+                      </div>
+                    );
+                  })()}
+                  <div>
+                    <p className="text-sm text-muted-foreground">Selected Courier</p>
+                    <p className="font-semibold">{(selectedCourier as any).carrier || (selectedCourier as any).courier_name}</p>
+                  </div>
                 </div>
-                <p className="text-xl font-bold">₹{((selectedCourier as any).price || (selectedCourier as any).customer_price)?.toLocaleString('en-IN')}</p>
+                <p className="text-xl font-bold text-emerald-600">₹{((selectedCourier as any).price || (selectedCourier as any).customer_price)?.toLocaleString('en-IN')}</p>
               </div>
             )}
 
