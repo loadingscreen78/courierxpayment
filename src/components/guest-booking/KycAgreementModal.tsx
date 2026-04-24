@@ -135,6 +135,29 @@ export default function KycAgreementModal(props: KycAgreementModalProps) {
   const [hasScrolledAgreement, setHasScrolledAgreement] = useState(false);
   const agreementScrollRef = useRef<HTMLDivElement>(null);
 
+  // ── OTP UX state ──
+  const [showOtp, setShowOtp] = useState(false);
+  const [resendTimer, setResendTimer] = useState(0);
+  const resendTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const startResendTimer = () => {
+    setResendTimer(120);
+    if (resendTimerRef.current) clearInterval(resendTimerRef.current);
+    resendTimerRef.current = setInterval(() => {
+      setResendTimer(prev => {
+        if (prev <= 1) { clearInterval(resendTimerRef.current!); resendTimerRef.current = null; return 0; }
+        return prev - 1;
+      });
+    }, 1000);
+  };
+
+  useEffect(() => {
+    if (sandboxStep === 'otp_sent') startResendTimer();
+    if (sandboxStep === 'idle') { setResendTimer(0); if (resendTimerRef.current) { clearInterval(resendTimerRef.current); resendTimerRef.current = null; } }
+  }, [sandboxStep]);
+
+  useEffect(() => { return () => { if (resendTimerRef.current) clearInterval(resendTimerRef.current); }; }, []);
+
   // ── KYC Form (Cashfree hosted link) state ──
   const [kycFormPhone, setKycFormPhone] = useState(props.senderReceiver?.senderPhone?.replace(/^\+91/, '').slice(-10) || '');
   const [kycFormDocType, setKycFormDocType] = useState<GuestDocType>('aadhaar');
@@ -235,6 +258,7 @@ export default function KycAgreementModal(props: KycAgreementModalProps) {
     setSandboxStep('idle');
     setDigilockerStep('idle');
     setSandboxOtp('');
+    setShowOtp(false);
     stopKycFormPolling();
     setKycFormError('');
     feedbackPresets.tap();
@@ -437,15 +461,36 @@ export default function KycAgreementModal(props: KycAgreementModalProps) {
                               >
                                 <p className="text-xs text-muted-foreground">Enter the 6-digit OTP sent to your Aadhaar-registered mobile.</p>
                                 <div className="flex gap-2">
-                                  <Input
-                                    type="text"
-                                    inputMode="numeric"
-                                    maxLength={6}
-                                    placeholder="6-digit OTP"
-                                    className="font-mono tracking-widest text-center flex-1 h-11 text-base"
-                                    value={sandboxOtp}
-                                    onChange={e => { setSandboxOtp(e.target.value.replace(/\D/g, '').slice(0, 6)); setAadhaarError(''); }}
-                                  />
+                                  <div className="relative flex-1">
+                                    <Input
+                                      type={showOtp ? 'text' : 'password'}
+                                      inputMode="numeric"
+                                      maxLength={6}
+                                      placeholder="6-digit OTP"
+                                      className={`font-mono tracking-widest text-center h-11 text-base pr-10 ${aadhaarError ? 'border-red-500 focus:border-red-500 bg-red-50/40 dark:bg-red-950/20' : ''}`}
+                                      value={sandboxOtp}
+                                      onChange={e => {
+                                        const val = e.target.value.replace(/\D/g, '').slice(0, 6);
+                                        setSandboxOtp(val);
+                                        setAadhaarError('');
+                                        if (val.length === 6) {
+                                          setTimeout(() => { feedbackPresets.tap(); handleVerifySandboxOtp(); }, 100);
+                                        }
+                                      }}
+                                    />
+                                    <button
+                                      type="button"
+                                      onClick={() => setShowOtp(v => !v)}
+                                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                                      tabIndex={-1}
+                                    >
+                                      {showOtp ? (
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" /></svg>
+                                      ) : (
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+                                      )}
+                                    </button>
+                                  </div>
                                   <Button
                                     onClick={() => { feedbackPresets.tap(); handleVerifySandboxOtp(); }}
                                     disabled={aadhaarLoading || sandboxOtp.length !== 6}
@@ -454,9 +499,37 @@ export default function KycAgreementModal(props: KycAgreementModalProps) {
                                     {aadhaarLoading ? <CircleNotch className="h-4 w-4 animate-spin" /> : 'Verify'}
                                   </Button>
                                 </div>
-                                <button className="text-xs text-blue-600 hover:text-blue-700 font-medium" onClick={() => { setSandboxStep('idle'); setSandboxOtp(''); }}>
-                                  Resend OTP
-                                </button>
+
+                                {/* Wrong OTP error */}
+                                {aadhaarError && (
+                                  <motion.p initial={{ opacity: 0, x: -4 }} animate={{ opacity: 1, x: 0 }}
+                                    className="text-xs text-red-600 flex items-center gap-1.5 bg-red-50 dark:bg-red-950/20 px-3 py-2 rounded-lg border border-red-200/60 dark:border-red-800/30">
+                                    <Warning className="h-3.5 w-3.5 shrink-0" weight="fill" />
+                                    {aadhaarError.includes('secret not configured') ? 'Aadhaar OTP service not configured. Please use DigiLocker.' : aadhaarError}
+                                  </motion.p>
+                                )}
+
+                                {/* Resend with timer */}
+                                <div className="flex items-center gap-2">
+                                  {resendTimer > 0 ? (
+                                    <p className="text-xs text-muted-foreground">
+                                      Resend OTP in <span className="font-semibold text-foreground tabular-nums">{Math.floor(resendTimer / 60)}:{String(resendTimer % 60).padStart(2, '0')}</span>
+                                    </p>
+                                  ) : (
+                                    <button
+                                      className="text-xs text-blue-600 hover:text-blue-700 font-medium"
+                                      onClick={() => {
+                                        setSandboxOtp('');
+                                        setAadhaarError('');
+                                        setShowOtp(false);
+                                        feedbackPresets.tap();
+                                        handleSendSandboxOtp();
+                                      }}
+                                    >
+                                      Resend OTP
+                                    </button>
+                                  )}
+                                </div>
                               </motion.div>
                             )}
 
@@ -670,13 +743,6 @@ export default function KycAgreementModal(props: KycAgreementModalProps) {
                         )}
                       </AnimatePresence>
 
-                      {/* Error display */}
-                      {aadhaarError && (
-                        <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-xs text-amber-600 flex items-start gap-1.5 bg-amber-50/60 dark:bg-amber-950/20 p-3 rounded-xl border border-amber-200/40">
-                          <Warning className="h-3.5 w-3.5 mt-0.5 shrink-0" weight="fill" />
-                          <span>{aadhaarError.includes('secret not configured') ? 'Aadhaar OTP service not configured. Please use DigiLocker.' : aadhaarError}</span>
-                        </motion.p>
-                      )}
                     </>
                   )}
 
