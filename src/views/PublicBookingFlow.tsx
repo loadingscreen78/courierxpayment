@@ -355,6 +355,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
   const [showReceiverPinFinder, setShowReceiverPinFinder] = useState(false);
   const [isDomesticLoading, setIsDomesticLoading] = useState(false);
   const [domTypeUserSelected, setDomTypeUserSelected] = useState(false);
+  const [showTypeError, setShowTypeError] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [senderReceiverData, setSenderReceiverData] = useState<any>(null);
   const [addressSubStep, setAddressSubStep] = useState<'pickup' | 'sender' | 'receiver' | 'content'>('pickup');
@@ -657,6 +658,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
 
   // ── Handle domestic rate calculation ──
   const handleDomRateSubmit = async (values: DomesticRateValues) => {
+    if (!domTypeUserSelected) { setShowTypeError(true); return; }
     setIsDomesticLoading(true);
     // For documents: use default envelope dimensions and set declared value to ₹100
     const isDoc = values.shipmentType === 'document';
@@ -1027,6 +1029,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
     setPickupPhone('');
     setNoIllegalItemsDeclared(false);
     setContentItemsTouched(false);
+    setShowTypeError(false);
     setPickupPhoneManuallyEdited(false);
     setEmailOtpState('idle');
     setEmailOtpCode(['', '', '', '', '', '']);
@@ -1329,24 +1332,31 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                     <FormField control={domForm.control} name="shipmentType" render={({ field }) => (
                       <FormItem>
                         <FormLabel>What are you shipping?</FormLabel>
-                        <div className="grid grid-cols-3 gap-2">
+                        <div className={`grid grid-cols-3 gap-2 rounded-lg transition-all ${showTypeError && !domTypeUserSelected ? 'ring-2 ring-destructive/50 p-1' : ''}`}>
                           {shipmentTypeOptions.domestic.map(opt => (
                             <button
                               key={opt.value}
                               type="button"
-                              onClick={() => { feedbackPresets.select(); setDomTypeUserSelected(true); field.onChange(opt.value); }}
+                              onClick={() => { feedbackPresets.select(); setDomTypeUserSelected(true); setShowTypeError(false); field.onChange(opt.value); }}
                               className={`p-3 rounded-lg border text-left transition-all ${
                                 domTypeUserSelected && field.value === opt.value
                                   ? 'border-coke-red bg-coke-red/5 ring-1 ring-coke-red/20'
+                                  : showTypeError && !domTypeUserSelected
+                                  ? 'border-destructive/50 bg-destructive/5 hover:border-destructive/70'
                                   : 'border-border hover:border-muted-foreground/30'
                               }`}
                             >
-                              <opt.icon className={`h-5 w-5 mb-1 ${domTypeUserSelected && field.value === opt.value ? 'text-coke-red' : 'text-muted-foreground'}`} weight="duotone" />
+                              <opt.icon className={`h-5 w-5 mb-1 ${domTypeUserSelected && field.value === opt.value ? 'text-coke-red' : showTypeError && !domTypeUserSelected ? 'text-destructive/60' : 'text-muted-foreground'}`} weight="duotone" />
                               <p className="text-sm font-medium">{opt.label}</p>
                               <p className="text-[11px] sm:text-xs text-muted-foreground leading-tight">{opt.desc}</p>
                             </button>
                           ))}
                         </div>
+                        {showTypeError && !domTypeUserSelected && (
+                          <p className="text-xs text-destructive flex items-center gap-1 mt-1">
+                            <Warning className="h-3.5 w-3.5" weight="fill" /> Please select what you are shipping to continue
+                          </p>
+                        )}
                         <FormMessage />
                       </FormItem>
                     )} />
@@ -1687,10 +1697,10 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                       </FormItem>
                     )} />
 
-                    <Button type="submit" className="w-full bg-coke-red hover:bg-red-600 text-white gap-2 py-4 min-h-[52px] text-sm sm:text-base" disabled={isDomesticLoading || !domTypeUserSelected} onClick={() => feedbackPresets.tap()}>
+                    <Button type="submit" className="w-full bg-coke-red hover:bg-red-600 text-white gap-2 py-4 min-h-[52px] text-sm sm:text-base" disabled={isDomesticLoading} onClick={() => { feedbackPresets.tap(); if (!domTypeUserSelected) setShowTypeError(true); }}>
                       {isDomesticLoading ? <><CircleNotch className="h-4 w-4 animate-spin" /> Fetching Rates...</> : <>Calculate Rates <ArrowRight className="h-4 w-4" /></>}
                     </Button>
-                    {!domTypeUserSelected && (
+                    {!domTypeUserSelected && !showTypeError && (
                       <p className="text-xs text-muted-foreground text-center">Please select what you are shipping above to continue</p>
                     )}
                   </form>
