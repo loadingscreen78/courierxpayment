@@ -78,7 +78,7 @@ export async function POST(request: NextRequest) {
 
       return NextResponse.json({
         success: true,
-        referenceId: data?.data?.reference_id,
+        referenceId: String(data?.data?.reference_id || ''),
         message: 'OTP sent to Aadhaar-registered mobile number',
       });
     }
@@ -94,20 +94,20 @@ export async function POST(request: NextRequest) {
         headers,
         body: JSON.stringify({
           '@entity': 'in.co.sandbox.kyc.aadhaar.okyc.request',
-          reference_id: referenceId,
-          otp,
+          reference_id: String(referenceId),
+          otp: String(otp),
         }),
       });
       const data = await res.json();
-      console.log('[sandbox-otp] verify response:', res.status, JSON.stringify(data).slice(0, 300));
+      console.log('[sandbox-otp] verify response:', res.status, JSON.stringify(data).slice(0, 500));
 
-      if (!res.ok || data?.code !== 200) {
-        const msg = data?.message || data?.error || 'OTP verification failed';
+      if (!res.ok || (data?.code !== 200 && data?.code !== 'OK')) {
+        const msg = data?.message || data?.data?.message || data?.error || 'OTP verification failed';
         return NextResponse.json({ error: msg }, { status: 400 });
       }
 
-      const kyc = data?.data?.kyc_result || data?.data || {};
-      const addr = kyc?.address || {};
+      const kyc = data?.data || {};
+      const addr = kyc?.address || kyc?.split_address || {};
       const verifiedAddress = [
         addr.house, addr.street, addr.landmark,
         addr.vtc, addr.subdist, addr.dist,
