@@ -10,7 +10,7 @@ import {
   CurrencyInr, CheckCircle, Warning, DownloadSimple, Copy,
   Clock, Scissors, SealCheck, Drop, ArrowLeft, Cube, Info,
   Ruler, IdentificationCard, House, Upload, FileText, Camera, X, Eye,
-  Pill, Receipt, IdentificationBadge, FolderOpen,
+  Pill, Receipt, IdentificationBadge, FolderOpen, Check,
 } from '@phosphor-icons/react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -257,6 +257,11 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
   const [docVerified, setDocVerified] = useState(false);
   const [docVerifiedLabel, setDocVerifiedLabel] = useState('');
   const [termsAccepted, setTermsAccepted] = useState(false);
+  // ── Agreement modal (2-step: KYC → Agreement) ──
+  const [showAgreementModal, setShowAgreementModal] = useState(false);
+  const [agreementStep, setAgreementStep] = useState<1 | 2>(1);
+  const [verifiedName, setVerifiedName] = useState('');
+  const [verifiedDocId, setVerifiedDocId] = useState('');
   const [couponCode, setCouponCode] = useState('');
   const [couponDiscount, setCouponDiscount] = useState(0);
   const [couponApplied, setCouponApplied] = useState(false);
@@ -389,10 +394,14 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
     return true;
   };
 
-  const markVerified = (label: string) => {
+  const markVerified = (label: string, name?: string) => {
     setDocVerified(true);
     setAadhaarVerified(true);
     setDocVerifiedLabel(label);
+    setVerifiedName(name || senderReceiver?.senderName || '');
+    setVerifiedDocId(label);
+    // Advance to agreement step
+    setAgreementStep(2);
   };
 
   // ── DigiLocker (Aadhaar only via Cashfree) ────────────────────────────────
@@ -423,7 +432,7 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
       const res = await fetch(`/api/kyc/guest-digilocker?${params}`);
       const data = await res.json();
       if (data.verified) {
-        markVerified(data.maskedAadhaar || `XXXX XXXX ${aadhaarInput.slice(-4)}`);
+        markVerified(data.maskedAadhaar || `XXXX XXXX ${aadhaarInput.slice(-4)}`, data.verifiedName);
         setDigilockerStep('idle');
         toast({ title: 'Aadhaar Verified via DigiLocker', description: `Verified: ${data.verifiedName || ''}` });
       } else {
@@ -470,7 +479,7 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
           selectedDocType === 'pan' ? `PAN: ${panInput.slice(0,3)}XXXXXXX` :
           selectedDocType === 'passport' ? `Passport: ${passportInput.slice(0,2)}XXXXX` :
           `Voter ID: ${voterIdInput.slice(0,3)}XXXXX`;
-        markVerified(docLabel);
+        markVerified(docLabel, data.verifiedName);
         setKycFormStep('idle');
         toast({ title: 'KYC Verified', description: `${data.verifiedName ? `Verified: ${data.verifiedName}` : 'Identity verified successfully'}` });
       } else {
@@ -511,7 +520,7 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
       });
       const data = await res.json();
       if (!res.ok || !data.success) { setAadhaarError(data.error || 'OTP verification failed'); setSandboxStep('otp_sent'); return; }
-      markVerified(data.maskedAadhaar || `XXXX XXXX ${aadhaarInput.slice(-4)}`);
+      markVerified(data.maskedAadhaar || `XXXX XXXX ${aadhaarInput.slice(-4)}`, data.verifiedName);
       setSandboxStep('idle');
       toast({ title: 'Aadhaar Verified', description: `Verified: ${data.verifiedName || ''}` });
     } catch { setAadhaarError('OTP verification failed'); setSandboxStep('otp_sent'); }
@@ -1485,19 +1494,17 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
       </div>
 
       {/* ── Terms & Conditions ── */}
-      <div className="flex items-start gap-3 p-4 rounded-xl border border-border bg-card">
-        <Checkbox
-          id="terms"
-          checked={termsAccepted}
-          onCheckedChange={(v) => setTermsAccepted(v === true)}
-          className="mt-0.5"
-        />
-        <label htmlFor="terms" className="text-xs text-muted-foreground leading-relaxed cursor-pointer">
-          I confirm that all information provided is true and accurate. I understand that I am solely responsible for the contents of this shipment and any legal consequences arising from shipping prohibited or illegal items. I agree to the{' '}
-          <a href="/terms" target="_blank" className="text-coke-red hover:underline">Terms & Conditions</a>,{' '}
-          <a href="/shipping-policy" target="_blank" className="text-coke-red hover:underline">Shipping Policy</a>, and{' '}
-          <a href="/refund-policy" target="_blank" className="text-coke-red hover:underline">Refund Policy</a>.
-        </label>
+      <div
+        className={`flex items-start gap-3 p-4 rounded-xl border cursor-pointer transition-all ${termsAccepted ? 'border-candlestick-green/40 bg-candlestick-green/5' : 'border-border bg-card hover:border-coke-red/30'}`}
+        onClick={() => { if (!termsAccepted) { setAgreementStep(docVerified ? 2 : 1); setShowAgreementModal(true); } else setTermsAccepted(false); }}
+      >
+        <div className={`mt-0.5 w-4 h-4 rounded border-2 flex items-center justify-center shrink-0 transition-colors ${termsAccepted ? 'bg-candlestick-green border-candlestick-green' : 'border-muted-foreground'}`}>
+          {termsAccepted && <Check className="h-2.5 w-2.5 text-white" weight="bold" />}
+        </div>
+        <div className="space-y-0.5 leading-none">
+          <p className="text-sm font-medium">I agree to the Terms & Conditions</p>
+          <p className="text-xs text-muted-foreground">Click to verify your identity and review the shipping agreement before confirming.</p>
+        </div>
       </div>
 
       {/* ── Pay Button ── */}
@@ -1757,6 +1764,266 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
                   editModal === 'weightdims' ? saveWeightDims :
                   saveEdit
                 }>Save Changes</Button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ══════════════════════════════════════════════════════════════
+          2-STEP AGREEMENT MODAL
+          Step 1: KYC verification
+          Step 2: Agreement with KYC-populated details
+      ══════════════════════════════════════════════════════════════ */}
+      <AnimatePresence>
+        {showAgreementModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[120] flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm p-0 sm:p-4"
+            onClick={() => setShowAgreementModal(false)}
+          >
+            <motion.div
+              initial={{ y: '100%', opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: '100%', opacity: 0 }}
+              transition={{ type: 'spring', damping: 28, stiffness: 300 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-card w-full sm:max-w-lg sm:rounded-2xl rounded-t-2xl border border-border shadow-2xl flex flex-col max-h-[92vh] sm:max-h-[85vh]"
+            >
+              {/* ── Header ── */}
+              <div className="flex items-center justify-between px-5 py-4 border-b border-border shrink-0">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-full bg-coke-red/10 flex items-center justify-center">
+                    <ShieldCheck className="h-4 w-4 text-coke-red" weight="duotone" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-sm sm:text-base">Shipping Agreement</h3>
+                    <p className="text-[11px] text-muted-foreground">{agreementStep === 1 ? 'Step 1 of 2 — Verify your identity' : 'Step 2 of 2 — Review & agree'}</p>
+                  </div>
+                </div>
+                <button onClick={() => setShowAgreementModal(false)} className="text-muted-foreground hover:text-foreground p-1 rounded-lg hover:bg-muted transition-colors">
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+
+              {/* ── Step indicator ── */}
+              <div className="flex px-5 pt-3 pb-0 gap-2 shrink-0">
+                {[1, 2].map(s => (
+                  <div key={s} className={`flex-1 h-1 rounded-full transition-all duration-500 ${s <= agreementStep ? 'bg-coke-red' : 'bg-muted'}`} />
+                ))}
+              </div>
+
+              {/* ── Scrollable body ── */}
+              <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
+
+                {/* ════ STEP 1: KYC ════ */}
+                {agreementStep === 1 && (
+                  <div className="space-y-4">
+                    <div className="rounded-lg border border-blue-200 dark:border-blue-800/40 bg-blue-50/60 dark:bg-blue-950/20 p-3">
+                      <p className="text-xs font-semibold text-blue-900 dark:text-blue-200 flex items-center gap-1.5">
+                        <Info className="h-3.5 w-3.5 shrink-0 text-blue-600" weight="fill" />
+                        Why is identity verification required?
+                      </p>
+                      <p className="text-xs text-blue-800 dark:text-blue-300 mt-1 leading-relaxed">
+                        {isDomestic ? 'As per courier regulations, sender identity must be verified before dispatch.' : 'Under CBIC Courier Regulations and PMLA, sender identity must be verified before international dispatch.'}
+                      </p>
+                    </div>
+
+                    {/* Already verified */}
+                    {(aadhaarVerified || docVerified) ? (
+                      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex items-center gap-3 p-3 rounded-lg bg-candlestick-green/5 border border-candlestick-green/20">
+                        <CheckCircle className="h-5 w-5 text-candlestick-green shrink-0" weight="fill" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-candlestick-green">Identity Verified</p>
+                          <p className="text-xs text-muted-foreground font-mono truncate">{docVerifiedLabel}</p>
+                          {verifiedName && <p className="text-xs text-muted-foreground">Name: {verifiedName}</p>}
+                        </div>
+                        <button className="text-xs text-muted-foreground hover:text-foreground underline shrink-0" onClick={() => { setDocVerified(false); setAadhaarVerified(false); setDocVerifiedLabel(''); setVerifiedName(''); setSandboxStep('idle'); setKycFormStep('idle'); setDigilockerStep('idle'); setAadhaarError(''); }}>
+                          Change
+                        </button>
+                      </motion.div>
+                    ) : (
+                      <>
+                        {/* Doc type */}
+                        <div>
+                          <p className="text-xs font-semibold text-muted-foreground mb-2">Choose document</p>
+                          <div className="grid grid-cols-2 gap-2">
+                            {([{ type: 'aadhaar', label: 'Aadhaar' }, { type: 'pan', label: 'PAN Card' }, { type: 'passport', label: 'Passport' }, { type: 'voter_id', label: 'Voter ID' }] as { type: typeof selectedDocType; label: string }[]).map(doc => (
+                              <button key={doc.type} onClick={() => { setSelectedDocType(doc.type); setDocInputError(''); setAadhaarError(''); setSandboxStep('idle'); setKycFormStep('idle'); setDigilockerStep('idle'); }}
+                                className={`py-2.5 px-3 rounded-lg border text-xs font-medium transition-all text-left ${selectedDocType === doc.type ? 'border-blue-500 bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300' : 'border-border bg-muted/30 text-muted-foreground hover:border-blue-300'}`}>
+                                {doc.label}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Doc number */}
+                        <div>
+                          <p className="text-xs font-semibold text-muted-foreground mb-2">Enter document details</p>
+                          {selectedDocType === 'aadhaar' && <Input type="text" inputMode="numeric" maxLength={14} placeholder="XXXX XXXX XXXX" className="font-mono tracking-widest text-center" value={formattedAadhaar} onChange={handleAadhaarChange} />}
+                          {selectedDocType === 'pan' && <Input placeholder="ABCDE1234F" maxLength={10} className="font-mono tracking-widest uppercase" value={panInput} onChange={e => { setPanInput(e.target.value.toUpperCase()); setDocInputError(''); }} />}
+                          {selectedDocType === 'passport' && (
+                            <div className="space-y-2">
+                              <Input placeholder="Passport number (e.g. A1234567)" maxLength={8} className="font-mono tracking-widest uppercase" value={passportInput} onChange={e => { setPassportInput(e.target.value.toUpperCase()); setDocInputError(''); }} />
+                              <Input type="date" value={passportDob} onChange={e => { setPassportDob(e.target.value); setDocInputError(''); }} />
+                            </div>
+                          )}
+                          {selectedDocType === 'voter_id' && <Input placeholder="EPIC number (e.g. ABC1234567)" className="font-mono tracking-widest uppercase" value={voterIdInput} onChange={e => { setVoterIdInput(e.target.value.toUpperCase()); setDocInputError(''); }} />}
+                          {docInputError && <p className="text-xs text-destructive mt-1 flex items-center gap-1"><Warning className="h-3 w-3" weight="fill" /> {docInputError}</p>}
+                        </div>
+
+                        {/* Verification method */}
+                        <div>
+                          <p className="text-xs font-semibold text-muted-foreground mb-2">Choose verification method</p>
+                          <div className="grid grid-cols-3 gap-2">
+                            {([{ m: 'sandbox_otp', label: '📱 Aadhaar OTP', desc: 'OTP to mobile', onlyAadhaar: true }, { m: 'digilocker', label: '🔐 DigiLocker', desc: 'Govt redirect', onlyAadhaar: true }, { m: 'kyc_form', label: '📋 KYC Form', desc: 'Link via SMS', onlyAadhaar: false }] as { m: typeof kycMethod; label: string; desc: string; onlyAadhaar: boolean }[]).map(opt => {
+                              const disabled = opt.onlyAadhaar && selectedDocType !== 'aadhaar';
+                              return (
+                                <button key={opt.m} disabled={disabled} onClick={() => { if (!disabled) { setKycMethod(opt.m); setAadhaarError(''); setSandboxStep('idle'); setKycFormStep('idle'); setDigilockerStep('idle'); } }}
+                                  className={`py-2 px-2 rounded-lg border text-xs font-medium transition-all text-left ${disabled ? 'opacity-30 cursor-not-allowed border-border bg-muted/20' : kycMethod === opt.m ? 'border-blue-500 bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300' : 'border-border bg-muted/30 text-muted-foreground hover:border-blue-300'}`}>
+                                  <div>{opt.label}</div>
+                                  <div className="text-[10px] font-normal opacity-70 mt-0.5">{opt.desc}</div>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+
+                        {/* OTP flow */}
+                        {kycMethod === 'sandbox_otp' && selectedDocType === 'aadhaar' && (
+                          <div className="space-y-2">
+                            {sandboxStep === 'idle' && <Button onClick={() => { feedbackPresets.tap(); handleSendSandboxOtp(); }} disabled={aadhaarLoading || aadhaarInput.length !== 12} className="w-full bg-blue-600 hover:bg-blue-700 text-white">{aadhaarLoading ? <CircleNotch className="h-4 w-4 animate-spin mr-2" /> : null}Send OTP to Aadhaar-registered mobile</Button>}
+                            {sandboxStep === 'otp_sent' && (
+                              <div className="space-y-2">
+                                <p className="text-xs text-muted-foreground">Enter the 6-digit OTP sent to your Aadhaar-registered mobile.</p>
+                                <div className="flex gap-2">
+                                  <Input type="text" inputMode="numeric" maxLength={6} placeholder="6-digit OTP" className="font-mono tracking-widest text-center flex-1" value={sandboxOtp} onChange={e => { setSandboxOtp(e.target.value.replace(/\D/g,'').slice(0,6)); setAadhaarError(''); }} />
+                                  <Button onClick={() => { feedbackPresets.tap(); handleVerifySandboxOtp(); }} disabled={aadhaarLoading || sandboxOtp.length !== 6} className="bg-blue-600 hover:bg-blue-700 text-white shrink-0">{aadhaarLoading ? <CircleNotch className="h-4 w-4 animate-spin" /> : 'Verify'}</Button>
+                                </div>
+                                <button className="text-xs text-muted-foreground underline" onClick={() => { setSandboxStep('idle'); setSandboxOtp(''); }}>Resend OTP</button>
+                              </div>
+                            )}
+                            {sandboxStep === 'verifying' && <div className="flex items-center gap-2 p-3 rounded-lg bg-muted text-sm text-muted-foreground"><CircleNotch className="h-4 w-4 animate-spin" /> Verifying OTP...</div>}
+                          </div>
+                        )}
+
+                        {/* DigiLocker flow */}
+                        {kycMethod === 'digilocker' && selectedDocType === 'aadhaar' && (
+                          <div className="space-y-2">
+                            {digilockerStep === 'idle' && <Button onClick={() => { feedbackPresets.tap(); handleStartDigiLocker(); }} disabled={aadhaarLoading || aadhaarInput.length !== 12} className="w-full bg-blue-600 hover:bg-blue-700 text-white">{aadhaarLoading ? <CircleNotch className="h-4 w-4 animate-spin mr-2" /> : null}Open DigiLocker</Button>}
+                            {digilockerStep === 'redirect' && (
+                              <div className="space-y-2 p-3 rounded-lg bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800/40">
+                                <p className="text-xs text-blue-800 dark:text-blue-300">Complete verification in DigiLocker, then come back and click below.</p>
+                                <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white text-xs" onClick={() => window.open(digilockerUrl, '_blank')}>Open DigiLocker ↗</Button>
+                                <Button variant="outline" size="sm" className="w-full text-xs" onClick={handleCompleteDigiLocker} disabled={aadhaarLoading}>{aadhaarLoading ? <CircleNotch className="h-3.5 w-3.5 animate-spin mr-1.5" /> : null}I've completed DigiLocker — Fetch Result</Button>
+                              </div>
+                            )}
+                            {digilockerStep === 'verifying' && <div className="flex items-center gap-2 p-3 rounded-lg bg-muted text-sm text-muted-foreground"><CircleNotch className="h-4 w-4 animate-spin" /> Fetching verified data...</div>}
+                          </div>
+                        )}
+
+                        {/* KYC Form flow */}
+                        {kycMethod === 'kyc_form' && (
+                          <div className="space-y-2">
+                            {kycFormStep === 'idle' && (
+                              <>
+                                <Input type="tel" inputMode="numeric" maxLength={10} placeholder="10-digit mobile number" className="font-mono" value={kycPhone} onChange={e => setKycPhone(e.target.value.replace(/\D/g,'').slice(0,10))} />
+                                <Button onClick={() => { feedbackPresets.tap(); handleStartKycForm(); }} disabled={aadhaarLoading || kycPhone.length < 10} className="w-full bg-blue-600 hover:bg-blue-700 text-white">{aadhaarLoading ? <CircleNotch className="h-4 w-4 animate-spin mr-2" /> : null}Send KYC Form Link via SMS</Button>
+                              </>
+                            )}
+                            {kycFormStep === 'sent' && (
+                              <div className="space-y-2 p-3 rounded-lg bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800/40">
+                                <p className="text-xs text-blue-800 dark:text-blue-300">Form sent to <span className="font-mono font-semibold">{kycPhone}</span>. Complete it, then click below.</p>
+                                {kycFormLink && <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white text-xs" onClick={() => window.open(kycFormLink, '_blank')}>Open KYC Form ↗</Button>}
+                                <Button variant="outline" size="sm" className="w-full text-xs" onClick={handleCheckKycForm} disabled={aadhaarLoading}>{aadhaarLoading ? <CircleNotch className="h-3.5 w-3.5 animate-spin mr-1.5" /> : null}I've completed the form — Check Status</Button>
+                              </div>
+                            )}
+                            {kycFormStep === 'polling' && <div className="flex items-center gap-2 p-3 rounded-lg bg-muted text-sm text-muted-foreground"><CircleNotch className="h-4 w-4 animate-spin" /> Checking status...</div>}
+                          </div>
+                        )}
+
+                        {aadhaarError && <p className="text-xs text-destructive flex items-start gap-1"><Warning className="h-3 w-3 mt-0.5 shrink-0" weight="fill" /><span>{aadhaarError.includes('secret not configured') ? 'Aadhaar OTP service not configured. Please use DigiLocker or KYC Form.' : aadhaarError}</span></p>}
+                      </>
+                    )}
+
+                    {/* Proceed to step 2 if already verified */}
+                    {(aadhaarVerified || docVerified) && (
+                      <Button className="w-full bg-coke-red hover:bg-red-600 text-white gap-2 min-h-[48px]" onClick={() => setAgreementStep(2)}>
+                        Continue to Agreement <ArrowRight className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
+                )}
+
+                {/* ════ STEP 2: AGREEMENT ════ */}
+                {agreementStep === 2 && (
+                  <div className="space-y-4">
+                    {/* KYC verified badge */}
+                    <div className="flex items-center gap-3 p-3 rounded-lg bg-candlestick-green/5 border border-candlestick-green/20">
+                      <CheckCircle className="h-5 w-5 text-candlestick-green shrink-0" weight="fill" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-semibold text-candlestick-green">Identity Verified</p>
+                        <p className="text-xs text-muted-foreground font-mono">{verifiedDocId}</p>
+                      </div>
+                    </div>
+
+                    {/* Sender details from KYC */}
+                    <div className="rounded-lg border border-border bg-muted/30 p-4 space-y-2">
+                      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Sender Details (from KYC)</p>
+                      <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs">
+                        <div><span className="text-muted-foreground">Name</span><p className="font-medium mt-0.5">{verifiedName || senderReceiver?.senderName || '—'}</p></div>
+                        <div><span className="text-muted-foreground">Phone</span><p className="font-medium mt-0.5">{senderReceiver?.senderPhone || '—'}</p></div>
+                        <div className="col-span-2"><span className="text-muted-foreground">Address</span><p className="font-medium mt-0.5">{senderReceiver?.senderAddress}, {senderReceiver?.senderCity} - {senderReceiver?.senderPincode}</p></div>
+                        {senderReceiver?.senderEmail && <div className="col-span-2"><span className="text-muted-foreground">Email</span><p className="font-medium mt-0.5">{senderReceiver.senderEmail}</p></div>}
+                      </div>
+                    </div>
+
+                    {/* Shipment details */}
+                    <div className="rounded-lg border border-border bg-muted/30 p-4 space-y-2">
+                      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Shipment Details</p>
+                      <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs">
+                        <div><span className="text-muted-foreground">Courier</span><p className="font-medium mt-0.5">{selectedCourier?.carrier || selectedCourier?.courier_name || '—'}</p></div>
+                        <div><span className="text-muted-foreground">Amount</span><p className="font-semibold mt-0.5 text-coke-red">₹{finalPrice.toLocaleString('en-IN')}</p></div>
+                        <div><span className="text-muted-foreground">Recipient</span><p className="font-medium mt-0.5">{senderReceiver?.receiverName}</p></div>
+                        <div><span className="text-muted-foreground">Destination</span><p className="font-medium mt-0.5">{senderReceiver?.receiverCity} - {senderReceiver?.receiverZipcode}</p></div>
+                      </div>
+                    </div>
+
+                    {/* Agreement text */}
+                    <div className="rounded-lg border border-border bg-card p-4 space-y-2 text-xs text-muted-foreground leading-relaxed">
+                      <p className="font-semibold text-foreground text-sm">Shipping Agreement</p>
+                      <p>I, <span className="font-semibold text-foreground">{verifiedName || senderReceiver?.senderName}</span>, confirm that:</p>
+                      <ul className="space-y-1.5 list-disc pl-4">
+                        <li>All information provided is <span className="font-medium text-foreground">true and accurate</span>.</li>
+                        <li>This shipment does <span className="font-medium text-foreground">not contain any prohibited, illegal, or restricted items</span> as per Indian law.</li>
+                        <li>I am solely responsible for the contents and any legal consequences arising from this shipment.</li>
+                        <li>I authorise CourierX to process this shipment and share necessary details with the courier partner.</li>
+                        <li>I have read and agree to the policies linked below.</li>
+                      </ul>
+                      <div className="flex flex-wrap gap-x-3 gap-y-1 pt-1 border-t border-border/60">
+                        <a href="/terms" target="_blank" className="text-coke-red hover:underline font-medium">Terms & Conditions ↗</a>
+                        <a href="/shipping-policy" target="_blank" className="text-coke-red hover:underline font-medium">Shipping Policy ↗</a>
+                        <a href="/refund-policy" target="_blank" className="text-coke-red hover:underline font-medium">Refund Policy ↗</a>
+                        <a href="/privacy-policy" target="_blank" className="text-coke-red hover:underline font-medium">Privacy Policy ↗</a>
+                        <a href="/prohibited-items" target="_blank" className="text-coke-red hover:underline font-medium">Prohibited Items ↗</a>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* ── Footer ── */}
+              <div className="px-5 py-4 border-t border-border shrink-0 space-y-2">
+                {agreementStep === 2 && (
+                  <Button className="w-full bg-coke-red hover:bg-red-600 text-white gap-2 min-h-[52px] text-sm font-semibold shadow-lg shadow-coke-red/20" onClick={() => { setTermsAccepted(true); setShowAgreementModal(false); feedbackPresets.tap(); }}>
+                    <CheckCircle className="h-5 w-5" weight="fill" /> I Agree & Confirm
+                  </Button>
+                )}
+                <button onClick={() => setShowAgreementModal(false)} className="w-full text-xs text-muted-foreground hover:text-foreground py-1 transition-colors">
+                  {agreementStep === 1 ? 'Cancel' : 'Back'}
+                </button>
               </div>
             </motion.div>
           </motion.div>
