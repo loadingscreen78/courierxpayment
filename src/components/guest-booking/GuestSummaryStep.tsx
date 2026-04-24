@@ -1441,67 +1441,59 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
               }}
               className="bg-card rounded-2xl border border-border shadow-xl max-w-md w-full p-6 space-y-4 max-h-[85vh] overflow-y-auto"
             >
-              <div className="flex items-center justify-between">
-                <h3 className="font-semibold text-base">
-                  {editModal === 'pickup' ? 'Edit Pickup Address' : editModal === 'recipient' ? 'Edit Recipient Address' : editModal === 'weightdims' ? 'Edit Weight & Dimensions' : 'Edit Package Contents'}
-                </h3>
-                <button onClick={() => setEditModal(null)} className="text-muted-foreground hover:text-foreground">
-                  <X className="h-5 w-5" />
-                </button>
-              </div>
-
               {editModal === 'pickup' && (
                 <div className="space-y-3">
-                  <div>
-                    <label className="text-xs font-medium">Full Name</label>
-                    <Input value={editData.senderName || ''} onChange={(e) => setEditData(d => ({ ...d, senderName: e.target.value }))} className="h-10 mt-1" />
-                  </div>
-                  <div>
-                    <label className="text-xs font-medium">Phone</label>
-                    <Input value={editData.senderPhone || ''} onChange={(e) => setEditData(d => ({ ...d, senderPhone: e.target.value }))} className="h-10 mt-1" />
-                  </div>
-                  <div>
-                    <label className="text-xs font-medium">Email</label>
-                    <Input value={editData.senderEmail || ''} onChange={(e) => setEditData(d => ({ ...d, senderEmail: e.target.value }))} className="h-10 mt-1" />
-                  </div>
-                  <div>
-                    <label className="text-xs font-medium">Address</label>
-                    <Input value={editData.senderAddress || ''} onChange={(e) => setEditData(d => ({ ...d, senderAddress: e.target.value }))} className="h-10 mt-1" />
-                  </div>
+                  {[
+                    { key: 'senderName', label: 'Full Name *' },
+                    { key: 'senderPhone', label: 'Phone *' },
+                    { key: 'senderEmail', label: 'Email' },
+                    { key: 'senderAddress', label: 'Address *' },
+                  ].map(({ key, label }) => (
+                    <div key={key}>
+                      <label className="text-xs font-medium">{label}</label>
+                      <Input value={(editData as any)[key] || ''} onChange={(e) => { setEditData(d => ({ ...d, [key]: e.target.value })); setEditErrors(er => ({ ...er, [key]: '' })); }} className={`h-10 mt-1 ${editErrors[key] ? 'border-destructive focus-visible:ring-destructive/30' : ''}`} />
+                      {editErrors[key] && <p className="text-[11px] text-destructive mt-0.5">{editErrors[key]}</p>}
+                    </div>
+                  ))}
                   <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="text-xs font-medium">City</label>
-                      <Input value={editData.senderCity || ''} onChange={(e) => setEditData(d => ({ ...d, senderCity: e.target.value }))} className="h-10 mt-1" />
-                    </div>
-                    <div>
-                      <label className="text-xs font-medium">Pincode</label>
-                      <Input value={editData.senderPincode || ''} onChange={(e) => setEditData(d => ({ ...d, senderPincode: e.target.value }))} className="h-10 mt-1" />
-                    </div>
+                    {[{ key: 'senderCity', label: 'City *' }, { key: 'senderPincode', label: 'Pincode *' }].map(({ key, label }) => (
+                      <div key={key}>
+                        <label className="text-xs font-medium">{label}</label>
+                        <Input value={(editData as any)[key] || ''} onChange={(e) => { setEditData(d => ({ ...d, [key]: e.target.value })); setEditErrors(er => ({ ...er, [key]: '' })); }} className={`h-10 mt-1 ${editErrors[key] ? 'border-destructive focus-visible:ring-destructive/30' : ''}`} />
+                        {editErrors[key] && <p className="text-[11px] text-destructive mt-0.5">{editErrors[key]}</p>}
+                      </div>
+                    ))}
                   </div>
                 </div>
               )}
 
               {editModal === 'recipient' && (
                 <div className="space-y-3">
-                  <div>
-                    <label className="text-xs font-medium">Full Name</label>
-                    <Input value={editData.receiverName || ''} onChange={(e) => setEditData(d => ({ ...d, receiverName: e.target.value }))} className="h-10 mt-1" />
-                  </div>
-                  <div>
-                    <label className="text-xs font-medium">Phone</label>
-                    <Input value={editData.receiverPhone || ''} onChange={(e) => setEditData(d => ({ ...d, receiverPhone: e.target.value }))} className="h-10 mt-1" />
-                  </div>
-                  <div>
-                    <label className="text-xs font-medium">Email</label>
-                    <Input value={editData.receiverEmail || ''} onChange={(e) => setEditData(d => ({ ...d, receiverEmail: e.target.value }))} className="h-10 mt-1" />
-                  </div>
-                  <div>
-                    <label className="text-xs font-medium">Address</label>
-                    <Input value={editData.receiverAddress || ''} onChange={(e) => setEditData(d => ({ ...d, receiverAddress: e.target.value }))} className="h-10 mt-1" />
-                  </div>
+                  {[
+                    { key: 'receiverName', label: 'Full Name *' },
+                    { key: 'receiverPhone', label: 'Phone *' },
+                    { key: 'receiverEmail', label: 'Email' },
+                    { key: 'receiverAddress', label: 'Address *' },
+                  ].map(({ key, label }) => (
+                    <div key={key}>
+                      <label className="text-xs font-medium">{label}</label>
+                      <Input value={(editData as any)[key] || ''} onChange={(e) => { setEditData(d => ({ ...d, [key]: e.target.value })); setEditErrors(er => ({ ...er, [key]: '' })); }} className={`h-10 mt-1 ${editErrors[key] ? 'border-destructive focus-visible:ring-destructive/30' : ''}`} />
+                      {editErrors[key] && <p className="text-[11px] text-destructive mt-0.5">{editErrors[key]}</p>}
+                    </div>
+                  ))}
                   <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="text-xs font-medium">City</label>
+                    {[{ key: 'receiverCity', label: 'City *' }, { key: 'receiverZipcode', label: 'Zipcode *' }].map(({ key, label }) => (
+                      <div key={key}>
+                        <label className="text-xs font-medium">{label}</label>
+                        <Input value={(editData as any)[key] || ''} onChange={(e) => { setEditData(d => ({ ...d, [key]: e.target.value })); setEditErrors(er => ({ ...er, [key]: '' })); }} className={`h-10 mt-1 ${editErrors[key] ? 'border-destructive focus-visible:ring-destructive/30' : ''}`} />
+                        {editErrors[key] && <p className="text-[11px] text-destructive mt-0.5">{editErrors[key]}</p>}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {editModal === 'contents' && (
                       <Input value={editData.receiverCity || ''} onChange={(e) => setEditData(d => ({ ...d, receiverCity: e.target.value }))} className="h-10 mt-1" />
                     </div>
                     <div>
@@ -1528,12 +1520,13 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
                       <div className="grid grid-cols-2 gap-2">
                         <div>
                           <label className="text-[10px] font-medium">Item Name *</label>
-                          <Input value={item.name} onChange={(e) => { const a = [...editedItems]; a[idx].name = e.target.value; setEditedItems(a); }} placeholder="e.g. Cotton T-Shirt" className="h-9 mt-0.5 text-sm" />
+                          <Input value={item.name} onChange={(e) => { const a = [...editedItems]; a[idx].name = e.target.value; setEditedItems(a); setEditErrors(er => ({ ...er, [`name_${idx}`]: '' })); }} placeholder="e.g. Cotton T-Shirt" className={`h-9 mt-0.5 text-sm ${editErrors[`name_${idx}`] ? 'border-destructive' : ''}`} />
+                          {editErrors[`name_${idx}`] && <p className="text-[10px] text-destructive mt-0.5">{editErrors[`name_${idx}`]}</p>}
                         </div>
                         <div>
                           <label className="text-[10px] font-medium">Type *</label>
-                          <select value={item.type} onChange={(e) => { const a = [...editedItems]; a[idx].type = e.target.value; setEditedItems(a); }}
-                            className="w-full h-9 mt-0.5 rounded-md border border-input bg-background px-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring">
+                          <select value={item.type} onChange={(e) => { const a = [...editedItems]; a[idx].type = e.target.value; setEditedItems(a); setEditErrors(er => ({ ...er, [`type_${idx}`]: '' })); }}
+                            className={`w-full h-9 mt-0.5 rounded-md border bg-background px-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring ${editErrors[`type_${idx}`] ? 'border-destructive' : 'border-input'}`}>
                             <option value="">Select type</option>
                             <option value="clothing">Clothing & Apparel</option>
                             <option value="electronics">Electronics</option>
@@ -1546,16 +1539,19 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
                             <option value="household">Household Items</option>
                             <option value="other">Other</option>
                           </select>
+                          {editErrors[`type_${idx}`] && <p className="text-[10px] text-destructive mt-0.5">{editErrors[`type_${idx}`]}</p>}
                         </div>
                       </div>
                       <div className="grid grid-cols-2 gap-2">
                         <div>
                           <label className="text-[10px] font-medium">Quantity *</label>
-                          <Input type="number" inputMode="numeric" value={item.qty} onChange={(e) => { const a = [...editedItems]; a[idx].qty = Number(e.target.value) || 1; setEditedItems(a); }} className="h-9 mt-0.5 text-sm" />
+                          <Input type="number" inputMode="numeric" value={item.qty} onChange={(e) => { const a = [...editedItems]; a[idx].qty = Number(e.target.value) || 1; setEditedItems(a); setEditErrors(er => ({ ...er, [`qty_${idx}`]: '' })); }} className={`h-9 mt-0.5 text-sm ${editErrors[`qty_${idx}`] ? 'border-destructive' : ''}`} />
+                          {editErrors[`qty_${idx}`] && <p className="text-[10px] text-destructive mt-0.5">{editErrors[`qty_${idx}`]}</p>}
                         </div>
                         <div>
                           <label className="text-[10px] font-medium">Unit Price (₹) *</label>
-                          <Input type="number" inputMode="numeric" value={item.unitPrice || ''} onChange={(e) => { const a = [...editedItems]; a[idx].unitPrice = parseInt(e.target.value) || 0; setEditedItems(a); }} placeholder="Enter value" className="h-9 mt-0.5 text-sm" />
+                          <Input type="number" inputMode="numeric" value={item.unitPrice || ''} onChange={(e) => { const a = [...editedItems]; a[idx].unitPrice = parseInt(e.target.value) || 0; setEditedItems(a); setEditErrors(er => ({ ...er, [`price_${idx}`]: '' })); }} placeholder="Enter value" className={`h-9 mt-0.5 text-sm ${editErrors[`price_${idx}`] ? 'border-destructive' : ''}`} />
+                          {editErrors[`price_${idx}`] && <p className="text-[10px] text-destructive mt-0.5">{editErrors[`price_${idx}`]}</p>}
                         </div>
                       </div>
                       {item.name && item.unitPrice > 0 && (
@@ -1584,7 +1580,8 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
                   </div>
                   <div>
                     <label className="text-xs font-medium">Actual Weight (kg) *</label>
-                    <Input type="number" inputMode="decimal" value={editedWeightKg || ''} onChange={(e) => setEditedWeightKg(parseFloat(e.target.value) || 0)} placeholder="e.g. 1.5" className="h-10 mt-1" />
+                    <Input type="number" inputMode="decimal" value={editedWeightKg || ''} onChange={(e) => { setEditedWeightKg(parseFloat(e.target.value) || 0); setEditErrors(er => ({ ...er, weightKg: '' })); }} placeholder="e.g. 1.5" className={`h-10 mt-1 ${editErrors.weightKg ? 'border-destructive focus-visible:ring-destructive/30' : ''}`} />
+                    {editErrors.weightKg && <p className="text-[11px] text-destructive mt-0.5">{editErrors.weightKg}</p>}
                   </div>
                   <div className="grid grid-cols-3 gap-2">
                     <div>
