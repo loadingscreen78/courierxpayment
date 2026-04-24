@@ -1572,6 +1572,14 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
               onClick={(e) => e.stopPropagation()}
+              onKeyDown={(e) => {
+                if (e.key !== 'Enter') return;
+                if ((e.target as HTMLElement).tagName === 'TEXTAREA') return;
+                e.preventDefault();
+                if (editModal === 'contents') saveContents();
+                else if (editModal === 'weightdims') saveWeightDims();
+                else saveEdit();
+              }}
               className="bg-card rounded-2xl border border-border shadow-xl max-w-md w-full p-6 space-y-4 max-h-[85vh] overflow-y-auto"
             >
               <div className="flex items-center justify-between">

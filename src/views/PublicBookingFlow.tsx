@@ -2181,7 +2181,16 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
             </div>
 
             <Form {...detailsForm}>
-              <form onSubmit={detailsForm.handleSubmit(handleFinalSubmit)}>
+              <form onSubmit={detailsForm.handleSubmit(handleFinalSubmit)} onKeyDown={(e) => {
+                if (e.key !== 'Enter') return;
+                const tag = (e.target as HTMLElement).tagName;
+                // Allow Enter in textareas; block default form submit
+                if (tag === 'TEXTAREA') return;
+                e.preventDefault();
+                if (addressSubStep === 'pickup') { feedbackPresets.stepChange(); handlePickupNext(); }
+                else if (addressSubStep === 'receiver') { feedbackPresets.stepChange(); handleReceiverNext(); }
+                // content step: Enter on Continue to Summary is handled by the button itself
+              }}>
                 {/* Slider container */}
                 <div className="overflow-hidden">
                   <AnimatePresence mode="wait">
