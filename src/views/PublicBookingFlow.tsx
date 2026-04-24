@@ -385,6 +385,8 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
   // ── Illegal items declaration (contents step) ──
   const [noIllegalItemsDeclared, setNoIllegalItemsDeclared] = useState(false);
   const [showIllegalItemsModal, setShowIllegalItemsModal] = useState(false);
+  // ── Content item touched state for per-field validation ──
+  const [contentItemsTouched, setContentItemsTouched] = useState(false);
   // ── Laptop declaration modal ──
   const [showLaptopDeclarationModal, setShowLaptopDeclarationModal] = useState(false);
   // ── Weight & dimensions declaration modal (domestic) ──
@@ -1024,6 +1026,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
     setPassportUploadLater(false);
     setPickupPhone('');
     setNoIllegalItemsDeclared(false);
+    setContentItemsTouched(false);
     setPickupPhoneManuallyEdited(false);
     setEmailOtpState('idle');
     setEmailOtpCode(['', '', '', '', '', '']);
@@ -2873,27 +2876,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                             </div>
                             )}
 
-                            {/* Assistive example — shown when no items filled yet */}
-                            {contentItems.length === 1 && !contentItems[0].name && (
-                              <div className="rounded-xl border-2 border-dashed border-coke-red/20 bg-coke-red/[0.03] overflow-hidden">
-                                {/* Example header badge */}
-                                <div className="flex items-center gap-2 px-4 py-2.5 bg-coke-red/5 border-b border-coke-red/10">
-                                  <span className="text-[10px] font-bold tracking-widest uppercase px-2 py-0.5 rounded-full bg-coke-red/10 text-coke-red">Example</span>
-                                  <span className="text-xs text-muted-foreground">This is just a preview — fill in your actual items below</span>
-                                </div>
-                                <div className="p-3 space-y-1.5 opacity-60 pointer-events-none select-none">
-                                  <div className="grid grid-cols-4 gap-2 text-[10px] font-semibold text-muted-foreground uppercase tracking-wide border-b border-border/40 pb-1.5">
-                                    <span>Item Name</span><span>Type</span><span>Qty × Price</span><span className="text-right">Total</span>
-                                  </div>
-                                  <div className="grid grid-cols-4 gap-2 text-[11px] italic text-muted-foreground py-1">
-                                    <span>Cotton T-Shirt</span><span>Clothing</span><span>2 × ₹500</span><span className="text-right">₹1,000</span>
-                                  </div>
-                                  <div className="grid grid-cols-4 gap-2 text-[11px] italic text-muted-foreground py-1 border-t border-border/30">
-                                    <span>Chocolate Box</span><span>Food</span><span>1 × ₹800</span><span className="text-right">₹800</span>
-                                  </div>
-                                </div>
-                              </div>
-                            )}
+                            {/* Assistive example — removed */}
 
                             {/* Items summary table — shown when 2+ items or first item is filled */}
                             {(contentItems.length > 1 || contentItems[0]?.name) && (
@@ -2933,6 +2916,11 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                             {contentItems.map((item, idx) => {
                             const isExpanded = expandedItemIndex === idx;
                             const itemTotal = item.qty * item.unitPrice;
+                            // Per-field validation (shown after user tries to continue)
+                            const nameErr = contentItemsTouched && !item.name.trim();
+                            const typeErr = contentItemsTouched && !item.type;
+                            const qtyErr = contentItemsTouched && (!item.qty || item.qty < 1);
+                            const priceErr = contentItemsTouched && (!item.unitPrice || item.unitPrice <= 0);
 
                             if (!isExpanded && item.name.trim()) return null; // shown in table above
 
@@ -2940,7 +2928,6 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                             <div key={idx} className="rounded-lg border border-border p-4 space-y-3 relative">
                               <div className="flex items-center justify-between">
                                 <span className="text-xs font-semibold text-muted-foreground">Item {idx + 1}</span>
-                                {/* Allow delete if there are multiple items OR if editing an existing saved item (others exist in table) */}
                                 {(contentItems.length > 1 || (isEditingExistingItem && contentItems.filter(i => i.name.trim()).length > 1)) && (
                                   <button type="button" onClick={() => {
                                     setContentItems(prev => prev.filter((_, i) => i !== idx));
@@ -2953,13 +2940,19 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                               </div>
                               <div className="grid grid-cols-1 xs:grid-cols-2 gap-3">
                                 <div>
-                                  <label className="text-xs font-medium">Item Name</label>
-                                  <Input value={item.name} onChange={(e) => { const arr = [...contentItems]; arr[idx].name = e.target.value; setContentItems(arr); }} placeholder="e.g. Cotton T-Shirt" className="h-10 mt-1" />
+                                  <label className="text-xs font-medium">Item Name <span className="text-destructive">*</span></label>
+                                  <Input
+                                    value={item.name}
+                                    onChange={(e) => { const arr = [...contentItems]; arr[idx].name = e.target.value; setContentItems(arr); }}
+                                    placeholder="e.g. Cotton T-Shirt"
+                                    className={`h-10 mt-1 ${nameErr ? 'border-destructive focus-visible:ring-destructive/30' : ''}`}
+                                  />
+                                  {nameErr && <p className="text-[11px] text-destructive mt-0.5">Item name is required</p>}
                                 </div>
                                 <div>
-                                  <label className="text-xs font-medium">Type of Item</label>
+                                  <label className="text-xs font-medium">Type of Item <span className="text-destructive">*</span></label>
                                   <Select value={item.type} onValueChange={(v) => { const arr = [...contentItems]; arr[idx].type = v; setContentItems(arr); }}>
-                                    <SelectTrigger className="h-10 mt-1"><SelectValue placeholder="Select type" /></SelectTrigger>
+                                    <SelectTrigger className={`h-10 mt-1 ${typeErr ? 'border-destructive' : ''}`}><SelectValue placeholder="Select type" /></SelectTrigger>
                                     <SelectContent>
                                       <SelectItem value="clothing">Clothing & Apparel</SelectItem>
                                       <SelectItem value="electronics">Electronics</SelectItem>
@@ -2973,15 +2966,23 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                                       <SelectItem value="other">Other</SelectItem>
                                     </SelectContent>
                                   </Select>
+                                  {typeErr && <p className="text-[11px] text-destructive mt-0.5">Item type is required</p>}
                                 </div>
                               </div>
                               <div className="grid grid-cols-2 gap-3">
                                 <div>
-                                  <label className="text-xs font-medium">Quantity</label>
-                                  <Input type="number" inputMode="numeric" value={item.qty} onChange={(e) => { const arr = [...contentItems]; arr[idx].qty = Number(e.target.value) || 0; setContentItems(arr); }} className="h-10 mt-1" />
+                                  <label className="text-xs font-medium">Quantity <span className="text-destructive">*</span></label>
+                                  <Input
+                                    type="number"
+                                    inputMode="numeric"
+                                    value={item.qty}
+                                    onChange={(e) => { const arr = [...contentItems]; arr[idx].qty = Number(e.target.value) || 0; setContentItems(arr); }}
+                                    className={`h-10 mt-1 ${qtyErr ? 'border-destructive focus-visible:ring-destructive/30' : ''}`}
+                                  />
+                                  {qtyErr && <p className="text-[11px] text-destructive mt-0.5">Quantity must be at least 1</p>}
                                 </div>
                                 <div>
-                                  <label className="text-xs font-medium">Unit Price (₹)</label>
+                                  <label className="text-xs font-medium">Unit Price (₹) <span className="text-destructive">*</span></label>
                                   <Input
                                     type="number"
                                     inputMode="numeric"
@@ -2996,9 +2997,10 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                                     onKeyDown={(e) => {
                                       if (['-', '+', 'e', 'E', '.'].includes(e.key)) e.preventDefault();
                                     }}
-                                    placeholder="500"
-                                    className="h-10 mt-1"
+                                    placeholder="Enter item value"
+                                    className={`h-10 mt-1 ${priceErr ? 'border-destructive focus-visible:ring-destructive/30' : ''}`}
                                   />
+                                  {priceErr && <p className="text-[11px] text-destructive mt-0.5">Price is required</p>}
                                 </div>
                               </div>
                               {item.name && item.unitPrice > 0 && (
@@ -3007,7 +3009,6 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                                   <span className="font-semibold">₹{itemTotal.toLocaleString('en-IN')}</span>
                                 </div>
                               )}
-                              {/* Done Editing button — only shows when user explicitly clicked Edit on a saved item */}
                               {isExpanded && isEditingExistingItem && item.name.trim() && (
                                 <button
                                   type="button"
@@ -3246,7 +3247,10 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                               return;
                             }
                             const hasItems = contentItems.some(i => i.name.trim());
-                            if (!hasItems) { return; }
+                            if (!hasItems) { setContentItemsTouched(true); return; }
+                            // Validate all items have required fields
+                            const allValid = contentItems.every(i => i.name.trim() && i.type && i.qty >= 1 && i.unitPrice > 0);
+                            if (!allValid) { setContentItemsTouched(true); return; }
                             const totalValue = contentItems.reduce((sum, i) => sum + (i.qty * i.unitPrice), 0);
                             // International limit: ₹25,000 | Domestic limit: ₹49,000
                             const valueLimit = isInternational ? 25000 : 49000;
