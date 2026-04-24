@@ -1,12 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { CASHFREE_VERIFICATION_BASE } from '@/lib/wallet/cashfreeConfig';
 
-// Cashfree KYC Link template names per document type
+// Cashfree KYC Link — only Aadhaar_verification is a default template.
+// PAN/Passport/VoterID require custom templates created in the Cashfree dashboard.
+// For now we only support Aadhaar via the hosted form link.
 const TEMPLATE_MAP: Record<string, string> = {
-  aadhaar:  'Aadhaar_verification',
-  pan:      'PAN_verification',
-  passport: 'Passport_verification',
-  voter_id: 'VoterID_verification',
+  aadhaar: 'Aadhaar_verification',
 };
 
 /**

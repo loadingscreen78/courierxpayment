@@ -153,7 +153,7 @@ export default function KycAgreementModal(props: KycAgreementModalProps) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          docType: kycFormDocType,
+          docType: 'aadhaar',
           phone,
           name: senderReceiver?.senderName || 'User',
           email: senderReceiver?.senderEmail || '',
@@ -182,9 +182,7 @@ export default function KycAgreementModal(props: KycAgreementModalProps) {
           if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
           pollIntervalRef.current = null;
           // Mark as verified using the parent's markVerified flow
-          const label = kycFormDocType === 'aadhaar' ? `Aadhaar (KYC Form)` :
-            kycFormDocType === 'pan' ? `PAN (KYC Form)` :
-            kycFormDocType === 'passport' ? `Passport (KYC Form)` : `Voter ID (KYC Form)`;
+          const label = `Aadhaar (KYC Form)`;
           props.resetVerification(); // clear first
           // We need to trigger verification through the parent — use a custom callback
           onKycFormVerified(label, data.verifiedName || '');
@@ -463,11 +461,11 @@ export default function KycAgreementModal(props: KycAgreementModalProps) {
                             transition={{ duration: 0.2 }}
                             className="space-y-4"
                           >
-                            {/* Document selection for DigiLocker */}
+                            {/* Document selection for DigiLocker — only Aadhaar & PAN supported */}
                             <div className="space-y-2">
                               <label className="text-xs font-medium text-foreground">Select document</label>
                               <div className="grid grid-cols-2 gap-2">
-                                {(['aadhaar', 'pan', 'passport', 'voter_id'] as GuestDocType[]).map(doc => (
+                                {(['aadhaar', 'pan'] as GuestDocType[]).map(doc => (
                                   <button
                                     key={doc}
                                     onClick={() => { setSelectedDocType(doc); setDocInputError(''); setAadhaarError(''); }}
@@ -484,6 +482,7 @@ export default function KycAgreementModal(props: KycAgreementModalProps) {
                                   </button>
                                 ))}
                               </div>
+                              <p className="text-[10px] text-muted-foreground">For Passport or Voter ID, use the KYC Form tab.</p>
                             </div>
 
                             {/* Document number input */}
@@ -562,26 +561,14 @@ export default function KycAgreementModal(props: KycAgreementModalProps) {
                             transition={{ duration: 0.2 }}
                             className="space-y-4"
                           >
-                            {/* Document selection */}
-                            <div className="space-y-2">
-                              <label className="text-xs font-medium text-foreground">Select document type</label>
-                              <div className="grid grid-cols-2 gap-2">
-                                {(['aadhaar', 'pan', 'passport', 'voter_id'] as GuestDocType[]).map(doc => (
-                                  <button
-                                    key={doc}
-                                    onClick={() => { setKycFormDocType(doc); setKycFormError(''); }}
-                                    className={`flex items-center gap-2.5 py-3 px-3 rounded-xl border text-left transition-all ${
-                                      kycFormDocType === doc
-                                        ? 'border-blue-400 bg-blue-50/80 dark:bg-blue-950/30 ring-1 ring-blue-200/50'
-                                        : 'border-border/60 bg-card hover:border-blue-200 hover:bg-blue-50/30'
-                                    }`}
-                                  >
-                                    <img src={DOC_ICONS[doc]} alt={DOC_LABELS[doc]} className="h-8 w-8 object-contain" draggable={false} />
-                                    <span className={`text-xs font-medium ${kycFormDocType === doc ? 'text-blue-700 dark:text-blue-300' : 'text-foreground'}`}>
-                                      {DOC_LABELS[doc]}
-                                    </span>
-                                  </button>
-                                ))}
+                            {/* Document selection — KYC Form only supports Aadhaar via Cashfree hosted link */}
+                            <div className="rounded-xl bg-blue-50/40 dark:bg-blue-950/15 border border-blue-100/60 dark:border-blue-800/20 p-3 flex items-start gap-2.5">
+                              <img src={DOC_ICONS['aadhaar']} alt="Aadhaar" className="h-10 w-10 object-contain shrink-0" draggable={false} />
+                              <div>
+                                <p className="text-xs font-semibold text-foreground">Aadhaar Verification</p>
+                                <p className="text-[11px] text-muted-foreground mt-0.5 leading-relaxed">
+                                  We&apos;ll send a secure Cashfree-hosted verification link to your mobile. Open it on your phone and complete Aadhaar verification — no app needed.
+                                </p>
                               </div>
                             </div>
 
@@ -606,7 +593,9 @@ export default function KycAgreementModal(props: KycAgreementModalProps) {
                             {/* Info box */}
                             <div className="rounded-xl bg-blue-50/40 dark:bg-blue-950/15 border border-blue-100/60 dark:border-blue-800/20 p-3">
                               <p className="text-[11px] text-muted-foreground leading-relaxed">
-                                We&apos;ll send a secure verification link via SMS to this number. Open the link on your phone, complete the {DOC_LABELS[kycFormDocType]} verification, and we&apos;ll automatically detect it here.
+                                {selectedDocType === 'aadhaar'
+                                  ? "We'll send a verification OTP to your Aadhaar-registered mobile number."
+                                  : "We'll verify your document via DigiLocker. A new tab will open automatically."}
                               </p>
                             </div>
 

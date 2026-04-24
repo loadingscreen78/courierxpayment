@@ -1,9 +1,35 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40" fill="none">
-  <rect x="4" y="8" width="32" height="24" rx="3" stroke="#ea580c" stroke-width="1.5" fill="#fff7ed"/>
-  <circle cx="14" cy="18" r="4" stroke="#ea580c" stroke-width="1" fill="#fed7aa" opacity="0.5"/>
-  <rect x="21" y="14" width="11" height="1.5" rx="0.75" fill="#ea580c" opacity="0.4"/>
-  <rect x="21" y="17.5" width="9" height="1.5" rx="0.75" fill="#ea580c" opacity="0.25"/>
-  <rect x="8" y="25" width="24" height="1.5" rx="0.75" fill="#ea580c" opacity="0.2"/>
-  <rect x="8" y="28" width="16" height="1.5" rx="0.75" fill="#ea580c" opacity="0.15"/>
-  <path d="M12 18 L14 20 L18 15" stroke="#ea580c" stroke-width="1.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 52" fill="none">
+  <!-- Card background - white -->
+  <rect width="80" height="52" rx="4" fill="#FFFFFF" stroke="#e2e8f0" stroke-width="0.5"/>
+  <!-- Top orange band (ECI color) -->
+  <rect width="80" height="11" rx="4" fill="#FF6B00"/>
+  <rect y="7" width="80" height="4" fill="#FF6B00"/>
+  <!-- ECI logo area -->
+  <circle cx="8" cy="5.5" r="4" fill="none" stroke="white" stroke-width="0.8"/>
+  <circle cx="8" cy="5.5" r="1" fill="white"/>
+  <line x1="8" y1="1.5" x2="8" y2="9.5" stroke="white" stroke-width="0.4"/>
+  <line x1="4" y1="5.5" x2="12" y2="5.5" stroke="white" stroke-width="0.4"/>
+  <line x1="5.2" y1="2.7" x2="10.8" y2="8.3" stroke="white" stroke-width="0.4"/>
+  <line x1="10.8" y1="2.7" x2="5.2" y2="8.3" stroke="white" stroke-width="0.4"/>
+  <!-- Header text -->
+  <text x="40" y="5" font-family="Arial,sans-serif" font-size="3" fill="white" text-anchor="middle" font-weight="bold">ELECTION COMMISSION OF INDIA</text>
+  <text x="40" y="9" font-family="Arial,sans-serif" font-size="2.8" fill="white" text-anchor="middle">ELECTORS PHOTO IDENTITY CARD</text>
+  <!-- Photo placeholder -->
+  <rect x="4" y="14" width="16" height="20" rx="2" fill="#fed7aa" stroke="#fb923c" stroke-width="0.5"/>
+  <circle cx="12" cy="20" r="4" fill="#fb923c"/>
+  <path d="M6 34 Q12 28 18 34" fill="#fb923c"/>
+  <!-- EPIC number -->
+  <text x="24" y="18" font-family="Arial,sans-serif" font-size="3" fill="#64748b">EPIC No.</text>
+  <text x="24" y="23" font-family="Courier New,monospace" font-size="5" fill="#1e293b" font-weight="bold">ABC1234567</text>
+  <!-- Name -->
+  <text x="24" y="30" font-family="Arial,sans-serif" font-size="3" fill="#64748b">Name</text>
+  <text x="24" y="35" font-family="Arial,sans-serif" font-size="4" fill="#1e293b" font-weight="bold">RAHUL SHARMA</text>
+  <!-- Father name -->
+  <text x="4" y="40" font-family="Arial,sans-serif" font-size="3" fill="#64748b">Father's Name: SURESH SHARMA</text>
+  <!-- DOB and Gender -->
+  <text x="4" y="45" font-family="Arial,sans-serif" font-size="3" fill="#64748b">DOB: 01/01/1990  |  Male</text>
+  <!-- Bottom strip -->
+  <rect y="47" width="80" height="5" rx="0" fill="#fff7ed"/>
+  <rect y="47" width="80" height="0.5" fill="#fed7aa"/>
+  <text x="40" y="50.5" font-family="Arial,sans-serif" font-size="2.5" fill="#94a3b8" text-anchor="middle">State: Odisha  |  AC: 123  |  Part No: 45</text>
 </svg>

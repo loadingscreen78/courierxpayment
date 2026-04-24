@@ -1,9 +1,43 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40" fill="none">
-  <rect x="4" y="6" width="32" height="28" rx="3" stroke="#2563eb" stroke-width="1.5" fill="#eff6ff"/>
-  <circle cx="15" cy="18" r="4" fill="#3b82f6" opacity="0.3"/>
-  <circle cx="15" cy="18" r="4" stroke="#2563eb" stroke-width="1"/>
-  <rect x="22" y="14" width="10" height="1.5" rx="0.75" fill="#2563eb" opacity="0.5"/>
-  <rect x="22" y="18" width="8" height="1.5" rx="0.75" fill="#2563eb" opacity="0.3"/>
-  <rect x="10" y="26" width="20" height="1.5" rx="0.75" fill="#2563eb" opacity="0.2"/>
-  <rect x="10" y="29" width="14" height="1.5" rx="0.75" fill="#2563eb" opacity="0.15"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 52" fill="none">
+  <!-- Card background -->
+  <rect width="80" height="52" rx="4" fill="#FFFFFF" stroke="#e2e8f0" stroke-width="0.5"/>
+  <!-- Top blue band -->
+  <rect width="80" height="10" rx="4" fill="#1a56db"/>
+  <rect y="6" width="80" height="4" fill="#1a56db"/>
+  <!-- UIDAI text -->
+  <text x="4" y="7.5" font-family="Arial,sans-serif" font-size="4" fill="white" font-weight="bold">UIDAI</text>
+  <!-- Aadhaar logo area -->
+  <text x="40" y="7.5" font-family="Arial,sans-serif" font-size="4" fill="white" text-anchor="middle">आधार</text>
+  <!-- Govt of India -->
+  <text x="76" y="7.5" font-family="Arial,sans-serif" font-size="3" fill="white" text-anchor="end">Govt. of India</text>
+  <!-- Photo placeholder -->
+  <rect x="4" y="13" width="16" height="20" rx="2" fill="#dbeafe" stroke="#93c5fd" stroke-width="0.5"/>
+  <circle cx="12" cy="19" r="4" fill="#93c5fd"/>
+  <path d="M6 33 Q12 27 18 33" fill="#93c5fd"/>
+  <!-- Name -->
+  <text x="24" y="18" font-family="Arial,sans-serif" font-size="3.5" fill="#1e293b" font-weight="bold">RAHUL SHARMA</text>
+  <!-- DOB -->
+  <text x="24" y="23" font-family="Arial,sans-serif" font-size="3" fill="#64748b">DOB: 01/01/1990</text>
+  <!-- Gender -->
+  <text x="24" y="27" font-family="Arial,sans-serif" font-size="3" fill="#64748b">Male</text>
+  <!-- Aadhaar number -->
+  <text x="4" y="38" font-family="Courier New,monospace" font-size="5" fill="#1e293b" font-weight="bold" letter-spacing="2">XXXX XXXX 4940</text>
+  <!-- Bottom strip -->
+  <rect y="44" width="80" height="8" rx="0" fill="#f8fafc"/>
+  <rect y="44" width="80" height="1" fill="#e2e8f0"/>
+  <!-- Barcode lines -->
+  <rect x="4" y="46" width="1" height="4" fill="#334155"/>
+  <rect x="6" y="46" width="2" height="4" fill="#334155"/>
+  <rect x="9" y="46" width="1" height="4" fill="#334155"/>
+  <rect x="11" y="46" width="3" height="4" fill="#334155"/>
+  <rect x="15" y="46" width="1" height="4" fill="#334155"/>
+  <rect x="17" y="46" width="2" height="4" fill="#334155"/>
+  <rect x="20" y="46" width="1" height="4" fill="#334155"/>
+  <!-- Ashoka chakra small -->
+  <circle cx="72" cy="22" r="6" stroke="#1a56db" stroke-width="0.8" fill="none"/>
+  <circle cx="72" cy="22" r="1.5" fill="#1a56db"/>
+  <line x1="72" y1="16" x2="72" y2="28" stroke="#1a56db" stroke-width="0.5"/>
+  <line x1="66" y1="22" x2="78" y2="22" stroke="#1a56db" stroke-width="0.5"/>
+  <line x1="67.8" y1="17.8" x2="76.2" y2="26.2" stroke="#1a56db" stroke-width="0.5"/>
+  <line x1="76.2" y1="17.8" x2="67.8" y2="26.2" stroke="#1a56db" stroke-width="0.5"/>
 </svg>
