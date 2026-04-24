@@ -129,6 +129,19 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
 
   const [phase, setPhase] = useState<SummaryPhase>('review');
   const [aadhaarInput, setAadhaarInput] = useState(extractedAadhaarNumber || '');
+
+  // ── Inline edit state for summary sections ──
+  type EditModal = 'pickup' | 'recipient' | 'contents' | null;
+  const [editModal, setEditModal] = useState<EditModal>(null);
+  const [editData, setEditData] = useState<Partial<SenderReceiver>>({});
+  const openEdit = (section: EditModal) => {
+    setEditData({ ...senderReceiver });
+    setEditModal(section);
+  };
+  const saveEdit = () => {
+    Object.assign(senderReceiver, editData);
+    setEditModal(null);
+  };
   const [formattedAadhaar, setFormattedAadhaar] = useState(extractedAadhaarNumber ? formatAadhaar(extractedAadhaarNumber) : '');
   const [aadhaarVerified, setAadhaarVerified] = useState(false);
   const [aadhaarLoading, setAadhaarLoading] = useState(false);
@@ -912,8 +925,9 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
           {isDomestic ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <p className="text-xs text-muted-foreground mb-1 flex items-center gap-1">
-                  <House className="h-3 w-3" /> Pickup Address
+                <p className="text-xs text-muted-foreground mb-1 flex items-center gap-1 justify-between">
+                  <span className="flex items-center gap-1"><House className="h-3 w-3" /> Pickup Address</span>
+                  <button onClick={() => openEdit('pickup')} className="text-[10px] text-coke-red hover:underline font-medium flex items-center gap-0.5">Edit</button>
                 </p>
                 <p className="text-sm font-medium">{senderReceiver.senderName}</p>
                 <p className="text-xs text-muted-foreground">{senderReceiver.senderAddress}</p>
@@ -922,8 +936,9 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
                 {senderReceiver.senderEmail && <p className="text-xs text-muted-foreground">{senderReceiver.senderEmail}</p>}
               </div>
               <div>
-                <p className="text-xs text-muted-foreground mb-1 flex items-center gap-1">
-                  <MapPin className="h-3 w-3" /> Recipient Address
+                <p className="text-xs text-muted-foreground mb-1 flex items-center gap-1 justify-between">
+                  <span className="flex items-center gap-1"><MapPin className="h-3 w-3" /> Recipient Address</span>
+                  <button onClick={() => openEdit('recipient')} className="text-[10px] text-coke-red hover:underline font-medium flex items-center gap-0.5">Edit</button>
                 </p>
                 <p className="text-sm font-medium">{senderReceiver.receiverName}</p>
                 <p className="text-xs text-muted-foreground">{senderReceiver.receiverAddress}</p>
@@ -969,7 +984,10 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
           {/* Package + Dimensions — content left, weight/dims right */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <p className="text-xs text-muted-foreground mb-1 flex items-center gap-1"><Package className="h-3 w-3" /> Package Contents</p>
+              <p className="text-xs text-muted-foreground mb-1 flex items-center gap-1 justify-between">
+                <span className="flex items-center gap-1"><Package className="h-3 w-3" /> Package Contents</span>
+                <button onClick={() => openEdit('contents')} className="text-[10px] text-coke-red hover:underline font-medium">Edit</button>
+              </p>
               <p className="text-sm">{senderReceiver.contentDescription.replace(/\s*\[HSN:[^\]]*\]/g, '')}</p>
             </div>
             <div>
@@ -1431,6 +1449,118 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
                 />
               </div>
               <p className="text-center text-white/60 text-xs mt-3">{kycDocLabel} · Tap outside to close</p>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── Edit Modals ── */}
+      <AnimatePresence>
+        {editModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[110] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
+            onClick={() => setEditModal(null)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-card rounded-2xl border border-border shadow-xl max-w-md w-full p-6 space-y-4 max-h-[85vh] overflow-y-auto"
+            >
+              <div className="flex items-center justify-between">
+                <h3 className="font-semibold text-base">
+                  {editModal === 'pickup' ? 'Edit Pickup Address' : editModal === 'recipient' ? 'Edit Recipient Address' : 'Edit Package Contents'}
+                </h3>
+                <button onClick={() => setEditModal(null)} className="text-muted-foreground hover:text-foreground">
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+
+              {editModal === 'pickup' && (
+                <div className="space-y-3">
+                  <div>
+                    <label className="text-xs font-medium">Full Name</label>
+                    <Input value={editData.senderName || ''} onChange={(e) => setEditData(d => ({ ...d, senderName: e.target.value }))} className="h-10 mt-1" />
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium">Phone</label>
+                    <Input value={editData.senderPhone || ''} onChange={(e) => setEditData(d => ({ ...d, senderPhone: e.target.value }))} className="h-10 mt-1" />
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium">Email</label>
+                    <Input value={editData.senderEmail || ''} onChange={(e) => setEditData(d => ({ ...d, senderEmail: e.target.value }))} className="h-10 mt-1" />
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium">Address</label>
+                    <Input value={editData.senderAddress || ''} onChange={(e) => setEditData(d => ({ ...d, senderAddress: e.target.value }))} className="h-10 mt-1" />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-xs font-medium">City</label>
+                      <Input value={editData.senderCity || ''} onChange={(e) => setEditData(d => ({ ...d, senderCity: e.target.value }))} className="h-10 mt-1" />
+                    </div>
+                    <div>
+                      <label className="text-xs font-medium">Pincode</label>
+                      <Input value={editData.senderPincode || ''} onChange={(e) => setEditData(d => ({ ...d, senderPincode: e.target.value }))} className="h-10 mt-1" />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {editModal === 'recipient' && (
+                <div className="space-y-3">
+                  <div>
+                    <label className="text-xs font-medium">Full Name</label>
+                    <Input value={editData.receiverName || ''} onChange={(e) => setEditData(d => ({ ...d, receiverName: e.target.value }))} className="h-10 mt-1" />
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium">Phone</label>
+                    <Input value={editData.receiverPhone || ''} onChange={(e) => setEditData(d => ({ ...d, receiverPhone: e.target.value }))} className="h-10 mt-1" />
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium">Email</label>
+                    <Input value={editData.receiverEmail || ''} onChange={(e) => setEditData(d => ({ ...d, receiverEmail: e.target.value }))} className="h-10 mt-1" />
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium">Address</label>
+                    <Input value={editData.receiverAddress || ''} onChange={(e) => setEditData(d => ({ ...d, receiverAddress: e.target.value }))} className="h-10 mt-1" />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-xs font-medium">City</label>
+                      <Input value={editData.receiverCity || ''} onChange={(e) => setEditData(d => ({ ...d, receiverCity: e.target.value }))} className="h-10 mt-1" />
+                    </div>
+                    <div>
+                      <label className="text-xs font-medium">Zipcode</label>
+                      <Input value={editData.receiverZipcode || ''} onChange={(e) => setEditData(d => ({ ...d, receiverZipcode: e.target.value }))} className="h-10 mt-1" />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {editModal === 'contents' && (
+                <div className="space-y-3">
+                  <p className="text-xs text-muted-foreground">Describe the contents of your shipment accurately.</p>
+                  <div>
+                    <label className="text-xs font-medium">Contents Description</label>
+                    <textarea
+                      value={editData.contentDescription || ''}
+                      onChange={(e) => setEditData(d => ({ ...d, contentDescription: e.target.value }))}
+                      rows={4}
+                      className="w-full mt-1 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 resize-none"
+                    />
+                  </div>
+                </div>
+              )}
+
+              <div className="flex gap-3 pt-1">
+                <Button variant="outline" onClick={() => setEditModal(null)} className="flex-1">Cancel</Button>
+                <Button className="flex-1 bg-coke-red hover:bg-red-600 text-white" onClick={saveEdit}>Save Changes</Button>
+              </div>
             </motion.div>
           </motion.div>
         )}

@@ -2977,6 +2977,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                                     inputMode="numeric"
                                     value={item.qty}
                                     onChange={(e) => { const arr = [...contentItems]; arr[idx].qty = Number(e.target.value) || 0; setContentItems(arr); }}
+                                    placeholder="Total number of this item"
                                     className={`h-10 mt-1 ${qtyErr ? 'border-destructive focus-visible:ring-destructive/30' : ''}`}
                                   />
                                   {qtyErr && <p className="text-[11px] text-destructive mt-0.5">Quantity must be at least 1</p>}
@@ -3032,13 +3033,13 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                           const valueLimit = isInternational ? 25000 : 49000;
                           const isOverLimit = totalValue > valueLimit;
                           return (
-                          <Button type="button" variant="outline" onClick={() => {
+                          <Button type="button" onClick={() => {
                             const newIdx = contentItems.length;
                             setContentItems(prev => [...prev, { name: '', type: '', hsnCode: '', qty: 1, unitPrice: 0 }]);
                             setExpandedItemIndex(newIdx);
                             setIsEditingExistingItem(false);
-                          }} className="w-full gap-2 border-dashed" disabled={isOverLimit}>
-                            <Plus className="h-4 w-4" /> Add Another Item
+                          }} className="w-full gap-2 bg-coke-red/10 hover:bg-coke-red/20 text-coke-red border border-coke-red/30 hover:border-coke-red/50 font-semibold" disabled={isOverLimit}>
+                            <Plus className="h-4 w-4" /> Add More Items to This Shipment
                           </Button>
                           );
                         })()}
