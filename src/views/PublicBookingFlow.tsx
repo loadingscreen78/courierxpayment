@@ -1603,29 +1603,52 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                         </p>
                       </div>
                       <div className="grid grid-cols-1 xs:grid-cols-2 gap-3">
-                        <FormField control={domForm.control} name="laptopBrand" render={({ field }) => (
+                        <FormField control={domForm.control} name="laptopBrand" render={({ field }) => {
+                          const isOther = field.value === 'Other' || (field.value && !['Apple','Dell','HP','Lenovo','Asus','Acer','MSI','Samsung','Microsoft'].includes(field.value) && field.value.length > 0);
+                          return (
                           <FormItem>
                             <FormLabel>Laptop Brand</FormLabel>
-                            <Select onValueChange={field.onChange} value={field.value || ''}>
+                            {isOther ? (
                               <FormControl>
-                                <SelectTrigger><SelectValue placeholder="Select brand" /></SelectTrigger>
+                                <div className="relative">
+                                  <Input
+                                    value={field.value === 'Other' ? '' : field.value}
+                                    onChange={(e) => field.onChange(e.target.value)}
+                                    placeholder="Type brand name"
+                                    autoFocus
+                                  />
+                                  <button
+                                    type="button"
+                                    onClick={() => field.onChange('')}
+                                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                                  >
+                                    <X className="h-3.5 w-3.5" />
+                                  </button>
+                                </div>
                               </FormControl>
-                              <SelectContent>
-                                <SelectItem value="Apple">Apple (MacBook)</SelectItem>
-                                <SelectItem value="Dell">Dell</SelectItem>
-                                <SelectItem value="HP">HP</SelectItem>
-                                <SelectItem value="Lenovo">Lenovo</SelectItem>
-                                <SelectItem value="Asus">Asus</SelectItem>
-                                <SelectItem value="Acer">Acer</SelectItem>
-                                <SelectItem value="MSI">MSI</SelectItem>
-                                <SelectItem value="Samsung">Samsung</SelectItem>
-                                <SelectItem value="Microsoft">Microsoft (Surface)</SelectItem>
-                                <SelectItem value="Other">Other</SelectItem>
-                              </SelectContent>
-                            </Select>
+                            ) : (
+                              <Select onValueChange={field.onChange} value={field.value || ''}>
+                                <FormControl>
+                                  <SelectTrigger><SelectValue placeholder="Select brand" /></SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  <SelectItem value="Apple">Apple (MacBook)</SelectItem>
+                                  <SelectItem value="Dell">Dell</SelectItem>
+                                  <SelectItem value="HP">HP</SelectItem>
+                                  <SelectItem value="Lenovo">Lenovo</SelectItem>
+                                  <SelectItem value="Asus">Asus</SelectItem>
+                                  <SelectItem value="Acer">Acer</SelectItem>
+                                  <SelectItem value="MSI">MSI</SelectItem>
+                                  <SelectItem value="Samsung">Samsung</SelectItem>
+                                  <SelectItem value="Microsoft">Microsoft (Surface)</SelectItem>
+                                  <SelectItem value="Other">Other</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            )}
                             <FormMessage />
                           </FormItem>
-                        )} />
+                          );
+                        }} />
                         <FormField control={domForm.control} name="laptopSerialNumber" render={({ field }) => {
                           const val = (field.value || '').trim();
                           const isValidFormat = /^[A-Za-z0-9\-]{4,30}$/.test(val);
