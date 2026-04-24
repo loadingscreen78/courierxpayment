@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 60" fill="none">
+  <g>
+    <!-- Ashoka Chakra simplified -->
+    <circle cx="30" cy="30" r="18" stroke="#000080" stroke-width="1.5" fill="none"/>
+    <circle cx="30" cy="30" r="2" fill="#000080"/>
+    <!-- 24 spokes simplified as 8 -->
+    <line x1="30" y1="12" x2="30" y2="48" stroke="#000080" stroke-width="0.8"/>
+    <line x1="12" y1="30" x2="48" y2="30" stroke="#000080" stroke-width="0.8"/>
+    <line x1="17.3" y1="17.3" x2="42.7" y2="42.7" stroke="#000080" stroke-width="0.8"/>
+    <line x1="42.7" y1="17.3" x2="17.3" y2="42.7" stroke="#000080" stroke-width="0.8"/>
+    <line x1="21" y1="13.5" x2="39" y2="46.5" stroke="#000080" stroke-width="0.6"/>
+    <line x1="39" y1="13.5" x2="21" y2="46.5" stroke="#000080" stroke-width="0.6"/>
+    <line x1="13.5" y1="21" x2="46.5" y2="39" stroke="#000080" stroke-width="0.6"/>
+    <line x1="46.5" y1="21" x2="13.5" y2="39" stroke="#000080" stroke-width="0.6"/>
+  </g>
+  <text x="58" y="24" font-family="Georgia, serif" font-size="11" font-weight="bold" fill="#000080">Government of India</text>
+  <text x="58" y="40" font-family="Georgia, serif" font-size="9" fill="#444">भारत सरकार</text>
+  <text x="58" y="53" font-family="Arial, sans-serif" font-size="7" fill="#666">Ministry of Electronics &amp; IT</text>
+</svg>

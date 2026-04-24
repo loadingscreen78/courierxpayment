@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 40" fill="none">
+  <rect width="120" height="40" rx="4" fill="#0066CC"/>
+  <!-- Lock icon -->
+  <g transform="translate(8, 7)">
+    <rect x="4" y="12" width="16" height="12" rx="2" fill="#FFFFFF"/>
+    <path d="M7 12 V8 Q7 3 12 3 Q17 3 17 8 V12" stroke="#FFFFFF" stroke-width="2" fill="none" stroke-linecap="round"/>
+    <circle cx="12" cy="18" r="2" fill="#0066CC"/>
+    <rect x="11" y="18" width="2" height="3" rx="1" fill="#0066CC"/>
+  </g>
+  <!-- Text -->
+  <text x="34" y="17" font-family="Arial, sans-serif" font-size="10" font-weight="700" fill="#FFFFFF" letter-spacing="0.3">DigiLocker</text>
+  <text x="34" y="29" font-family="Arial, sans-serif" font-size="6.5" fill="#A8D4FF" letter-spacing="0.3">Govt. of India</text>
+</svg>

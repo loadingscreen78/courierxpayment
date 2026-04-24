@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 40" fill="none">
+  <rect width="120" height="40" rx="4" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="1"/>
+  <!-- Cashfree "C" mark -->
+  <g transform="translate(8, 8)">
+    <circle cx="12" cy="12" r="10" fill="#00B050"/>
+    <path d="M17 8 Q12 4 8 8 Q4 12 8 16 Q12 20 17 16" stroke="#FFFFFF" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+  </g>
+  <!-- Text -->
+  <text x="34" y="18" font-family="Arial, sans-serif" font-size="10.5" font-weight="700" fill="#1A1A1A" letter-spacing="0.2">cashfree</text>
+  <text x="34" y="30" font-family="Arial, sans-serif" font-size="6.5" fill="#6B7280" letter-spacing="0.3">Payments</text>
+</svg>

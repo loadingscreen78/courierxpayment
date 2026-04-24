@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
@@ -23,8 +23,9 @@ import { getCountryByCode } from '@/lib/shipping/countries';
 import { motion, AnimatePresence } from 'framer-motion';
 import { feedbackPresets } from '@/lib/haptics';
 import RouteMap from '@/components/guest-booking/RouteMap';
+import KycAgreementModal from '@/components/guest-booking/KycAgreementModal';
 
-// ── Types ────────────────────────────────────────────────────────────────────
+// â”€â”€ Types â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 interface SenderReceiver {
   senderName: string; senderPhone: string; senderEmail: string;
@@ -52,7 +53,7 @@ interface GuestSummaryStepProps {
 
 type SummaryPhase = 'review' | 'aadhaar' | 'payment' | 'success';
 
-// ── Aadhaar validation ───────────────────────────────────────────────────────
+// â”€â”€ Aadhaar validation â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 const verhoeffD = [
   [0,1,2,3,4,5,6,7,8,9],[1,2,3,4,0,6,7,8,9,5],[2,3,4,0,1,7,8,9,5,6],
@@ -82,7 +83,7 @@ const formatAadhaar = (v: string) => {
   return p.join(' ');
 };
 
-// ── Pickup time logic ────────────────────────────────────────────────────────
+// â”€â”€ Pickup time logic â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function getPickupInfo(): { message: string; isToday: boolean } {
   const now = new Date();
@@ -105,7 +106,7 @@ function getPickupInfo(): { message: string; isToday: boolean } {
   return { message: 'Pickup will be on the next working day (Monday).', isToday: false };
 }
 
-// ── Packing instructions ─────────────────────────────────────────────────────
+// â”€â”€ Packing instructions â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 const packingSteps = [
   { icon: Cube, title: 'Use a sturdy box', desc: 'Choose a corrugated box that fits your items snugly. Avoid oversized boxes.' },
@@ -121,7 +122,7 @@ const documentPackingSteps = [
   { icon: Scissors, title: 'Label clearly', desc: 'Attach the shipping label on a flat surface. Ensure the address is fully visible and not covered by tape.' },
 ];
 
-// ── Component ────────────────────────────────────────────────────────────────
+// â”€â”€ Component â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, senderReceiver, onBack, extractedAadhaarNumber, aadhaarFront, aadhaarBack, passportIdentity, passportAddress, passportUploadLater, prescriptionUploadLater, pharmacyBillUploadLater }: GuestSummaryStepProps) {
   const router = useRouter();
@@ -130,12 +131,12 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
   const [phase, setPhase] = useState<SummaryPhase>('review');
   const [aadhaarInput, setAadhaarInput] = useState(extractedAadhaarNumber || '');
 
-  // ── Inline edit state for summary sections ──
+  // â”€â”€ Inline edit state for summary sections â”€â”€
   type EditModal = 'pickup' | 'recipient' | 'contents' | 'weightdims' | null;
   const [editModal, setEditModal] = useState<EditModal>(null);
   const [editData, setEditData] = useState<Partial<SenderReceiver>>({});
 
-  // ── Mutable weight/dims/items (override rateFormData after edits) ──
+  // â”€â”€ Mutable weight/dims/items (override rateFormData after edits) â”€â”€
   const [editedWeightKg, setEditedWeightKg] = useState<number>(rateFormData?.weightKg ?? 0);
   const [editedLength, setEditedLength] = useState<number>(rateFormData?.lengthCm ?? 0);
   const [editedWidth, setEditedWidth] = useState<number>(rateFormData?.widthCm ?? 0);
@@ -146,7 +147,7 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
     const parts = desc.split(';').map(s => s.trim()).filter(Boolean);
     if (parts.length === 0) return [{ name: '', type: '', qty: 1, unitPrice: 0 }];
     return parts.map(p => {
-      const m = p.match(/^(.+?)\s*\((.+?)\)\s*x(\d+)\s*@\s*₹(\d+)/);
+      const m = p.match(/^(.+?)\s*\((.+?)\)\s*x(\d+)\s*@\s*â‚¹(\d+)/);
       if (m) return { name: m[1].trim(), type: m[2].trim(), qty: parseInt(m[3]), unitPrice: parseInt(m[4]) };
       return { name: p, type: '', qty: 1, unitPrice: 0 };
     });
@@ -162,7 +163,7 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
     setEditModal(section);
   };
 
-  // ── Edit field validation ──
+  // â”€â”€ Edit field validation â”€â”€
   const [editErrors, setEditErrors] = useState<Record<string, string>>({});
 
   const validateAndSaveEdit = () => {
@@ -184,7 +185,7 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
     }
     if (Object.keys(errs).length > 0) { setEditErrors(errs); return; }
 
-    // ── Same address check across both sections ──
+    // â”€â”€ Same address check across both sections â”€â”€
     const mergedData = { ...senderReceiver, ...editData };
     const sPin = (mergedData.senderPincode || '').trim();
     const rPin = (mergedData.receiverZipcode || '').trim();
@@ -215,7 +216,7 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
       if (!item.unitPrice || item.unitPrice <= 0) errs[`price_${idx}`] = 'Price is required';
     });
     if (Object.keys(errs).length > 0) { setEditErrors(errs); return; }
-    const desc = editedItems.filter(i => i.name.trim()).map(i => `${i.name} (${i.type || 'other'}) x${i.qty} @ ₹${i.unitPrice}`).join('; ');
+    const desc = editedItems.filter(i => i.name.trim()).map(i => `${i.name} (${i.type || 'other'}) x${i.qty} @ â‚¹${i.unitPrice}`).join('; ');
     senderReceiver.contentDescription = desc;
     setEditModal(null);
     setEditErrors({});
@@ -265,8 +266,8 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
           setAdjustedPrice(newPrice);
           const diff = newPrice - oldPrice;
           setPriceAlertMsg(diff > 0
-            ? `Price increased by ₹${diff.toLocaleString('en-IN')} due to updated weight/dimensions. New total: ₹${newPrice.toLocaleString('en-IN')}.`
-            : `Price decreased by ₹${Math.abs(diff).toLocaleString('en-IN')} due to updated weight/dimensions. New total: ₹${newPrice.toLocaleString('en-IN')}.`
+            ? `Price increased by â‚¹${diff.toLocaleString('en-IN')} due to updated weight/dimensions. New total: â‚¹${newPrice.toLocaleString('en-IN')}.`
+            : `Price decreased by â‚¹${Math.abs(diff).toLocaleString('en-IN')} due to updated weight/dimensions. New total: â‚¹${newPrice.toLocaleString('en-IN')}.`
           );
         } else {
           setAdjustedPrice(null);
@@ -281,7 +282,7 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
   const [aadhaarLoading, setAadhaarLoading] = useState(false);
   const [aadhaarError, setAadhaarError] = useState('');
 
-  // ── Multi-doc KYC state ──
+  // â”€â”€ Multi-doc KYC state â”€â”€
   type GuestDocType = 'aadhaar' | 'pan' | 'passport' | 'voter_id';
   type KycMethod = 'digilocker' | 'sandbox_otp';
   const [selectedDocType, setSelectedDocType] = useState<GuestDocType>('aadhaar');
@@ -305,7 +306,7 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
   const [docVerified, setDocVerified] = useState(false);
   const [docVerifiedLabel, setDocVerifiedLabel] = useState('');
   const [termsAccepted, setTermsAccepted] = useState(false);
-  // ── Agreement modal (2-step: KYC → Agreement) ──
+  // â”€â”€ Agreement modal (2-step: KYC â†’ Agreement) â”€â”€
   const [showAgreementModal, setShowAgreementModal] = useState(false);
   const [agreementStep, setAgreementStep] = useState<1 | 2>(1);
   const [verifiedName, setVerifiedName] = useState('');
@@ -322,7 +323,7 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
   const [trackingNumber, setTrackingNumber] = useState('');
   const [awbUrl, setAwbUrl] = useState('');
 
-  // ── Domestic KYC document upload state ──
+  // â”€â”€ Domestic KYC document upload state â”€â”€
   const [kycDocType, setKycDocType] = useState<string>('');
   const [kycDocs, setKycDocs] = useState<Record<string, { file: File; previewUrl: string }>>({});
   const [showDocPreview, setShowDocPreview] = useState(false);
@@ -331,7 +332,7 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
 
   const isDomestic = mode === 'domestic';
 
-  // ── Abandoned booking notification ──
+  // â”€â”€ Abandoned booking notification â”€â”€
   // Track whether booking was completed to avoid false positives
   const bookingCompletedRef = useRef(false);
   const abandonNotifiedRef = useRef(false);
@@ -368,7 +369,7 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
     };
   }, [notifyAbandonedBooking]);
 
-  // ── KYC doc helpers ──
+  // â”€â”€ KYC doc helpers â”€â”€
   const kycDocLabel = kycDocType === 'aadhaar' ? 'Aadhaar Card' : kycDocType === 'driving_license' ? 'Driving License' : kycDocType === 'passport' ? 'Passport' : kycDocType === 'voter_id' ? 'Voter ID Card' : '';
 
   // Current doc for selected type
@@ -408,7 +409,7 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
 
   const pickupInfo = useMemo(() => getPickupInfo(), []);
 
-  // ── Auto-fill Aadhaar from OCR — but do NOT auto-verify, user must choose method ──
+  // â”€â”€ Auto-fill Aadhaar from OCR â€” but do NOT auto-verify, user must choose method â”€â”€
   useEffect(() => {
     if (extractedAadhaarNumber && !docVerified) {
       const raw = extractedAadhaarNumber.replace(/\D/g, '');
@@ -419,7 +420,7 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
     }
   }, [extractedAadhaarNumber]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── KYC handlers ──
+  // â”€â”€ KYC handlers â”€â”€
 
   const handleAadhaarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const raw = e.target.value.replace(/\D/g, '').slice(0, 12);
@@ -458,7 +459,7 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
     setAgreementStep(2);
   };
 
-  // ── DigiLocker (Aadhaar, PAN, Driving License via Cashfree) ──────────────
+  // â”€â”€ DigiLocker (Aadhaar, PAN, Driving License via Cashfree) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   // DigiLocker only supports: aadhaar, pan, driving_license
   const digilockerDocType = selectedDocType === 'pan' ? 'pan' : 'aadhaar';
   const digilockerSupported = ['aadhaar', 'pan'].includes(selectedDocType);
@@ -506,7 +507,7 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
     finally { setAadhaarLoading(false); }
   }, [digilockerReferenceId, digilockerVerificationId, digilockerDocType, selectedDocType, aadhaarInput, panInput, toast]);
 
-  // ── Sandbox OTP (Aadhaar only) ─────────────────────────────────────────────
+  // â”€â”€ Sandbox OTP (Aadhaar only) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const handleSendSandboxOtp = async () => {
     if (!validateDocInput()) return;
     setAadhaarLoading(true); setAadhaarError('');
@@ -546,7 +547,7 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
   // Legacy alias
   const handleVerifyAadhaar = handleSendSandboxOtp;
 
-  // ── Coupon handler ──
+  // â”€â”€ Coupon handler â”€â”€
 
   const handleApplyCoupon = async (codeToValidate?: string) => {
     const codeToApply = (codeToValidate || couponCode).trim().toUpperCase();
@@ -563,11 +564,11 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
       const data = await res.json();
       if (data.valid) {
         setCouponCode(codeToApply);
-        // Cap discount at effectiveBasePrice so 100% coupon always gives ₹0 total
+        // Cap discount at effectiveBasePrice so 100% coupon always gives â‚¹0 total
         const discount = Math.min(data.discountAmount || 0, effectiveBasePrice);
         setCouponDiscount(discount);
         setCouponApplied(true);
-        toast({ title: 'Coupon Applied', description: `You saved ₹${discount}` });
+        toast({ title: 'Coupon Applied', description: `You saved â‚¹${discount}` });
       } else {
         toast({ title: 'Invalid Coupon', description: data.error || 'This coupon is not valid.', variant: 'destructive' });
       }
@@ -578,7 +579,7 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
     }
   };
 
-  // ── Payment handler ──
+  // â”€â”€ Payment handler â”€â”€
 
   const handlePayNow = async () => {
     if (!aadhaarVerified && !docVerified) {
@@ -668,7 +669,7 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
             if (pollData.paid) {
               pollingDetectedPayment = true;
               clearInterval(pollInterval);
-              // Don't update state here — wait for modal to close
+              // Don't update state here â€” wait for modal to close
             }
           } catch { /* ignore */ }
         }, 5000);
@@ -683,7 +684,7 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
           console.error('[GuestSummary] Cashfree checkout error:', checkoutErr);
         }
 
-        // Modal closed — safe to update React state now
+        // Modal closed â€” safe to update React state now
         pollingStopped = true;
         clearInterval(pollInterval);
 
@@ -709,7 +710,7 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
             setPhase('success');
             toast({ title: 'Payment Successful', description: 'Your shipment has been booked.' });
           } else if (pollingDetectedPayment) {
-            // Polling said paid but verify failed — still show success
+            // Polling said paid but verify failed â€” still show success
             bookingCompletedRef.current = true;
             setTrackingNumber(serverTracking);
             setAwbUrl(data.awbUrl || '');
@@ -741,7 +742,7 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
           setPhase('success');
           toast({ title: 'Booking Confirmed', description: 'Your shipment has been booked successfully.' });
         } catch {
-          // Fallback — still show success, shipment will be processed
+          // Fallback â€” still show success, shipment will be processed
           bookingCompletedRef.current = true;
           setTrackingNumber(serverTracking);
           setAwbUrl('');
@@ -750,7 +751,7 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
         }
       }
     } catch {
-      notifyAbandonedBooking('Payment process failed — possible gateway error or network issue.');
+      notifyAbandonedBooking('Payment process failed â€” possible gateway error or network issue.');
       toast({ title: 'Error', description: 'Payment failed. Please try again.', variant: 'destructive' });
     } finally {
       setPaymentLoading(false);
@@ -762,7 +763,7 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
     toast({ title: 'Copied', description: 'Tracking number copied to clipboard.' });
   };
 
-  // ── Rate breakdown for international (must be before any conditional return to satisfy Rules of Hooks) ──
+  // â”€â”€ Rate breakdown for international (must be before any conditional return to satisfy Rules of Hooks) â”€â”€
   const rateBreakdown = useMemo(() => {
     if (mode !== 'international' || !rateFormData?.destinationCountry) return null;
     try {
@@ -784,13 +785,13 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
   const frontThumb = useMemo(() => aadhaarFront ? URL.createObjectURL(aadhaarFront) : null, [aadhaarFront]);
   const backThumb = useMemo(() => aadhaarBack ? URL.createObjectURL(aadhaarBack) : null, [aadhaarBack]);
 
-  // Dimensions — use edited values
+  // Dimensions â€” use edited values
   const dims = { l: editedLength, w: editedWidth, h: editedHeight };
   const weight = rateFormData?.weightGrams ? `${rateFormData.weightGrams}g` : editedWeightKg ? `${editedWeightKg} kg` : '';
 
-  // ═══════════════════════════════════════════════════════════════════════════
+  // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
   // SUCCESS PHASE
-  // ═══════════════════════════════════════════════════════════════════════════
+  // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
   if (phase === 'success') {
     return (
@@ -858,7 +859,7 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
           </div>
         </motion.div>
 
-        {/* ── Documents Required (International medicine & gift only) ── */}
+        {/* â”€â”€ Documents Required (International medicine & gift only) â”€â”€ */}
         {mode === 'international' && shipmentType !== 'document' && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -954,21 +955,21 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
           </h3>
           <ul className="space-y-1.5 text-xs text-muted-foreground">
             {(isDomestic && rateFormData?.shipmentType === 'document' ? [
-              'Use a rigid envelope or stiff cardboard folder — no bending.',
+              'Use a rigid envelope or stiff cardboard folder â€” no bending.',
               'Seal in a zip-lock bag first to protect from moisture.',
               'Tape all edges firmly. Attach label on a flat, visible surface.',
             ] : isDomestic && rateFormData?.shipmentType === 'laptop' ? [
-              'Power off the laptop completely — not sleep mode.',
+              'Power off the laptop completely â€” not sleep mode.',
               'Remove the charger and accessories; pack them separately in a padded pouch.',
               'Wrap the laptop in anti-static bubble wrap (at least 3 layers).',
-              'Place in a rigid box with foam padding on all 6 sides — no movement inside.',
+              'Place in a rigid box with foam padding on all 6 sides â€” no movement inside.',
               'Seal all seams with strong tape. Attach the AWB label on the top surface.',
             ] : [
               'Use a sturdy corrugated box that fits your items snugly.',
               'Wrap each item individually in bubble wrap; fill gaps with packing material.',
               'For liquids/medicines: seal in zip-lock bags, then wrap in bubble wrap.',
               'Seal all seams with strong tape using the H-taping method.',
-              'Attach the AWB label on the largest flat surface — do not cover the barcode.',
+              'Attach the AWB label on the largest flat surface â€” do not cover the barcode.',
             ]).map((tip, i) => (
               <li key={i} className="flex gap-2">
                 <span className="mt-0.5 w-3.5 h-3.5 rounded-full bg-coke-red/10 text-coke-red flex items-center justify-center shrink-0 text-[9px] font-bold">{i + 1}</span>
@@ -992,13 +993,13 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
   }
 
 
-  // ═══════════════════════════════════════════════════════════════════════════
+  // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
   // REVIEW PHASE (default)
-  // ═══════════════════════════════════════════════════════════════════════════
+  // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
   return (
     <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-5">
-      {/* ── Booking Summary ── */}
+      {/* â”€â”€ Booking Summary â”€â”€ */}
       <div className="bg-card rounded-xl border border-border overflow-hidden">
         <div className="bg-muted/50 px-4 sm:px-5 py-3 border-b border-border">
           <h2 className="font-semibold text-sm sm:text-base flex items-center gap-2">
@@ -1012,14 +1013,14 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
             <div className="min-w-0">
               <p className="font-semibold text-base sm:text-lg truncate">{courierName}</p>
               <p className="text-xs sm:text-sm text-muted-foreground capitalize">
-                {mode} · {shipmentType}
+                {mode} Â· {shipmentType}
                 {destinationCountryInfo && (
-                  <span> · {destinationCountryInfo.flag} {destinationCountryInfo.name}</span>
+                  <span> Â· {destinationCountryInfo.flag} {destinationCountryInfo.name}</span>
                 )}
               </p>
             </div>
             <div className="sm:text-right shrink-0">
-              <p className="text-xl sm:text-2xl font-bold">₹{effectiveBasePrice.toLocaleString('en-IN')}</p>
+              <p className="text-xl sm:text-2xl font-bold">â‚¹{effectiveBasePrice.toLocaleString('en-IN')}</p>
               <p className="text-xs text-muted-foreground">all-inclusive</p>
             </div>
           </div>
@@ -1074,19 +1075,19 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
               </div>
               <div>
                 <p className="text-xs text-muted-foreground mb-1 flex items-center gap-1">
-                  <Airplane className="h-3 w-3" /> Receiver {destinationCountryInfo && <span>· {destinationCountryInfo.flag} {destinationCountryInfo.name}</span>}
+                  <Airplane className="h-3 w-3" /> Receiver {destinationCountryInfo && <span>Â· {destinationCountryInfo.flag} {destinationCountryInfo.name}</span>}
                 </p>
                 <p className="text-sm font-medium">{senderReceiver.receiverName}</p>
                 <p className="text-xs text-muted-foreground">{senderReceiver.receiverAddress}</p>
                 <p className="text-xs text-muted-foreground">{senderReceiver.receiverCity} - {senderReceiver.receiverZipcode}</p>
-                <p className="text-xs text-muted-foreground">{senderReceiver.receiverPhone} · {senderReceiver.receiverEmail}</p>
+                <p className="text-xs text-muted-foreground">{senderReceiver.receiverPhone} Â· {senderReceiver.receiverEmail}</p>
               </div>
             </div>
           )}
 
           <div className="h-px bg-border" />
 
-          {/* Package + Dimensions — content left, weight/dims right */}
+          {/* Package + Dimensions â€” content left, weight/dims right */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <p className="text-xs text-muted-foreground mb-1 flex items-center gap-1 justify-between">
@@ -1103,7 +1104,7 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
               {weight && <p className="text-sm font-medium">{weight}</p>}
               {dims && (
                 <>
-                  <p className="text-xs text-muted-foreground mt-0.5">{dims.l} × {dims.w} × {dims.h} cm</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">{dims.l} Ã— {dims.w} Ã— {dims.h} cm</p>
                   {dims.l && dims.w && dims.h && (rateFormData?.weightGrams || editedWeightKg) && (
                     <p className="text-xs text-muted-foreground mt-0.5">Vol. weight: {((dims.l * dims.w * dims.h) / 5000).toFixed(1)} kg</p>
                   )}
@@ -1136,7 +1137,7 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
         </div>
       </div>
 
-      {/* ── Route Map ── */}
+      {/* â”€â”€ Route Map â”€â”€ */}
       <RouteMap
         pickupAddress={senderReceiver.senderAddress}
         pickupCity={senderReceiver.senderCity}
@@ -1149,11 +1150,11 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
         mode={mode}
       />
 
-      {/* ── Price adjustment alert ── */}
+      {/* â”€â”€ Price adjustment alert â”€â”€ */}
       {refetchingPrice && (
         <div className="rounded-xl border border-blue-200 bg-blue-50 dark:bg-blue-950/20 p-4 flex items-center gap-3">
           <CircleNotch className="h-5 w-5 text-blue-600 animate-spin shrink-0" />
-          <p className="text-sm text-blue-800 dark:text-blue-300">Recalculating price based on updated weight/dimensions…</p>
+          <p className="text-sm text-blue-800 dark:text-blue-300">Recalculating price based on updated weight/dimensionsâ€¦</p>
         </div>
       )}
       {!refetchingPrice && priceAlertMsg && (
@@ -1162,14 +1163,14 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
           <Warning className={`h-5 w-5 shrink-0 mt-0.5 ${adjustedPrice && adjustedPrice > basePrice ? 'text-amber-600' : 'text-candlestick-green'}`} weight="fill" />
           <div className="space-y-0.5">
             <p className={`text-sm font-semibold ${adjustedPrice && adjustedPrice > basePrice ? 'text-amber-900 dark:text-amber-200' : 'text-candlestick-green'}`}>
-              {adjustedPrice && adjustedPrice > basePrice ? 'Price Updated — Additional Charge' : 'Price Updated — Reduced Charge'}
+              {adjustedPrice && adjustedPrice > basePrice ? 'Price Updated â€” Additional Charge' : 'Price Updated â€” Reduced Charge'}
             </p>
             <p className="text-xs text-muted-foreground">{priceAlertMsg}</p>
           </div>
         </motion.div>
       )}
 
-      {/* ── Passport Upload Later reminder (medicine flow) ── */}
+      {/* â”€â”€ Passport Upload Later reminder (medicine flow) â”€â”€ */}
       {passportUploadLater && (
         <div className="rounded-xl border border-amber-200 dark:border-amber-800/40 bg-amber-50 dark:bg-amber-950/20 p-4 flex items-start gap-3">
           <Clock className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" weight="duotone" />
@@ -1180,7 +1181,7 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
         </div>
       )}
 
-      {/* ── KYC verified status (shown after agreement modal completes) ── */}
+      {/* â”€â”€ KYC verified status (shown after agreement modal completes) â”€â”€ */}
       {(aadhaarVerified || docVerified) && (
         <div className="flex items-center gap-3 px-4 py-3 rounded-xl border border-candlestick-green/30 bg-candlestick-green/5">
           <CheckCircle className="h-5 w-5 text-candlestick-green shrink-0" weight="fill" />
@@ -1195,14 +1196,14 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
         </div>
       )}
 
-      {/* ── Coupon Code ── */}
+      {/* â”€â”€ Coupon Code â”€â”€ */}
       {couponApplied ? (
         <div className="bg-card rounded-xl border border-candlestick-green/30 p-5">
           <div className="flex items-center gap-2 p-2.5 rounded-lg bg-candlestick-green/5 border border-candlestick-green/20">
             <CheckCircle className="h-5 w-5 text-candlestick-green" weight="fill" />
             <div className="flex-1">
               <p className="text-sm font-medium text-candlestick-green">{couponCode.toUpperCase()} Applied</p>
-              <p className="text-xs text-muted-foreground">You saved ₹{couponDiscount.toLocaleString('en-IN')}</p>
+              <p className="text-xs text-muted-foreground">You saved â‚¹{couponDiscount.toLocaleString('en-IN')}</p>
             </div>
             <button
               onClick={() => {
@@ -1219,7 +1220,7 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
         </div>
       ) : (
         <div className="bg-card rounded-xl border border-border p-4 space-y-3">
-          {/* WELCOME10 banner — only show if not in manual mode */}
+          {/* WELCOME10 banner â€” only show if not in manual mode */}
           {!showManualCoupon && (
             <div className="flex items-center gap-3">
               <div className="flex-1 min-w-0">
@@ -1274,43 +1275,43 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
                 onClick={() => { setShowManualCoupon(false); setCouponCode(''); }}
                 className="text-xs text-muted-foreground hover:text-foreground underline underline-offset-2 transition-colors"
               >
-                ← Back
+                â† Back
               </button>
             </div>
           )}
         </div>
       )}
 
-      {/* ── Price Breakdown ── */}
+      {/* â”€â”€ Price Breakdown â”€â”€ */}
       <div className="bg-card rounded-xl border border-border p-5 space-y-2">
         {/* Show detailed breakdown for international if available */}
         {rateBreakdown?.breakdown ? (
           rateBreakdown.breakdown.map(item => (
             <div key={item.label} className="flex justify-between text-sm">
               <span className="text-muted-foreground">{item.label}</span>
-              <span>₹{item.amount.toLocaleString('en-IN')}</span>
+              <span>â‚¹{item.amount.toLocaleString('en-IN')}</span>
             </div>
           ))
         ) : (
           <div className="flex justify-between text-sm">
             <span className="text-muted-foreground">Shipping ({courierName})</span>
-            <span>₹{basePrice.toLocaleString('en-IN')}</span>
+            <span>â‚¹{basePrice.toLocaleString('en-IN')}</span>
           </div>
         )}
         {couponDiscount > 0 && (
           <div className="flex justify-between text-sm text-candlestick-green">
             <span>Coupon Discount</span>
-            <span>-₹{couponDiscount.toLocaleString('en-IN')}</span>
+            <span>-â‚¹{couponDiscount.toLocaleString('en-IN')}</span>
           </div>
         )}
         <div className="h-px bg-border my-1" />
         <div className="flex justify-between font-bold text-lg">
           <span>Total</span>
-          <span>₹{finalPrice.toLocaleString('en-IN')}</span>
+          <span>â‚¹{finalPrice.toLocaleString('en-IN')}</span>
         </div>
       </div>
 
-      {/* ── Terms & Conditions ── */}
+      {/* â”€â”€ Terms & Conditions â”€â”€ */}
       <div
         className={`flex items-start gap-3 p-4 rounded-xl border cursor-pointer transition-all ${termsAccepted ? 'border-candlestick-green/40 bg-candlestick-green/5' : 'border-border bg-card hover:border-coke-red/30'}`}
         onClick={() => { if (!termsAccepted) { setAgreementStep(docVerified ? 2 : 1); setShowAgreementModal(true); } else setTermsAccepted(false); }}
@@ -1324,7 +1325,7 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
         </div>
       </div>
 
-      {/* ── Pay Button ── */}
+      {/* â”€â”€ Pay Button â”€â”€ */}
       <Button
         onClick={() => { feedbackPresets.tap(); handlePayNow(); }}
         disabled={paymentLoading || !termsAccepted}
@@ -1335,7 +1336,7 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
         ) : (
           <>
             <ShieldCheck className="h-5 w-5 shrink-0" weight="bold" />
-            <span className="truncate">Complete Booking — ₹{finalPrice.toLocaleString('en-IN')}</span>
+            <span className="truncate">Complete Booking â€” â‚¹{finalPrice.toLocaleString('en-IN')}</span>
           </>
         )}
       </Button>
@@ -1344,7 +1345,7 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
         <p className="text-xs text-center text-muted-foreground">Click the checkbox above to verify your identity and agree to the terms before paying.</p>
       )}
 
-      {/* ── Full-screen Document Preview Modal ── */}
+      {/* â”€â”€ Full-screen Document Preview Modal â”€â”€ */}
       <AnimatePresence>
         {showDocPreview && kycDocPreviewUrl && (
           <motion.div
@@ -1375,13 +1376,13 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
                   className="w-full h-auto max-h-[80vh] object-contain"
                 />
               </div>
-              <p className="text-center text-white/60 text-xs mt-3">{kycDocLabel} · Tap outside to close</p>
+              <p className="text-center text-white/60 text-xs mt-3">{kycDocLabel} Â· Tap outside to close</p>
             </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* ── Edit Modals ── */}
+      {/* â”€â”€ Edit Modals â”€â”€ */}
       <AnimatePresence>
         {editModal && (
           <motion.div
@@ -1503,13 +1504,13 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
                           {editErrors[`qty_${idx}`] && <p className="text-[10px] text-destructive mt-0.5">{editErrors[`qty_${idx}`]}</p>}
                         </div>
                         <div>
-                          <label className="text-[10px] font-medium">Unit Price (₹) *</label>
+                          <label className="text-[10px] font-medium">Unit Price (â‚¹) *</label>
                           <Input type="number" inputMode="numeric" value={item.unitPrice || ''} onChange={(e) => { const a = [...editedItems]; a[idx].unitPrice = parseInt(e.target.value) || 0; setEditedItems(a); setEditErrors(er => ({ ...er, [`price_${idx}`]: '' })); }} placeholder="Enter value" className={`h-9 mt-0.5 text-sm ${editErrors[`price_${idx}`] ? 'border-destructive' : ''}`} />
                           {editErrors[`price_${idx}`] && <p className="text-[10px] text-destructive mt-0.5">{editErrors[`price_${idx}`]}</p>}
                         </div>
                       </div>
                       {item.name && item.unitPrice > 0 && (
-                        <p className="text-[11px] text-muted-foreground text-right">Item total: ₹{(item.qty * item.unitPrice).toLocaleString('en-IN')}</p>
+                        <p className="text-[11px] text-muted-foreground text-right">Item total: â‚¹{(item.qty * item.unitPrice).toLocaleString('en-IN')}</p>
                       )}
                     </div>
                   ))}
@@ -1520,7 +1521,7 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
                   {editedItems.length > 0 && (
                     <div className="flex justify-between text-sm font-semibold border-t border-border pt-2">
                       <span>Total Declared Value</span>
-                      <span>₹{editedItems.reduce((s, i) => s + i.qty * i.unitPrice, 0).toLocaleString('en-IN')}</span>
+                      <span>â‚¹{editedItems.reduce((s, i) => s + i.qty * i.unitPrice, 0).toLocaleString('en-IN')}</span>
                     </div>
                   )}
                 </div>
@@ -1573,396 +1574,62 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
         )}
       </AnimatePresence>
 
-      {/* ══════════════════════════════════════════════════════════════
-          2-STEP AGREEMENT MODAL
-          Step 1: KYC verification
-          Step 2: Agreement with KYC-populated details
-      ══════════════════════════════════════════════════════════════ */}
-      <AnimatePresence>
-        {showAgreementModal && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[120] flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm p-0 sm:p-4"
-            onClick={() => setShowAgreementModal(false)}
-          >
-            <motion.div
-              initial={{ y: '100%', opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              exit={{ y: '100%', opacity: 0 }}
-              transition={{ type: 'spring', damping: 28, stiffness: 300 }}
-              onClick={(e) => e.stopPropagation()}
-              className="bg-card w-full sm:max-w-lg sm:rounded-2xl rounded-t-2xl border border-border shadow-2xl flex flex-col max-h-[92vh] sm:max-h-[85vh]"
-            >
-              {/* ── Header ── */}
-              <div className="flex items-center justify-between px-5 py-4 border-b border-border shrink-0">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-coke-red/10 flex items-center justify-center">
-                    <ShieldCheck className="h-4 w-4 text-coke-red" weight="duotone" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-sm sm:text-base">Shipping Agreement</h3>
-                    <p className="text-[11px] text-muted-foreground">{agreementStep === 1 ? 'Step 1 of 2 — Verify your identity' : 'Step 2 of 2 — Review & agree'}</p>
-                  </div>
-                </div>
-                <button onClick={() => setShowAgreementModal(false)} className="text-muted-foreground hover:text-foreground p-1 rounded-lg hover:bg-muted transition-colors">
-                  <X className="h-5 w-5" />
-                </button>
-              </div>
+      {/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+          2-STEP AGREEMENT MODAL (Revamped)
+      â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
+      <KycAgreementModal
+        show={showAgreementModal}
+        onClose={() => setShowAgreementModal(false)}
+        agreementStep={agreementStep}
+        setAgreementStep={setAgreementStep}
+        isDomestic={isDomestic}
+        aadhaarVerified={aadhaarVerified}
+        docVerified={docVerified}
+        docVerifiedLabel={docVerifiedLabel}
+        verifiedName={verifiedName}
+        verifiedAddress={verifiedAddress}
+        verifiedDob={verifiedDob}
+        verifiedGender={verifiedGender}
+        verifiedDocId={verifiedDocId}
+        selectedDocType={selectedDocType}
+        setSelectedDocType={setSelectedDocType}
+        kycMethod={kycMethod}
+        setKycMethod={setKycMethod}
+        formattedAadhaar={formattedAadhaar}
+        handleAadhaarChange={handleAadhaarChange}
+        aadhaarInput={aadhaarInput}
+        panInput={panInput}
+        setPanInput={setPanInput}
+        passportInput={passportInput}
+        setPassportInput={setPassportInput}
+        passportDob={passportDob}
+        setPassportDob={setPassportDob}
+        voterIdInput={voterIdInput}
+        setVoterIdInput={setVoterIdInput}
+        docInputError={docInputError}
+        setDocInputError={setDocInputError}
+        aadhaarError={aadhaarError}
+        setAadhaarError={setAadhaarError}
+        aadhaarLoading={aadhaarLoading}
+        sandboxStep={sandboxStep}
+        setSandboxStep={setSandboxStep}
+        sandboxOtp={sandboxOtp}
+        setSandboxOtp={setSandboxOtp}
+        handleSendSandboxOtp={handleSendSandboxOtp}
+        handleVerifySandboxOtp={handleVerifySandboxOtp}
+        digilockerStep={digilockerStep}
+        setDigilockerStep={setDigilockerStep}
+        digilockerUrl={digilockerUrl}
+        digilockerSupported={digilockerSupported}
+        handleStartDigiLocker={handleStartDigiLocker}
+        handleCompleteDigiLocker={handleCompleteDigiLocker}
+        resetVerification={() => { setDocVerified(false); setAadhaarVerified(false); setDocVerifiedLabel(''); setVerifiedName(''); setVerifiedAddress(''); setVerifiedDob(''); setVerifiedGender(''); setSandboxStep('idle'); setDigilockerStep('idle'); setAadhaarError(''); }}
+        senderReceiver={senderReceiver}
+        selectedCourier={selectedCourier}
+        finalPrice={finalPrice}
+        onAccept={() => { setTermsAccepted(true); setShowAgreementModal(false); feedbackPresets.tap(); }}
+      />
 
-              {/* ── Step indicator ── */}
-              <div className="flex px-5 pt-3 pb-0 gap-2 shrink-0">
-                {[1, 2].map(s => (
-                  <div key={s} className={`flex-1 h-1 rounded-full transition-all duration-500 ${s <= agreementStep ? 'bg-coke-red' : 'bg-muted'}`} />
-                ))}
-              </div>
-
-              {/* ── Scrollable body ── */}
-              <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
-
-                {/* ════ STEP 1: KYC ════ */}
-                {agreementStep === 1 && (
-                  <div className="space-y-4">
-                    <div className="rounded-lg border border-blue-200 dark:border-blue-800/40 bg-blue-50/60 dark:bg-blue-950/20 p-3">
-                      <p className="text-xs font-semibold text-blue-900 dark:text-blue-200 flex items-center gap-1.5">
-                        <Info className="h-3.5 w-3.5 shrink-0 text-blue-600" weight="fill" />
-                        Why is identity verification required?
-                      </p>
-                      <p className="text-xs text-blue-800 dark:text-blue-300 mt-1 leading-relaxed">
-                        {isDomestic ? 'As per courier regulations, sender identity must be verified before dispatch.' : 'Under CBIC Courier Regulations and PMLA, sender identity must be verified before international dispatch.'}
-                      </p>
-                    </div>
-
-                    {/* Already verified */}
-                    {(aadhaarVerified || docVerified) ? (
-                      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex items-center gap-3 p-3 rounded-lg bg-candlestick-green/5 border border-candlestick-green/20">
-                        <CheckCircle className="h-5 w-5 text-candlestick-green shrink-0" weight="fill" />
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-candlestick-green">Identity Verified</p>
-                          <p className="text-xs text-muted-foreground font-mono truncate">{docVerifiedLabel}</p>
-                          {verifiedName && <p className="text-xs text-muted-foreground">Name: {verifiedName}</p>}
-                        </div>
-                        <button className="text-xs text-muted-foreground hover:text-foreground underline shrink-0" onClick={() => { setDocVerified(false); setAadhaarVerified(false); setDocVerifiedLabel(''); setVerifiedName(''); setVerifiedAddress(''); setVerifiedDob(''); setVerifiedGender(''); setSandboxStep('idle'); setDigilockerStep('idle'); setAadhaarError(''); }}>
-                          Change
-                        </button>
-                      </motion.div>
-                    ) : (
-                      <>
-                        {/* Doc type */}
-                        <div>
-                          <p className="text-xs font-semibold text-muted-foreground mb-2">Choose document</p>
-                          <div className="grid grid-cols-2 gap-2">
-                            {([{ type: 'aadhaar', label: 'Aadhaar' }, { type: 'pan', label: 'PAN Card' }, { type: 'passport', label: 'Passport' }, { type: 'voter_id', label: 'Voter ID' }] as { type: typeof selectedDocType; label: string }[]).map(doc => (
-                              <button key={doc.type} onClick={() => { setSelectedDocType(doc.type); setDocInputError(''); setAadhaarError(''); setSandboxStep('idle'); setDigilockerStep('idle'); if (doc.type !== 'aadhaar') setKycMethod('digilocker'); }}
-                                className={`py-2.5 px-3 rounded-lg border text-xs font-medium transition-all text-left ${selectedDocType === doc.type ? 'border-blue-500 bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300' : 'border-border bg-muted/30 text-muted-foreground hover:border-blue-300'}`}>
-                                {doc.label}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-
-                        {/* Doc number */}
-                        <div>
-                          <p className="text-xs font-semibold text-muted-foreground mb-2">Enter document details</p>
-                          {selectedDocType === 'aadhaar' && <Input type="text" inputMode="numeric" maxLength={14} placeholder="XXXX XXXX XXXX" className="font-mono tracking-widest text-center" value={formattedAadhaar} onChange={handleAadhaarChange} />}
-                          {selectedDocType === 'pan' && <Input placeholder="ABCDE1234F" maxLength={10} className="font-mono tracking-widest uppercase" value={panInput} onChange={e => { setPanInput(e.target.value.toUpperCase()); setDocInputError(''); }} />}
-                          {selectedDocType === 'passport' && (
-                            <div className="space-y-2">
-                              <Input placeholder="Passport number (e.g. A1234567)" maxLength={8} className="font-mono tracking-widest uppercase" value={passportInput} onChange={e => { setPassportInput(e.target.value.toUpperCase()); setDocInputError(''); }} />
-                              <Input type="date" value={passportDob} onChange={e => { setPassportDob(e.target.value); setDocInputError(''); }} />
-                            </div>
-                          )}
-                          {selectedDocType === 'voter_id' && <Input placeholder="EPIC number (e.g. ABC1234567)" className="font-mono tracking-widest uppercase" value={voterIdInput} onChange={e => { setVoterIdInput(e.target.value.toUpperCase()); setDocInputError(''); }} />}
-                          {docInputError && <p className="text-xs text-destructive mt-1 flex items-center gap-1"><Warning className="h-3 w-3" weight="fill" /> {docInputError}</p>}
-                        </div>
-
-                        {/* Verification method */}
-                        <div>
-                          <p className="text-xs font-semibold text-muted-foreground mb-2">Choose verification method</p>
-
-                          {/* Trust bar */}
-                          <div className="flex items-center gap-2 mb-3 p-2.5 rounded-lg bg-muted/40 border border-border/60 flex-wrap">
-                            <span className="text-[10px] text-muted-foreground font-medium">Secured by</span>
-                            {[
-                              { label: 'UIDAI', bg: '#1A3A6B' },
-                              { label: 'DigiLocker', bg: '#0066CC' },
-                              { label: 'Cashfree', bg: '#00B050' },
-                              { label: 'MeitY', bg: '#FF6600' },
-                            ].map((b, i) => (
-                              <div key={b.label} className="flex items-center gap-1">
-                                {i > 0 && <span className="text-border">·</span>}
-                                <span className="inline-flex items-center gap-1">
-                                  <span className="inline-block w-2 h-2 rounded-sm" style={{ background: b.bg }} />
-                                  <span className="text-[10px] font-semibold text-foreground/70">{b.label}</span>
-                                </span>
-                              </div>
-                            ))}
-                          </div>
-
-                          <div className="grid grid-cols-2 gap-2">
-                            {([
-                              { m: 'sandbox_otp', label: 'Aadhaar OTP', desc: 'OTP to registered mobile', onlyAadhaar: true },
-                              { m: 'digilocker',  label: 'DigiLocker',  desc: 'Govt-approved consent',   notFor: [] },
-                            ] as { m: typeof kycMethod; label: string; desc: string; onlyAadhaar?: boolean; notFor?: string[] }[]).map(opt => {
-                              const disabled = (opt.onlyAadhaar && selectedDocType !== 'aadhaar') || (opt.notFor?.includes(selectedDocType));
-                              return (
-                                <button key={opt.m} disabled={disabled} onClick={() => { if (!disabled) { setKycMethod(opt.m); setAadhaarError(''); setSandboxStep('idle'); setDigilockerStep('idle'); } }}
-                                  className={`py-2.5 px-2 rounded-lg border text-left transition-all ${disabled ? 'opacity-30 cursor-not-allowed border-border bg-muted/20' : kycMethod === opt.m ? 'border-blue-500 bg-blue-50 dark:bg-blue-950/40' : 'border-border bg-background hover:border-blue-300'}`}>
-                                  <div className={`text-xs font-semibold ${disabled ? 'text-muted-foreground' : kycMethod === opt.m ? 'text-blue-700 dark:text-blue-300' : 'text-foreground'}`}>{opt.label}</div>
-                                  <div className="text-[10px] text-muted-foreground mt-0.5 leading-tight">{opt.desc}</div>
-                                </button>
-                              );
-                            })}
-                          </div>
-                          {selectedDocType !== 'aadhaar' && (
-                            <p className="text-[11px] text-muted-foreground mt-1.5">Aadhaar OTP is only available for Aadhaar. Please use DigiLocker.</p>
-                          )}
-                        </div>
-
-                        {/* OTP flow */}
-                        {kycMethod === 'sandbox_otp' && selectedDocType === 'aadhaar' && (
-                          <div className="space-y-2">
-                            {sandboxStep === 'idle' && <Button onClick={() => { feedbackPresets.tap(); handleSendSandboxOtp(); }} disabled={aadhaarLoading || aadhaarInput.length !== 12} className="w-full bg-blue-600 hover:bg-blue-700 text-white">{aadhaarLoading ? <CircleNotch className="h-4 w-4 animate-spin mr-2" /> : null}Send OTP to Aadhaar-registered mobile</Button>}
-                            {sandboxStep === 'otp_sent' && (
-                              <div className="space-y-2">
-                                <p className="text-xs text-muted-foreground">Enter the 6-digit OTP sent to your Aadhaar-registered mobile.</p>
-                                <div className="flex gap-2">
-                                  <Input type="text" inputMode="numeric" maxLength={6} placeholder="6-digit OTP" className="font-mono tracking-widest text-center flex-1" value={sandboxOtp} onChange={e => { setSandboxOtp(e.target.value.replace(/\D/g,'').slice(0,6)); setAadhaarError(''); }} />
-                                  <Button onClick={() => { feedbackPresets.tap(); handleVerifySandboxOtp(); }} disabled={aadhaarLoading || sandboxOtp.length !== 6} className="bg-blue-600 hover:bg-blue-700 text-white shrink-0">{aadhaarLoading ? <CircleNotch className="h-4 w-4 animate-spin" /> : 'Verify'}</Button>
-                                </div>
-                                <button className="text-xs text-muted-foreground underline" onClick={() => { setSandboxStep('idle'); setSandboxOtp(''); }}>Resend OTP</button>
-                              </div>
-                            )}
-                            {sandboxStep === 'verifying' && <div className="flex items-center gap-2 p-3 rounded-lg bg-muted text-sm text-muted-foreground"><CircleNotch className="h-4 w-4 animate-spin" /> Verifying OTP...</div>}
-                          </div>
-                        )}
-
-                        {/* DigiLocker flow */}
-                        {kycMethod === 'digilocker' && digilockerSupported && (
-                          <div className="space-y-2">
-                            {digilockerStep === 'idle' && <Button onClick={() => { feedbackPresets.tap(); handleStartDigiLocker(); }} disabled={aadhaarLoading || (selectedDocType === 'aadhaar' && aadhaarInput.length !== 12)} className="w-full bg-blue-600 hover:bg-blue-700 text-white">{aadhaarLoading ? <CircleNotch className="h-4 w-4 animate-spin mr-2" /> : null}Continue with DigiLocker</Button>}
-                            {digilockerStep === 'redirect' && (
-                              <div className="space-y-2 p-3 rounded-lg bg-muted/40 border border-border">
-                                <p className="text-xs text-muted-foreground">Complete verification in DigiLocker, then return here and click below.</p>
-                                <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white text-xs" onClick={() => window.open(digilockerUrl, '_blank')}>Open DigiLocker</Button>
-                                <Button variant="outline" size="sm" className="w-full text-xs" onClick={handleCompleteDigiLocker} disabled={aadhaarLoading}>{aadhaarLoading ? <CircleNotch className="h-3.5 w-3.5 animate-spin mr-1.5" /> : null}I have completed DigiLocker — Fetch Result</Button>
-                                <button className="text-xs text-muted-foreground underline w-full text-center" onClick={() => setDigilockerStep('idle')}>Cancel</button>
-                              </div>
-                            )}
-                            {digilockerStep === 'verifying' && <div className="flex items-center gap-2 p-3 rounded-lg bg-muted text-sm text-muted-foreground"><CircleNotch className="h-4 w-4 animate-spin" /> Fetching verified data...</div>}
-                          </div>
-                        )}
-
-                        {/* KYC Form flow removed */}
-
-                        {aadhaarError && <p className="text-xs text-destructive flex items-start gap-1"><Warning className="h-3 w-3 mt-0.5 shrink-0" weight="fill" /><span>{aadhaarError.includes('secret not configured') ? 'Aadhaar OTP service not configured. Please use DigiLocker.' : aadhaarError}</span></p>}
-                      </>
-                    )}
-
-                    {/* Proceed to step 2 if already verified */}
-                    {(aadhaarVerified || docVerified) && (
-                      <Button className="w-full bg-coke-red hover:bg-red-600 text-white gap-2 min-h-[48px]" onClick={() => setAgreementStep(2)}>
-                        Continue to Agreement <ArrowRight className="h-4 w-4" />
-                      </Button>
-                    )}
-                  </div>
-                )}
-
-                {/* ════ STEP 2: AGREEMENT ════ */}
-                {agreementStep === 2 && (
-                  <div className="space-y-4">
-                    {/* KYC verified badge */}
-                    <div className="flex items-center gap-3 p-3 rounded-lg bg-candlestick-green/5 border border-candlestick-green/20">
-                      <CheckCircle className="h-5 w-5 text-candlestick-green shrink-0" weight="fill" />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs font-semibold text-candlestick-green">Identity Verified</p>
-                        <p className="text-xs text-muted-foreground font-mono">{verifiedDocId}</p>
-                      </div>
-                    </div>
-
-                    {/* Sender details from KYC */}
-                    <div className="rounded-lg border border-border bg-muted/30 p-4 space-y-2">
-                      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Sender Details (from KYC)</p>
-                      <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
-                        <div>
-                          <span className="text-muted-foreground">Full Name</span>
-                          <p className="font-medium mt-0.5">{verifiedName || senderReceiver?.senderName || '—'}</p>
-                        </div>
-                        {verifiedDob && (
-                          <div>
-                            <span className="text-muted-foreground">Date of Birth</span>
-                            <p className="font-medium mt-0.5">{verifiedDob}</p>
-                          </div>
-                        )}
-                        {verifiedGender && (
-                          <div>
-                            <span className="text-muted-foreground">Gender</span>
-                            <p className="font-medium mt-0.5">{verifiedGender === 'M' ? 'Male' : verifiedGender === 'F' ? 'Female' : verifiedGender}</p>
-                          </div>
-                        )}
-                        <div>
-                          <span className="text-muted-foreground">Phone</span>
-                          <p className="font-medium mt-0.5">{senderReceiver?.senderPhone || '—'}</p>
-                        </div>
-                        {senderReceiver?.senderEmail && (
-                          <div className="col-span-2">
-                            <span className="text-muted-foreground">Email</span>
-                            <p className="font-medium mt-0.5">{senderReceiver.senderEmail}</p>
-                          </div>
-                        )}
-                        <div className="col-span-2">
-                          <span className="text-muted-foreground">Address (from Aadhaar)</span>
-                          <p className="font-medium mt-0.5">{verifiedAddress || `${senderReceiver?.senderAddress}, ${senderReceiver?.senderCity} - ${senderReceiver?.senderPincode}`}</p>
-                        </div>
-                        <div className="col-span-2">
-                          <span className="text-muted-foreground">Document ID</span>
-                          <p className="font-mono font-medium mt-0.5">{verifiedDocId}</p>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Shipment details */}
-                    <div className="rounded-lg border border-border bg-muted/30 p-4 space-y-2">
-                      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Shipment Details</p>
-                      <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs">
-                        <div><span className="text-muted-foreground">Courier</span><p className="font-medium mt-0.5">{selectedCourier?.carrier || selectedCourier?.courier_name || '—'}</p></div>
-                        <div><span className="text-muted-foreground">Amount</span><p className="font-semibold mt-0.5 text-coke-red">₹{finalPrice.toLocaleString('en-IN')}</p></div>
-                        <div><span className="text-muted-foreground">Recipient</span><p className="font-medium mt-0.5">{senderReceiver?.receiverName}</p></div>
-                        <div><span className="text-muted-foreground">Destination</span><p className="font-medium mt-0.5">{senderReceiver?.receiverCity} - {senderReceiver?.receiverZipcode}</p></div>
-                      </div>
-                    </div>
-
-                    {/* Agreement text */}
-                    <div className="rounded-lg border border-border bg-card p-4 space-y-3 text-xs text-muted-foreground leading-relaxed">
-                      {/* Header */}
-                      <div className="border-b border-border pb-2">
-                        <p className="font-bold text-foreground text-sm uppercase tracking-wide">Shipping Service Agreement</p>
-                        <p className="text-[10px] text-muted-foreground mt-0.5">
-                          Goldilocks Zone Private Limited · CIN: U52290OD2026PTC053323 · Rathagadasahi, Urali, Cuttack, Odisha – 753011
-                        </p>
-                      </div>
-
-                      {/* Parties */}
-                      <div className="space-y-1">
-                        <p className="text-[11px]">
-                          This Agreement is entered into between <span className="font-semibold text-foreground">Goldilocks Zone Private Limited</span>, operating under the trade name <span className="font-semibold text-foreground">CourierX™</span> (the &quot;Company&quot;), and:
-                        </p>
-                        <div className="bg-muted/40 rounded-md p-2 text-[11px] space-y-0.5">
-                          <p><span className="text-muted-foreground">Name:</span> <span className="font-semibold text-foreground">{verifiedName || senderReceiver?.senderName}</span></p>
-                          {verifiedDob && <p><span className="text-muted-foreground">DOB:</span> <span className="font-medium text-foreground">{verifiedDob}</span></p>}
-                          <p><span className="text-muted-foreground">Address:</span> <span className="font-medium text-foreground">{verifiedAddress || `${senderReceiver?.senderAddress}, ${senderReceiver?.senderCity} – ${senderReceiver?.senderPincode}`}</span></p>
-                        </div>
-                        <p className="text-[10px] text-muted-foreground">
-                          Identity verified via Aadhaar OTP authentication. This electronic execution constitutes a valid and binding legal signature under the <span className="font-medium">Information Technology Act, 2000 (Section 5 &amp; Section 10A)</span> and the <span className="font-medium">IT (Amendment) Act, 2008</span>.
-                        </p>
-                      </div>
-
-                      {/* Clauses */}
-                      <div className="space-y-2.5">
-
-                        {/* 1. Declaration */}
-                        <div>
-                          <p className="font-semibold text-foreground text-[11px]">1. Declaration of Shipment Contents</p>
-                          <ul className="list-disc pl-4 space-y-1 mt-1">
-                            <li>I warrant that the description, quantity, and declared value of goods are <span className="font-medium text-foreground">100% accurate</span>.</li>
-                            <li>This shipment does <span className="font-medium text-foreground">not contain any prohibited, illegal, hazardous, or restricted items</span> as per the Indian Postal Act, 1898; IATA Dangerous Goods Regulations; Narcotic Drugs &amp; Psychotropic Substances Act, 1985; Customs Act, 1962; or any other applicable law.</li>
-                            <li>I agree to indemnify the Company against any claims, fines, legal proceedings, or penalties arising from undeclared or illegal goods.</li>
-                          </ul>
-                        </div>
-
-                        {/* 2. Weight & Surcharges */}
-                        <div>
-                          <p className="font-semibold text-foreground text-[11px]">2. Weight, Dimensions &amp; Surcharges</p>
-                          <ul className="list-disc pl-4 space-y-1 mt-1">
-                            <li>The Company and its carrier partners reserve the right to re-weigh and re-measure shipments using calibrated equipment.</li>
-                            <li>If actual weight or volumetric dimensions exceed declared values, I am liable to pay the additional charges immediately upon demand.</li>
-                            <li>If additional charges remain unpaid for more than <span className="font-medium text-foreground">4 days</span> from the date of demand, the Company shall have a <span className="font-medium text-foreground">general lien</span> over the shipment and reserves the right to confiscate, sell, or destroy it to recover unpaid dues, without further liability to me.</li>
-                          </ul>
-                        </div>
-
-                        {/* 3. Liability & Insurance */}
-                        <div>
-                          <p className="font-semibold text-foreground text-[11px]">3. Limitation of Liability &amp; Insurance</p>
-                          <ul className="list-disc pl-4 space-y-1 mt-1">
-                            <li>I acknowledge that CourierX™ is a <span className="font-medium text-foreground">service aggregator</span> and is not directly responsible for loss or damage caused by third-party courier partners.</li>
-                            <li>In case of loss or damage, basic insurance coverage is limited to <span className="font-medium text-foreground">100% of shipment value plus courier charges, up to a maximum of ₹3,000</span> (whichever is higher), as provided by the opted courier partner.</li>
-                            <li>The Company will act as a facilitator for insurance claims; the final decision rests solely with the carrier.</li>
-                            <li>This clause is consistent with the <span className="font-medium">Consumer Protection Act, 2019</span> and the <span className="font-medium">Carriage by Air Act, 1972</span>.</li>
-                          </ul>
-                        </div>
-
-                        {/* 4. Inspection & KYC */}
-                        <div>
-                          <p className="font-semibold text-foreground text-[11px]">4. Inspection, KYC &amp; Compliance</p>
-                          <ul className="list-disc pl-4 space-y-1 mt-1">
-                            <li>The Company or any authorised government body (including Customs, Narcotics, and CBIC) may open and inspect any shipment at any time.</li>
-                            <li>I am responsible for providing all KYC documents required under the <span className="font-medium">Prevention of Money Laundering Act, 2002 (PMLA)</span>, <span className="font-medium">CBIC Courier Regulations, 2010</span>, and <span className="font-medium">Foreign Exchange Management Act, 1999 (FEMA)</span>.</li>
-                          </ul>
-                        </div>
-
-                        {/* 5. Packaging */}
-                        <div>
-                          <p className="font-semibold text-foreground text-[11px]">5. Packaging Responsibility</p>
-                          <p className="mt-1">I am solely responsible for ensuring contents are packed securely. The Company is not liable for damage resulting from inadequate packaging.</p>
-                        </div>
-
-                        {/* 6. Data & Privacy */}
-                        <div>
-                          <p className="font-semibold text-foreground text-[11px]">6. Data Processing &amp; Privacy</p>
-                          <p className="mt-1">I consent to the processing of my personal data (including Aadhaar-derived information) for shipment processing, regulatory compliance, and fraud prevention, in accordance with the <span className="font-medium">IT Act, 2000</span>, <span className="font-medium">SPDI Rules, 2011</span>, and the <span className="font-medium">Digital Personal Data Protection Act, 2023</span>.</p>
-                        </div>
-
-                        {/* 7. Governing Law */}
-                        <div>
-                          <p className="font-semibold text-foreground text-[11px]">7. Governing Law &amp; Jurisdiction</p>
-                          <p className="mt-1">This Agreement is governed by the laws of India. All disputes shall be subject to the exclusive jurisdiction of the courts in <span className="font-medium text-foreground">Cuttack, Odisha</span>, and resolved through binding arbitration under the <span className="font-medium">Arbitration &amp; Conciliation Act, 1996</span>.</p>
-                        </div>
-
-                        {/* 8. Force Majeure */}
-                        <div>
-                          <p className="font-semibold text-foreground text-[11px]">8. Force Majeure</p>
-                          <p className="mt-1">The Company shall not be responsible for delays caused by natural disasters, war, strikes, pandemics, or government restrictions beyond its control.</p>
-                        </div>
-                      </div>
-
-                      {/* Confirmation */}
-                      <div className="border-t border-border pt-2 space-y-1">
-                        <p className="text-[11px] font-medium text-foreground">By clicking &quot;I Agree &amp; Confirm&quot; below, I confirm that:</p>
-                        <ul className="list-disc pl-4 space-y-1">
-                          <li>I have read, understood, and agree to all clauses of this Agreement.</li>
-                          <li>I authorise CourierX™ to process this shipment and share necessary details with the courier partner.</li>
-                          <li>This digital acceptance is legally binding under the <span className="font-medium">IT Act, 2000</span>.</li>
-                        </ul>
-                      </div>
-
-                      <div className="flex flex-wrap gap-x-3 gap-y-1 pt-1 border-t border-border/60">
-                        <a href="/terms" target="_blank" className="text-coke-red hover:underline font-medium">Terms &amp; Conditions ↗</a>
-                        <a href="/shipping-policy" target="_blank" className="text-coke-red hover:underline font-medium">Shipping Policy ↗</a>
-                        <a href="/refund-policy" target="_blank" className="text-coke-red hover:underline font-medium">Refund Policy ↗</a>
-                        <a href="/privacy-policy" target="_blank" className="text-coke-red hover:underline font-medium">Privacy Policy ↗</a>
-                        <a href="/prohibited-items" target="_blank" className="text-coke-red hover:underline font-medium">Prohibited Items ↗</a>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* ── Footer ── */}
-              <div className="px-5 py-4 border-t border-border shrink-0 space-y-2">
-                {agreementStep === 2 && (
-                  <Button className="w-full bg-coke-red hover:bg-red-600 text-white gap-2 min-h-[52px] text-sm font-semibold shadow-lg shadow-coke-red/20" onClick={() => { setTermsAccepted(true); setShowAgreementModal(false); feedbackPresets.tap(); }}>
-                    <CheckCircle className="h-5 w-5" weight="fill" /> I Agree & Confirm
-                  </Button>
-                )}
-                <button onClick={() => setShowAgreementModal(false)} className="w-full text-xs text-muted-foreground hover:text-foreground py-1 transition-colors">
-                  {agreementStep === 1 ? 'Cancel' : 'Back'}
-                </button>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </motion.div>
   );
 }

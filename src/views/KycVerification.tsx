@@ -2,7 +2,7 @@
 
 import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Shield, ArrowRight, Loader2, CheckCircle2, MapPin, ExternalLink, Lock, CreditCard, BookOpen, Vote, FileText } from 'lucide-react';
+import { Shield, ArrowRight, Loader2, CheckCircle2, MapPin, ExternalLink, Lock, FileText } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -18,11 +18,11 @@ type DocType = 'aadhaar' | 'pan' | 'passport' | 'voter_id';
 type AadhaarMethod = 'digilocker' | 'uid_lookup';
 type KycStep = 'select_doc' | 'enter_details' | 'redirect' | 'verifying' | 'success';
 
-const DOC_OPTIONS: { type: DocType; label: string; icon: React.ReactNode; desc: string }[] = [
-  { type: 'aadhaar',   label: 'Aadhaar',   icon: <Shield className="h-5 w-5" />,     desc: 'Verify via DigiLocker or UID lookup' },
-  { type: 'pan',       label: 'PAN Card',  icon: <CreditCard className="h-5 w-5" />, desc: 'Instant PAN database verification' },
-  { type: 'passport',  label: 'Passport',  icon: <BookOpen className="h-5 w-5" />,   desc: 'Passport number + date of birth' },
-  { type: 'voter_id',  label: 'Voter ID',  icon: <Vote className="h-5 w-5" />,       desc: 'EPIC number verification' },
+const DOC_OPTIONS: { type: DocType; label: string; icon: string; desc: string }[] = [
+  { type: 'aadhaar',   label: 'Aadhaar',   icon: '/logos/doc-aadhaar.svg',   desc: 'Verify via DigiLocker or UID lookup' },
+  { type: 'pan',       label: 'PAN Card',  icon: '/logos/doc-pan.svg',       desc: 'Instant PAN database verification' },
+  { type: 'passport',  label: 'Passport',  icon: '/logos/doc-passport.svg',  desc: 'Passport number + date of birth' },
+  { type: 'voter_id',  label: 'Voter ID',  icon: '/logos/doc-voterid.svg',   desc: 'EPIC number verification' },
 ];
 
 // Verhoeff for Aadhaar checksum
@@ -258,12 +258,12 @@ function KycVerificationInner() {
             return (
               <div key={label} className="flex items-center flex-1 last:flex-none">
                 <div className="flex flex-col items-center">
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold transition-all ${isCompleted ? 'bg-green-600 text-white' : isActive ? 'bg-primary text-primary-foreground ring-4 ring-primary/20' : 'bg-muted text-muted-foreground'}`}>
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold transition-all ${isCompleted ? 'bg-emerald-600 text-white' : isActive ? 'bg-blue-600 text-white ring-4 ring-blue-100' : 'bg-muted text-muted-foreground'}`}>
                     {isCompleted ? <CheckCircle2 className="h-4 w-4" /> : stepNum}
                   </div>
                   <span className={`mt-1.5 text-[11px] font-medium whitespace-nowrap ${isActive ? 'text-foreground' : 'text-muted-foreground'}`}>{label}</span>
                 </div>
-                {i < KYC_STEPS.length - 1 && <div className={`flex-1 h-0.5 mx-2 mt-[-18px] ${progressStep > stepNum ? 'bg-green-600' : 'bg-border'}`} />}
+                {i < KYC_STEPS.length - 1 && <div className={`flex-1 h-0.5 mx-2 mt-[-18px] ${progressStep > stepNum ? 'bg-emerald-600' : 'bg-border'}`} />}
               </div>
             );
           })}
@@ -272,7 +272,7 @@ function KycVerificationInner() {
         <Card className="border-border/50 shadow-lg">
           <CardHeader className="text-center pb-4">
             <CardTitle className="font-typewriter text-xl flex items-center justify-center gap-2">
-              <Shield className="h-5 w-5 text-destructive" />
+              <Shield className="h-5 w-5 text-blue-600" />
               Identity Verification
             </CardTitle>
             <CardDescription>
@@ -293,16 +293,16 @@ function KycVerificationInner() {
                   <button
                     key={doc.type}
                     onClick={() => { setSelectedDoc(doc.type); setStep('enter_details'); }}
-                    className="w-full flex items-center gap-4 p-4 rounded-xl border border-border hover:border-primary hover:bg-primary/5 transition-all text-left group"
+                    className="w-full flex items-center gap-4 p-4 rounded-xl border border-border hover:border-blue-400 hover:bg-blue-50/50 dark:hover:bg-blue-950/20 transition-all text-left group"
                   >
-                    <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary transition-colors">
-                      {doc.icon}
+                    <div className="h-10 w-10 rounded-xl bg-muted/60 flex items-center justify-center group-hover:bg-blue-50 dark:group-hover:bg-blue-950/30 transition-colors">
+                      <img src={doc.icon} alt={doc.label} className="h-8 w-8 object-contain" draggable={false} />
                     </div>
                     <div className="flex-1">
                       <p className="font-semibold text-sm">{doc.label}</p>
                       <p className="text-xs text-muted-foreground">{doc.desc}</p>
                     </div>
-                    <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                    <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-blue-600 transition-colors" />
                   </button>
                 ))}
               </div>
@@ -440,8 +440,8 @@ function KycVerificationInner() {
             {step === 'success' && (
               <div className="space-y-6 text-center">
                 <div className="flex justify-center">
-                  <div className="h-16 w-16 rounded-full bg-accent flex items-center justify-center">
-                    <CheckCircle2 className="h-8 w-8 text-accent-foreground" />
+                  <div className="h-16 w-16 rounded-full bg-emerald-50 dark:bg-emerald-950/30 flex items-center justify-center">
+                    <CheckCircle2 className="h-8 w-8 text-emerald-600" />
                   </div>
                 </div>
                 <div className="space-y-1">
@@ -469,6 +469,28 @@ function KycVerificationInner() {
 
           </CardContent>
         </Card>
+
+        {/* Trust badges */}
+        <div className="p-3 rounded-xl bg-gradient-to-r from-slate-50 to-blue-50/30 dark:from-slate-900/50 dark:to-blue-950/20 border border-slate-200/60 dark:border-slate-700/40">
+          <p className="text-[9px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-2 text-center">Secured by</p>
+          <div className="flex items-center justify-center gap-3 flex-wrap">
+            {[
+              { src: '/logos/uidai.svg', alt: 'UIDAI' },
+              { src: '/logos/digilocker.svg', alt: 'DigiLocker' },
+              { src: '/logos/cashfree.svg', alt: 'Cashfree' },
+              { src: '/logos/meity.svg', alt: 'MeitY' },
+            ].map((logo, i) => (
+              <div key={logo.alt} className="flex items-center gap-3">
+                {i > 0 && <span className="w-px h-5 bg-slate-200 dark:bg-slate-700 shrink-0" />}
+                <img src={logo.src} alt={logo.alt} className="h-6 w-auto object-contain opacity-80" draggable={false} />
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="flex items-center justify-center gap-2">
+          <img src="/logos/govt-india.svg" alt="Government of India" className="h-8 w-auto object-contain opacity-70" draggable={false} />
+        </div>
 
         <p className="text-center text-xs text-muted-foreground">
           Powered by Cashfree Secure ID · Verified by Government of India
