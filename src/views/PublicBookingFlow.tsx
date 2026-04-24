@@ -90,7 +90,11 @@ const domesticRateSchema = z.object({
     if (data.weightKg > 5) ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Laptop shipments max 5 kg', path: ['weightKg'] });
     if (data.declaredValue > 100000) ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Max declared value ₹1,00,000', path: ['declaredValue'] });
     if (!data.laptopBrand || data.laptopBrand.length < 2) ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Laptop brand is required', path: ['laptopBrand'] });
-    if (!data.laptopSerialNumber || data.laptopSerialNumber.length < 3) ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Serial number is required for laptop shipments', path: ['laptopSerialNumber'] });
+    if (!data.laptopSerialNumber || data.laptopSerialNumber.length < 4) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Serial number is required', path: ['laptopSerialNumber'] });
+    } else if (!/^[A-Za-z0-9\-]{4,30}$/.test(data.laptopSerialNumber)) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Serial number must be 4–30 alphanumeric characters (hyphens allowed)', path: ['laptopSerialNumber'] });
+    }
     if (!data.laptopDeclarationAccepted) ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'You must accept the laptop shipping declaration', path: ['laptopDeclarationAccepted'] });
   }
 });
@@ -1572,33 +1576,30 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                             <FormMessage />
                           </FormItem>
                         )} />
-                        <FormField control={domForm.control} name="laptopSerialNumber" render={({ field }) => (
+                        <FormField control={domForm.control} name="laptopSerialNumber" render={({ field }) => {
+                          const val = (field.value || '').trim();
+                          const isValidFormat = /^[A-Za-z0-9\-]{4,30}$/.test(val);
+                          return (
                           <FormItem>
                             <FormLabel>Serial Number</FormLabel>
                             <FormControl>
-                              <div className="relative">
-                                <Input {...field} placeholder="e.g. C02X1234ABCD" onChange={(e) => {
-                                  field.onChange(e);
-                                  setSerialLookupResult(null);
-                                }} />
-                                {field.value && field.value.length >= 3 && (
-                                  <button type="button" onClick={() => handleSerialNumberLookup(field.value || '')} className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-coke-red hover:underline font-medium" disabled={serialLookupLoading}>
-                                    {serialLookupLoading ? <CircleNotch className="h-3.5 w-3.5 animate-spin" /> : 'Verify'}
-                                  </button>
-                                )}
-                              </div>
+                              <Input
+                                {...field}
+                                placeholder="e.g. C02X1234ABCD"
+                                onChange={(e) => field.onChange(e.target.value.toUpperCase())}
+                                className={val.length >= 4 ? (isValidFormat ? 'border-candlestick-green focus-visible:ring-candlestick-green/30' : 'border-destructive focus-visible:ring-destructive/30') : ''}
+                              />
                             </FormControl>
                             <p className="text-[10px] text-muted-foreground">Found on the bottom of your laptop or in Settings → About</p>
-                            {serialLookupResult && (
-                              <p className={`text-[11px] mt-1 ${serialLookupResult.found ? 'text-candlestick-green' : 'text-amber-600'}`}>
-                                {serialLookupResult.found
-                                  ? `✓ ${serialLookupResult.brand || ''} ${serialLookupResult.model || ''} — verified`
-                                  : serialLookupResult.message}
+                            {val.length >= 4 && (
+                              <p className={`text-[11px] mt-0.5 ${isValidFormat ? 'text-candlestick-green' : 'text-destructive'}`}>
+                                {isValidFormat ? '✓ Valid format' : '✗ Use 4–30 alphanumeric characters only'}
                               </p>
                             )}
                             <FormMessage />
                           </FormItem>
-                        )} />
+                          );
+                        }} />
                       </div>
                       <FormField control={domForm.control} name="declaredValue" render={({ field }) => (
                         <FormItem>
