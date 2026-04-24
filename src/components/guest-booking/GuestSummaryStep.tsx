@@ -1164,219 +1164,20 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
         </div>
       )}
 
-      {/* ── Identity Verification — 3 methods × 4 doc types ── */}
-      <div className="bg-card rounded-xl border-2 border-blue-400/50 dark:border-blue-600/40 overflow-hidden shadow-sm shadow-blue-500/10">
-        <div className="bg-blue-50/80 dark:bg-blue-950/30 px-5 py-3 border-b border-blue-200/60 dark:border-blue-800/40">
-          <h2 className="font-semibold text-base flex items-center gap-2 text-blue-900 dark:text-blue-200">
-            <ShieldCheck className="h-4.5 w-4.5 text-blue-600" weight="fill" />
-            Sender Identity Verification
-            <span className="ml-auto text-[10px] font-semibold px-2 py-0.5 rounded-full bg-blue-600 text-white">Required</span>
-          </h2>
-        </div>
-        <div className="p-5 space-y-4">
-
-          {/* Why KYC */}
-          <div className="rounded-lg border border-blue-200 dark:border-blue-800/40 bg-blue-50/60 dark:bg-blue-950/20 p-3">
-            <p className="text-xs font-semibold text-blue-900 dark:text-blue-200 flex items-center gap-1.5">
-              <Info className="h-3.5 w-3.5 shrink-0 text-blue-600" weight="fill" />
-              Why is KYC required?
-            </p>
-            <p className="text-xs text-blue-800 dark:text-blue-300 mt-1 leading-relaxed">
-              {isDomestic ? 'Identity verification is required for all shipments as per courier regulations.' : <>Under <span className="font-medium">CBIC Courier Regulations</span> and PMLA, sender identity must be verified before international dispatch.</>}
-            </p>
+      {/* ── KYC verified status (shown after agreement modal completes) ── */}
+      {(aadhaarVerified || docVerified) && (
+        <div className="flex items-center gap-3 px-4 py-3 rounded-xl border border-candlestick-green/30 bg-candlestick-green/5">
+          <CheckCircle className="h-5 w-5 text-candlestick-green shrink-0" weight="fill" />
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium text-candlestick-green">Identity Verified</p>
+            <p className="text-xs text-muted-foreground font-mono">{docVerifiedLabel}</p>
           </div>
-
-          {/* Verified state */}
-          {(aadhaarVerified || docVerified) ? (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex items-center gap-3 p-3 rounded-lg bg-candlestick-green/5 border border-candlestick-green/20">
-              <CheckCircle className="h-5 w-5 text-candlestick-green" weight="fill" />
-              <div className="flex-1">
-                <p className="text-sm font-medium text-candlestick-green">Identity Verified</p>
-                <p className="text-xs text-muted-foreground font-mono">{docVerifiedLabel}</p>
-              </div>
-              <button className="text-xs text-muted-foreground hover:text-foreground underline" onClick={() => { setDocVerified(false); setAadhaarVerified(false); setDocVerifiedLabel(''); setSandboxStep('idle'); setKycFormStep('idle'); setDigilockerStep('idle'); setAadhaarError(''); }}>
-                Change
-              </button>
-            </motion.div>
-          ) : (
-            <>
-              {/* Step 1: Document type */}
-              <div>
-                <p className="text-xs font-medium text-muted-foreground mb-2">Step 1 — Choose document</p>
-                <div className="grid grid-cols-2 gap-2">
-                  {([
-                    { type: 'aadhaar', label: 'Aadhaar' },
-                    { type: 'pan', label: 'PAN Card' },
-                    { type: 'passport', label: 'Passport' },
-                    { type: 'voter_id', label: 'Voter ID' },
-                  ] as { type: typeof selectedDocType; label: string }[]).map(doc => (
-                    <button key={doc.type}
-                      onClick={() => { setSelectedDocType(doc.type); setDocInputError(''); setAadhaarError(''); setSandboxStep('idle'); setKycFormStep('idle'); setDigilockerStep('idle'); }}
-                      className={`py-2.5 px-3 rounded-lg border text-xs font-medium transition-all text-left ${selectedDocType === doc.type ? 'border-blue-500 bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300' : 'border-border bg-muted/30 text-muted-foreground hover:border-blue-300'}`}>
-                      {doc.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Step 2: Document number input */}
-              <div>
-                <p className="text-xs font-medium text-muted-foreground mb-2">Step 2 — Enter document details</p>
-                {selectedDocType === 'aadhaar' && (
-                  <Input type="text" inputMode="numeric" maxLength={14} placeholder="XXXX XXXX XXXX"
-                    className="font-mono tracking-widest text-center"
-                    value={formattedAadhaar} onChange={handleAadhaarChange} />
-                )}
-                {selectedDocType === 'pan' && (
-                  <Input placeholder="ABCDE1234F" maxLength={10} className="font-mono tracking-widest uppercase"
-                    value={panInput} onChange={e => { setPanInput(e.target.value.toUpperCase()); setDocInputError(''); }} />
-                )}
-                {selectedDocType === 'passport' && (
-                  <div className="space-y-2">
-                    <Input placeholder="Passport number (e.g. A1234567)" maxLength={8} className="font-mono tracking-widest uppercase"
-                      value={passportInput} onChange={e => { setPassportInput(e.target.value.toUpperCase()); setDocInputError(''); }} />
-                    <Input type="date" value={passportDob} onChange={e => { setPassportDob(e.target.value); setDocInputError(''); }} />
-                  </div>
-                )}
-                {selectedDocType === 'voter_id' && (
-                  <Input placeholder="EPIC number (e.g. ABC1234567)" className="font-mono tracking-widest uppercase"
-                    value={voterIdInput} onChange={e => { setVoterIdInput(e.target.value.toUpperCase()); setDocInputError(''); }} />
-                )}
-                {docInputError && <p className="text-xs text-destructive mt-1 flex items-center gap-1"><Warning className="h-3 w-3" weight="fill" /> {docInputError}</p>}
-              </div>
-
-              {/* Step 3: Verification method */}
-              <div>
-                <p className="text-xs font-medium text-muted-foreground mb-2">Step 3 — Choose verification method</p>
-                <div className="grid grid-cols-3 gap-2">
-                  {([
-                    { m: 'sandbox_otp', label: '📱 Aadhaar OTP', desc: 'OTP to registered mobile', onlyAadhaar: true },
-                    { m: 'digilocker',  label: '🔐 DigiLocker',  desc: 'Govt-approved redirect',  onlyAadhaar: true },
-                    { m: 'kyc_form',    label: '📋 KYC Form',    desc: 'Link sent via SMS',        onlyAadhaar: false },
-                  ] as { m: typeof kycMethod; label: string; desc: string; onlyAadhaar: boolean }[]).map(opt => {
-                    const disabled = opt.onlyAadhaar && selectedDocType !== 'aadhaar';
-                    return (
-                      <button key={opt.m}
-                        disabled={disabled}
-                        onClick={() => { if (!disabled) { setKycMethod(opt.m); setAadhaarError(''); setSandboxStep('idle'); setKycFormStep('idle'); setDigilockerStep('idle'); } }}
-                        className={`py-2 px-2 rounded-lg border text-xs font-medium transition-all text-left ${disabled ? 'opacity-30 cursor-not-allowed border-border bg-muted/20' : kycMethod === opt.m ? 'border-blue-500 bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300' : 'border-border bg-muted/30 text-muted-foreground hover:border-blue-300'}`}>
-                        <div>{opt.label}</div>
-                        <div className="text-[10px] font-normal opacity-70 mt-0.5">{opt.desc}</div>
-                      </button>
-                    );
-                  })}
-                </div>
-                {selectedDocType !== 'aadhaar' && (
-                  <p className="text-[11px] text-muted-foreground mt-1.5">OTP and DigiLocker are Aadhaar-only. KYC Form works for all documents.</p>
-                )}
-              </div>
-
-              {/* ── Sandbox OTP flow (Aadhaar only) ── */}
-              {kycMethod === 'sandbox_otp' && selectedDocType === 'aadhaar' && (
-                <div className="space-y-3">
-                  {sandboxStep === 'idle' && (
-                    <Button onClick={() => { feedbackPresets.tap(); handleSendSandboxOtp(); }} disabled={aadhaarLoading || aadhaarInput.length !== 12} className="w-full bg-blue-600 hover:bg-blue-700 text-white">
-                      {aadhaarLoading ? <CircleNotch className="h-4 w-4 animate-spin mr-2" /> : null}
-                      Send OTP to Aadhaar-registered mobile
-                    </Button>
-                  )}
-                  {sandboxStep === 'otp_sent' && (
-                    <div className="space-y-2">
-                      <p className="text-xs text-muted-foreground">Enter the 6-digit OTP sent to your Aadhaar-registered mobile number.</p>
-                      <div className="flex gap-2">
-                        <Input type="text" inputMode="numeric" maxLength={6} placeholder="6-digit OTP"
-                          className="font-mono tracking-widest text-center flex-1"
-                          value={sandboxOtp} onChange={e => { setSandboxOtp(e.target.value.replace(/\D/g,'').slice(0,6)); setAadhaarError(''); }} />
-                        <Button onClick={() => { feedbackPresets.tap(); handleVerifySandboxOtp(); }} disabled={aadhaarLoading || sandboxOtp.length !== 6} className="bg-blue-600 hover:bg-blue-700 text-white shrink-0">
-                          {aadhaarLoading ? <CircleNotch className="h-4 w-4 animate-spin" /> : 'Verify'}
-                        </Button>
-                      </div>
-                      <button className="text-xs text-muted-foreground underline" onClick={() => { setSandboxStep('idle'); setSandboxOtp(''); }}>Resend OTP</button>
-                    </div>
-                  )}
-                  {sandboxStep === 'verifying' && (
-                    <div className="flex items-center gap-2 p-3 rounded-lg bg-muted text-sm text-muted-foreground">
-                      <CircleNotch className="h-4 w-4 animate-spin" /> Verifying OTP...
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* ── DigiLocker flow (Aadhaar only) ── */}
-              {kycMethod === 'digilocker' && selectedDocType === 'aadhaar' && (
-                <div className="space-y-3">
-                  {digilockerStep === 'idle' && (
-                    <Button onClick={() => { feedbackPresets.tap(); handleStartDigiLocker(); }} disabled={aadhaarLoading || aadhaarInput.length !== 12} className="w-full bg-blue-600 hover:bg-blue-700 text-white">
-                      {aadhaarLoading ? <CircleNotch className="h-4 w-4 animate-spin mr-2" /> : null}
-                      Open DigiLocker
-                    </Button>
-                  )}
-                  {digilockerStep === 'redirect' && (
-                    <div className="space-y-2 p-3 rounded-lg bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800/40">
-                      <p className="text-xs text-blue-800 dark:text-blue-300">Complete verification in DigiLocker, then come back and click below.</p>
-                      <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white text-xs" onClick={() => window.open(digilockerUrl, '_blank')}>Open DigiLocker ↗</Button>
-                      <Button variant="outline" size="sm" className="w-full text-xs" onClick={handleCompleteDigiLocker} disabled={aadhaarLoading}>
-                        {aadhaarLoading ? <CircleNotch className="h-3.5 w-3.5 animate-spin mr-1.5" /> : null}
-                        I've completed DigiLocker — Fetch Result
-                      </Button>
-                      <button className="text-xs text-muted-foreground underline w-full text-center" onClick={() => setDigilockerStep('idle')}>Cancel</button>
-                    </div>
-                  )}
-                  {digilockerStep === 'verifying' && (
-                    <div className="flex items-center gap-2 p-3 rounded-lg bg-muted text-sm text-muted-foreground">
-                      <CircleNotch className="h-4 w-4 animate-spin" /> Fetching verified data from DigiLocker...
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* ── KYC Form flow (all doc types) ── */}
-              {kycMethod === 'kyc_form' && (
-                <div className="space-y-3">
-                  {kycFormStep === 'idle' && (
-                    <>
-                      <div className="space-y-1.5">
-                        <p className="text-xs text-muted-foreground">A verification form link will be sent to your mobile via SMS.</p>
-                        <Input type="tel" inputMode="numeric" maxLength={10} placeholder="10-digit mobile number"
-                          className="font-mono"
-                          value={kycPhone} onChange={e => setKycPhone(e.target.value.replace(/\D/g,'').slice(0,10))} />
-                      </div>
-                      <Button onClick={() => { feedbackPresets.tap(); handleStartKycForm(); }} disabled={aadhaarLoading || kycPhone.length < 10} className="w-full bg-blue-600 hover:bg-blue-700 text-white">
-                        {aadhaarLoading ? <CircleNotch className="h-4 w-4 animate-spin mr-2" /> : null}
-                        Send KYC Form Link via SMS
-                      </Button>
-                    </>
-                  )}
-                  {kycFormStep === 'sent' && (
-                    <div className="space-y-2 p-3 rounded-lg bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800/40">
-                      <p className="text-xs text-blue-800 dark:text-blue-300">KYC form link sent to <span className="font-mono font-semibold">{kycPhone}</span>. Open it, complete verification, then click below.</p>
-                      {kycFormLink && <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white text-xs" onClick={() => window.open(kycFormLink, '_blank')}>Open KYC Form ↗</Button>}
-                      <Button variant="outline" size="sm" className="w-full text-xs" onClick={handleCheckKycForm} disabled={aadhaarLoading}>
-                        {aadhaarLoading ? <CircleNotch className="h-3.5 w-3.5 animate-spin mr-1.5" /> : null}
-                        I've completed the form — Check Status
-                      </Button>
-                      <button className="text-xs text-muted-foreground underline w-full text-center" onClick={() => setKycFormStep('idle')}>Resend</button>
-                    </div>
-                  )}
-                  {kycFormStep === 'polling' && (
-                    <div className="flex items-center gap-2 p-3 rounded-lg bg-muted text-sm text-muted-foreground">
-                      <CircleNotch className="h-4 w-4 animate-spin" /> Checking verification status...
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* Error */}
-              {aadhaarError && (
-                <p className="text-xs text-destructive flex items-start gap-1">
-                  <Warning className="h-3 w-3 mt-0.5 shrink-0" weight="fill" />
-                  <span>{aadhaarError.includes('secret not configured') ? 'Aadhaar OTP service not fully configured yet. Please use DigiLocker or KYC Form instead.' : aadhaarError}</span>
-                </p>
-              )}
-            </>
-          )}
+          <button className="text-xs text-muted-foreground hover:text-foreground underline shrink-0"
+            onClick={() => { setDocVerified(false); setAadhaarVerified(false); setDocVerifiedLabel(''); setVerifiedName(''); setTermsAccepted(false); setSandboxStep('idle'); setKycFormStep('idle'); setDigilockerStep('idle'); setAadhaarError(''); }}>
+            Change
+          </button>
         </div>
-      </div>
+      )}
 
       {/* ── Coupon Code ── */}
       {couponApplied ? (
@@ -1510,7 +1311,7 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
       {/* ── Pay Button ── */}
       <Button
         onClick={() => { feedbackPresets.tap(); handlePayNow(); }}
-        disabled={paymentLoading || !aadhaarVerified || !termsAccepted}
+        disabled={paymentLoading || !termsAccepted}
         className="w-full bg-coke-red hover:bg-red-600 text-white gap-2 min-h-[56px] py-3 text-sm sm:text-base shadow-lg shadow-coke-red/20"
       >
         {paymentLoading ? (
@@ -1523,8 +1324,8 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
         )}
       </Button>
 
-      {!aadhaarVerified && (
-        <p className="text-xs text-center text-muted-foreground">Please verify your Aadhaar number to proceed with payment.</p>
+      {!termsAccepted && (
+        <p className="text-xs text-center text-muted-foreground">Click the checkbox above to verify your identity and agree to the terms before paying.</p>
       )}
 
       {/* ── Full-screen Document Preview Modal ── */}
