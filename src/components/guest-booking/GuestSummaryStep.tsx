@@ -262,6 +262,9 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
   const [agreementStep, setAgreementStep] = useState<1 | 2>(1);
   const [verifiedName, setVerifiedName] = useState('');
   const [verifiedDocId, setVerifiedDocId] = useState('');
+  const [verifiedAddress, setVerifiedAddress] = useState('');
+  const [verifiedDob, setVerifiedDob] = useState('');
+  const [verifiedGender, setVerifiedGender] = useState('');
   const [couponCode, setCouponCode] = useState('');
   const [couponDiscount, setCouponDiscount] = useState(0);
   const [couponApplied, setCouponApplied] = useState(false);
@@ -394,12 +397,15 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
     return true;
   };
 
-  const markVerified = (label: string, name?: string) => {
+  const markVerified = (label: string, name?: string, address?: string, dob?: string, gender?: string) => {
     setDocVerified(true);
     setAadhaarVerified(true);
     setDocVerifiedLabel(label);
     setVerifiedName(name || senderReceiver?.senderName || '');
     setVerifiedDocId(label);
+    setVerifiedAddress(address || '');
+    setVerifiedDob(dob || '');
+    setVerifiedGender(gender || '');
     // Advance to agreement step
     setAgreementStep(2);
   };
@@ -520,7 +526,7 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
       });
       const data = await res.json();
       if (!res.ok || !data.success) { setAadhaarError(data.error || 'OTP verification failed'); setSandboxStep('otp_sent'); return; }
-      markVerified(data.maskedAadhaar || `XXXX XXXX ${aadhaarInput.slice(-4)}`, data.verifiedName);
+      markVerified(data.maskedAadhaar || `XXXX XXXX ${aadhaarInput.slice(-4)}`, data.verifiedName, data.verifiedAddress, data.dob, data.gender);
       setSandboxStep('idle');
       toast({ title: 'Aadhaar Verified', description: `Verified: ${data.verifiedName || ''}` });
     } catch { setAadhaarError('OTP verification failed'); setSandboxStep('otp_sent'); }
@@ -1173,7 +1179,7 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
             <p className="text-xs text-muted-foreground font-mono">{docVerifiedLabel}</p>
           </div>
           <button className="text-xs text-muted-foreground hover:text-foreground underline shrink-0"
-            onClick={() => { setDocVerified(false); setAadhaarVerified(false); setDocVerifiedLabel(''); setVerifiedName(''); setTermsAccepted(false); setSandboxStep('idle'); setKycFormStep('idle'); setDigilockerStep('idle'); setAadhaarError(''); }}>
+            onClick={() => { setDocVerified(false); setAadhaarVerified(false); setDocVerifiedLabel(''); setVerifiedName(''); setVerifiedAddress(''); setVerifiedDob(''); setVerifiedGender(''); setTermsAccepted(false); setSandboxStep('idle'); setKycFormStep('idle'); setDigilockerStep('idle'); setAadhaarError(''); }}>
             Change
           </button>
         </div>
@@ -1641,7 +1647,7 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
                           <p className="text-xs text-muted-foreground font-mono truncate">{docVerifiedLabel}</p>
                           {verifiedName && <p className="text-xs text-muted-foreground">Name: {verifiedName}</p>}
                         </div>
-                        <button className="text-xs text-muted-foreground hover:text-foreground underline shrink-0" onClick={() => { setDocVerified(false); setAadhaarVerified(false); setDocVerifiedLabel(''); setVerifiedName(''); setSandboxStep('idle'); setKycFormStep('idle'); setDigilockerStep('idle'); setAadhaarError(''); }}>
+                        <button className="text-xs text-muted-foreground hover:text-foreground underline shrink-0" onClick={() => { setDocVerified(false); setAadhaarVerified(false); setDocVerifiedLabel(''); setVerifiedName(''); setVerifiedAddress(''); setVerifiedDob(''); setVerifiedGender(''); setSandboxStep('idle'); setKycFormStep('idle'); setDigilockerStep('idle'); setAadhaarError(''); }}>
                           Change
                         </button>
                       </motion.div>
@@ -1773,11 +1779,41 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
                     {/* Sender details from KYC */}
                     <div className="rounded-lg border border-border bg-muted/30 p-4 space-y-2">
                       <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Sender Details (from KYC)</p>
-                      <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs">
-                        <div><span className="text-muted-foreground">Name</span><p className="font-medium mt-0.5">{verifiedName || senderReceiver?.senderName || '—'}</p></div>
-                        <div><span className="text-muted-foreground">Phone</span><p className="font-medium mt-0.5">{senderReceiver?.senderPhone || '—'}</p></div>
-                        <div className="col-span-2"><span className="text-muted-foreground">Address</span><p className="font-medium mt-0.5">{senderReceiver?.senderAddress}, {senderReceiver?.senderCity} - {senderReceiver?.senderPincode}</p></div>
-                        {senderReceiver?.senderEmail && <div className="col-span-2"><span className="text-muted-foreground">Email</span><p className="font-medium mt-0.5">{senderReceiver.senderEmail}</p></div>}
+                      <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
+                        <div>
+                          <span className="text-muted-foreground">Full Name</span>
+                          <p className="font-medium mt-0.5">{verifiedName || senderReceiver?.senderName || '—'}</p>
+                        </div>
+                        {verifiedDob && (
+                          <div>
+                            <span className="text-muted-foreground">Date of Birth</span>
+                            <p className="font-medium mt-0.5">{verifiedDob}</p>
+                          </div>
+                        )}
+                        {verifiedGender && (
+                          <div>
+                            <span className="text-muted-foreground">Gender</span>
+                            <p className="font-medium mt-0.5">{verifiedGender === 'M' ? 'Male' : verifiedGender === 'F' ? 'Female' : verifiedGender}</p>
+                          </div>
+                        )}
+                        <div>
+                          <span className="text-muted-foreground">Phone</span>
+                          <p className="font-medium mt-0.5">{senderReceiver?.senderPhone || '—'}</p>
+                        </div>
+                        {senderReceiver?.senderEmail && (
+                          <div className="col-span-2">
+                            <span className="text-muted-foreground">Email</span>
+                            <p className="font-medium mt-0.5">{senderReceiver.senderEmail}</p>
+                          </div>
+                        )}
+                        <div className="col-span-2">
+                          <span className="text-muted-foreground">Address (from Aadhaar)</span>
+                          <p className="font-medium mt-0.5">{verifiedAddress || `${senderReceiver?.senderAddress}, ${senderReceiver?.senderCity} - ${senderReceiver?.senderPincode}`}</p>
+                        </div>
+                        <div className="col-span-2">
+                          <span className="text-muted-foreground">Document ID</span>
+                          <p className="font-mono font-medium mt-0.5">{verifiedDocId}</p>
+                        </div>
                       </div>
                     </div>
 
@@ -1795,7 +1831,7 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
                     {/* Agreement text */}
                     <div className="rounded-lg border border-border bg-card p-4 space-y-2 text-xs text-muted-foreground leading-relaxed">
                       <p className="font-semibold text-foreground text-sm">Shipping Agreement</p>
-                      <p>I, <span className="font-semibold text-foreground">{verifiedName || senderReceiver?.senderName}</span>, confirm that:</p>
+                      <p>I, <span className="font-semibold text-foreground">{verifiedName || senderReceiver?.senderName}</span>{verifiedDob ? `, DOB: ${verifiedDob}` : ''}, confirm that:</p>
                       <ul className="space-y-1.5 list-disc pl-4">
                         <li>All information provided is <span className="font-medium text-foreground">true and accurate</span>.</li>
                         <li>This shipment does <span className="font-medium text-foreground">not contain any prohibited, illegal, or restricted items</span> as per Indian law.</li>
