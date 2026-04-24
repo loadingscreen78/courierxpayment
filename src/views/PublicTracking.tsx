@@ -20,8 +20,6 @@ import dynamic from 'next/dynamic';
 
 const ShipmentMap = dynamic(() => import('@/components/tracking/ShipmentMap'), { ssr: false });
 
-const ShipmentMap = dynamic(() => import('@/components/tracking/ShipmentMap'), { ssr: false });
-
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
