@@ -1437,7 +1437,7 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
                 e.preventDefault();
                 if (editModal === 'contents') saveContents();
                 else if (editModal === 'weightdims') saveWeightDims();
-                else saveEdit();
+                else validateAndSaveEdit();
               }}
               className="bg-card rounded-2xl border border-border shadow-xl max-w-md w-full p-6 space-y-4 max-h-[85vh] overflow-y-auto"
             >
