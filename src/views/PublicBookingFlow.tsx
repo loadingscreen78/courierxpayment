@@ -376,6 +376,8 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
   // ── Dimension unit toggle (cm default, inches option) ──
   const [dimUnit, setDimUnit] = useState<'cm' | 'in'>('cm');
   const [intlDimUnit, setIntlDimUnit] = useState<'cm' | 'in'>('cm');
+  // ── Gift weight unit toggle (kg default, grams option) ──
+  const [giftWeightUnit, setGiftWeightUnit] = useState<'g' | 'kg'>('kg');
   // ── Laptop declaration modal ──
   const [showLaptopDeclarationModal, setShowLaptopDeclarationModal] = useState(false);
   // ── Weight & dimensions declaration modal (domestic) ──
@@ -1423,38 +1425,40 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                                 <SelectTrigger><SelectValue placeholder="Select weight" /></SelectTrigger>
                               </FormControl>
                               <SelectContent>
-                                <SelectItem value="1">Up to 1 kg</SelectItem>
-                                <SelectItem value="1.5">Up to 1.5 kg</SelectItem>
                                 <SelectItem value="2">Up to 2 kg</SelectItem>
-                                <SelectItem value="2.5">Up to 2.5 kg</SelectItem>
                                 <SelectItem value="3">Up to 3 kg</SelectItem>
-                                <SelectItem value="3.5">Up to 3.5 kg</SelectItem>
-                                <SelectItem value="4">Up to 4 kg</SelectItem>
-                                <SelectItem value="4.5">Up to 4.5 kg</SelectItem>
                                 <SelectItem value="5">Up to 5 kg</SelectItem>
                               </SelectContent>
                             </Select>
                           ) : (
-                            <Select onValueChange={(v) => field.onChange(Number(v))} value={field.value ? String(field.value) : ''}>
-                              <FormControl>
-                                <SelectTrigger><SelectValue placeholder="Select weight" /></SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                <SelectItem value="0.5">Up to 500g</SelectItem>
-                                <SelectItem value="1">Up to 1 kg</SelectItem>
-                                <SelectItem value="2">Up to 2 kg</SelectItem>
-                                <SelectItem value="3">Up to 3 kg</SelectItem>
-                                <SelectItem value="4">Up to 4 kg</SelectItem>
-                                <SelectItem value="5">Up to 5 kg</SelectItem>
-                                <SelectItem value="6">Up to 6 kg</SelectItem>
-                                <SelectItem value="7">Up to 7 kg</SelectItem>
-                                <SelectItem value="8">Up to 8 kg</SelectItem>
-                                <SelectItem value="9">Up to 9 kg</SelectItem>
-                                <SelectItem value="10">Up to 10 kg</SelectItem>
-                                <SelectItem value="11">Up to 11 kg</SelectItem>
-                                <SelectItem value="12">Up to 12 kg</SelectItem>
-                              </SelectContent>
-                            </Select>
+                            /* Gift/Parcel: free-entry weight input in grams or kg */
+                            <div className="space-y-1.5">
+                              <div className="flex gap-2">
+                                <FormControl>
+                                  <Input
+                                    type="number"
+                                    inputMode="decimal"
+                                    placeholder={giftWeightUnit === 'g' ? 'e.g. 500' : 'e.g. 1.5'}
+                                    value={field.value ? (giftWeightUnit === 'g' ? Math.round(field.value * 1000) : field.value) : ''}
+                                    onChange={(e) => {
+                                      const v = parseFloat(e.target.value);
+                                      if (isNaN(v) || v <= 0) { field.onChange(undefined); return; }
+                                      field.onChange(giftWeightUnit === 'g' ? v / 1000 : v);
+                                    }}
+                                    className="flex-1"
+                                  />
+                                </FormControl>
+                                <div className="flex items-center bg-muted rounded-lg p-0.5 text-xs shrink-0">
+                                  <button type="button" onClick={() => setGiftWeightUnit('g')} className={`px-2.5 py-1.5 rounded-md transition-all ${giftWeightUnit === 'g' ? 'bg-coke-red text-white shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}>g</button>
+                                  <button type="button" onClick={() => setGiftWeightUnit('kg')} className={`px-2.5 py-1.5 rounded-md transition-all ${giftWeightUnit === 'kg' ? 'bg-coke-red text-white shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}>kg</button>
+                                </div>
+                              </div>
+                              {field.value > 0 && (
+                                <p className="text-xs text-muted-foreground">
+                                  = {giftWeightUnit === 'g' ? `${field.value} kg` : `${Math.round(field.value * 1000)} g`}
+                                </p>
+                              )}
+                            </div>
                           )}
                           <FormMessage />
                         </FormItem>
@@ -1864,18 +1868,40 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                 });
 
                 // For gift/parcel: categorize into Express, Economy, Saver
+                const isLaptopType = rateFormData && 'shipmentType' in rateFormData && rateFormData.shipmentType === 'laptop';
+
+                // For laptop: apply 2x surcharge to economy & saver (surface) rates; express (air) stays as-is
+                const applyLaptopSurcharge = (couriers: any[], isExpress: boolean) => {
+                  if (!isLaptopType || isExpress) return couriers;
+                  return couriers.map((c: any) => {
+                    const basePrice = c.customer_price;
+                    const specialHandling = Math.round(basePrice * 0.30);
+                    const insurance = Math.round(basePrice * 0.40);
+                    const priorityService = Math.round(basePrice * 0.30);
+                    const surcharge = specialHandling + insurance + priorityService;
+                    return {
+                      ...c,
+                      customer_price: basePrice + surcharge,
+                      _laptopBreakdown: { basePrice, specialHandling, insurance, priorityService },
+                    };
+                  });
+                };
+
                 const allSorted = [...filteredDomestic].sort((a: any, b: any) => a.customer_price - b.customer_price);
                 const expressCouriers = filteredDomestic.filter((c: any) => c.mode === 'air');
                 const surfaceOnly = filteredDomestic.filter((c: any) => c.mode === 'surface');
-                const saverCouriers = allSorted.slice(0, 3); // top 3 cheapest
-                const saverIds = new Set(saverCouriers.map((c: any) => c.courier_company_id));
-                const economyCouriers = surfaceOnly.filter((c: any) => !saverIds.has(c.courier_company_id)); // surface minus saver
+                const saverCouriersRaw = allSorted.slice(0, 3); // top 3 cheapest
+                const saverIds = new Set(saverCouriersRaw.map((c: any) => c.courier_company_id));
+                const economyCouriersRaw = surfaceOnly.filter((c: any) => !saverIds.has(c.courier_company_id)); // surface minus saver
+
+                const saverCouriers = applyLaptopSurcharge(saverCouriersRaw, false);
+                const economyCouriers = applyLaptopSurcharge(economyCouriersRaw, false);
 
                 const currentWeight = rateFormData && 'weightKg' in rateFormData ? (rateFormData as DomesticRateValues).weightKg : 0;
 
                 // Determine which couriers to show based on active tab
                 const tabCouriers = isDocType ? filteredDomestic
-                  : isSameState ? filteredDomestic // Within state: show all surface (no tabs needed)
+                  : isSameState ? applyLaptopSurcharge(filteredDomestic, false) // Within state: show all surface (no tabs needed)
                   : courierFilterTab === 'express' ? expressCouriers
                   : courierFilterTab === 'economy' ? economyCouriers
                   : saverCouriers;
@@ -1977,14 +2003,55 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                     )}
 
                     {tabCouriers.length > 0 ? (
-                      <DomesticCourierGrid
-                        couriers={tabCouriers}
-                        selectedId={null}
-                        onSelect={() => {}}
-                        showBookButton
-                        onBook={(courier) => { feedbackPresets.select(); handleSelectCourier(courier); }}
-                        maxItems={15}
-                      />
+                      <>
+                        {/* Laptop surcharge breakdown — shown for economy & saver tabs */}
+                        {isLaptopType && courierFilterTab !== 'express' && tabCouriers[0]?._laptopBreakdown && (
+                          <div className="rounded-xl border border-amber-200/60 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-700/30 p-4 space-y-2.5">
+                            <p className="text-xs font-semibold text-amber-900 dark:text-amber-200 flex items-center gap-1.5">
+                              <ShieldCheck className="h-4 w-4" weight="duotone" /> Laptop Handling Charges Breakdown
+                            </p>
+                            <p className="text-[11px] text-amber-800 dark:text-amber-300">Laptop shipments include additional charges for safe handling and protection:</p>
+                            <div className="space-y-1.5">
+                              {(() => {
+                                const bd = tabCouriers[0]._laptopBreakdown;
+                                return (
+                                  <>
+                                    <div className="flex justify-between text-xs">
+                                      <span className="text-muted-foreground">Base shipping rate</span>
+                                      <span className="font-medium">₹{bd.basePrice.toLocaleString('en-IN')}</span>
+                                    </div>
+                                    <div className="flex justify-between text-xs">
+                                      <span className="text-muted-foreground">Special handling charges</span>
+                                      <span className="font-medium text-amber-700 dark:text-amber-400">+ ₹{bd.specialHandling.toLocaleString('en-IN')}</span>
+                                    </div>
+                                    <div className="flex justify-between text-xs">
+                                      <span className="text-muted-foreground">Insurance charges</span>
+                                      <span className="font-medium text-amber-700 dark:text-amber-400">+ ₹{bd.insurance.toLocaleString('en-IN')}</span>
+                                    </div>
+                                    <div className="flex justify-between text-xs">
+                                      <span className="text-muted-foreground">Priority service charges</span>
+                                      <span className="font-medium text-amber-700 dark:text-amber-400">+ ₹{bd.priorityService.toLocaleString('en-IN')}</span>
+                                    </div>
+                                    <div className="flex justify-between text-xs font-semibold border-t border-amber-200/60 pt-1.5 mt-1">
+                                      <span>Total (per courier)</span>
+                                      <span>₹{(bd.basePrice + bd.specialHandling + bd.insurance + bd.priorityService).toLocaleString('en-IN')}</span>
+                                    </div>
+                                  </>
+                                );
+                              })()}
+                            </div>
+                            <p className="text-[10px] text-amber-700 dark:text-amber-400">Express (air) rates are not subject to additional laptop surcharges.</p>
+                          </div>
+                        )}
+                        <DomesticCourierGrid
+                          couriers={tabCouriers}
+                          selectedId={null}
+                          onSelect={() => {}}
+                          showBookButton
+                          onBook={(courier) => { feedbackPresets.select(); handleSelectCourier(courier); }}
+                          maxItems={15}
+                        />
+                      </>
                     ) : (
                       <div className="text-center py-8 text-sm text-muted-foreground">
                         <p>No {courierFilterTab} options available for this route.</p>
@@ -3223,7 +3290,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                   <li>The <span className="font-semibold text-foreground">weight entered is the actual packed weight</span> of the shipment, measured on a calibrated scale.</li>
                   <li>The <span className="font-semibold text-foreground">dimensions (L × W × H) are the outer dimensions</span> of the packed box or envelope, not the item inside.</li>
                   <li>I understand that courier charges are based on the <span className="font-semibold text-foreground">higher of actual weight or volumetric weight</span> (L×W×H ÷ 5000).</li>
-                  <li>If the actual weight or dimensions at pickup differ from what I declared, <span className="font-semibold text-foreground">additional charges will apply</span> and will be deducted from my wallet.</li>
+                  <li>If the actual weight or dimensions at pickup differ from what I declared, <span className="font-semibold text-foreground">additional charges will apply</span> and must be settled before dispatch.</li>
                   <li>Deliberate under-declaration of weight or dimensions may result in <span className="font-semibold text-foreground">shipment hold or cancellation</span> without refund.</li>
                   <li>I accept full responsibility for any discrepancies between declared and actual measurements.</li>
                 </ul>
