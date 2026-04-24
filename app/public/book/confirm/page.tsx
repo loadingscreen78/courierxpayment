@@ -315,7 +315,7 @@ function ConfirmContent() {
             phone={activePhone}
             onVerify={handleOTPVerify}
             onResend={handleOTPResend}
-            onClose={() => { setShowOTP(false); clearOtpSession(); setOtpError(''); }}
+            onClose={() => { setShowOTP(false); setOtpError(''); }}
             error={otpError}
           />
         )}
