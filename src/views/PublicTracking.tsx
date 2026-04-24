@@ -17,7 +17,8 @@ import { cn } from '@/lib/utils';
 import { STATUS_LABEL_MAP, LEG_LABEL_MAP } from '@/lib/shipment-lifecycle/statusLabelMap';
 import type { ShipmentStatus, ShipmentLeg, TimelineSource } from '@/lib/shipment-lifecycle/types';
 import dynamic from 'next/dynamic';
-import { sendFirebaseOtp, verifyFirebaseOtp, clearOtpSession } from '@/lib/firebase/phoneAuth';
+
+const ShipmentMap = dynamic(() => import('@/components/tracking/ShipmentMap'), { ssr: false });
 
 const ShipmentMap = dynamic(() => import('@/components/tracking/ShipmentMap'), { ssr: false });
 
@@ -305,12 +306,22 @@ const PublicTracking = () => {
 
   const sendPhoneOtp = async () => {
     setOtpError('');
-    const result = await sendFirebaseOtp(`+91${phoneNumber}`);
-    if (!result.success) {
-      setError(result.error || 'Failed to send OTP. Please try again.');
+    try {
+      const res = await fetch('/api/auth/phone-otp/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone: `+91${phoneNumber}` }),
+      });
+      const json = await res.json();
+      if (!res.ok || !json.success) {
+        setError(json.error || 'Failed to send OTP. Please try again.');
+        return false;
+      }
+      return true;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to send OTP.');
       return false;
     }
-    return true;
   };
 
   const handlePhoneSearch = async () => {
@@ -325,18 +336,26 @@ const PublicTracking = () => {
 
   const handleOTPVerify = async (otp: string) => {
     setOtpError('');
-    const result = await verifyFirebaseOtp(otp);
-    if (!result.success) {
-      setOtpError(result.error || 'Invalid OTP. Please try again.');
+    try {
+      const res = await fetch('/api/auth/phone-otp/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone: `+91${phoneNumber}`, code: otp }),
+      });
+      const json = await res.json();
+      if (!json.success) {
+        setOtpError(json.error || 'Invalid OTP. Please try again.');
+        return;
+      }
+    } catch {
+      setOtpError('OTP verification failed. Please try again.');
       return;
     }
 
     setShowOTP(false);
-    clearOtpSession();
     setLoading(true);
     setError('');
 
-    // Look up shipment by sender phone
     try {
       const res = await fetch(`/api/track?awb=${encodeURIComponent(phoneNumber)}`);
       const json = await res.json();
@@ -361,7 +380,6 @@ const PublicTracking = () => {
 
   const handleCloseOTP = () => {
     setShowOTP(false);
-    clearOtpSession();
     setOtpError('');
   };
 
@@ -380,9 +398,6 @@ const PublicTracking = () => {
   return (
     <div className="min-h-screen flex flex-col bg-background">
       <LandingHeader />
-
-      {/* Invisible reCAPTCHA container required by Firebase Phone Auth */}
-      <div id="recaptcha-container" />
 
       <AnimatePresence>
         {showOTP && (
