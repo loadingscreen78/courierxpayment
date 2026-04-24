@@ -2,6 +2,7 @@ import { ShipmentRow, ShipmentStatus, ShipmentLeg } from './types';
 import { getServiceRoleClient } from './supabaseAdmin';
 import { dispatchStatusWhatsApp } from '@/lib/whatsapp/dispatcher';
 import { dispatchStatusEmail } from '@/lib/email/dispatcher';
+import { dispatchStatusPush } from '@/lib/fcm/sender';
 
 const WAREHOUSE_ADDRESS = process.env.WAREHOUSE_ADDRESS ?? 'CourierX Warehouse';
 
@@ -48,6 +49,11 @@ export async function handleStatusChange(
         console.error('[statusHandler] Email notification failed:', err);
       });
 
+      // Send FCM push notification (fire-and-forget)
+      dispatchStatusPush(shipment.id, newStatus).catch((err) => {
+        console.error('[statusHandler] FCM push notification failed:', err);
+      });
+
       const supabase = getServiceRoleClient();
       await supabase
         .from('shipments')
@@ -70,5 +76,10 @@ export async function handleStatusChange(
   // Send email notification for all meaningful status changes (fire-and-forget)
   dispatchStatusEmail(shipment.id, newStatus).catch((err) => {
     console.error('[statusHandler] Email notification failed:', err);
+  });
+
+  // Send FCM push notification (fire-and-forget)
+  dispatchStatusPush(shipment.id, newStatus).catch((err) => {
+    console.error('[statusHandler] FCM push notification failed:', err);
   });
 }

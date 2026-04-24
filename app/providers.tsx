@@ -9,6 +9,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { WalletProvider } from "@/contexts/WalletContext";
 import { ShippingModeProvider } from "@/contexts/ShippingModeContext";
 import { OnboardingTourProvider } from "@/contexts/OnboardingTourContext";
+import { FCMProvider } from "@/components/FCMProvider";
 import { useState } from "react";
 
 export function Providers({ children }: { children: React.ReactNode }) {
@@ -37,6 +38,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
           <WalletProvider>
             <OnboardingTourProvider>
             <TooltipProvider>
+              <FCMProvider />
               {children}
               <Toaster />
               <Sonner />
