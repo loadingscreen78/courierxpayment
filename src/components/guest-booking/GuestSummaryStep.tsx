@@ -1628,6 +1628,7 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
         selectedCourier={selectedCourier}
         finalPrice={finalPrice}
         onAccept={() => { setTermsAccepted(true); setShowAgreementModal(false); feedbackPresets.tap(); }}
+        onKycFormVerified={(label, name) => { setDocVerified(true); setAadhaarVerified(true); setDocVerifiedLabel(label); setVerifiedName(name || senderReceiver?.senderName || ''); setVerifiedDocId(label); setAgreementStep(2); }}
       />
 
     </motion.div>
