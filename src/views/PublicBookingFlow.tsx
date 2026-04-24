@@ -1003,6 +1003,31 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
     const domFields = ['receiverName', 'receiverPhone', 'receiverAddress', 'receiverCity', 'receiverZipcode'] as const;
     const result = await detailsForm.trigger(isInternational ? intlFields : domFields);
     if (!result) return;
+
+    // ── Same address check ──
+    const vals = detailsForm.getValues();
+    if (!isInternational) {
+      const sPin = (vals.senderPincode || '').trim();
+      const rPin = (vals.receiverZipcode || '').trim();
+      if (sPin && rPin && sPin === rPin) {
+        const sAddr = (vals.senderAddress || '').trim().toLowerCase();
+        const rAddr = (vals.receiverAddress || '').trim().toLowerCase();
+        if (sAddr === rAddr) {
+          toast({ title: 'Same address detected', description: 'Sender and receiver cannot have the same address. Please enter a different delivery address.', variant: 'destructive' });
+          return;
+        }
+      }
+    } else {
+      const sAddr = (vals.senderAddress || '').trim().toLowerCase();
+      const rAddr = (vals.receiverAddress || '').trim().toLowerCase();
+      const sCity = (vals.senderCity || '').trim().toLowerCase();
+      const rCity = (vals.receiverCity || '').trim().toLowerCase();
+      if (sAddr && rAddr && sAddr === rAddr && sCity === rCity) {
+        toast({ title: 'Same address detected', description: 'Sender and receiver cannot have the same address. Please enter a different delivery address.', variant: 'destructive' });
+        return;
+      }
+    }
+
     // For domestic, auto-set receiverState from pincode lookup if available
     if (!isInternational && receiverLookup.state) {
       detailsForm.setValue('receiverState', receiverLookup.state);

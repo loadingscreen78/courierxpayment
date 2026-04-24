@@ -183,6 +183,24 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
       if (!editData.receiverZipcode?.trim()) errs.receiverZipcode = 'Zipcode is required';
     }
     if (Object.keys(errs).length > 0) { setEditErrors(errs); return; }
+
+    // ── Same address check across both sections ──
+    const mergedData = { ...senderReceiver, ...editData };
+    const sPin = (mergedData.senderPincode || '').trim();
+    const rPin = (mergedData.receiverZipcode || '').trim();
+    const sAddr = (mergedData.senderAddress || '').trim().toLowerCase();
+    const rAddr = (mergedData.receiverAddress || '').trim().toLowerCase();
+    const sCity = (mergedData.senderCity || '').trim().toLowerCase();
+    const rCity = (mergedData.receiverCity || '').trim().toLowerCase();
+    const isSameAddress = sAddr && rAddr && sAddr === rAddr && (
+      (sPin && rPin && sPin === rPin) || sCity === rCity
+    );
+    if (isSameAddress) {
+      const targetKey = editModal === 'pickup' ? 'senderAddress' : 'receiverAddress';
+      setEditErrors({ [targetKey]: 'Sender and receiver cannot have the same address.' });
+      return;
+    }
+
     Object.assign(senderReceiver, editData);
     setEditModal(null);
     setEditErrors({});
@@ -265,7 +283,7 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
 
   // ── Multi-doc KYC state ──
   type GuestDocType = 'aadhaar' | 'pan' | 'passport' | 'voter_id';
-  type KycMethod = 'digilocker' | 'kyc_form' | 'sandbox_otp';
+  type KycMethod = 'digilocker' | 'sandbox_otp';
   const [selectedDocType, setSelectedDocType] = useState<GuestDocType>('aadhaar');
   const [kycMethod, setKycMethod] = useState<KycMethod>('sandbox_otp');
   // doc inputs
@@ -274,17 +292,11 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
   const [passportDob, setPassportDob] = useState('');
   const [voterIdInput, setVoterIdInput] = useState('');
   const [docInputError, setDocInputError] = useState('');
-  // phone (needed for kyc_form)
-  const [kycPhone, setKycPhone] = useState(senderReceiver?.senderPhone?.replace(/^\+91/, '').slice(-10) || '');
   // digilocker state
   const [digilockerUrl, setDigilockerUrl] = useState('');
   const [digilockerVerificationId, setDigilockerVerificationId] = useState('');
   const [digilockerReferenceId, setDigilockerReferenceId] = useState('');
   const [digilockerStep, setDigilockerStep] = useState<'idle' | 'redirect' | 'verifying'>('idle');
-  // kyc form state
-  const [kycFormLink, setKycFormLink] = useState('');
-  const [kycFormVerificationId, setKycFormVerificationId] = useState('');
-  const [kycFormStep, setKycFormStep] = useState<'idle' | 'sent' | 'polling'>('idle');
   // sandbox otp state
   const [sandboxReferenceId, setSandboxReferenceId] = useState('');
   const [sandboxOtp, setSandboxOtp] = useState('');
@@ -493,53 +505,6 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
     } catch { setAadhaarError('Failed to fetch DigiLocker result'); setDigilockerStep('idle'); }
     finally { setAadhaarLoading(false); }
   }, [digilockerReferenceId, digilockerVerificationId, digilockerDocType, selectedDocType, aadhaarInput, panInput, toast]);
-
-  // ── KYC Form (Cashfree hosted) ─────────────────────────────────────────────
-  const handleStartKycForm = async () => {
-    if (!validateDocInput()) return;
-    if (!kycPhone || kycPhone.length < 10) { setDocInputError('Enter your 10-digit mobile number'); return; }
-    setAadhaarLoading(true); setAadhaarError('');
-    try {
-      const res = await fetch('/api/kyc/kyc-form', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          docType: selectedDocType,
-          phone: kycPhone,
-          name: senderReceiver?.senderName || '',
-          email: senderReceiver?.senderEmail || '',
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok || !data.formLink) { setAadhaarError(data.error || 'Failed to generate KYC form'); return; }
-      setKycFormLink(data.formLink);
-      setKycFormVerificationId(data.verificationId || '');
-      setKycFormStep('sent');
-    } catch { setAadhaarError('Failed to generate KYC form'); }
-    finally { setAadhaarLoading(false); }
-  };
-
-  const handleCheckKycForm = useCallback(async () => {
-    if (!kycFormVerificationId) return;
-    setKycFormStep('polling'); setAadhaarLoading(true);
-    try {
-      const res = await fetch(`/api/kyc/kyc-form?verification_id=${kycFormVerificationId}`);
-      const data = await res.json();
-      if (data.verified) {
-        const docLabel = selectedDocType === 'aadhaar' ? `XXXX XXXX ${aadhaarInput.slice(-4)}` :
-          selectedDocType === 'pan' ? `PAN: ${panInput.slice(0,3)}XXXXXXX` :
-          selectedDocType === 'passport' ? `Passport: ${passportInput.slice(0,2)}XXXXX` :
-          `Voter ID: ${voterIdInput.slice(0,3)}XXXXX`;
-        markVerified(docLabel, data.verifiedName);
-        setKycFormStep('idle');
-        toast({ title: 'KYC Verified', description: `${data.verifiedName ? `Verified: ${data.verifiedName}` : 'Identity verified successfully'}` });
-      } else {
-        setAadhaarError(`Form status: ${data.formStatus || 'PENDING'} — Complete the form sent to your mobile.`);
-        setKycFormStep('sent');
-      }
-    } catch { setAadhaarError('Failed to check form status'); setKycFormStep('sent'); }
-    finally { setAadhaarLoading(false); }
-  }, [kycFormVerificationId, selectedDocType, aadhaarInput, panInput, passportInput, voterIdInput, toast]);
 
   // ── Sandbox OTP (Aadhaar only) ─────────────────────────────────────────────
   const handleSendSandboxOtp = async () => {
@@ -1224,7 +1189,7 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
             <p className="text-xs text-muted-foreground font-mono">{docVerifiedLabel}</p>
           </div>
           <button className="text-xs text-muted-foreground hover:text-foreground underline shrink-0"
-            onClick={() => { setDocVerified(false); setAadhaarVerified(false); setDocVerifiedLabel(''); setVerifiedName(''); setVerifiedAddress(''); setVerifiedDob(''); setVerifiedGender(''); setTermsAccepted(false); setSandboxStep('idle'); setKycFormStep('idle'); setDigilockerStep('idle'); setAadhaarError(''); }}>
+            onClick={() => { setDocVerified(false); setAadhaarVerified(false); setDocVerifiedLabel(''); setVerifiedName(''); setVerifiedAddress(''); setVerifiedDob(''); setVerifiedGender(''); setTermsAccepted(false); setSandboxStep('idle'); setDigilockerStep('idle'); setAadhaarError(''); }}>
             Change
           </button>
         </div>
@@ -1678,7 +1643,7 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
                           <p className="text-xs text-muted-foreground font-mono truncate">{docVerifiedLabel}</p>
                           {verifiedName && <p className="text-xs text-muted-foreground">Name: {verifiedName}</p>}
                         </div>
-                        <button className="text-xs text-muted-foreground hover:text-foreground underline shrink-0" onClick={() => { setDocVerified(false); setAadhaarVerified(false); setDocVerifiedLabel(''); setVerifiedName(''); setVerifiedAddress(''); setVerifiedDob(''); setVerifiedGender(''); setSandboxStep('idle'); setKycFormStep('idle'); setDigilockerStep('idle'); setAadhaarError(''); }}>
+                        <button className="text-xs text-muted-foreground hover:text-foreground underline shrink-0" onClick={() => { setDocVerified(false); setAadhaarVerified(false); setDocVerifiedLabel(''); setVerifiedName(''); setVerifiedAddress(''); setVerifiedDob(''); setVerifiedGender(''); setSandboxStep('idle'); setDigilockerStep('idle'); setAadhaarError(''); }}>
                           Change
                         </button>
                       </motion.div>
@@ -1689,7 +1654,7 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
                           <p className="text-xs font-semibold text-muted-foreground mb-2">Choose document</p>
                           <div className="grid grid-cols-2 gap-2">
                             {([{ type: 'aadhaar', label: 'Aadhaar' }, { type: 'pan', label: 'PAN Card' }, { type: 'passport', label: 'Passport' }, { type: 'voter_id', label: 'Voter ID' }] as { type: typeof selectedDocType; label: string }[]).map(doc => (
-                              <button key={doc.type} onClick={() => { setSelectedDocType(doc.type); setDocInputError(''); setAadhaarError(''); setSandboxStep('idle'); setKycFormStep('idle'); setDigilockerStep('idle'); }}
+                              <button key={doc.type} onClick={() => { setSelectedDocType(doc.type); setDocInputError(''); setAadhaarError(''); setSandboxStep('idle'); setDigilockerStep('idle'); if (doc.type !== 'aadhaar') setKycMethod('digilocker'); }}
                                 className={`py-2.5 px-3 rounded-lg border text-xs font-medium transition-all text-left ${selectedDocType === doc.type ? 'border-blue-500 bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300' : 'border-border bg-muted/30 text-muted-foreground hover:border-blue-300'}`}>
                                 {doc.label}
                               </button>
@@ -1735,15 +1700,14 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
                             ))}
                           </div>
 
-                          <div className="grid grid-cols-3 gap-2">
+                          <div className="grid grid-cols-2 gap-2">
                             {([
                               { m: 'sandbox_otp', label: 'Aadhaar OTP', desc: 'OTP to registered mobile', onlyAadhaar: true },
-                              { m: 'digilocker',  label: 'DigiLocker',  desc: 'Govt-approved consent',   notFor: ['passport', 'voter_id'] },
-                              { m: 'kyc_form',    label: 'KYC Form',    desc: 'Secure link via SMS',      notFor: [] },
+                              { m: 'digilocker',  label: 'DigiLocker',  desc: 'Govt-approved consent',   notFor: [] },
                             ] as { m: typeof kycMethod; label: string; desc: string; onlyAadhaar?: boolean; notFor?: string[] }[]).map(opt => {
                               const disabled = (opt.onlyAadhaar && selectedDocType !== 'aadhaar') || (opt.notFor?.includes(selectedDocType));
                               return (
-                                <button key={opt.m} disabled={disabled} onClick={() => { if (!disabled) { setKycMethod(opt.m); setAadhaarError(''); setSandboxStep('idle'); setKycFormStep('idle'); setDigilockerStep('idle'); } }}
+                                <button key={opt.m} disabled={disabled} onClick={() => { if (!disabled) { setKycMethod(opt.m); setAadhaarError(''); setSandboxStep('idle'); setDigilockerStep('idle'); } }}
                                   className={`py-2.5 px-2 rounded-lg border text-left transition-all ${disabled ? 'opacity-30 cursor-not-allowed border-border bg-muted/20' : kycMethod === opt.m ? 'border-blue-500 bg-blue-50 dark:bg-blue-950/40' : 'border-border bg-background hover:border-blue-300'}`}>
                                   <div className={`text-xs font-semibold ${disabled ? 'text-muted-foreground' : kycMethod === opt.m ? 'text-blue-700 dark:text-blue-300' : 'text-foreground'}`}>{opt.label}</div>
                                   <div className="text-[10px] text-muted-foreground mt-0.5 leading-tight">{opt.desc}</div>
@@ -1751,8 +1715,8 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
                               );
                             })}
                           </div>
-                          {(selectedDocType === 'passport' || selectedDocType === 'voter_id') && (
-                            <p className="text-[11px] text-muted-foreground mt-1.5">Aadhaar OTP and DigiLocker are not available for this document. KYC Form is recommended.</p>
+                          {selectedDocType !== 'aadhaar' && (
+                            <p className="text-[11px] text-muted-foreground mt-1.5">Aadhaar OTP is only available for Aadhaar. Please use DigiLocker.</p>
                           )}
                         </div>
 
@@ -1790,27 +1754,9 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
                           </div>
                         )}
 
-                        {/* KYC Form flow */}
-                        {kycMethod === 'kyc_form' && (
-                          <div className="space-y-2">
-                            {kycFormStep === 'idle' && (
-                              <>
-                                <Input type="tel" inputMode="numeric" maxLength={10} placeholder="10-digit mobile number" className="font-mono" value={kycPhone} onChange={e => setKycPhone(e.target.value.replace(/\D/g,'').slice(0,10))} />
-                                <Button onClick={() => { feedbackPresets.tap(); handleStartKycForm(); }} disabled={aadhaarLoading || kycPhone.length < 10} className="w-full bg-blue-600 hover:bg-blue-700 text-white">{aadhaarLoading ? <CircleNotch className="h-4 w-4 animate-spin mr-2" /> : null}Send KYC Form Link via SMS</Button>
-                              </>
-                            )}
-                            {kycFormStep === 'sent' && (
-                              <div className="space-y-2 p-3 rounded-lg bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800/40">
-                                <p className="text-xs text-blue-800 dark:text-blue-300">Form sent to <span className="font-mono font-semibold">{kycPhone}</span>. Complete it, then click below.</p>
-                                {kycFormLink && <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white text-xs" onClick={() => window.open(kycFormLink, '_blank')}>Open KYC Form ↗</Button>}
-                                <Button variant="outline" size="sm" className="w-full text-xs" onClick={handleCheckKycForm} disabled={aadhaarLoading}>{aadhaarLoading ? <CircleNotch className="h-3.5 w-3.5 animate-spin mr-1.5" /> : null}I've completed the form — Check Status</Button>
-                              </div>
-                            )}
-                            {kycFormStep === 'polling' && <div className="flex items-center gap-2 p-3 rounded-lg bg-muted text-sm text-muted-foreground"><CircleNotch className="h-4 w-4 animate-spin" /> Checking status...</div>}
-                          </div>
-                        )}
+                        {/* KYC Form flow removed */}
 
-                        {aadhaarError && <p className="text-xs text-destructive flex items-start gap-1"><Warning className="h-3 w-3 mt-0.5 shrink-0" weight="fill" /><span>{aadhaarError.includes('secret not configured') ? 'Aadhaar OTP service not configured. Please use DigiLocker or KYC Form.' : aadhaarError}</span></p>}
+                        {aadhaarError && <p className="text-xs text-destructive flex items-start gap-1"><Warning className="h-3 w-3 mt-0.5 shrink-0" weight="fill" /><span>{aadhaarError.includes('secret not configured') ? 'Aadhaar OTP service not configured. Please use DigiLocker.' : aadhaarError}</span></p>}
                       </>
                     )}
 
