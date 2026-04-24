@@ -82,11 +82,16 @@ export async function POST(request: NextRequest) {
 
     // Already processed — return existing AWB
     if (booking.status === 'shipped' && booking.awb_number) {
+      const payload0 = typeof booking.booking_payload === 'string'
+        ? JSON.parse(booking.booking_payload)
+        : booking.booking_payload || {};
+      const sp0 = (payload0?.senderReceiver?.senderPhone || '').replace(/\D/g, '').slice(-10);
       return NextResponse.json({
         success: true,
         awbUrl: booking.label_url || '',
         awb: booking.awb_number,
         trackingNumber: booking.tracking_number,
+        senderPhone: sp0 || null,
       });
     }
 
@@ -471,6 +476,10 @@ export async function POST(request: NextRequest) {
     // Wait for emails but don't fail the response if they error
     await Promise.allSettled(emailPromises);
 
+    // Extract 10-digit sender phone for the thank-you page OTP flow
+    const rawPhone = senderReceiver.senderPhone || '';
+    const senderPhone10 = rawPhone.replace(/\D/g, '').slice(-10);
+
     return NextResponse.json({
       success: true,
       awbUrl: labelUrl,
@@ -478,6 +487,7 @@ export async function POST(request: NextRequest) {
       trackingNumber: booking.tracking_number,
       shipmentType: rateFormData?.shipmentType || '',
       mode: isInternational ? 'international' : 'domestic',
+      senderPhone: senderPhone10 || null,
     });
   } catch (error) {
     console.error('[verify-guest-payment] Error:', error);

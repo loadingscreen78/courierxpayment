@@ -4,12 +4,17 @@ import { Suspense, useEffect, useState, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
   CheckCircle, CircleNotch, Warning, ArrowRight, UserPlus,
-  Package, Copy, DownloadSimple, Clock, Info,
+  Package, Copy, DownloadSimple, Clock, Info, Phone, Shield, X,
 } from '@phosphor-icons/react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
+import { sendFirebaseOtp, verifyFirebaseOtp, clearOtpSession } from '@/lib/firebase/phoneAuth';
+
+const RESEND_SECONDS = 120;
 
 export default function GuestBookingConfirmPage() {
   return (
@@ -23,6 +28,96 @@ export default function GuestBookingConfirmPage() {
   );
 }
 
+// ---------------------------------------------------------------------------
+// OTP Modal — reused from PublicTracking, 2-min timer
+// ---------------------------------------------------------------------------
+function OTPModal({
+  phone,
+  onVerify,
+  onResend,
+  onClose,
+  error: externalError,
+}: {
+  phone: string;
+  onVerify: (otp: string) => void;
+  onResend: () => void;
+  onClose: () => void;
+  error?: string;
+}) {
+  const [otp, setOtp] = useState('');
+  const [resendTimer, setResendTimer] = useState(RESEND_SECONDS);
+  const [verifying, setVerifying] = useState(false);
+
+  useEffect(() => {
+    const t = setInterval(() => setResendTimer(p => p > 0 ? p - 1 : 0), 1000);
+    return () => clearInterval(t);
+  }, []);
+
+  const handleResend = () => { onResend(); setResendTimer(RESEND_SECONDS); setOtp(''); };
+
+  const fmt = (s: number) => `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, '0')}`;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
+    >
+      <motion.div
+        initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }}
+        className="bg-card border border-border rounded-2xl p-8 max-w-md w-full shadow-2xl"
+      >
+        <div className="flex justify-between items-start mb-6">
+          <div>
+            <h3 className="text-xl font-bold text-foreground">Verify to Track</h3>
+            <p className="text-sm text-muted-foreground mt-1">
+              OTP sent to +91 {phone.slice(0, 2)}****{phone.slice(-2)}
+            </p>
+          </div>
+          <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
+            <X size={20} weight="bold" />
+          </button>
+        </div>
+
+        <div className="flex justify-center mb-6">
+          <InputOTP maxLength={6} value={otp} onChange={setOtp}>
+            <InputOTPGroup>
+              {[0, 1, 2, 3, 4, 5].map(i => (
+                <InputOTPSlot key={i} index={i} className="w-12 h-14 text-xl" />
+              ))}
+            </InputOTPGroup>
+          </InputOTP>
+        </div>
+
+        {externalError && (
+          <p className="text-sm text-destructive text-center mb-4">{externalError}</p>
+        )}
+
+        <Button
+          className="w-full h-12 bg-coke-red hover:bg-coke-red/90"
+          onClick={() => { setVerifying(true); onVerify(otp); }}
+          disabled={otp.length !== 6 || verifying}
+        >
+          <Shield size={20} weight="bold" className="mr-2" />
+          {verifying ? 'Verifying...' : 'Verify & Track'}
+        </Button>
+
+        <p className="text-center text-sm text-muted-foreground mt-4">
+          {resendTimer > 0 ? (
+            <>Resend OTP in <span className="font-semibold">{fmt(resendTimer)}</span></>
+          ) : (
+            <button className="text-coke-red hover:underline font-medium" onClick={handleResend}>
+              Resend OTP
+            </button>
+          )}
+        </p>
+      </motion.div>
+    </motion.div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Main confirm content
+// ---------------------------------------------------------------------------
 function ConfirmContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -37,14 +132,16 @@ function ConfirmContent() {
   const [awbUrl, setAwbUrl] = useState('');
   const [awb, setAwb] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
+  const [senderPhone, setSenderPhone] = useState('');
+
+  // OTP modal state
+  const [showOTP, setShowOTP] = useState(false);
+  const [otpError, setOtpError] = useState('');
+  const [manualPhone, setManualPhone] = useState('');
+  const [showManualPhone, setShowManualPhone] = useState(false);
 
   useEffect(() => {
-    if (!orderId) {
-      router.replace('/public/book');
-      return;
-    }
-
-    // Prevent double-call in React strict mode
+    if (!orderId) { router.replace('/public/book'); return; }
     if (verifyCalledRef.current) return;
     verifyCalledRef.current = true;
 
@@ -61,11 +158,9 @@ function ConfirmContent() {
           setTrackingNumber(data.trackingNumber || trackingFromUrl);
           setAwbUrl(data.awbUrl || '');
           setAwb(data.awb || '');
+          setSenderPhone(data.senderPhone || '');
           setPhase('success');
-          if (data.error) {
-            // Partial success — shipment creation may have failed
-            setErrorMsg(data.error);
-          }
+          if (data.error) setErrorMsg(data.error);
         } else {
           setErrorMsg(data.error || 'Payment verification failed');
           setPhase('failed');
@@ -82,6 +177,41 @@ function ConfirmContent() {
   const handleCopyTracking = () => {
     navigator.clipboard.writeText(trackingNumber);
     toast({ title: 'Copied', description: 'Tracking number copied to clipboard.' });
+  };
+
+  // Determine which phone to use for OTP
+  const activePhone = senderPhone || manualPhone;
+
+  const handleTrackShipment = async () => {
+    if (!activePhone || activePhone.length !== 10) {
+      setShowManualPhone(true);
+      return;
+    }
+    setOtpError('');
+    const result = await sendFirebaseOtp(`+91${activePhone}`);
+    if (!result.success) {
+      toast({ title: 'Error', description: result.error || 'Failed to send OTP', variant: 'destructive' });
+      return;
+    }
+    setShowOTP(true);
+  };
+
+  const handleOTPVerify = async (otp: string) => {
+    setOtpError('');
+    const result = await verifyFirebaseOtp(otp);
+    if (!result.success) {
+      setOtpError(result.error || 'Invalid OTP. Please try again.');
+      return;
+    }
+    setShowOTP(false);
+    clearOtpSession();
+    // Navigate to tracking page with the tracking number
+    router.push(`/public/track?tracking=${encodeURIComponent(trackingNumber)}`);
+  };
+
+  const handleOTPResend = async () => {
+    setOtpError('');
+    await sendFirebaseOtp(`+91${activePhone}`);
   };
 
   // ── Verifying phase ──
@@ -119,8 +249,7 @@ function ConfirmContent() {
         </header>
         <main className="container max-w-lg py-8 sm:py-12 px-3 sm:px-4">
           <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
+            initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
             className="bg-card rounded-xl border border-border p-5 sm:p-8 text-center space-y-5 sm:space-y-6"
           >
             <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-destructive/10 flex items-center justify-center mx-auto">
@@ -157,6 +286,21 @@ function ConfirmContent() {
   // ── Success phase ──
   return (
     <div className="min-h-screen bg-background">
+      {/* Invisible reCAPTCHA container for Firebase Phone Auth */}
+      <div id="recaptcha-container" />
+
+      <AnimatePresence>
+        {showOTP && (
+          <OTPModal
+            phone={activePhone}
+            onVerify={handleOTPVerify}
+            onResend={handleOTPResend}
+            onClose={() => { setShowOTP(false); clearOtpSession(); setOtpError(''); }}
+            error={otpError}
+          />
+        )}
+      </AnimatePresence>
+
       <header className="sticky top-0 z-50 bg-background/90 backdrop-blur-xl border-b border-border/50">
         <div className="container flex items-center justify-between h-16">
           <Link href="/" className="flex items-center gap-2.5">
@@ -167,8 +311,7 @@ function ConfirmContent() {
 
       <main className="container max-w-lg py-8 sm:py-12 px-3 sm:px-4 space-y-6">
         <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
+          initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
           className="bg-card rounded-xl border border-border p-5 sm:p-8 text-center space-y-5 sm:space-y-6"
         >
           <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-candlestick-green/10 flex items-center justify-center mx-auto">
@@ -230,8 +373,57 @@ function ConfirmContent() {
             </p>
           </div>
 
+          {/* Manual phone input if senderPhone not available */}
+          <AnimatePresence>
+            {showManualPhone && !senderPhone && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }} className="overflow-hidden"
+              >
+                <div className="p-4 rounded-xl bg-muted/50 border border-border text-left space-y-3">
+                  <p className="text-sm font-medium flex items-center gap-2">
+                    <Phone size={16} className="text-coke-red" />
+                    Enter your booking phone number
+                  </p>
+                  <div className="flex gap-2">
+                    <span className="inline-flex items-center px-3 rounded-l-lg bg-muted border border-r-0 border-border text-muted-foreground text-sm">
+                      +91
+                    </span>
+                    <Input
+                      placeholder="10-digit mobile"
+                      value={manualPhone}
+                      onChange={e => setManualPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                      className="flex-1 rounded-l-none border-l-0 h-10"
+                    />
+                    <Button
+                      size="sm"
+                      className="bg-coke-red hover:bg-red-600 text-white h-10 px-4"
+                      disabled={manualPhone.length !== 10}
+                      onClick={async () => {
+                        setShowManualPhone(false);
+                        const result = await sendFirebaseOtp(`+91${manualPhone}`);
+                        if (!result.success) {
+                          toast({ title: 'Error', description: result.error || 'Failed to send OTP', variant: 'destructive' });
+                          return;
+                        }
+                        setShowOTP(true);
+                      }}
+                    >
+                      Send OTP
+                    </Button>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
           <div className="flex gap-3">
-            <Button variant="outline" className="flex-1" onClick={() => router.push(`/public/track?tracking=${encodeURIComponent(trackingNumber)}`)}>
+            <Button
+              variant="outline"
+              className="flex-1 gap-1.5"
+              onClick={handleTrackShipment}
+            >
+              <Phone className="h-4 w-4" />
               Track Shipment
             </Button>
             <Button className="flex-1 bg-coke-red hover:bg-red-600 text-white gap-1.5" onClick={() => router.push('/public/book')}>

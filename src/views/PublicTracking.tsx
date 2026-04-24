@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
 import {
   MagnifyingGlass, Package, CheckCircle, Globe, Phone, Shield,
@@ -17,6 +17,7 @@ import { cn } from '@/lib/utils';
 import { STATUS_LABEL_MAP, LEG_LABEL_MAP } from '@/lib/shipment-lifecycle/statusLabelMap';
 import type { ShipmentStatus, ShipmentLeg, TimelineSource } from '@/lib/shipment-lifecycle/types';
 import dynamic from 'next/dynamic';
+import { sendFirebaseOtp, verifyFirebaseOtp, clearOtpSession } from '@/lib/firebase/phoneAuth';
 
 const ShipmentMap = dynamic(() => import('@/components/tracking/ShipmentMap'), { ssr: false });
 
@@ -81,22 +82,26 @@ function getEstimatedDelivery(createdAt: string): string {
 }
 
 // ---------------------------------------------------------------------------
-// OTP Modal (phone search)
+// OTP Modal — Firebase Phone Auth, 2-min resend timer
 // ---------------------------------------------------------------------------
+
+const RESEND_SECONDS = 120; // 2 minutes
 
 const OTPModal = ({
   phone,
   onVerify,
   onResend,
   onClose,
+  error: externalError,
 }: {
   phone: string;
   onVerify: (otp: string) => void;
   onResend: () => void;
   onClose: () => void;
+  error?: string;
 }) => {
   const [otp, setOtp] = useState('');
-  const [resendTimer, setResendTimer] = useState(30);
+  const [resendTimer, setResendTimer] = useState(RESEND_SECONDS);
   const [verifying, setVerifying] = useState(false);
 
   useEffect(() => {
@@ -106,7 +111,14 @@ const OTPModal = ({
 
   const handleResend = () => {
     onResend();
-    setResendTimer(30);
+    setResendTimer(RESEND_SECONDS);
+    setOtp('');
+  };
+
+  const formatTimer = (s: number) => {
+    const m = Math.floor(s / 60);
+    const sec = s % 60;
+    return `${m}:${sec.toString().padStart(2, '0')}`;
   };
 
   return (
@@ -122,13 +134,14 @@ const OTPModal = ({
           <div>
             <h3 className="text-xl font-bold font-typewriter text-foreground">Verify Your Number</h3>
             <p className="text-sm text-muted-foreground mt-1">
-              Enter the 6-digit OTP sent to +91 {phone.slice(0, 2)}****{phone.slice(-2)}
+              OTP sent to +91 {phone.slice(0, 2)}****{phone.slice(-2)}
             </p>
           </div>
           <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
             <X size={20} weight="bold" />
           </button>
         </div>
+
         <div className="flex justify-center mb-6">
           <InputOTP maxLength={6} value={otp} onChange={setOtp}>
             <InputOTPGroup>
@@ -138,6 +151,11 @@ const OTPModal = ({
             </InputOTPGroup>
           </InputOTP>
         </div>
+
+        {externalError && (
+          <p className="text-sm text-destructive text-center mb-4">{externalError}</p>
+        )}
+
         <Button
           className="w-full h-12 bg-coke-red hover:bg-coke-red/90"
           onClick={() => { setVerifying(true); onVerify(otp); }}
@@ -146,11 +164,12 @@ const OTPModal = ({
           <Shield size={20} weight="bold" className="mr-2" />
           {verifying ? 'Verifying...' : 'Verify & Track'}
         </Button>
+
         <p className="text-center text-sm text-muted-foreground mt-4">
           {resendTimer > 0 ? (
-            <>Resend OTP in <span className="font-semibold">{resendTimer}s</span></>
+            <>Resend OTP in <span className="font-semibold">{formatTimer(resendTimer)}</span></>
           ) : (
-            <button className="text-coke-red hover:underline" onClick={handleResend}>
+            <button className="text-coke-red hover:underline font-medium" onClick={handleResend}>
               Resend OTP
             </button>
           )}
@@ -223,6 +242,7 @@ const PublicTracking = () => {
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
+  const [otpError, setOtpError] = useState('');
   const [shipment, setShipment] = useState<TrackingShipment | null>(null);
   const [timeline, setTimeline] = useState<TrackingTimelineEntry[]>([]);
 
@@ -274,23 +294,23 @@ const PublicTracking = () => {
     }
   }, [searchParams]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Auto-open phone OTP if ?phone=1 in URL (from thank-you page)
+  useEffect(() => {
+    const urlPhone = searchParams.get('phone');
+    if (urlPhone && urlPhone.length === 10) {
+      setPhoneNumber(urlPhone);
+      setShowAdvanced(true);
+    }
+  }, [searchParams]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const sendPhoneOtp = async () => {
-    try {
-      const res = await fetch('/api/auth/phone-otp/send', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone: `+91${phoneNumber}` }),
-      });
-      const json = await res.json();
-      if (!res.ok || !json.success) {
-        setError(json.error || 'Failed to send OTP. Please try again.');
-        return false;
-      }
-      return true;
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to send OTP. Please try again.');
+    setOtpError('');
+    const result = await sendFirebaseOtp(`+91${phoneNumber}`);
+    if (!result.success) {
+      setError(result.error || 'Failed to send OTP. Please try again.');
       return false;
     }
+    return true;
   };
 
   const handlePhoneSearch = async () => {
@@ -304,28 +324,19 @@ const PublicTracking = () => {
   };
 
   const handleOTPVerify = async (otp: string) => {
-    // Verify OTP via FAST2SMS
-    try {
-      const res = await fetch('/api/auth/phone-otp/verify', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone: `+91${phoneNumber}`, code: otp }),
-      });
-      const json = await res.json();
-      if (!json.success) {
-        setError(json.error || 'Invalid OTP. Please try again.');
-        return;
-      }
-    } catch {
-      setError('OTP verification failed.');
+    setOtpError('');
+    const result = await verifyFirebaseOtp(otp);
+    if (!result.success) {
+      setOtpError(result.error || 'Invalid OTP. Please try again.');
       return;
     }
 
     setShowOTP(false);
+    clearOtpSession();
     setLoading(true);
     setError('');
 
-    // Look up shipment by phone
+    // Look up shipment by sender phone
     try {
       const res = await fetch(`/api/track?awb=${encodeURIComponent(phoneNumber)}`);
       const json = await res.json();
@@ -343,10 +354,20 @@ const PublicTracking = () => {
     }
   };
 
+  const handleOTPResend = async () => {
+    setOtpError('');
+    await sendPhoneOtp();
+  };
+
+  const handleCloseOTP = () => {
+    setShowOTP(false);
+    clearOtpSession();
+    setOtpError('');
+  };
+
   const currentStatusInfo = shipment ? STATUS_LABEL_MAP[shipment.current_status] : null;
   const currentLegLabel = shipment ? LEG_LABEL_MAP[shipment.current_leg] : null;
 
-  // Progress percentage based on lifecycle
   const PROGRESS_MAP: Record<ShipmentStatus, number> = {
     PENDING: 5, BOOKING_CONFIRMED: 10, PICKED_UP: 20, IN_TRANSIT: 35,
     OUT_FOR_DELIVERY: 45, DELIVERED: 55, ARRIVED_AT_WAREHOUSE: 60,
@@ -360,13 +381,17 @@ const PublicTracking = () => {
     <div className="min-h-screen flex flex-col bg-background">
       <LandingHeader />
 
+      {/* Invisible reCAPTCHA container required by Firebase Phone Auth */}
+      <div id="recaptcha-container" />
+
       <AnimatePresence>
         {showOTP && (
           <OTPModal
             phone={phoneNumber}
             onVerify={handleOTPVerify}
-            onResend={sendPhoneOtp}
-            onClose={() => setShowOTP(false)}
+            onResend={handleOTPResend}
+            onClose={handleCloseOTP}
+            error={otpError}
           />
         )}
       </AnimatePresence>
@@ -421,7 +446,7 @@ const PublicTracking = () => {
                 </div>
               </div>
 
-              {/* Advanced Search Toggle */}
+              {/* Phone Search Toggle */}
               <div className="mt-4 text-center">
                 <button
                   onClick={() => setShowAdvanced(!showAdvanced)}
@@ -444,7 +469,7 @@ const PublicTracking = () => {
                         <span className="font-semibold text-foreground">Search by Phone Number</span>
                       </div>
                       <p className="text-sm text-muted-foreground mb-4">
-                        Enter the phone number used during booking. We&apos;ll send an OTP for verification.
+                        Enter the sender&apos;s phone number used during booking. We&apos;ll send an OTP to verify.
                       </p>
                       <div className="flex flex-col sm:flex-row gap-3">
                         <div className="flex-1 flex">
@@ -455,6 +480,7 @@ const PublicTracking = () => {
                             placeholder="10-digit mobile number"
                             value={phoneNumber}
                             onChange={e => setPhoneNumber(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                            onKeyDown={e => e.key === 'Enter' && handlePhoneSearch()}
                             className="flex-1 h-12 rounded-l-none border-l-0"
                           />
                         </div>

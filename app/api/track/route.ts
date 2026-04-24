@@ -75,7 +75,7 @@ export async function GET(request: NextRequest) {
   }
 
   if (!guestBooking) {
-    // Try phone search
+    // Try phone search in shipments (recipient_phone)
     const { data: byPhone } = await supabase
       .from('shipments')
       .select('id, tracking_number, current_status, current_leg, domestic_awb, international_awb, recipient_name, destination_country, destination_address, origin_address, weight_kg, shipment_type, created_at')
@@ -94,7 +94,21 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ success: true, shipment: byPhone, timeline: timeline ?? [] });
     }
 
-    return NextResponse.json({ success: false, error: 'No shipment found with this tracking number.' }, { status: 404 });
+    // Try phone search in guest_bookings (sender_phone) — strip to last 10 digits for flexible match
+    const phoneDigits = awb.replace(/\D/g, '').slice(-10);
+    const { data: guestByPhone } = await supabase
+      .from('guest_bookings')
+      .select('*')
+      .ilike('sender_phone', `%${phoneDigits}`)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (guestByPhone) {
+      guestBooking = guestByPhone;
+    } else {
+      return NextResponse.json({ success: false, error: 'No shipment found with this tracking number.' }, { status: 404 });
+    }
   }
 
   // ── Build guest booking response in shipment-compatible format ──
