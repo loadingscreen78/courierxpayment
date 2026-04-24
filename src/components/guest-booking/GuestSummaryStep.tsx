@@ -131,9 +131,31 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
   const [aadhaarInput, setAadhaarInput] = useState(extractedAadhaarNumber || '');
 
   // ── Inline edit state for summary sections ──
-  type EditModal = 'pickup' | 'recipient' | 'contents' | null;
+  type EditModal = 'pickup' | 'recipient' | 'contents' | 'weightdims' | null;
   const [editModal, setEditModal] = useState<EditModal>(null);
   const [editData, setEditData] = useState<Partial<SenderReceiver>>({});
+
+  // ── Mutable weight/dims/items (override rateFormData after edits) ──
+  const [editedWeightKg, setEditedWeightKg] = useState<number>(rateFormData?.weightKg ?? 0);
+  const [editedLength, setEditedLength] = useState<number>(rateFormData?.lengthCm ?? 0);
+  const [editedWidth, setEditedWidth] = useState<number>(rateFormData?.widthCm ?? 0);
+  const [editedHeight, setEditedHeight] = useState<number>(rateFormData?.heightCm ?? 0);
+  const [editedItems, setEditedItems] = useState<Array<{ name: string; type: string; qty: number; unitPrice: number }>>(() => {
+    // Parse existing contentDescription back into items
+    const desc = senderReceiver?.contentDescription || '';
+    const parts = desc.split(';').map(s => s.trim()).filter(Boolean);
+    if (parts.length === 0) return [{ name: '', type: '', qty: 1, unitPrice: 0 }];
+    return parts.map(p => {
+      const m = p.match(/^(.+?)\s*\((.+?)\)\s*x(\d+)\s*@\s*₹(\d+)/);
+      if (m) return { name: m[1].trim(), type: m[2].trim(), qty: parseInt(m[3]), unitPrice: parseInt(m[4]) };
+      return { name: p, type: '', qty: 1, unitPrice: 0 };
+    });
+  });
+  // Adjusted price after weight/dims edit
+  const [adjustedPrice, setAdjustedPrice] = useState<number | null>(null);
+  const [priceAlertMsg, setPriceAlertMsg] = useState<string>('');
+  const [refetchingPrice, setRefetchingPrice] = useState(false);
+
   const openEdit = (section: EditModal) => {
     setEditData({ ...senderReceiver });
     setEditModal(section);
@@ -141,6 +163,64 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
   const saveEdit = () => {
     Object.assign(senderReceiver, editData);
     setEditModal(null);
+  };
+
+  const saveContents = () => {
+    const desc = editedItems.filter(i => i.name.trim()).map(i => `${i.name} (${i.type || 'other'}) x${i.qty} @ ₹${i.unitPrice}`).join('; ');
+    senderReceiver.contentDescription = desc;
+    setEditModal(null);
+  };
+
+  const saveWeightDims = async () => {
+    // Update rateFormData in-place
+    if (rateFormData) {
+      rateFormData.weightKg = editedWeightKg;
+      rateFormData.lengthCm = editedLength;
+      rateFormData.widthCm = editedWidth;
+      rateFormData.heightCm = editedHeight;
+    }
+    setEditModal(null);
+    // Re-fetch rates
+    if (!isDomestic) return;
+    setRefetchingPrice(true);
+    setPriceAlertMsg('');
+    try {
+      const res = await fetch('/api/domestic/rates', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          pickupPincode: rateFormData?.pickupPincode,
+          deliveryPincode: rateFormData?.deliveryPincode,
+          weightKg: editedWeightKg,
+          lengthCm: editedLength || 10,
+          widthCm: editedWidth || 10,
+          heightCm: editedHeight || 10,
+          declaredValue: rateFormData?.declaredValue || 0,
+          shipmentType: rateFormData?.shipmentType || 'gift',
+          isGuest: true,
+        }),
+      });
+      const data = await res.json();
+      if (data.success && data.couriers?.length > 0) {
+        // Find same courier or cheapest
+        const courierId = selectedCourier?.courier_company_id;
+        const match = data.couriers.find((c: any) => c.courier_company_id === courierId) || data.couriers[0];
+        const newPrice = match.customer_price;
+        const oldPrice = basePrice;
+        if (newPrice !== oldPrice) {
+          setAdjustedPrice(newPrice);
+          const diff = newPrice - oldPrice;
+          setPriceAlertMsg(diff > 0
+            ? `Price increased by ₹${diff.toLocaleString('en-IN')} due to updated weight/dimensions. New total: ₹${newPrice.toLocaleString('en-IN')}.`
+            : `Price decreased by ₹${Math.abs(diff).toLocaleString('en-IN')} due to updated weight/dimensions. New total: ₹${newPrice.toLocaleString('en-IN')}.`
+          );
+        } else {
+          setAdjustedPrice(null);
+          setPriceAlertMsg('');
+        }
+      }
+    } catch { /* silent */ }
+    finally { setRefetchingPrice(false); }
   };
   const [formattedAadhaar, setFormattedAadhaar] = useState(extractedAadhaarNumber ? formatAadhaar(extractedAadhaarNumber) : '');
   const [aadhaarVerified, setAadhaarVerified] = useState(false);
@@ -672,16 +752,16 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
   }, [mode, rateFormData]);
 
   // For international, use rateBreakdown total as the authoritative price so breakdown matches total
-  const effectiveBasePrice = (mode === 'international' && rateBreakdown?.total) ? rateBreakdown.total : basePrice;
+  const effectiveBasePrice = adjustedPrice ?? ((mode === 'international' && rateBreakdown?.total) ? rateBreakdown.total : basePrice);
   const finalPrice = Math.max(0, effectiveBasePrice - couponDiscount);
 
   // Aadhaar thumbnail URLs
   const frontThumb = useMemo(() => aadhaarFront ? URL.createObjectURL(aadhaarFront) : null, [aadhaarFront]);
   const backThumb = useMemo(() => aadhaarBack ? URL.createObjectURL(aadhaarBack) : null, [aadhaarBack]);
 
-  // Dimensions
-  const dims = rateFormData ? { l: rateFormData.lengthCm, w: rateFormData.widthCm, h: rateFormData.heightCm } : null;
-  const weight = rateFormData?.weightGrams ? `${rateFormData.weightGrams}g` : rateFormData?.weightKg ? `${rateFormData.weightKg} kg` : '';
+  // Dimensions — use edited values
+  const dims = { l: editedLength, w: editedWidth, h: editedHeight };
+  const weight = rateFormData?.weightGrams ? `${rateFormData.weightGrams}g` : editedWeightKg ? `${editedWeightKg} kg` : '';
 
   // ═══════════════════════════════════════════════════════════════════════════
   // SUCCESS PHASE
@@ -991,12 +1071,15 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
               <p className="text-sm">{senderReceiver.contentDescription.replace(/\s*\[HSN:[^\]]*\]/g, '')}</p>
             </div>
             <div>
-              <p className="text-xs text-muted-foreground mb-1 flex items-center gap-1"><Ruler className="h-3 w-3" /> Weight &amp; Dimensions</p>
+              <p className="text-xs text-muted-foreground mb-1 flex items-center gap-1 justify-between">
+                <span className="flex items-center gap-1"><Ruler className="h-3 w-3" /> Weight &amp; Dimensions</span>
+                {isDomestic && <button onClick={() => setEditModal('weightdims')} className="text-[10px] text-coke-red hover:underline font-medium">Edit</button>}
+              </p>
               {weight && <p className="text-sm font-medium">{weight}</p>}
               {dims && (
                 <>
                   <p className="text-xs text-muted-foreground mt-0.5">{dims.l} × {dims.w} × {dims.h} cm</p>
-                  {dims.l && dims.w && dims.h && (rateFormData?.weightGrams || rateFormData?.weightKg) && (
+                  {dims.l && dims.w && dims.h && (rateFormData?.weightGrams || editedWeightKg) && (
                     <p className="text-xs text-muted-foreground mt-0.5">Vol. weight: {((dims.l * dims.w * dims.h) / 5000).toFixed(1)} kg</p>
                   )}
                 </>
@@ -1040,6 +1123,26 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
         destinationCountryName={destinationCountryInfo?.name}
         mode={mode}
       />
+
+      {/* ── Price adjustment alert ── */}
+      {refetchingPrice && (
+        <div className="rounded-xl border border-blue-200 bg-blue-50 dark:bg-blue-950/20 p-4 flex items-center gap-3">
+          <CircleNotch className="h-5 w-5 text-blue-600 animate-spin shrink-0" />
+          <p className="text-sm text-blue-800 dark:text-blue-300">Recalculating price based on updated weight/dimensions…</p>
+        </div>
+      )}
+      {!refetchingPrice && priceAlertMsg && (
+        <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}
+          className={`rounded-xl border p-4 flex items-start gap-3 ${adjustedPrice && adjustedPrice > basePrice ? 'border-amber-300/60 bg-amber-50 dark:bg-amber-950/20' : 'border-candlestick-green/30 bg-candlestick-green/5'}`}>
+          <Warning className={`h-5 w-5 shrink-0 mt-0.5 ${adjustedPrice && adjustedPrice > basePrice ? 'text-amber-600' : 'text-candlestick-green'}`} weight="fill" />
+          <div className="space-y-0.5">
+            <p className={`text-sm font-semibold ${adjustedPrice && adjustedPrice > basePrice ? 'text-amber-900 dark:text-amber-200' : 'text-candlestick-green'}`}>
+              {adjustedPrice && adjustedPrice > basePrice ? 'Price Updated — Additional Charge' : 'Price Updated — Reduced Charge'}
+            </p>
+            <p className="text-xs text-muted-foreground">{priceAlertMsg}</p>
+          </div>
+        </motion.div>
+      )}
 
       {/* ── Passport Upload Later reminder (medicine flow) ── */}
       {passportUploadLater && (
@@ -1473,7 +1576,7 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
             >
               <div className="flex items-center justify-between">
                 <h3 className="font-semibold text-base">
-                  {editModal === 'pickup' ? 'Edit Pickup Address' : editModal === 'recipient' ? 'Edit Recipient Address' : 'Edit Package Contents'}
+                  {editModal === 'pickup' ? 'Edit Pickup Address' : editModal === 'recipient' ? 'Edit Recipient Address' : editModal === 'weightdims' ? 'Edit Weight & Dimensions' : 'Edit Package Contents'}
                 </h3>
                 <button onClick={() => setEditModal(null)} className="text-muted-foreground hover:text-foreground">
                   <X className="h-5 w-5" />
@@ -1544,22 +1647,108 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
 
               {editModal === 'contents' && (
                 <div className="space-y-3">
-                  <p className="text-xs text-muted-foreground">Describe the contents of your shipment accurately.</p>
-                  <div>
-                    <label className="text-xs font-medium">Contents Description</label>
-                    <textarea
-                      value={editData.contentDescription || ''}
-                      onChange={(e) => setEditData(d => ({ ...d, contentDescription: e.target.value }))}
-                      rows={4}
-                      className="w-full mt-1 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 resize-none"
-                    />
+                  <p className="text-xs text-muted-foreground">Add or edit items in your shipment.</p>
+                  {editedItems.map((item, idx) => (
+                    <div key={idx} className="rounded-lg border border-border p-3 space-y-2.5 relative">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-semibold text-muted-foreground">Item {idx + 1}</span>
+                        {editedItems.length > 1 && (
+                          <button type="button" onClick={() => setEditedItems(prev => prev.filter((_, i) => i !== idx))} className="text-destructive p-1">
+                            <X className="h-3.5 w-3.5" weight="bold" />
+                          </button>
+                        )}
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <label className="text-[10px] font-medium">Item Name *</label>
+                          <Input value={item.name} onChange={(e) => { const a = [...editedItems]; a[idx].name = e.target.value; setEditedItems(a); }} placeholder="e.g. Cotton T-Shirt" className="h-9 mt-0.5 text-sm" />
+                        </div>
+                        <div>
+                          <label className="text-[10px] font-medium">Type *</label>
+                          <select value={item.type} onChange={(e) => { const a = [...editedItems]; a[idx].type = e.target.value; setEditedItems(a); }}
+                            className="w-full h-9 mt-0.5 rounded-md border border-input bg-background px-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring">
+                            <option value="">Select type</option>
+                            <option value="clothing">Clothing & Apparel</option>
+                            <option value="electronics">Electronics</option>
+                            <option value="food">Branded Packaged Food</option>
+                            <option value="cosmetics">Cosmetics & Personal Care</option>
+                            <option value="handicraft">Handicraft & Art</option>
+                            <option value="books">Books & Stationery</option>
+                            <option value="toys">Toys & Games</option>
+                            <option value="jewelry">Imitation Jewelry</option>
+                            <option value="household">Household Items</option>
+                            <option value="other">Other</option>
+                          </select>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <label className="text-[10px] font-medium">Quantity *</label>
+                          <Input type="number" inputMode="numeric" value={item.qty} onChange={(e) => { const a = [...editedItems]; a[idx].qty = Number(e.target.value) || 1; setEditedItems(a); }} className="h-9 mt-0.5 text-sm" />
+                        </div>
+                        <div>
+                          <label className="text-[10px] font-medium">Unit Price (₹) *</label>
+                          <Input type="number" inputMode="numeric" value={item.unitPrice || ''} onChange={(e) => { const a = [...editedItems]; a[idx].unitPrice = parseInt(e.target.value) || 0; setEditedItems(a); }} placeholder="Enter value" className="h-9 mt-0.5 text-sm" />
+                        </div>
+                      </div>
+                      {item.name && item.unitPrice > 0 && (
+                        <p className="text-[11px] text-muted-foreground text-right">Item total: ₹{(item.qty * item.unitPrice).toLocaleString('en-IN')}</p>
+                      )}
+                    </div>
+                  ))}
+                  <button type="button" onClick={() => setEditedItems(prev => [...prev, { name: '', type: '', qty: 1, unitPrice: 0 }])}
+                    className="w-full py-2 rounded-lg border border-coke-red/30 bg-coke-red/5 text-coke-red text-xs font-semibold hover:bg-coke-red/10 transition-colors flex items-center justify-center gap-1.5">
+                    + Add Another Item
+                  </button>
+                  {editedItems.length > 0 && (
+                    <div className="flex justify-between text-sm font-semibold border-t border-border pt-2">
+                      <span>Total Declared Value</span>
+                      <span>₹{editedItems.reduce((s, i) => s + i.qty * i.unitPrice, 0).toLocaleString('en-IN')}</span>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {editModal === 'weightdims' && (
+                <div className="space-y-3">
+                  <div className="rounded-lg bg-amber-50 dark:bg-amber-950/20 border border-amber-200/60 p-3 text-xs text-amber-800 dark:text-amber-300 flex items-start gap-2">
+                    <Warning className="h-4 w-4 shrink-0 mt-0.5 text-amber-600" weight="fill" />
+                    Changing weight or dimensions will recalculate the shipping price. You will see an alert if the price changes.
                   </div>
+                  <div>
+                    <label className="text-xs font-medium">Actual Weight (kg) *</label>
+                    <Input type="number" inputMode="decimal" value={editedWeightKg || ''} onChange={(e) => setEditedWeightKg(parseFloat(e.target.value) || 0)} placeholder="e.g. 1.5" className="h-10 mt-1" />
+                  </div>
+                  <div className="grid grid-cols-3 gap-2">
+                    <div>
+                      <label className="text-xs font-medium">Length (cm)</label>
+                      <Input type="number" inputMode="numeric" value={editedLength || ''} onChange={(e) => setEditedLength(parseFloat(e.target.value) || 0)} placeholder="30" className="h-10 mt-1" />
+                    </div>
+                    <div>
+                      <label className="text-xs font-medium">Width (cm)</label>
+                      <Input type="number" inputMode="numeric" value={editedWidth || ''} onChange={(e) => setEditedWidth(parseFloat(e.target.value) || 0)} placeholder="20" className="h-10 mt-1" />
+                    </div>
+                    <div>
+                      <label className="text-xs font-medium">Height (cm)</label>
+                      <Input type="number" inputMode="numeric" value={editedHeight || ''} onChange={(e) => setEditedHeight(parseFloat(e.target.value) || 0)} placeholder="10" className="h-10 mt-1" />
+                    </div>
+                  </div>
+                  {editedLength > 0 && editedWidth > 0 && editedHeight > 0 && (
+                    <div className="rounded-lg bg-muted/40 px-3 py-2 text-xs space-y-0.5">
+                      <div className="flex justify-between"><span className="text-muted-foreground">Volumetric weight</span><span className="font-medium">{((editedLength * editedWidth * editedHeight) / 5000).toFixed(2)} kg</span></div>
+                      <div className="flex justify-between"><span className="text-muted-foreground">Chargeable weight</span><span className="font-semibold">{Math.max(editedWeightKg, (editedLength * editedWidth * editedHeight) / 5000).toFixed(2)} kg</span></div>
+                    </div>
+                  )}
                 </div>
               )}
 
               <div className="flex gap-3 pt-1">
                 <Button variant="outline" onClick={() => setEditModal(null)} className="flex-1">Cancel</Button>
-                <Button className="flex-1 bg-coke-red hover:bg-red-600 text-white" onClick={saveEdit}>Save Changes</Button>
+                <Button className="flex-1 bg-coke-red hover:bg-red-600 text-white" onClick={
+                  editModal === 'contents' ? saveContents :
+                  editModal === 'weightdims' ? saveWeightDims :
+                  saveEdit
+                }>Save Changes</Button>
               </div>
             </motion.div>
           </motion.div>
