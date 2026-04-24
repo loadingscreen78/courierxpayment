@@ -382,8 +382,9 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
   const [intlDimUnit, setIntlDimUnit] = useState<'cm' | 'in'>('cm');
   // ── Gift weight unit toggle (kg default, grams option) ──
   const [giftWeightUnit, setGiftWeightUnit] = useState<'g' | 'kg'>('kg');
-  // ── Illegal items declaration (step 3 header) ──
+  // ── Illegal items declaration (contents step) ──
   const [noIllegalItemsDeclared, setNoIllegalItemsDeclared] = useState(false);
+  const [showIllegalItemsModal, setShowIllegalItemsModal] = useState(false);
   // ── Laptop declaration modal ──
   const [showLaptopDeclarationModal, setShowLaptopDeclarationModal] = useState(false);
   // ── Weight & dimensions declaration modal (domestic) ──
@@ -2122,18 +2123,6 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                       </div>
                     )}
                   </div>
-                  {/* Illegal items declaration */}
-                  <div
-                    className={`flex items-start gap-3 px-4 py-3 cursor-pointer transition-colors ${noIllegalItemsDeclared ? 'bg-green-500/5' : 'bg-card hover:bg-muted/20'}`}
-                    onClick={() => setNoIllegalItemsDeclared(v => !v)}
-                  >
-                    <div className={`mt-0.5 w-4 h-4 rounded border-2 flex items-center justify-center shrink-0 transition-colors ${noIllegalItemsDeclared ? 'bg-candlestick-green border-candlestick-green' : 'border-muted-foreground'}`}>
-                      {noIllegalItemsDeclared && <Check className="h-2.5 w-2.5 text-white" weight="bold" />}
-                    </div>
-                    <p className="text-xs text-muted-foreground leading-relaxed">
-                      I declare that this shipment does <span className="font-semibold text-foreground">not contain any illegal, prohibited, or restricted items</span> as per Indian law, including narcotics, weapons, counterfeit goods, or items banned by the Government of India.
-                    </p>
-                  </div>
                 </div>
               );
             })()}
@@ -3218,6 +3207,22 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                           <input type="hidden" {...field} />
                         )} />
 
+                        {/* Illegal items declaration — domestic gift flow only */}
+                        {!isInternational && !isMedicineFlow && !isDocumentFlow && (
+                          <div
+                            className={`flex flex-row items-start gap-3 rounded-lg border p-4 cursor-pointer transition-all ${noIllegalItemsDeclared ? 'border-green-500/40 bg-green-500/5' : 'border-border bg-muted/30 hover:border-coke-red/30'}`}
+                            onClick={() => { if (!noIllegalItemsDeclared) setShowIllegalItemsModal(true); else setNoIllegalItemsDeclared(false); }}
+                          >
+                            <div className={`mt-0.5 w-4 h-4 rounded border-2 flex items-center justify-center shrink-0 transition-colors ${noIllegalItemsDeclared ? 'bg-candlestick-green border-candlestick-green' : 'border-muted-foreground'}`}>
+                              {noIllegalItemsDeclared && <Check className="h-2.5 w-2.5 text-white" weight="bold" />}
+                            </div>
+                            <div className="space-y-0.5 leading-none">
+                              <p className="text-sm font-medium">I declare this shipment contains no prohibited items</p>
+                              <p className="text-xs text-muted-foreground">No narcotics, weapons, counterfeit goods, or items banned by the Government of India. Click to review and accept the declaration.</p>
+                            </div>
+                          </div>
+                        )}
+
                         <div className="flex gap-3">
                           <Button type="button" variant="outline" onClick={() => { feedbackPresets.tap(); setAddressSubStep('receiver'); }} className="flex-1 gap-1.5 min-h-[48px] text-sm">
                             <ArrowLeft className="h-4 w-4 shrink-0" /> <span className="truncate">Receiver</span>
@@ -3249,6 +3254,10 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                               toast({ title: 'Value limit exceeded', description: `Total declared value cannot exceed ₹${valueLimit.toLocaleString('en-IN')} for this shipment.`, variant: 'destructive' });
                               return;
                             }
+                            if (!isInternational && !noIllegalItemsDeclared) {
+                              toast({ title: 'Declaration required', description: 'Please confirm your shipment does not contain any illegal or prohibited items.', variant: 'destructive' });
+                              return;
+                            }
                             const desc = contentItems.filter(i => i.name.trim()).map(i => `${i.name} (${i.type || 'other'}) x${i.qty} @ ₹${i.unitPrice}`).join('; ');
                             detailsForm.setValue('contentDescription', desc);
                             detailsForm.handleSubmit(handleFinalSubmit)();
@@ -3265,6 +3274,65 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
           </motion.div>
         )}
 
+        {/* ═══════════════ Illegal Items Declaration Modal ═══════════════ */}
+        <AnimatePresence>
+          {showIllegalItemsModal && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
+              onClick={() => setShowIllegalItemsModal(false)}
+            >
+              <motion.div
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.9, opacity: 0 }}
+                onClick={(e) => e.stopPropagation()}
+                className="bg-card rounded-2xl border border-border shadow-xl max-w-lg w-full p-6 space-y-4 max-h-[85vh] overflow-y-auto"
+              >
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-red-100 dark:bg-red-950/40 flex items-center justify-center shrink-0">
+                      <ShieldCheck className="h-5 w-5 text-coke-red" weight="duotone" />
+                    </div>
+                    <h3 className="font-semibold text-lg">Prohibited Items Declaration</h3>
+                  </div>
+                  <button onClick={() => setShowIllegalItemsModal(false)} className="text-muted-foreground hover:text-foreground">
+                    <X className="h-5 w-5" />
+                  </button>
+                </div>
+                <div className="space-y-3 text-sm text-muted-foreground">
+                  <p className="font-medium text-foreground">By proceeding, I declare and confirm that:</p>
+                  <ul className="space-y-2 list-disc pl-5">
+                    <li>This shipment does <span className="font-semibold text-foreground">not contain narcotics, drugs, or controlled substances</span> prohibited under the NDPS Act, 1985.</li>
+                    <li>This shipment does <span className="font-semibold text-foreground">not contain weapons, ammunition, or explosives</span> of any kind.</li>
+                    <li>This shipment does <span className="font-semibold text-foreground">not contain counterfeit goods, pirated material, or items infringing intellectual property</span> rights.</li>
+                    <li>This shipment does <span className="font-semibold text-foreground">not contain wildlife products, ivory, or items banned</span> under the Wildlife Protection Act.</li>
+                    <li>This shipment does <span className="font-semibold text-foreground">not contain currency, negotiable instruments, or items banned</span> by the Government of India or RBI.</li>
+                    <li>I understand that <span className="font-semibold text-foreground">false declaration is a criminal offence</span> and may result in seizure, legal action, and permanent ban from our services.</li>
+                    <li>I accept full legal responsibility for the contents of this shipment.</li>
+                  </ul>
+                  <div className="rounded-lg bg-amber-50 dark:bg-amber-950/20 border border-amber-200/60 dark:border-amber-700/30 p-3 text-xs text-amber-900 dark:text-amber-200">
+                    <span className="font-semibold">Note:</span> CourierX reserves the right to inspect any shipment and report suspicious contents to law enforcement authorities.
+                  </div>
+                </div>
+                <div className="flex gap-3 pt-2">
+                  <Button variant="outline" onClick={() => setShowIllegalItemsModal(false)} className="flex-1">
+                    Cancel
+                  </Button>
+                  <Button className="flex-1 bg-coke-red hover:bg-red-600 text-white" onClick={() => {
+                    setNoIllegalItemsDeclared(true);
+                    setShowIllegalItemsModal(false);
+                  }}>
+                    I Declare & Confirm
+                  </Button>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         {/* ═══════════════ STEP 4: Summary & Pay ═══════════════ */}
         {step === 4 && senderReceiverData && (
           <GuestSummaryStep
@@ -3273,6 +3341,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
             selectedCourier={selectedCourier}
             senderReceiver={senderReceiverData}
             onBack={() => setStep(3)}
+
             extractedAadhaarNumber={extractedAadhaarNumber}
             aadhaarFront={aadhaarFront}
             aadhaarBack={aadhaarBack}
