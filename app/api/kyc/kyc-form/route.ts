@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { CASHFREE_VERIFICATION_DIRECT } from '@/lib/wallet/cashfreeConfig';
+import { CASHFREE_VERIFICATION_BASE } from '@/lib/wallet/cashfreeConfig';
 
 // Cashfree KYC Link template names per document type
 const TEMPLATE_MAP: Record<string, string> = {
@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
     const verificationId = `kycform_${docType}_${Date.now()}`;
     const expiry = new Date(Date.now() + 30 * 60 * 1000).toISOString().split('T')[0]; // 30 min
 
-    const res = await fetch(`${CASHFREE_VERIFICATION_DIRECT}/form`, {
+    const res = await fetch(`${CASHFREE_VERIFICATION_BASE}/form`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -83,7 +83,7 @@ export async function GET(request: NextRequest) {
     const verificationId = searchParams.get('verification_id');
     if (!verificationId) return NextResponse.json({ error: 'Missing verification_id' }, { status: 400 });
 
-    const res = await fetch(`${CASHFREE_VERIFICATION_DIRECT}/form/${verificationId}`, {
+    const res = await fetch(`${CASHFREE_VERIFICATION_BASE}/form/${verificationId}`, {
       headers: {
         'x-client-id': appId,
         'x-client-secret': secretKey,

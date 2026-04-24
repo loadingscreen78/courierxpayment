@@ -158,20 +158,56 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
 
   const openEdit = (section: EditModal) => {
     setEditData({ ...senderReceiver });
+    setEditErrors({});
     setEditModal(section);
   };
-  const saveEdit = () => {
+
+  // ── Edit field validation ──
+  const [editErrors, setEditErrors] = useState<Record<string, string>>({});
+
+  const validateAndSaveEdit = () => {
+    const errs: Record<string, string> = {};
+    if (editModal === 'pickup') {
+      if (!editData.senderName?.trim()) errs.senderName = 'Name is required';
+      if (!editData.senderPhone?.trim()) errs.senderPhone = 'Phone is required';
+      if (!editData.senderAddress?.trim()) errs.senderAddress = 'Address is required';
+      if (!editData.senderCity?.trim()) errs.senderCity = 'City is required';
+      if (!editData.senderPincode?.trim()) errs.senderPincode = 'Pincode is required';
+      else if (!/^\d{6}$/.test(editData.senderPincode)) errs.senderPincode = 'Enter valid 6-digit pincode';
+    }
+    if (editModal === 'recipient') {
+      if (!editData.receiverName?.trim()) errs.receiverName = 'Name is required';
+      if (!editData.receiverPhone?.trim()) errs.receiverPhone = 'Phone is required';
+      if (!editData.receiverAddress?.trim()) errs.receiverAddress = 'Address is required';
+      if (!editData.receiverCity?.trim()) errs.receiverCity = 'City is required';
+      if (!editData.receiverZipcode?.trim()) errs.receiverZipcode = 'Zipcode is required';
+    }
+    if (Object.keys(errs).length > 0) { setEditErrors(errs); return; }
     Object.assign(senderReceiver, editData);
     setEditModal(null);
+    setEditErrors({});
   };
 
   const saveContents = () => {
+    const errs: Record<string, string> = {};
+    editedItems.forEach((item, idx) => {
+      if (!item.name.trim()) errs[`name_${idx}`] = 'Item name is required';
+      if (!item.type) errs[`type_${idx}`] = 'Type is required';
+      if (!item.qty || item.qty < 1) errs[`qty_${idx}`] = 'Min 1';
+      if (!item.unitPrice || item.unitPrice <= 0) errs[`price_${idx}`] = 'Price is required';
+    });
+    if (Object.keys(errs).length > 0) { setEditErrors(errs); return; }
     const desc = editedItems.filter(i => i.name.trim()).map(i => `${i.name} (${i.type || 'other'}) x${i.qty} @ ₹${i.unitPrice}`).join('; ');
     senderReceiver.contentDescription = desc;
     setEditModal(null);
+    setEditErrors({});
   };
 
   const saveWeightDims = async () => {
+    const errs: Record<string, string> = {};
+    if (!editedWeightKg || editedWeightKg <= 0) errs.weightKg = 'Weight is required';
+    if (Object.keys(errs).length > 0) { setEditErrors(errs); return; }
+    setEditErrors({});
     // Update rateFormData in-place
     if (rateFormData) {
       rateFormData.weightKg = editedWeightKg;
@@ -410,7 +446,11 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
     setAgreementStep(2);
   };
 
-  // ── DigiLocker (Aadhaar only via Cashfree) ────────────────────────────────
+  // ── DigiLocker (Aadhaar, PAN, Driving License via Cashfree) ──────────────
+  // DigiLocker only supports: aadhaar, pan, driving_license
+  const digilockerDocType = selectedDocType === 'pan' ? 'pan' : selectedDocType === 'driving_license' ? 'driving_license' : 'aadhaar';
+  const digilockerSupported = ['aadhaar', 'pan', 'driving_license'].includes(selectedDocType);
+
   const handleStartDigiLocker = async () => {
     if (!validateDocInput()) return;
     setAadhaarLoading(true); setAadhaarError('');
@@ -419,7 +459,7 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
       const res = await fetch('/api/kyc/guest-digilocker', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ aadhaarNumber: aadhaarInput, sessionId }),
+        body: JSON.stringify({ docType: digilockerDocType, aadhaarNumber: selectedDocType === 'aadhaar' ? aadhaarInput : undefined, sessionId }),
       });
       const data = await res.json();
       if (!res.ok || !data.digilockerUrl) { setAadhaarError(data.error || 'Failed to initiate DigiLocker'); return; }
@@ -434,20 +474,25 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
   const handleCompleteDigiLocker = useCallback(async () => {
     setDigilockerStep('verifying'); setAadhaarLoading(true);
     try {
-      const params = digilockerReferenceId ? `reference_id=${digilockerReferenceId}` : `verification_id=${digilockerVerificationId}`;
-      const res = await fetch(`/api/kyc/guest-digilocker?${params}`);
+      const params = new URLSearchParams();
+      if (digilockerReferenceId) params.set('reference_id', digilockerReferenceId);
+      else params.set('verification_id', digilockerVerificationId);
+      params.set('docType', digilockerDocType);
+      const res = await fetch(`/api/kyc/guest-digilocker?${params.toString()}`);
       const data = await res.json();
       if (data.verified) {
-        markVerified(data.maskedAadhaar || `XXXX XXXX ${aadhaarInput.slice(-4)}`, data.verifiedName);
+        const label = selectedDocType === 'aadhaar' ? (data.maskedAadhaar || `XXXX XXXX ${aadhaarInput.slice(-4)}`) :
+          selectedDocType === 'pan' ? `PAN: ${panInput.slice(0,3)}XXXXXXX` : `DL verified`;
+        markVerified(label);
         setDigilockerStep('idle');
-        toast({ title: 'Aadhaar Verified via DigiLocker', description: `Verified: ${data.verifiedName || ''}` });
+        toast({ title: 'Verified via DigiLocker', description: data.verifiedName ? `Name: ${data.verifiedName}` : 'Identity verified' });
       } else {
         setAadhaarError(data.error || 'DigiLocker not completed. Try again.');
         setDigilockerStep('idle');
       }
     } catch { setAadhaarError('Failed to fetch DigiLocker result'); setDigilockerStep('idle'); }
     finally { setAadhaarLoading(false); }
-  }, [digilockerReferenceId, digilockerVerificationId, aadhaarInput, toast]);
+  }, [digilockerReferenceId, digilockerVerificationId, digilockerDocType, selectedDocType, aadhaarInput, panInput, toast]);
 
   // ── KYC Form (Cashfree hosted) ─────────────────────────────────────────────
   const handleStartKycForm = async () => {
@@ -1569,7 +1614,7 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
                 <Button className="flex-1 bg-coke-red hover:bg-red-600 text-white" onClick={
                   editModal === 'contents' ? saveContents :
                   editModal === 'weightdims' ? saveWeightDims :
-                  saveEdit
+                  validateAndSaveEdit
                 }>Save Changes</Button>
               </div>
             </motion.div>
@@ -1684,18 +1729,45 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
                         {/* Verification method */}
                         <div>
                           <p className="text-xs font-semibold text-muted-foreground mb-2">Choose verification method</p>
+
+                          {/* Trust bar */}
+                          <div className="flex items-center gap-2 mb-3 p-2.5 rounded-lg bg-muted/40 border border-border/60 flex-wrap">
+                            <span className="text-[10px] text-muted-foreground font-medium">Secured by</span>
+                            {[
+                              { label: 'UIDAI', bg: '#1A3A6B' },
+                              { label: 'DigiLocker', bg: '#0066CC' },
+                              { label: 'Cashfree', bg: '#00B050' },
+                              { label: 'MeitY', bg: '#FF6600' },
+                            ].map((b, i) => (
+                              <div key={b.label} className="flex items-center gap-1">
+                                {i > 0 && <span className="text-border">·</span>}
+                                <span className="inline-flex items-center gap-1">
+                                  <span className="inline-block w-2 h-2 rounded-sm" style={{ background: b.bg }} />
+                                  <span className="text-[10px] font-semibold text-foreground/70">{b.label}</span>
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+
                           <div className="grid grid-cols-3 gap-2">
-                            {([{ m: 'sandbox_otp', label: '📱 Aadhaar OTP', desc: 'OTP to mobile', onlyAadhaar: true }, { m: 'digilocker', label: '🔐 DigiLocker', desc: 'Govt redirect', onlyAadhaar: true }, { m: 'kyc_form', label: '📋 KYC Form', desc: 'Link via SMS', onlyAadhaar: false }] as { m: typeof kycMethod; label: string; desc: string; onlyAadhaar: boolean }[]).map(opt => {
-                              const disabled = opt.onlyAadhaar && selectedDocType !== 'aadhaar';
+                            {([
+                              { m: 'sandbox_otp', label: 'Aadhaar OTP', desc: 'OTP to registered mobile', onlyAadhaar: true },
+                              { m: 'digilocker',  label: 'DigiLocker',  desc: 'Govt-approved consent',   notFor: ['passport', 'voter_id'] },
+                              { m: 'kyc_form',    label: 'KYC Form',    desc: 'Secure link via SMS',      notFor: [] },
+                            ] as { m: typeof kycMethod; label: string; desc: string; onlyAadhaar?: boolean; notFor?: string[] }[]).map(opt => {
+                              const disabled = (opt.onlyAadhaar && selectedDocType !== 'aadhaar') || (opt.notFor?.includes(selectedDocType));
                               return (
                                 <button key={opt.m} disabled={disabled} onClick={() => { if (!disabled) { setKycMethod(opt.m); setAadhaarError(''); setSandboxStep('idle'); setKycFormStep('idle'); setDigilockerStep('idle'); } }}
-                                  className={`py-2 px-2 rounded-lg border text-xs font-medium transition-all text-left ${disabled ? 'opacity-30 cursor-not-allowed border-border bg-muted/20' : kycMethod === opt.m ? 'border-blue-500 bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300' : 'border-border bg-muted/30 text-muted-foreground hover:border-blue-300'}`}>
-                                  <div>{opt.label}</div>
-                                  <div className="text-[10px] font-normal opacity-70 mt-0.5">{opt.desc}</div>
+                                  className={`py-2.5 px-2 rounded-lg border text-left transition-all ${disabled ? 'opacity-30 cursor-not-allowed border-border bg-muted/20' : kycMethod === opt.m ? 'border-blue-500 bg-blue-50 dark:bg-blue-950/40' : 'border-border bg-background hover:border-blue-300'}`}>
+                                  <div className={`text-xs font-semibold ${disabled ? 'text-muted-foreground' : kycMethod === opt.m ? 'text-blue-700 dark:text-blue-300' : 'text-foreground'}`}>{opt.label}</div>
+                                  <div className="text-[10px] text-muted-foreground mt-0.5 leading-tight">{opt.desc}</div>
                                 </button>
                               );
                             })}
                           </div>
+                          {(selectedDocType === 'passport' || selectedDocType === 'voter_id') && (
+                            <p className="text-[11px] text-muted-foreground mt-1.5">Aadhaar OTP and DigiLocker are not available for this document. KYC Form is recommended.</p>
+                          )}
                         </div>
 
                         {/* OTP flow */}
@@ -1717,14 +1789,15 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
                         )}
 
                         {/* DigiLocker flow */}
-                        {kycMethod === 'digilocker' && selectedDocType === 'aadhaar' && (
+                        {kycMethod === 'digilocker' && digilockerSupported && (
                           <div className="space-y-2">
-                            {digilockerStep === 'idle' && <Button onClick={() => { feedbackPresets.tap(); handleStartDigiLocker(); }} disabled={aadhaarLoading || aadhaarInput.length !== 12} className="w-full bg-blue-600 hover:bg-blue-700 text-white">{aadhaarLoading ? <CircleNotch className="h-4 w-4 animate-spin mr-2" /> : null}Open DigiLocker</Button>}
+                            {digilockerStep === 'idle' && <Button onClick={() => { feedbackPresets.tap(); handleStartDigiLocker(); }} disabled={aadhaarLoading || (selectedDocType === 'aadhaar' && aadhaarInput.length !== 12)} className="w-full bg-blue-600 hover:bg-blue-700 text-white">{aadhaarLoading ? <CircleNotch className="h-4 w-4 animate-spin mr-2" /> : null}Continue with DigiLocker</Button>}
                             {digilockerStep === 'redirect' && (
-                              <div className="space-y-2 p-3 rounded-lg bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800/40">
-                                <p className="text-xs text-blue-800 dark:text-blue-300">Complete verification in DigiLocker, then come back and click below.</p>
-                                <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white text-xs" onClick={() => window.open(digilockerUrl, '_blank')}>Open DigiLocker ↗</Button>
-                                <Button variant="outline" size="sm" className="w-full text-xs" onClick={handleCompleteDigiLocker} disabled={aadhaarLoading}>{aadhaarLoading ? <CircleNotch className="h-3.5 w-3.5 animate-spin mr-1.5" /> : null}I've completed DigiLocker — Fetch Result</Button>
+                              <div className="space-y-2 p-3 rounded-lg bg-muted/40 border border-border">
+                                <p className="text-xs text-muted-foreground">Complete verification in DigiLocker, then return here and click below.</p>
+                                <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white text-xs" onClick={() => window.open(digilockerUrl, '_blank')}>Open DigiLocker</Button>
+                                <Button variant="outline" size="sm" className="w-full text-xs" onClick={handleCompleteDigiLocker} disabled={aadhaarLoading}>{aadhaarLoading ? <CircleNotch className="h-3.5 w-3.5 animate-spin mr-1.5" /> : null}I have completed DigiLocker — Fetch Result</Button>
+                                <button className="text-xs text-muted-foreground underline w-full text-center" onClick={() => setDigilockerStep('idle')}>Cancel</button>
                               </div>
                             )}
                             {digilockerStep === 'verifying' && <div className="flex items-center gap-2 p-3 rounded-lg bg-muted text-sm text-muted-foreground"><CircleNotch className="h-4 w-4 animate-spin" /> Fetching verified data...</div>}
