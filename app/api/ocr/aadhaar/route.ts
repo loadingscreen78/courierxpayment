@@ -6,6 +6,20 @@ import { CASHFREE_VERIFICATION_DIRECT } from '@/lib/wallet/cashfreeConfig';
  * Extracts Aadhaar details using Cashfree Smart OCR (bharat-ocr).
  * Accepts front (required) and back (optional) images, calls Cashfree for each,
  * then merges results into the AadhaarOcrResult shape the frontend expects.
+ *
+ * Cashfree field mapping:
+ *   document_fields.uid        → full Aadhaar number (12 digits, may be masked)
+ *   document_fields.name       → name
+ *   document_fields.dob        → date of birth (YYYY-MM-DD)
+ *   document_fields.gender     → gender
+ *   document_fields.address    → full address string
+ *   qr_details.uid             → full Aadhaar number from QR (more reliable)
+ *   qr_details.name            → name from QR
+ *   qr_details.dob             → DOB from QR
+ *   qr_details.gender          → gender from QR
+ *   qr_details.address         → full address from QR
+ *   qr_details.split_address   → structured address (state, dist, pincode…)
+ *   qr_details.aadhaar_last_four_digit → last 4 digits (fallback)
  */
 
 export const runtime = 'nodejs';
@@ -20,9 +34,10 @@ interface CashfreeOcrFields {
   address?: string;
   dob?: string;
   gender?: string;
-  uid?: string;
+  uid?: string;           // full 12-digit Aadhaar number
   father?: string;
   pincode?: string;
+  year_of_birth?: string;
 }
 
 interface CashfreeQrSplitAddress {
@@ -34,17 +49,17 @@ interface CashfreeQrSplitAddress {
   dist?: string;
   vtc?: string;
   state?: string;
-  pincode?: number;
+  pincode?: number | string;
   country?: string;
   locality?: string;
 }
 
 interface CashfreeOcrResponse {
-  verification_id: string;
-  reference_id: number;
-  status: string;
-  document_type: string;
-  document_fields: CashfreeOcrFields;
+  verification_id?: string;
+  reference_id?: number;
+  status?: string;
+  document_type?: string;
+  document_fields?: CashfreeOcrFields;
   quality_checks?: Record<string, boolean | null>;
   fraud_checks?: Record<string, boolean | null>;
   qr_details?: {
@@ -54,18 +69,27 @@ interface CashfreeOcrResponse {
     gender?: string;
     care_of?: string;
     address?: string;
+    uid?: string;           // full Aadhaar number from QR scan
     split_address?: CashfreeQrSplitAddress;
     year_of_birth?: number;
     aadhaar_last_four_digit?: string;
     mobile_linked?: boolean;
   };
+  // Cashfree sometimes wraps errors differently
+  message?: string;
+  error?: string;
 }
 
-/** Call Cashfree Smart OCR for a single image */
-async function callCashfreeOcr(file: File, side: 'front' | 'back'): Promise<CashfreeOcrResponse> {
+/** Call Cashfree Smart OCR for a single Aadhaar image */
+async function callCashfreeOcr(
+  file: File,
+  side: 'front' | 'back',
+): Promise<CashfreeOcrResponse> {
+  const verificationId = `cx_aadhaar_${side}_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+
   const form = new FormData();
-  form.append('verification_id', `cx_aadhaar_${side}_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`);
-  form.append('document_type', 'AADHAAR');
+  form.append('verification_id', verificationId);
+  form.append('document_type', 'AADHAAR');  // Cashfree request enum value
   form.append('file', file);
 
   const res = await fetch(`${CASHFREE_VERIFICATION_DIRECT}/bharat-ocr`, {
@@ -78,100 +102,114 @@ async function callCashfreeOcr(file: File, side: 'front' | 'back'): Promise<Cash
     body: form,
   });
 
+  const body = await res.json().catch(() => ({}));
+
   if (!res.ok) {
-    const errBody = await res.json().catch(() => ({}));
-    throw new Error(errBody?.message || errBody?.error || `Cashfree OCR failed (${res.status})`);
+    const msg = body?.message || body?.error || `Cashfree OCR failed (HTTP ${res.status})`;
+    console.error(`[ocr/aadhaar] Cashfree ${side} error:`, msg, body);
+    throw new Error(msg);
   }
 
-  return res.json();
+  console.log(`[ocr/aadhaar] Cashfree ${side} raw response:`, JSON.stringify(body).slice(0, 500));
+  return body as CashfreeOcrResponse;
 }
 
-/** Extract pincode from a raw address string */
+/** Extract 6-digit pincode from a raw address string */
 function extractPincode(address: string): string {
   const match = address.match(/\b(\d{6})\b/);
   return match ? match[1] : '';
 }
 
-/** Extract city from Cashfree split_address or raw address */
-function extractCity(splitAddr?: CashfreeQrSplitAddress, rawAddress?: string): string {
-  if (splitAddr?.dist) return splitAddr.dist;
-  if (splitAddr?.vtc) return splitAddr.vtc;
-  if (splitAddr?.po) return splitAddr.po;
-  // Fallback: try to parse from raw address (comma-separated segments)
-  if (rawAddress) {
-    const parts = rawAddress.split(',').map(s => s.trim());
-    // City is typically 2nd-to-last before state+pincode
+/** Extract city from split_address or raw address */
+function extractCity(split?: CashfreeQrSplitAddress, raw?: string): string {
+  if (split?.dist) return split.dist;
+  if (split?.vtc) return split.vtc;
+  if (split?.po) return split.po;
+  if (split?.subdist) return split.subdist;
+  if (raw) {
+    const parts = raw.split(',').map(s => s.trim()).filter(Boolean);
     if (parts.length >= 3) return parts[parts.length - 3] || '';
   }
   return '';
 }
 
-/** Extract state from Cashfree split_address or raw address */
-function extractState(splitAddr?: CashfreeQrSplitAddress, rawAddress?: string): string {
-  if (splitAddr?.state) return splitAddr.state;
-  if (rawAddress) {
-    const parts = rawAddress.split(',').map(s => s.trim());
-    // State is typically the last meaningful segment (may include pincode)
+/** Extract state from split_address or raw address */
+function extractState(split?: CashfreeQrSplitAddress, raw?: string): string {
+  if (split?.state) return split.state;
+  if (raw) {
+    const parts = raw.split(',').map(s => s.trim()).filter(Boolean);
     const last = parts[parts.length - 1] || '';
-    return last.replace(/\s*-?\s*\d{6}\s*$/, '').trim();
+    return last.replace(/\s*[-–]\s*\d{6}\s*$/, '').trim();
   }
   return '';
 }
 
-/** Calculate age from DOB string (YYYY-MM-DD) */
+/** Calculate age from DOB string — handles YYYY-MM-DD and DD-MM-YYYY */
 function calculateAge(dob: string): number | null {
   if (!dob) return null;
-  const birthDate = new Date(dob);
+
+  let birthDate: Date;
+
+  // Try YYYY-MM-DD first
+  if (/^\d{4}-\d{2}-\d{2}$/.test(dob)) {
+    birthDate = new Date(dob);
+  } else if (/^\d{2}-\d{2}-\d{4}$/.test(dob)) {
+    // DD-MM-YYYY
+    const [dd, mm, yyyy] = dob.split('-');
+    birthDate = new Date(`${yyyy}-${mm}-${dd}`);
+  } else if (/^\d{2}\/\d{2}\/\d{4}$/.test(dob)) {
+    // DD/MM/YYYY
+    const [dd, mm, yyyy] = dob.split('/');
+    birthDate = new Date(`${yyyy}-${mm}-${dd}`);
+  } else {
+    birthDate = new Date(dob);
+  }
+
   if (isNaN(birthDate.getTime())) return null;
+
   const today = new Date();
   let age = today.getFullYear() - birthDate.getFullYear();
-  const monthDiff = today.getMonth() - birthDate.getMonth();
-  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
-    age--;
-  }
+  const m = today.getMonth() - birthDate.getMonth();
+  if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) age--;
   return age;
 }
 
-/** Determine confidence level based on quality and fraud checks */
+/** Determine confidence level */
 function determineConfidence(
-  qualityChecks?: Record<string, boolean | null>,
-  fraudChecks?: Record<string, boolean | null>,
+  quality?: Record<string, boolean | null>,
+  fraud?: Record<string, boolean | null>,
 ): 'high' | 'medium' | 'low' {
-  const warnings: string[] = [];
-
-  if (fraudChecks?.is_forged || fraudChecks?.is_photo_imposed || fraudChecks?.is_overwritten) {
-    return 'low';
-  }
-  if (fraudChecks?.is_screenshot || fraudChecks?.is_photo_of_screen) {
-    warnings.push('screenshot');
-  }
-  if (qualityChecks?.blur === true) warnings.push('blur');
-  if (qualityChecks?.glare === true) warnings.push('glare');
-  if (qualityChecks?.partially_present === true) warnings.push('partial');
-  if (qualityChecks?.obscured === true) warnings.push('obscured');
-
-  if (warnings.length >= 2) return 'low';
-  if (warnings.length === 1) return 'medium';
+  if (fraud?.is_forged || fraud?.is_photo_imposed || fraud?.is_overwritten) return 'low';
+  const issues = [
+    fraud?.is_screenshot,
+    fraud?.is_photo_of_screen,
+    quality?.blur,
+    quality?.glare,
+    quality?.partially_present,
+    quality?.obscured,
+  ].filter(Boolean).length;
+  if (issues >= 2) return 'low';
+  if (issues === 1) return 'medium';
   return 'high';
 }
 
-/** Collect warning messages from quality/fraud checks */
+/** Collect human-readable warnings */
 function collectWarnings(
-  qualityChecks?: Record<string, boolean | null>,
-  fraudChecks?: Record<string, boolean | null>,
+  quality?: Record<string, boolean | null>,
+  fraud?: Record<string, boolean | null>,
 ): string[] {
-  const warnings: string[] = [];
-  if (qualityChecks?.blur === true) warnings.push('Image appears blurry');
-  if (qualityChecks?.glare === true) warnings.push('Glare detected on image');
-  if (qualityChecks?.partially_present === true) warnings.push('Document partially visible');
-  if (qualityChecks?.obscured === true) warnings.push('Part of document is obscured');
-  if (qualityChecks?.black_and_white === true) warnings.push('Black and white image detected');
-  if (fraudChecks?.is_screenshot === true) warnings.push('Image appears to be a screenshot');
-  if (fraudChecks?.is_photo_of_screen === true) warnings.push('Photo of screen detected');
-  if (fraudChecks?.is_photo_imposed === true) warnings.push('Photo may be tampered');
-  if (fraudChecks?.is_overwritten === true) warnings.push('Document may have been altered');
-  if (fraudChecks?.is_forged === true) warnings.push('Possible forged document detected');
-  return warnings;
+  const w: string[] = [];
+  if (quality?.blur) w.push('Image appears blurry');
+  if (quality?.glare) w.push('Glare detected on image');
+  if (quality?.partially_present) w.push('Document partially visible');
+  if (quality?.obscured) w.push('Part of document is obscured');
+  if (quality?.black_and_white) w.push('Black and white image detected');
+  if (fraud?.is_screenshot) w.push('Image appears to be a screenshot');
+  if (fraud?.is_photo_of_screen) w.push('Photo of screen detected');
+  if (fraud?.is_photo_imposed) w.push('Photo may be tampered');
+  if (fraud?.is_overwritten) w.push('Document may have been altered');
+  if (fraud?.is_forged) w.push('Possible forged document detected');
+  return w;
 }
 
 export async function POST(request: NextRequest) {
@@ -194,7 +232,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate sizes (5 MB max per file)
     const MAX_SIZE = 5 * 1024 * 1024;
     if (frontFile.size > MAX_SIZE || (backFile && backFile.size > MAX_SIZE)) {
       return NextResponse.json(
@@ -203,67 +240,85 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Call Cashfree Smart OCR for front (always) and back (if provided)
+    // Call Cashfree Smart OCR in parallel for front + back
     const [frontResult, backResult] = await Promise.all([
       callCashfreeOcr(frontFile, 'front'),
       backFile ? callCashfreeOcr(backFile, 'back') : Promise.resolve(null),
     ]);
 
-    // --- Extract fields from front ---
+    // ── Extract from FRONT ──────────────────────────────────────────────────
     const ff = frontResult.document_fields || {};
-    const qr = frontResult.qr_details;
-    const splitAddr = qr?.split_address;
+    const fqr = frontResult.qr_details;
+    const fSplit = fqr?.split_address;
 
-    // Prefer QR data when available (more reliable), fall back to OCR fields
-    const name = qr?.name || ff.name || '';
-    const dob = qr?.dob || ff.dob || '';
-    const gender = qr?.gender || ff.gender || '';
-    const uid = ff.uid || '';
+    // Name: QR > OCR field
+    const name = fqr?.name || ff.name || '';
 
-    // Address: prefer QR full address, fall back to OCR address
-    const rawAddress = qr?.address || ff.address || '';
+    // DOB: QR > OCR field
+    const dob = fqr?.dob || ff.dob || '';
 
-    // --- Extract fields from back (address side) ---
+    // Gender: QR > OCR field
+    const gender = fqr?.gender || ff.gender || '';
+
+    // Aadhaar UID: QR uid (full) > document_fields.uid > last-4 fallback
+    const frontUid = fqr?.uid || ff.uid || '';
+
+    // ── Extract from BACK ───────────────────────────────────────────────────
     const bf = backResult?.document_fields || {};
-    const backQr = backResult?.qr_details;
-    const backSplitAddr = backQr?.split_address;
-    const backRawAddress = backQr?.address || bf.address || '';
+    const bqr = backResult?.qr_details;
+    const bSplit = bqr?.split_address;
 
-    // Merge: back image typically has the full address
-    const finalAddress = backRawAddress || rawAddress;
-    const finalSplitAddr = backSplitAddr || splitAddr;
+    const backUid = bqr?.uid || bf.uid || '';
 
-    const city = extractCity(finalSplitAddr, finalAddress);
-    const state = extractState(finalSplitAddr, finalAddress);
-    const pincode = finalSplitAddr?.pincode?.toString() || extractPincode(finalAddress);
+    // ── Merge address (back has full address, front may have partial) ───────
+    const backRawAddr = bqr?.address || bf.address || '';
+    const frontRawAddr = fqr?.address || ff.address || '';
+    const finalRawAddr = backRawAddr || frontRawAddr;
+    const finalSplit = bSplit || fSplit;
 
-    // UID may appear on front or back
-    const aadhaarNumber = uid || bf.uid || '';
+    const city = extractCity(finalSplit, finalRawAddr);
+    const state = extractState(finalSplit, finalRawAddr);
+    const pincode =
+      (finalSplit?.pincode !== undefined ? String(finalSplit.pincode) : '') ||
+      extractPincode(finalRawAddr);
 
-    // Age calculation
+    // ── Aadhaar number ──────────────────────────────────────────────────────
+    // Full 12-digit from QR (most reliable) or OCR field
+    // Cashfree may mask it — if masked (contains 'X' or '*'), fall back to last-4
+    const rawUid = frontUid || backUid;
+    const cleanUid = rawUid.replace(/[\s\-]/g, '');
+    const isMasked = /[Xx*X]/i.test(cleanUid);
+    const aadhaarNumber = !isMasked && /^\d{12}$/.test(cleanUid)
+      ? cleanUid
+      : ''; // empty = user must enter manually; last-4 not useful for validation
+
+    // ── Age ─────────────────────────────────────────────────────────────────
     const age = calculateAge(dob);
 
-    // Confidence & warnings (merge both sides)
+    // ── Confidence & warnings ───────────────────────────────────────────────
     const confidence = determineConfidence(frontResult.quality_checks, frontResult.fraud_checks);
     const warnings = [
       ...collectWarnings(frontResult.quality_checks, frontResult.fraud_checks),
-      ...(backResult ? collectWarnings(backResult.quality_checks, backResult.fraud_checks).map(w => `(Back) ${w}`) : []),
+      ...(backResult
+        ? collectWarnings(backResult.quality_checks, backResult.fraud_checks).map(w => `(Back) ${w}`)
+        : []),
     ];
 
-    // Build field confidence scores (1.0 = from QR, 0.8 = from OCR fields, 0.5 = from back)
-    const fieldConfidence: Record<string, number> = {};
-    fieldConfidence.name = qr?.name ? 100 : ff.name ? 80 : 0;
-    fieldConfidence.address = backQr?.address ? 100 : qr?.address ? 95 : (bf.address || ff.address) ? 75 : 0;
-    fieldConfidence.city = finalSplitAddr?.dist ? 100 : city ? 70 : 0;
-    fieldConfidence.state = finalSplitAddr?.state ? 100 : state ? 70 : 0;
-    fieldConfidence.pincode = finalSplitAddr?.pincode ? 100 : pincode ? 80 : 0;
-    fieldConfidence.dob = qr?.dob ? 100 : ff.dob ? 80 : 0;
-    fieldConfidence.gender = qr?.gender ? 100 : ff.gender ? 80 : 0;
-    fieldConfidence.aadhaarNumber = aadhaarNumber ? 90 : 0;
+    // ── Field confidence scores ─────────────────────────────────────────────
+    const fieldConfidence: Record<string, number> = {
+      name: fqr?.name ? 100 : ff.name ? 80 : 0,
+      address: bqr?.address ? 100 : fqr?.address ? 95 : (bf.address || ff.address) ? 75 : 0,
+      city: finalSplit?.dist ? 100 : city ? 70 : 0,
+      state: finalSplit?.state ? 100 : state ? 70 : 0,
+      pincode: finalSplit?.pincode !== undefined ? 100 : pincode ? 80 : 0,
+      dob: fqr?.dob ? 100 : ff.dob ? 80 : 0,
+      gender: fqr?.gender ? 100 : ff.gender ? 80 : 0,
+      aadhaarNumber: aadhaarNumber ? 90 : 0,
+    };
 
-    // Clean address: remove pincode suffix if present (frontend has separate pincode field)
-    const cleanAddress = finalAddress
-      .replace(/\s*-?\s*\d{6}\s*$/, '')
+    // ── Clean address (strip trailing pincode) ──────────────────────────────
+    const cleanAddress = finalRawAddr
+      .replace(/\s*[-–]\s*\d{6}\s*$/, '')
       .replace(/,\s*$/, '')
       .trim();
 
@@ -277,11 +332,13 @@ export async function POST(request: NextRequest) {
       dob,
       age,
       gender,
-      phone: '', // Cashfree Smart OCR doesn't return phone; user fills manually
+      phone: '', // Cashfree Smart OCR does not return phone number
       confidence,
       warnings,
       fieldConfidence,
     };
+
+    console.log('[ocr/aadhaar] Extracted result:', JSON.stringify({ ...result, address: result.address.slice(0, 50) }));
 
     return NextResponse.json({ success: true, data: result });
   } catch (error: any) {
