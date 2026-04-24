@@ -136,20 +136,31 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
 
   // ── Multi-doc KYC state ──
   type GuestDocType = 'aadhaar' | 'pan' | 'passport' | 'voter_id';
-  type AadhaarVerifyMethod = 'digilocker' | 'format_check';
+  type KycMethod = 'digilocker' | 'kyc_form' | 'sandbox_otp';
   const [selectedDocType, setSelectedDocType] = useState<GuestDocType>('aadhaar');
-  const [aadhaarMethod, setAadhaarMethod] = useState<AadhaarVerifyMethod>('digilocker');
+  const [kycMethod, setKycMethod] = useState<KycMethod>('sandbox_otp');
+  // doc inputs
+  const [panInput, setPanInput] = useState('');
+  const [passportInput, setPassportInput] = useState('');
+  const [passportDob, setPassportDob] = useState('');
+  const [voterIdInput, setVoterIdInput] = useState('');
+  const [docInputError, setDocInputError] = useState('');
+  // phone (needed for kyc_form)
+  const [kycPhone, setKycPhone] = useState(senderReceiver?.senderPhone?.replace(/^\+91/, '').slice(-10) || '');
+  // digilocker state
   const [digilockerUrl, setDigilockerUrl] = useState('');
   const [digilockerVerificationId, setDigilockerVerificationId] = useState('');
   const [digilockerReferenceId, setDigilockerReferenceId] = useState('');
   const [digilockerStep, setDigilockerStep] = useState<'idle' | 'redirect' | 'verifying'>('idle');
-  const [panInput, setPanInput] = useState('');
-  const [panError, setPanError] = useState('');
-  const [passportInput, setPassportInput] = useState('');
-  const [passportDob, setPassportDob] = useState('');
-  const [passportError, setPassportError] = useState('');
-  const [voterIdInput, setVoterIdInput] = useState('');
-  const [voterIdError, setVoterIdError] = useState('');
+  // kyc form state
+  const [kycFormLink, setKycFormLink] = useState('');
+  const [kycFormVerificationId, setKycFormVerificationId] = useState('');
+  const [kycFormStep, setKycFormStep] = useState<'idle' | 'sent' | 'polling'>('idle');
+  // sandbox otp state
+  const [sandboxReferenceId, setSandboxReferenceId] = useState('');
+  const [sandboxOtp, setSandboxOtp] = useState('');
+  const [sandboxStep, setSandboxStep] = useState<'idle' | 'otp_sent' | 'verifying'>('idle');
+  // verified state
   const [docVerified, setDocVerified] = useState(false);
   const [docVerifiedLabel, setDocVerifiedLabel] = useState('');
   const [termsAccepted, setTermsAccepted] = useState(false);
@@ -255,7 +266,6 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
       if (raw.length === 12) {
         setAadhaarInput(raw);
         setFormattedAadhaar(formatAadhaar(raw));
-        // Don't auto-verify — user must explicitly choose DigiLocker or format check
       }
     }
   }, [extractedAadhaarNumber]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -269,96 +279,154 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
     setAadhaarError('');
   };
 
-  const handleVerifyDoc = async () => {
-    setAadhaarLoading(true);
-    setAadhaarError(''); setPanError(''); setPassportError(''); setVoterIdError('');
-    try {
-      if (selectedDocType === 'aadhaar') {
-        if (aadhaarInput.length !== 12) { setAadhaarError('Enter a valid 12-digit Aadhaar number'); return; }
-        if (!validateVerhoeff(aadhaarInput)) { setAadhaarError('Invalid Aadhaar number'); return; }
-
-        if (aadhaarMethod === 'digilocker') {
-          // Initiate DigiLocker flow
-          const sessionId = `guest_${Date.now().toString(36)}`;
-          const res = await fetch('/api/kyc/guest-digilocker', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ aadhaarNumber: aadhaarInput, sessionId }),
-          });
-          const data = await res.json();
-          if (!res.ok || !data.digilockerUrl) {
-            setAadhaarError(data.error || 'Failed to initiate DigiLocker. Try format check instead.');
-            return;
-          }
-          setDigilockerUrl(data.digilockerUrl);
-          setDigilockerVerificationId(data.verificationId || '');
-          setDigilockerReferenceId(data.referenceId || '');
-          setDigilockerStep('redirect');
-          return; // Don't set verified yet — wait for redirect back
-        } else {
-          // Format check only
-          await new Promise(r => setTimeout(r, 800));
-          setAadhaarVerified(true);
-          setDocVerified(true);
-          setDocVerifiedLabel(`XXXX XXXX ${aadhaarInput.slice(-4)}`);
-          toast({ title: 'Aadhaar Validated', description: 'Format verified. Proceeding with booking.' });
-        }
-      } else if (selectedDocType === 'pan') {
-        if (!/^[A-Z]{5}[0-9]{4}[A-Z]$/.test(panInput.toUpperCase())) { setPanError('Invalid PAN format (e.g. ABCDE1234F)'); return; }
-        await new Promise(r => setTimeout(r, 800));
-        setDocVerified(true);
-        setDocVerifiedLabel(`PAN: ${panInput.slice(0, 3)}XXXXXXX`);
-        toast({ title: 'PAN Verified', description: 'Your PAN has been validated.' });
-      } else if (selectedDocType === 'passport') {
-        if (!/^[A-Z][0-9]{7}$/.test(passportInput.toUpperCase())) { setPassportError('Invalid passport number (e.g. A1234567)'); return; }
-        if (!passportDob) { setPassportError('Date of birth is required'); return; }
-        await new Promise(r => setTimeout(r, 800));
-        setDocVerified(true);
-        setDocVerifiedLabel(`Passport: ${passportInput.slice(0, 2)}XXXXX`);
-        toast({ title: 'Passport Verified', description: 'Your passport details have been validated.' });
-      } else if (selectedDocType === 'voter_id') {
-        if (voterIdInput.trim().length < 6) { setVoterIdError('Enter a valid EPIC number'); return; }
-        await new Promise(r => setTimeout(r, 800));
-        setDocVerified(true);
-        setDocVerifiedLabel(`Voter ID: ${voterIdInput.slice(0, 3)}XXXXX`);
-        toast({ title: 'Voter ID Verified', description: 'Your Voter ID has been validated.' });
-      }
-    } catch {
-      setAadhaarError('Verification failed. Please try again.');
-    } finally {
-      setAadhaarLoading(false);
+  // Validate doc number format before calling any API
+  const validateDocInput = (): boolean => {
+    setDocInputError('');
+    if (selectedDocType === 'aadhaar') {
+      if (aadhaarInput.length !== 12) { setDocInputError('Enter a valid 12-digit Aadhaar number'); return false; }
+      if (!validateVerhoeff(aadhaarInput)) { setDocInputError('Invalid Aadhaar number (checksum failed)'); return false; }
+    } else if (selectedDocType === 'pan') {
+      if (!/^[A-Z]{5}[0-9]{4}[A-Z]$/.test(panInput.toUpperCase())) { setDocInputError('Invalid PAN format (e.g. ABCDE1234F)'); return false; }
+    } else if (selectedDocType === 'passport') {
+      if (!/^[A-Z][0-9]{7}$/.test(passportInput.toUpperCase())) { setDocInputError('Invalid passport number (e.g. A1234567)'); return false; }
+      if (!passportDob) { setDocInputError('Date of birth is required'); return false; }
+    } else if (selectedDocType === 'voter_id') {
+      if (voterIdInput.trim().length < 6) { setDocInputError('Enter a valid EPIC number'); return false; }
     }
+    return true;
   };
 
-  // Called after DigiLocker redirect returns
-  const handleCompleteDigiLocker = useCallback(async () => {
-    setDigilockerStep('verifying');
-    setAadhaarLoading(true);
+  const markVerified = (label: string) => {
+    setDocVerified(true);
+    setAadhaarVerified(true);
+    setDocVerifiedLabel(label);
+  };
+
+  // ── DigiLocker (Aadhaar only via Cashfree) ────────────────────────────────
+  const handleStartDigiLocker = async () => {
+    if (!validateDocInput()) return;
+    setAadhaarLoading(true); setAadhaarError('');
     try {
-      const params = digilockerReferenceId
-        ? `reference_id=${digilockerReferenceId}`
-        : `verification_id=${digilockerVerificationId}`;
+      const sessionId = `guest_${Date.now().toString(36)}`;
+      const res = await fetch('/api/kyc/guest-digilocker', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ aadhaarNumber: aadhaarInput, sessionId }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.digilockerUrl) { setAadhaarError(data.error || 'Failed to initiate DigiLocker'); return; }
+      setDigilockerUrl(data.digilockerUrl);
+      setDigilockerVerificationId(data.verificationId || '');
+      setDigilockerReferenceId(data.referenceId || '');
+      setDigilockerStep('redirect');
+    } catch { setAadhaarError('Failed to start DigiLocker'); }
+    finally { setAadhaarLoading(false); }
+  };
+
+  const handleCompleteDigiLocker = useCallback(async () => {
+    setDigilockerStep('verifying'); setAadhaarLoading(true);
+    try {
+      const params = digilockerReferenceId ? `reference_id=${digilockerReferenceId}` : `verification_id=${digilockerVerificationId}`;
       const res = await fetch(`/api/kyc/guest-digilocker?${params}`);
       const data = await res.json();
       if (data.verified) {
-        setAadhaarVerified(true);
-        setDocVerified(true);
-        setDocVerifiedLabel(data.maskedAadhaar || `XXXX XXXX ${aadhaarInput.slice(-4)}`);
+        markVerified(data.maskedAadhaar || `XXXX XXXX ${aadhaarInput.slice(-4)}`);
         setDigilockerStep('idle');
-        toast({ title: 'Aadhaar Verified via DigiLocker', description: `Welcome, ${data.verifiedName || 'verified'}` });
+        toast({ title: 'Aadhaar Verified via DigiLocker', description: `Verified: ${data.verifiedName || ''}` });
       } else {
-        setAadhaarError(data.error || 'DigiLocker verification not completed. Try again or use format check.');
+        setAadhaarError(data.error || 'DigiLocker not completed. Try again.');
         setDigilockerStep('idle');
       }
-    } catch {
-      setAadhaarError('Failed to complete DigiLocker verification.');
-      setDigilockerStep('idle');
-    } finally {
-      setAadhaarLoading(false);
-    }
+    } catch { setAadhaarError('Failed to fetch DigiLocker result'); setDigilockerStep('idle'); }
+    finally { setAadhaarLoading(false); }
   }, [digilockerReferenceId, digilockerVerificationId, aadhaarInput, toast]);
 
-  const handleVerifyAadhaar = handleVerifyDoc;
+  // ── KYC Form (Cashfree hosted) ─────────────────────────────────────────────
+  const handleStartKycForm = async () => {
+    if (!validateDocInput()) return;
+    if (!kycPhone || kycPhone.length < 10) { setDocInputError('Enter your 10-digit mobile number'); return; }
+    setAadhaarLoading(true); setAadhaarError('');
+    try {
+      const res = await fetch('/api/kyc/kyc-form', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          docType: selectedDocType,
+          phone: kycPhone,
+          name: senderReceiver?.senderName || '',
+          email: senderReceiver?.senderEmail || '',
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.formLink) { setAadhaarError(data.error || 'Failed to generate KYC form'); return; }
+      setKycFormLink(data.formLink);
+      setKycFormVerificationId(data.verificationId || '');
+      setKycFormStep('sent');
+    } catch { setAadhaarError('Failed to generate KYC form'); }
+    finally { setAadhaarLoading(false); }
+  };
+
+  const handleCheckKycForm = useCallback(async () => {
+    if (!kycFormVerificationId) return;
+    setKycFormStep('polling'); setAadhaarLoading(true);
+    try {
+      const res = await fetch(`/api/kyc/kyc-form?verification_id=${kycFormVerificationId}`);
+      const data = await res.json();
+      if (data.verified) {
+        const docLabel = selectedDocType === 'aadhaar' ? `XXXX XXXX ${aadhaarInput.slice(-4)}` :
+          selectedDocType === 'pan' ? `PAN: ${panInput.slice(0,3)}XXXXXXX` :
+          selectedDocType === 'passport' ? `Passport: ${passportInput.slice(0,2)}XXXXX` :
+          `Voter ID: ${voterIdInput.slice(0,3)}XXXXX`;
+        markVerified(docLabel);
+        setKycFormStep('idle');
+        toast({ title: 'KYC Verified', description: `${data.verifiedName ? `Verified: ${data.verifiedName}` : 'Identity verified successfully'}` });
+      } else {
+        setAadhaarError(`Form status: ${data.formStatus || 'PENDING'} — Complete the form sent to your mobile.`);
+        setKycFormStep('sent');
+      }
+    } catch { setAadhaarError('Failed to check form status'); setKycFormStep('sent'); }
+    finally { setAadhaarLoading(false); }
+  }, [kycFormVerificationId, selectedDocType, aadhaarInput, panInput, passportInput, voterIdInput, toast]);
+
+  // ── Sandbox OTP (Aadhaar only) ─────────────────────────────────────────────
+  const handleSendSandboxOtp = async () => {
+    if (!validateDocInput()) return;
+    setAadhaarLoading(true); setAadhaarError('');
+    try {
+      const res = await fetch('/api/kyc/sandbox-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'send', aadhaarNumber: aadhaarInput }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) { setAadhaarError(data.error || 'Failed to send OTP'); return; }
+      setSandboxReferenceId(data.referenceId);
+      setSandboxStep('otp_sent');
+      toast({ title: 'OTP Sent', description: 'Enter the 6-digit OTP sent to your Aadhaar-registered mobile.' });
+    } catch { setAadhaarError('Failed to send OTP'); }
+    finally { setAadhaarLoading(false); }
+  };
+
+  const handleVerifySandboxOtp = async () => {
+    if (!sandboxOtp || sandboxOtp.length !== 6) { setAadhaarError('Enter the 6-digit OTP'); return; }
+    setAadhaarLoading(true); setAadhaarError(''); setSandboxStep('verifying');
+    try {
+      const res = await fetch('/api/kyc/sandbox-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'verify', referenceId: sandboxReferenceId, otp: sandboxOtp, aadhaarNumber: aadhaarInput }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) { setAadhaarError(data.error || 'OTP verification failed'); setSandboxStep('otp_sent'); return; }
+      markVerified(data.maskedAadhaar || `XXXX XXXX ${aadhaarInput.slice(-4)}`);
+      setSandboxStep('idle');
+      toast({ title: 'Aadhaar Verified', description: `Verified: ${data.verifiedName || ''}` });
+    } catch { setAadhaarError('OTP verification failed'); setSandboxStep('otp_sent'); }
+    finally { setAadhaarLoading(false); }
+  };
+
+  // Legacy alias
+  const handleVerifyAadhaar = handleSendSandboxOtp;
 
   // ── Coupon handler ──
 
@@ -966,7 +1034,7 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
         </div>
       )}
 
-      {/* ── Identity Verification — multi-document ── */}
+      {/* ── Identity Verification — 3 methods × 4 doc types ── */}
       <div className="bg-card rounded-xl border-2 border-blue-400/50 dark:border-blue-600/40 overflow-hidden shadow-sm shadow-blue-500/10">
         <div className="bg-blue-50/80 dark:bg-blue-950/30 px-5 py-3 border-b border-blue-200/60 dark:border-blue-800/40">
           <h2 className="font-semibold text-base flex items-center gap-2 text-blue-900 dark:text-blue-200">
@@ -978,15 +1046,13 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
         <div className="p-5 space-y-4">
 
           {/* Why KYC */}
-          <div className="rounded-lg border border-blue-200 dark:border-blue-800/40 bg-blue-50/60 dark:bg-blue-950/20 p-3 space-y-1.5">
+          <div className="rounded-lg border border-blue-200 dark:border-blue-800/40 bg-blue-50/60 dark:bg-blue-950/20 p-3">
             <p className="text-xs font-semibold text-blue-900 dark:text-blue-200 flex items-center gap-1.5">
               <Info className="h-3.5 w-3.5 shrink-0 text-blue-600" weight="fill" />
               Why is KYC required?
             </p>
-            <p className="text-xs text-blue-800 dark:text-blue-300 leading-relaxed">
-              {isDomestic
-                ? 'Identity verification is required for all shipments as per courier regulations.'
-                : <>Under <span className="font-medium">CBIC Courier Regulations</span> and PMLA, sender identity must be verified before international dispatch.</>}
+            <p className="text-xs text-blue-800 dark:text-blue-300 mt-1 leading-relaxed">
+              {isDomestic ? 'Identity verification is required for all shipments as per courier regulations.' : <>Under <span className="font-medium">CBIC Courier Regulations</span> and PMLA, sender identity must be verified before international dispatch.</>}
             </p>
           </div>
 
@@ -994,58 +1060,131 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
           {(aadhaarVerified || docVerified) ? (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex items-center gap-3 p-3 rounded-lg bg-candlestick-green/5 border border-candlestick-green/20">
               <CheckCircle className="h-5 w-5 text-candlestick-green" weight="fill" />
-              <div>
+              <div className="flex-1">
                 <p className="text-sm font-medium text-candlestick-green">Identity Verified</p>
                 <p className="text-xs text-muted-foreground font-mono">{docVerifiedLabel}</p>
               </div>
-              <button className="ml-auto text-xs text-muted-foreground hover:text-foreground" onClick={() => { setDocVerified(false); setAadhaarVerified(false); setDocVerifiedLabel(''); }}>
+              <button className="text-xs text-muted-foreground hover:text-foreground underline" onClick={() => { setDocVerified(false); setAadhaarVerified(false); setDocVerifiedLabel(''); setSandboxStep('idle'); setKycFormStep('idle'); setDigilockerStep('idle'); setAadhaarError(''); }}>
                 Change
               </button>
             </motion.div>
           ) : (
             <>
-              {/* Document type selector */}
-              <div className="grid grid-cols-2 gap-2">
-                {([
-                  { type: 'aadhaar', label: 'Aadhaar' },
-                  { type: 'pan', label: 'PAN Card' },
-                  { type: 'passport', label: 'Passport' },
-                  { type: 'voter_id', label: 'Voter ID' },
-                ] as { type: typeof selectedDocType; label: string }[]).map(doc => (
-                  <button
-                    key={doc.type}
-                    onClick={() => { setSelectedDocType(doc.type); setAadhaarError(''); setPanError(''); setPassportError(''); setVoterIdError(''); }}
-                    className={`py-2.5 px-3 rounded-lg border text-xs font-medium transition-all text-left ${selectedDocType === doc.type ? 'border-blue-500 bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300' : 'border-border bg-muted/30 text-muted-foreground hover:border-blue-300'}`}
-                  >
-                    {doc.label}
-                  </button>
-                ))}
+              {/* Step 1: Document type */}
+              <div>
+                <p className="text-xs font-medium text-muted-foreground mb-2">Step 1 — Choose document</p>
+                <div className="grid grid-cols-2 gap-2">
+                  {([
+                    { type: 'aadhaar', label: 'Aadhaar' },
+                    { type: 'pan', label: 'PAN Card' },
+                    { type: 'passport', label: 'Passport' },
+                    { type: 'voter_id', label: 'Voter ID' },
+                  ] as { type: typeof selectedDocType; label: string }[]).map(doc => (
+                    <button key={doc.type}
+                      onClick={() => { setSelectedDocType(doc.type); setDocInputError(''); setAadhaarError(''); setSandboxStep('idle'); setKycFormStep('idle'); setDigilockerStep('idle'); }}
+                      className={`py-2.5 px-3 rounded-lg border text-xs font-medium transition-all text-left ${selectedDocType === doc.type ? 'border-blue-500 bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300' : 'border-border bg-muted/30 text-muted-foreground hover:border-blue-300'}`}>
+                      {doc.label}
+                    </button>
+                  ))}
+                </div>
               </div>
 
-              {/* Aadhaar input */}
-              {selectedDocType === 'aadhaar' && (
-                <div className="space-y-3">
-                  {/* Method toggle */}
-                  <div className="grid grid-cols-2 gap-1.5 p-1 bg-muted rounded-lg">
-                    {([
-                      { m: 'digilocker', label: '🔐 DigiLocker (OTP)', desc: 'Verify via Aadhaar-linked mobile OTP' },
-                      { m: 'format_check', label: '🔢 Format Check', desc: 'Basic format validation only' },
-                    ] as { m: AadhaarVerifyMethod; label: string; desc: string }[]).map(opt => (
-                      <button key={opt.m} onClick={() => { setAadhaarMethod(opt.m); setAadhaarError(''); setDigilockerStep('idle'); }}
-                        className={`py-2 px-2 rounded-md text-xs font-medium transition-all text-left ${aadhaarMethod === opt.m ? 'bg-background shadow text-foreground' : 'text-muted-foreground hover:text-foreground'}`}>
+              {/* Step 2: Document number input */}
+              <div>
+                <p className="text-xs font-medium text-muted-foreground mb-2">Step 2 — Enter document details</p>
+                {selectedDocType === 'aadhaar' && (
+                  <Input type="text" inputMode="numeric" maxLength={14} placeholder="XXXX XXXX XXXX"
+                    className="font-mono tracking-widest text-center"
+                    value={formattedAadhaar} onChange={handleAadhaarChange} />
+                )}
+                {selectedDocType === 'pan' && (
+                  <Input placeholder="ABCDE1234F" maxLength={10} className="font-mono tracking-widest uppercase"
+                    value={panInput} onChange={e => { setPanInput(e.target.value.toUpperCase()); setDocInputError(''); }} />
+                )}
+                {selectedDocType === 'passport' && (
+                  <div className="space-y-2">
+                    <Input placeholder="Passport number (e.g. A1234567)" maxLength={8} className="font-mono tracking-widest uppercase"
+                      value={passportInput} onChange={e => { setPassportInput(e.target.value.toUpperCase()); setDocInputError(''); }} />
+                    <Input type="date" value={passportDob} onChange={e => { setPassportDob(e.target.value); setDocInputError(''); }} />
+                  </div>
+                )}
+                {selectedDocType === 'voter_id' && (
+                  <Input placeholder="EPIC number (e.g. ABC1234567)" className="font-mono tracking-widest uppercase"
+                    value={voterIdInput} onChange={e => { setVoterIdInput(e.target.value.toUpperCase()); setDocInputError(''); }} />
+                )}
+                {docInputError && <p className="text-xs text-destructive mt-1 flex items-center gap-1"><Warning className="h-3 w-3" weight="fill" /> {docInputError}</p>}
+              </div>
+
+              {/* Step 3: Verification method */}
+              <div>
+                <p className="text-xs font-medium text-muted-foreground mb-2">Step 3 — Choose verification method</p>
+                <div className="grid grid-cols-3 gap-2">
+                  {([
+                    { m: 'sandbox_otp', label: '📱 Aadhaar OTP', desc: 'OTP to registered mobile', onlyAadhaar: true },
+                    { m: 'digilocker',  label: '🔐 DigiLocker',  desc: 'Govt-approved redirect',  onlyAadhaar: true },
+                    { m: 'kyc_form',    label: '📋 KYC Form',    desc: 'Link sent via SMS',        onlyAadhaar: false },
+                  ] as { m: typeof kycMethod; label: string; desc: string; onlyAadhaar: boolean }[]).map(opt => {
+                    const disabled = opt.onlyAadhaar && selectedDocType !== 'aadhaar';
+                    return (
+                      <button key={opt.m}
+                        disabled={disabled}
+                        onClick={() => { if (!disabled) { setKycMethod(opt.m); setAadhaarError(''); setSandboxStep('idle'); setKycFormStep('idle'); setDigilockerStep('idle'); } }}
+                        className={`py-2 px-2 rounded-lg border text-xs font-medium transition-all text-left ${disabled ? 'opacity-30 cursor-not-allowed border-border bg-muted/20' : kycMethod === opt.m ? 'border-blue-500 bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300' : 'border-border bg-muted/30 text-muted-foreground hover:border-blue-300'}`}>
                         <div>{opt.label}</div>
                         <div className="text-[10px] font-normal opacity-70 mt-0.5">{opt.desc}</div>
                       </button>
-                    ))}
-                  </div>
+                    );
+                  })}
+                </div>
+                {selectedDocType !== 'aadhaar' && (
+                  <p className="text-[11px] text-muted-foreground mt-1.5">OTP and DigiLocker are Aadhaar-only. KYC Form works for all documents.</p>
+                )}
+              </div>
 
-                  {/* DigiLocker redirect step */}
-                  {aadhaarMethod === 'digilocker' && digilockerStep === 'redirect' && (
-                    <div className="space-y-3 p-3 rounded-lg bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800/40">
-                      <p className="text-xs text-blue-800 dark:text-blue-300">Click below to open DigiLocker. After completing verification, come back and click "I've completed DigiLocker".</p>
-                      <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white text-xs" onClick={() => window.open(digilockerUrl, '_blank')}>
-                        Open DigiLocker ↗
-                      </Button>
+              {/* ── Sandbox OTP flow (Aadhaar only) ── */}
+              {kycMethod === 'sandbox_otp' && selectedDocType === 'aadhaar' && (
+                <div className="space-y-3">
+                  {sandboxStep === 'idle' && (
+                    <Button onClick={() => { feedbackPresets.tap(); handleSendSandboxOtp(); }} disabled={aadhaarLoading || aadhaarInput.length !== 12} className="w-full bg-blue-600 hover:bg-blue-700 text-white">
+                      {aadhaarLoading ? <CircleNotch className="h-4 w-4 animate-spin mr-2" /> : null}
+                      Send OTP to Aadhaar-registered mobile
+                    </Button>
+                  )}
+                  {sandboxStep === 'otp_sent' && (
+                    <div className="space-y-2">
+                      <p className="text-xs text-muted-foreground">Enter the 6-digit OTP sent to your Aadhaar-registered mobile number.</p>
+                      <div className="flex gap-2">
+                        <Input type="text" inputMode="numeric" maxLength={6} placeholder="6-digit OTP"
+                          className="font-mono tracking-widest text-center flex-1"
+                          value={sandboxOtp} onChange={e => { setSandboxOtp(e.target.value.replace(/\D/g,'').slice(0,6)); setAadhaarError(''); }} />
+                        <Button onClick={() => { feedbackPresets.tap(); handleVerifySandboxOtp(); }} disabled={aadhaarLoading || sandboxOtp.length !== 6} className="bg-blue-600 hover:bg-blue-700 text-white shrink-0">
+                          {aadhaarLoading ? <CircleNotch className="h-4 w-4 animate-spin" /> : 'Verify'}
+                        </Button>
+                      </div>
+                      <button className="text-xs text-muted-foreground underline" onClick={() => { setSandboxStep('idle'); setSandboxOtp(''); }}>Resend OTP</button>
+                    </div>
+                  )}
+                  {sandboxStep === 'verifying' && (
+                    <div className="flex items-center gap-2 p-3 rounded-lg bg-muted text-sm text-muted-foreground">
+                      <CircleNotch className="h-4 w-4 animate-spin" /> Verifying OTP...
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* ── DigiLocker flow (Aadhaar only) ── */}
+              {kycMethod === 'digilocker' && selectedDocType === 'aadhaar' && (
+                <div className="space-y-3">
+                  {digilockerStep === 'idle' && (
+                    <Button onClick={() => { feedbackPresets.tap(); handleStartDigiLocker(); }} disabled={aadhaarLoading || aadhaarInput.length !== 12} className="w-full bg-blue-600 hover:bg-blue-700 text-white">
+                      {aadhaarLoading ? <CircleNotch className="h-4 w-4 animate-spin mr-2" /> : null}
+                      Open DigiLocker
+                    </Button>
+                  )}
+                  {digilockerStep === 'redirect' && (
+                    <div className="space-y-2 p-3 rounded-lg bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800/40">
+                      <p className="text-xs text-blue-800 dark:text-blue-300">Complete verification in DigiLocker, then come back and click below.</p>
+                      <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white text-xs" onClick={() => window.open(digilockerUrl, '_blank')}>Open DigiLocker ↗</Button>
                       <Button variant="outline" size="sm" className="w-full text-xs" onClick={handleCompleteDigiLocker} disabled={aadhaarLoading}>
                         {aadhaarLoading ? <CircleNotch className="h-3.5 w-3.5 animate-spin mr-1.5" /> : null}
                         I've completed DigiLocker — Fetch Result
@@ -1053,91 +1192,54 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
                       <button className="text-xs text-muted-foreground underline w-full text-center" onClick={() => setDigilockerStep('idle')}>Cancel</button>
                     </div>
                   )}
-
-                  {/* DigiLocker verifying */}
-                  {aadhaarMethod === 'digilocker' && digilockerStep === 'verifying' && (
+                  {digilockerStep === 'verifying' && (
                     <div className="flex items-center gap-2 p-3 rounded-lg bg-muted text-sm text-muted-foreground">
                       <CircleNotch className="h-4 w-4 animate-spin" /> Fetching verified data from DigiLocker...
                     </div>
                   )}
+                </div>
+              )}
 
-                  {/* Aadhaar number input (shown when idle) */}
-                  {digilockerStep === 'idle' && (
+              {/* ── KYC Form flow (all doc types) ── */}
+              {kycMethod === 'kyc_form' && (
+                <div className="space-y-3">
+                  {kycFormStep === 'idle' && (
                     <>
-                      {extractedAadhaarNumber && (
-                        <p className="text-xs text-muted-foreground">Auto-filled from your uploaded document. Confirm and verify.</p>
-                      )}
-                      <div className="flex gap-2">
-                        <Input type="text" inputMode="numeric" maxLength={14} placeholder="XXXX XXXX XXXX"
-                          className="font-mono tracking-widest text-center flex-1"
-                          value={formattedAadhaar} onChange={handleAadhaarChange} />
-                        <Button onClick={() => { feedbackPresets.tap(); handleVerifyDoc(); }}
-                          disabled={aadhaarLoading || aadhaarInput.length !== 12}
-                          className="bg-blue-600 hover:bg-blue-700 text-white shrink-0">
-                          {aadhaarLoading ? <CircleNotch className="h-4 w-4 animate-spin" /> : aadhaarMethod === 'digilocker' ? 'Start' : 'Verify'}
-                        </Button>
+                      <div className="space-y-1.5">
+                        <p className="text-xs text-muted-foreground">A verification form link will be sent to your mobile via SMS.</p>
+                        <Input type="tel" inputMode="numeric" maxLength={10} placeholder="10-digit mobile number"
+                          className="font-mono"
+                          value={kycPhone} onChange={e => setKycPhone(e.target.value.replace(/\D/g,'').slice(0,10))} />
                       </div>
-                      {aadhaarError && <p className="text-xs text-destructive flex items-center gap-1"><Warning className="h-3 w-3" weight="fill" /> {aadhaarError}</p>}
-                      <p className="text-xs text-muted-foreground">
-                        {aadhaarMethod === 'digilocker' ? 'You\'ll be redirected to DigiLocker to verify with your Aadhaar-linked mobile OTP.' : 'Format validated client-side via Verhoeff checksum.'}
-                      </p>
+                      <Button onClick={() => { feedbackPresets.tap(); handleStartKycForm(); }} disabled={aadhaarLoading || kycPhone.length < 10} className="w-full bg-blue-600 hover:bg-blue-700 text-white">
+                        {aadhaarLoading ? <CircleNotch className="h-4 w-4 animate-spin mr-2" /> : null}
+                        Send KYC Form Link via SMS
+                      </Button>
                     </>
+                  )}
+                  {kycFormStep === 'sent' && (
+                    <div className="space-y-2 p-3 rounded-lg bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800/40">
+                      <p className="text-xs text-blue-800 dark:text-blue-300">KYC form link sent to <span className="font-mono font-semibold">{kycPhone}</span>. Open it, complete verification, then click below.</p>
+                      {kycFormLink && <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white text-xs" onClick={() => window.open(kycFormLink, '_blank')}>Open KYC Form ↗</Button>}
+                      <Button variant="outline" size="sm" className="w-full text-xs" onClick={handleCheckKycForm} disabled={aadhaarLoading}>
+                        {aadhaarLoading ? <CircleNotch className="h-3.5 w-3.5 animate-spin mr-1.5" /> : null}
+                        I've completed the form — Check Status
+                      </Button>
+                      <button className="text-xs text-muted-foreground underline w-full text-center" onClick={() => setKycFormStep('idle')}>Resend</button>
+                    </div>
+                  )}
+                  {kycFormStep === 'polling' && (
+                    <div className="flex items-center gap-2 p-3 rounded-lg bg-muted text-sm text-muted-foreground">
+                      <CircleNotch className="h-4 w-4 animate-spin" /> Checking verification status...
+                    </div>
                   )}
                 </div>
               )}
 
-              {/* PAN input */}
-              {selectedDocType === 'pan' && (
-                <div className="space-y-2">
-                  <div className="flex gap-2">
-                    <Input placeholder="ABCDE1234F" maxLength={10}
-                      className="font-mono tracking-widest uppercase flex-1"
-                      value={panInput} onChange={e => { setPanInput(e.target.value.toUpperCase()); setPanError(''); }} />
-                    <Button onClick={() => { feedbackPresets.tap(); handleVerifyDoc(); }}
-                      disabled={aadhaarLoading || panInput.length < 10}
-                      className="bg-blue-600 hover:bg-blue-700 text-white shrink-0">
-                      {aadhaarLoading ? <CircleNotch className="h-4 w-4 animate-spin" /> : 'Verify'}
-                    </Button>
-                  </div>
-                  {panError && <p className="text-xs text-destructive flex items-center gap-1"><Warning className="h-3 w-3" weight="fill" /> {panError}</p>}
-                </div>
+              {/* Error */}
+              {aadhaarError && (
+                <p className="text-xs text-destructive flex items-center gap-1"><Warning className="h-3 w-3" weight="fill" /> {aadhaarError}</p>
               )}
-
-              {/* Passport input */}
-              {selectedDocType === 'passport' && (
-                <div className="space-y-2">
-                  <Input placeholder="Passport number (e.g. A1234567)" maxLength={8}
-                    className="font-mono tracking-widest uppercase"
-                    value={passportInput} onChange={e => { setPassportInput(e.target.value.toUpperCase()); setPassportError(''); }} />
-                  <Input type="date" value={passportDob} onChange={e => { setPassportDob(e.target.value); setPassportError(''); }} />
-                  {passportError && <p className="text-xs text-destructive flex items-center gap-1"><Warning className="h-3 w-3" weight="fill" /> {passportError}</p>}
-                  <Button onClick={() => { feedbackPresets.tap(); handleVerifyDoc(); }}
-                    disabled={aadhaarLoading || !passportInput || !passportDob}
-                    className="w-full bg-blue-600 hover:bg-blue-700 text-white">
-                    {aadhaarLoading ? <CircleNotch className="h-4 w-4 animate-spin mr-2" /> : null}
-                    Verify Passport
-                  </Button>
-                </div>
-              )}
-
-              {/* Voter ID input */}
-              {selectedDocType === 'voter_id' && (
-                <div className="space-y-2">
-                  <div className="flex gap-2">
-                    <Input placeholder="EPIC number (e.g. ABC1234567)"
-                      className="font-mono tracking-widest uppercase flex-1"
-                      value={voterIdInput} onChange={e => { setVoterIdInput(e.target.value.toUpperCase()); setVoterIdError(''); }} />
-                    <Button onClick={() => { feedbackPresets.tap(); handleVerifyDoc(); }}
-                      disabled={aadhaarLoading || voterIdInput.length < 6}
-                      className="bg-blue-600 hover:bg-blue-700 text-white shrink-0">
-                      {aadhaarLoading ? <CircleNotch className="h-4 w-4 animate-spin" /> : 'Verify'}
-                    </Button>
-                  </div>
-                  {voterIdError && <p className="text-xs text-destructive flex items-center gap-1"><Warning className="h-3 w-3" weight="fill" /> {voterIdError}</p>}
-                </div>
-              )}
-
-              <p className="text-xs text-muted-foreground">Format validated client-side. Document numbers are never stored.</p>
             </>
           )}
         </div>
