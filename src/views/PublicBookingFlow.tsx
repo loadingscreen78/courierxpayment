@@ -26,7 +26,7 @@ import { usePincodeLookup } from '@/hooks/usePincodeLookup';
 import { DomesticCourierGrid } from '@/components/domestic/DomesticCourierGrid';
 import { DimensionAssistant } from '@/components/domestic/DimensionAssistant';
 import { PincodeFinder } from '@/components/domestic/PincodeFinder';
-import { useAadhaarOcr } from '@/hooks/useAadhaarOcr';
+
 import { INDIAN_STATES } from '@/lib/pincode-lookup';
 import { motion, AnimatePresence } from 'framer-motion';
 import { feedbackPresets } from '@/lib/haptics';
@@ -437,15 +437,11 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
   const [pickupPhone, setPickupPhone] = useState('');
   const [pickupPhoneManuallyEdited, setPickupPhoneManuallyEdited] = useState(false);
 
-  // ── Aadhaar OCR state ──
-  const { ocrResult, isProcessing: ocrProcessing, ocrError, processAadhaar, clearOcr } = useAadhaarOcr();
-  const [extractedAadhaarNumber, setExtractedAadhaarNumber] = useState('');
-
   // ── Detect mobile ──
   useEffect(() => {
     setIsMobilePBF(/Android|iPhone|iPad|iPod/i.test(navigator.userAgent));
   }, []);
-  const [isUnderAge, setIsUnderAge] = useState(false);
+  const [isUnderAge] = useState(false);
 
   // ── Email OTP verification state ──
   const [emailOtpState, setEmailOtpState] = useState<'idle' | 'sending' | 'sent' | 'verifying' | 'verified'>('idle');
@@ -750,38 +746,6 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
     setSenderReceiverData(values);
     setStep(4);
   };
-
-  // ── Aadhaar OCR processing + auto-fill ──
-  // Background processing: extract age (block <18) and 12-digit Aadhaar number
-  const handleAadhaarProcess = useCallback(async () => {
-    if (!aadhaarFront) return;
-    const result = await processAadhaar(aadhaarFront, aadhaarBack);
-    if (!result) return;
-
-    // Task 1: Age gate — block if under 18
-    if (result.age !== null && result.age < 18) {
-      setIsUnderAge(true);
-      return;
-    }
-    setIsUnderAge(false);
-
-    // Task 2: Extract 12-digit Aadhaar number and silently auto-fill summary page
-    if (result.aadhaarNumber) {
-      const cleaned = result.aadhaarNumber.replace(/\D/g, '');
-      if (cleaned.length === 12) {
-        setExtractedAadhaarNumber(cleaned);
-      }
-    }
-
-    // Auto-fill sender fields from OCR (name, address etc. for pickup step)
-    const fc = result.fieldConfidence || {};
-    if (result.name && (fc.name ?? 80) >= 50) detailsForm.setValue('senderName', result.name);
-    if (result.phone && (fc.phone ?? 80) >= 50) detailsForm.setValue('senderPhone', result.phone);
-    if (result.address && (fc.address ?? 80) >= 50) detailsForm.setValue('senderAddress', result.address);
-    if (result.city && (fc.city ?? 80) >= 50) detailsForm.setValue('senderCity', result.city);
-    if (result.state && (fc.state ?? 80) >= 50) detailsForm.setValue('senderState', result.state);
-    if (result.pincode && (fc.pincode ?? 80) >= 50) detailsForm.setValue('senderPincode', result.pincode);
-  }, [aadhaarFront, aadhaarBack, processAadhaar, detailsForm, isInternational]);
 
   // ── Validate sender KYC + pickup fields before sliding to receiver ──
   const handlePickupNext = async () => {
@@ -1098,17 +1062,14 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
     setEmailOtpError('');
     setEmailOtpCooldown(0);
     setEmailOtpAttempts(0);
-    setExtractedAadhaarNumber('');
-    setIsUnderAge(false);
     setDimUnit('cm');
     setIntlDimUnit('cm');
     setShowLaptopDeclarationModal(false);
     setShowWeightDimDeclarationModal(false);
     setShowIntlWeightDimDeclarationModal(false);
     setSerialLookupResult(null);
-    clearOcr();
     detailsForm.reset();
-  }, [clearOcr, detailsForm]);
+  }, [detailsForm]);
 
   const handleBack = () => {
     if (step === 1) router.push('/');
@@ -2478,18 +2439,13 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                             )} />
                           )}
 
-                          {/* ── 3. Aadhaar Upload (auto-triggers OCR in background) ── */}
+                          {/* ── 3. Aadhaar Upload ── */}
                           {isInternational && requiresAadhaarKyc && (
                             <AadhaarKycUpload
                               aadhaarFront={aadhaarFront}
                               aadhaarBack={aadhaarBack}
                               onFrontChange={setAadhaarFront}
                               onBackChange={setAadhaarBack}
-                              ocrResult={ocrResult}
-                              isProcessing={ocrProcessing}
-                              ocrError={ocrError}
-                              onProcess={handleAadhaarProcess}
-                              isUnderAge={isUnderAge}
                             />
                           )}
                           </div>
@@ -3503,7 +3459,6 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
             senderReceiver={senderReceiverData}
             onBack={() => setStep(3)}
 
-            extractedAadhaarNumber={extractedAadhaarNumber}
             aadhaarFront={aadhaarFront}
             aadhaarBack={aadhaarBack}
             passportIdentity={passportIdentity}
