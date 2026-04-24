@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   ArrowRight, CircleNotch, ShieldCheck, CheckCircle, Warning, Info, X,
 } from '@phosphor-icons/react';
@@ -137,7 +137,23 @@ export default function KycAgreementModal(props: KycAgreementModalProps) {
     } else if (activeTab === 'digilocker') {
       setKycMethod('digilocker');
     }
+    // KYC Form uses digilocker method under the hood for non-aadhaar docs
+    if (activeTab === 'kyc_form') {
+      setKycMethod('digilocker');
+    }
   }, [activeTab]);
+
+  // Auto-open DigiLocker when URL becomes available (skip the intermediate step)
+  const digilockerAutoOpenedRef = useRef(false);
+  useEffect(() => {
+    if (digilockerStep === 'redirect' && digilockerUrl && !digilockerAutoOpenedRef.current) {
+      digilockerAutoOpenedRef.current = true;
+      window.open(digilockerUrl, '_blank');
+    }
+    if (digilockerStep === 'idle') {
+      digilockerAutoOpenedRef.current = false;
+    }
+  }, [digilockerStep, digilockerUrl]);
 
   const switchTab = (tab: KycTab) => {
     setActiveTab(tab);
@@ -150,15 +166,6 @@ export default function KycAgreementModal(props: KycAgreementModalProps) {
   };
 
   const isVerified = aadhaarVerified || docVerified;
-
-  // DigiLocker: open in iframe (desktop) or new tab (mobile)
-  const openDigiLocker = () => {
-    if (isMobile) {
-      window.open(digilockerUrl, '_blank');
-    } else {
-      window.open(digilockerUrl, '_blank');
-    }
-  };
 
   return (
     <AnimatePresence>
@@ -447,11 +454,11 @@ export default function KycAgreementModal(props: KycAgreementModalProps) {
                                     animate={{ opacity: 1, y: 0 }}
                                     className="space-y-3 p-4 rounded-xl bg-blue-50/60 dark:bg-blue-950/20 border border-blue-200/40 dark:border-blue-800/30"
                                   >
-                                    <p className="text-xs text-muted-foreground">Complete verification in DigiLocker, then return here.</p>
-                                    <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white text-sm h-10 rounded-xl" onClick={openDigiLocker}>
-                                      Open DigiLocker
+                                    <p className="text-xs text-muted-foreground">DigiLocker has been opened in a new tab. Complete verification there, then click below.</p>
+                                    <Button variant="outline" className="w-full text-sm h-10 rounded-xl" onClick={() => window.open(digilockerUrl, '_blank')}>
+                                      Reopen DigiLocker
                                     </Button>
-                                    <Button variant="outline" size="sm" className="w-full text-xs h-9 rounded-xl" onClick={handleCompleteDigiLocker} disabled={aadhaarLoading}>
+                                    <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white text-sm h-10 rounded-xl" onClick={handleCompleteDigiLocker} disabled={aadhaarLoading}>
                                       {aadhaarLoading ? <CircleNotch className="h-3.5 w-3.5 animate-spin mr-1.5" /> : null}
                                       I have completed — Fetch Result
                                     </Button>
@@ -530,27 +537,54 @@ export default function KycAgreementModal(props: KycAgreementModalProps) {
                             {/* SMS verification button */}
                             <div className="rounded-xl bg-blue-50/40 dark:bg-blue-950/15 border border-blue-100/60 dark:border-blue-800/20 p-3">
                               <p className="text-[11px] text-muted-foreground leading-relaxed">
-                                We&apos;ll send a verification SMS to your registered mobile number. No need to open any external website.
+                                {selectedDocType === 'aadhaar'
+                                  ? "We'll send a verification OTP to your Aadhaar-registered mobile number."
+                                  : "We'll verify your document via DigiLocker. A new tab will open automatically."}
                               </p>
                             </div>
 
-                            <Button
-                              onClick={() => {
-                                feedbackPresets.tap();
-                                if (selectedDocType === 'aadhaar') {
-                                  handleSendSandboxOtp();
-                                } else {
-                                  handleStartDigiLocker();
-                                }
-                              }}
-                              disabled={aadhaarLoading || (selectedDocType === 'aadhaar' && aadhaarInput.length !== 12)}
-                              className="w-full bg-blue-600 hover:bg-blue-700 text-white h-11 text-sm font-medium rounded-xl"
-                            >
-                              {aadhaarLoading ? <CircleNotch className="h-4 w-4 animate-spin mr-2" /> : null}
-                              Verify via SMS
-                            </Button>
+                            {digilockerStep === 'idle' && sandboxStep === 'idle' && (
+                              <Button
+                                onClick={() => {
+                                  feedbackPresets.tap();
+                                  if (selectedDocType === 'aadhaar') {
+                                    setKycMethod('sandbox_otp');
+                                    handleSendSandboxOtp();
+                                  } else {
+                                    setKycMethod('digilocker');
+                                    handleStartDigiLocker();
+                                  }
+                                }}
+                                disabled={aadhaarLoading || (selectedDocType === 'aadhaar' && aadhaarInput.length !== 12)}
+                                className="w-full bg-blue-600 hover:bg-blue-700 text-white h-11 text-sm font-medium rounded-xl"
+                              >
+                                {aadhaarLoading ? <CircleNotch className="h-4 w-4 animate-spin mr-2" /> : null}
+                                {selectedDocType === 'aadhaar' ? 'Send OTP to registered mobile' : 'Verify Document'}
+                              </Button>
+                            )}
 
-                            {/* OTP input if sent */}
+                            {/* DigiLocker redirect state for non-aadhaar docs */}
+                            {digilockerStep === 'redirect' && selectedDocType !== 'aadhaar' && (
+                              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-3 p-4 rounded-xl bg-blue-50/60 dark:bg-blue-950/20 border border-blue-200/40 dark:border-blue-800/30">
+                                <p className="text-xs text-muted-foreground">DigiLocker has been opened. Complete verification there, then click below.</p>
+                                <Button variant="outline" className="w-full text-sm h-10 rounded-xl" onClick={() => window.open(digilockerUrl, '_blank')}>
+                                  Reopen DigiLocker
+                                </Button>
+                                <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white text-sm h-10 rounded-xl" onClick={handleCompleteDigiLocker} disabled={aadhaarLoading}>
+                                  {aadhaarLoading ? <CircleNotch className="h-3.5 w-3.5 animate-spin mr-1.5" /> : null}
+                                  I have completed — Fetch Result
+                                </Button>
+                                <button className="text-xs text-muted-foreground hover:text-foreground w-full text-center" onClick={() => setDigilockerStep('idle')}>Cancel</button>
+                              </motion.div>
+                            )}
+
+                            {digilockerStep === 'verifying' && (
+                              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex items-center gap-2 p-4 rounded-xl bg-blue-50/60 dark:bg-blue-950/20 text-sm text-blue-700 dark:text-blue-300">
+                                <CircleNotch className="h-4 w-4 animate-spin" /> Fetching verified data...
+                              </motion.div>
+                            )}
+
+                            {/* OTP input if sent (Aadhaar only) */}
                             {sandboxStep === 'otp_sent' && (
                               <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-3">
                                 <p className="text-xs text-muted-foreground">Enter the 6-digit OTP sent to your registered mobile.</p>
