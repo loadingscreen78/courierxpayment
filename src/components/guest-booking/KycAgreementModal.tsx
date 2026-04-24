@@ -295,9 +295,9 @@ export default function KycAgreementModal(props: KycAgreementModalProps) {
                   transition={{ duration: 0.3 }}
                   className="space-y-4"
                 >
-                  {/* Govt of India trust banner */}
+                  {/* Govt of India / MeitY trust banner */}
                   <div className="rounded-xl bg-gradient-to-r from-blue-50/80 to-indigo-50/60 dark:from-blue-950/30 dark:to-indigo-950/20 border border-blue-100/80 dark:border-blue-800/30 p-3 flex items-center gap-3">
-                    <img src="/logos/govt-india.svg" alt="Government of India" className="h-10 w-auto object-contain" draggable={false} />
+                    <img src="/logos/meity-official.png" alt="Ministry of Electronics & Information Technology, Government of India" className="h-12 w-auto object-contain shrink-0" draggable={false} />
                     <div className="flex-1 min-w-0">
                       <p className="text-[10px] font-medium text-blue-800 dark:text-blue-300 leading-tight">
                         {isDomestic ? 'As per courier regulations, sender identity must be verified before dispatch.' : 'Under CBIC Courier Regulations and PMLA, sender identity must be verified before international dispatch.'}
@@ -364,7 +364,7 @@ export default function KycAgreementModal(props: KycAgreementModalProps) {
                             { src: '/logos/uidai.svg', alt: 'UIDAI' },
                             { src: '/logos/digilocker.svg', alt: 'DigiLocker' },
                             { src: '/logos/cashfree.svg', alt: 'Cashfree' },
-                            { src: '/logos/meity.svg', alt: 'MeitY' },
+                            { src: '/logos/meity-official.png', alt: 'MeitY' },
                           ].map((logo, i) => (
                             <div key={logo.alt} className="flex items-center gap-3">
                               {i > 0 && <span className="w-px h-5 bg-slate-200 dark:bg-slate-700 shrink-0" />}

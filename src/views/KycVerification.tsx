@@ -478,7 +478,7 @@ function KycVerificationInner() {
               { src: '/logos/uidai.svg', alt: 'UIDAI' },
               { src: '/logos/digilocker.svg', alt: 'DigiLocker' },
               { src: '/logos/cashfree.svg', alt: 'Cashfree' },
-              { src: '/logos/meity.svg', alt: 'MeitY' },
+              { src: '/logos/meity-official.png', alt: 'MeitY' },
             ].map((logo, i) => (
               <div key={logo.alt} className="flex items-center gap-3">
                 {i > 0 && <span className="w-px h-5 bg-slate-200 dark:bg-slate-700 shrink-0" />}
@@ -489,7 +489,7 @@ function KycVerificationInner() {
         </div>
 
         <div className="flex items-center justify-center gap-2">
-          <img src="/logos/govt-india.svg" alt="Government of India" className="h-8 w-auto object-contain opacity-70" draggable={false} />
+          <img src="/logos/meity-official.png" alt="Ministry of Electronics & IT, Government of India" className="h-10 w-auto object-contain opacity-80" draggable={false} />
         </div>
 
         <p className="text-center text-xs text-muted-foreground">
