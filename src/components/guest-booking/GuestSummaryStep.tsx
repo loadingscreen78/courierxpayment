@@ -1238,7 +1238,10 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
 
               {/* Error */}
               {aadhaarError && (
-                <p className="text-xs text-destructive flex items-center gap-1"><Warning className="h-3 w-3" weight="fill" /> {aadhaarError}</p>
+                <p className="text-xs text-destructive flex items-start gap-1">
+                  <Warning className="h-3 w-3 mt-0.5 shrink-0" weight="fill" />
+                  <span>{aadhaarError.includes('secret not configured') ? 'Aadhaar OTP service not fully configured yet. Please use DigiLocker or KYC Form instead.' : aadhaarError}</span>
+                </p>
               )}
             </>
           )}

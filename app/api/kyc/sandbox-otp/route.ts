@@ -11,7 +11,7 @@ async function getSandboxToken(): Promise<string> {
   const apiKey = process.env.SANDBOX_API_KEY?.trim();
   const apiSecret = process.env.SANDBOX_API_SECRET?.trim();
   if (!apiKey || !apiSecret || apiSecret === 'your_sandbox_api_secret') {
-    throw new Error('Sandbox API credentials not configured');
+    throw new Error('Sandbox API secret not configured. Add SANDBOX_API_SECRET to your .env file from app.sandbox.co.in → Settings → API Keys.');
   }
 
   const res = await fetch(`${SANDBOX_BASE}/authenticate`, {
@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
     try {
       token = await getSandboxToken();
     } catch (e) {
-      return NextResponse.json({ error: (e as Error).message }, { status: 500 });
+      return NextResponse.json({ error: (e as Error).message }, { status: 503 });
     }
 
     const headers = {
