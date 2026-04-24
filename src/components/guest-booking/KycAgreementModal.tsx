@@ -79,9 +79,10 @@ interface KycAgreementModalProps {
   senderReceiver: SenderReceiver;
   selectedCourier: any;
   finalPrice: number;
+  verifiedPhone?: string;
   // Callbacks
   onAccept: () => void;
-  onKycFormVerified: (label: string, name: string) => void;
+  onKycFormVerified: (label: string, name: string, phone?: string) => void;
 }
 
 // ── Document SVG icons ───────────────────────────────────────────────────────
@@ -124,11 +125,15 @@ export default function KycAgreementModal(props: KycAgreementModalProps) {
     handleSendSandboxOtp, handleVerifySandboxOtp,
     digilockerStep, setDigilockerStep, digilockerUrl, digilockerSupported,
     handleStartDigiLocker, handleCompleteDigiLocker,
-    resetVerification, senderReceiver, selectedCourier, finalPrice, onAccept, onKycFormVerified,
+    resetVerification, senderReceiver, selectedCourier, finalPrice, verifiedPhone, onAccept, onKycFormVerified,
   } = props;
 
   const [activeTab, setActiveTab] = useState<KycTab>('aadhaar_otp');
   const isMobile = typeof window !== 'undefined' && window.innerWidth < 640;
+
+  // ── Scroll-to-enable state ──
+  const [hasScrolledAgreement, setHasScrolledAgreement] = useState(false);
+  const agreementScrollRef = useRef<HTMLDivElement>(null);
 
   // ── KYC Form (Cashfree hosted link) state ──
   const [kycFormPhone, setKycFormPhone] = useState(props.senderReceiver?.senderPhone?.replace(/^\+91/, '').slice(-10) || '');
@@ -185,7 +190,7 @@ export default function KycAgreementModal(props: KycAgreementModalProps) {
           const label = `Aadhaar (KYC Form)`;
           props.resetVerification(); // clear first
           // We need to trigger verification through the parent — use a custom callback
-          onKycFormVerified(label, data.verifiedName || '');
+          onKycFormVerified(label, data.verifiedName || '', kycFormPhone);
         }
       } catch { /* keep polling */ }
     }, 5000);
@@ -234,6 +239,11 @@ export default function KycAgreementModal(props: KycAgreementModalProps) {
     setKycFormError('');
     feedbackPresets.tap();
   };
+
+  // Reset scroll state when going back to step 1
+  useEffect(() => {
+    if (agreementStep === 1) setHasScrolledAgreement(false);
+  }, [agreementStep]);
 
   const isVerified = aadhaarVerified || docVerified;
 
@@ -285,7 +295,15 @@ export default function KycAgreementModal(props: KycAgreementModalProps) {
             </div>
 
             {/* ── Scrollable body ── */}
-            <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
+            <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4"
+              onScroll={(e) => {
+                if (agreementStep !== 2 || hasScrolledAgreement) return;
+                const el = e.currentTarget;
+                if (el.scrollTop + el.clientHeight >= el.scrollHeight - 40) {
+                  setHasScrolledAgreement(true);
+                }
+              }}
+            >
 
               {/* ════ STEP 1: KYC ════ */}
               {agreementStep === 1 && (
@@ -698,12 +716,16 @@ export default function KycAgreementModal(props: KycAgreementModalProps) {
                         <span className="text-muted-foreground">Full Name</span>
                         <p className="font-medium mt-0.5">{verifiedName || senderReceiver?.senderName || '—'}</p>
                       </div>
-                      {verifiedDob && (
-                        <div>
-                          <span className="text-muted-foreground">Date of Birth</span>
-                          <p className="font-medium mt-0.5">{verifiedDob}</p>
-                        </div>
-                      )}
+                      {verifiedDob && (() => {
+                        const dobDate = new Date(verifiedDob.split('/').reverse().join('-'));
+                        const age = isNaN(dobDate.getTime()) ? null : Math.floor((Date.now() - dobDate.getTime()) / (365.25 * 24 * 60 * 60 * 1000));
+                        return (
+                          <div>
+                            <span className="text-muted-foreground">Age (as per KYC)</span>
+                            <p className="font-medium mt-0.5">{age !== null ? `${age} years` : verifiedDob}</p>
+                          </div>
+                        );
+                      })()}
                       {verifiedGender && (
                         <div>
                           <span className="text-muted-foreground">Gender</span>
@@ -711,8 +733,8 @@ export default function KycAgreementModal(props: KycAgreementModalProps) {
                         </div>
                       )}
                       <div>
-                        <span className="text-muted-foreground">Phone</span>
-                        <p className="font-medium mt-0.5">{senderReceiver?.senderPhone || '—'}</p>
+                        <span className="text-muted-foreground">Phone (Aadhaar-linked)</span>
+                        <p className="font-medium mt-0.5">{verifiedPhone ? `+91 ${verifiedPhone.replace(/^\+91/, '').slice(-10)}` : senderReceiver?.senderPhone || '—'}</p>
                       </div>
                       {senderReceiver?.senderEmail && (
                         <div className="col-span-2">
@@ -745,7 +767,7 @@ export default function KycAgreementModal(props: KycAgreementModalProps) {
                   {/* Agreement text */}
                   <div className="rounded-xl border border-border/60 bg-card p-4 space-y-3 text-xs text-muted-foreground leading-relaxed">
                     <div className="border-b border-border pb-2">
-                      <p className="font-bold text-foreground text-sm uppercase tracking-wide">Shipping Service Agreement</p>
+                      <p className="font-bold text-foreground text-sm uppercase tracking-wide">Service Level Agreement</p>
                       <p className="text-[10px] text-muted-foreground mt-0.5">
                         Goldilocks Zone Private Limited · CIN: U52290OD2026PTC053323 · Rathagadasahi, Urali, Cuttack, Odisha – 753011
                       </p>
@@ -838,12 +860,18 @@ export default function KycAgreementModal(props: KycAgreementModalProps) {
             {/* ── Footer ── */}
             <div className="px-5 py-4 border-t border-border/60 shrink-0 space-y-2">
               {agreementStep === 2 && (
-                <Button
-                  className="w-full bg-emerald-600 hover:bg-emerald-700 text-white gap-2 min-h-[52px] text-sm font-semibold shadow-sm rounded-xl"
-                  onClick={onAccept}
-                >
-                  <CheckCircle className="h-5 w-5" weight="fill" /> I Agree & Confirm
-                </Button>
+                <>
+                  {!hasScrolledAgreement && (
+                    <p className="text-[11px] text-center text-muted-foreground">Scroll through the agreement to enable confirmation</p>
+                  )}
+                  <Button
+                    className="w-full bg-emerald-600 hover:bg-emerald-700 text-white gap-2 min-h-[52px] text-sm font-semibold shadow-sm rounded-xl disabled:opacity-50 disabled:cursor-not-allowed"
+                    onClick={onAccept}
+                    disabled={!hasScrolledAgreement}
+                  >
+                    <CheckCircle className="h-5 w-5" weight="fill" /> I Agree & Confirm
+                  </Button>
+                </>
               )}
               <button onClick={onClose} className="w-full text-xs text-muted-foreground hover:text-foreground py-1 transition-colors">
                 {agreementStep === 1 ? 'Cancel' : 'Back'}

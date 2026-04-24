@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
@@ -25,7 +25,7 @@ import { feedbackPresets } from '@/lib/haptics';
 import RouteMap from '@/components/guest-booking/RouteMap';
 import KycAgreementModal from '@/components/guest-booking/KycAgreementModal';
 
-// â”€â”€ Types â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Types ────────────────────────────────────────────────────────────────────
 
 interface SenderReceiver {
   senderName: string; senderPhone: string; senderEmail: string;
@@ -41,7 +41,6 @@ interface GuestSummaryStepProps {
   selectedCourier: any;
   senderReceiver: SenderReceiver;
   onBack: () => void;
-  extractedAadhaarNumber?: string;
   aadhaarFront?: File | null;
   aadhaarBack?: File | null;
   passportIdentity?: File | null;
@@ -53,7 +52,7 @@ interface GuestSummaryStepProps {
 
 type SummaryPhase = 'review' | 'aadhaar' | 'payment' | 'success';
 
-// â”€â”€ Aadhaar validation â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Aadhaar validation ───────────────────────────────────────────────────────
 
 const verhoeffD = [
   [0,1,2,3,4,5,6,7,8,9],[1,2,3,4,0,6,7,8,9,5],[2,3,4,0,1,7,8,9,5,6],
@@ -83,7 +82,7 @@ const formatAadhaar = (v: string) => {
   return p.join(' ');
 };
 
-// â”€â”€ Pickup time logic â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Pickup time logic ────────────────────────────────────────────────────────
 
 function getPickupInfo(): { message: string; isToday: boolean } {
   const now = new Date();
@@ -106,7 +105,7 @@ function getPickupInfo(): { message: string; isToday: boolean } {
   return { message: 'Pickup will be on the next working day (Monday).', isToday: false };
 }
 
-// â”€â”€ Packing instructions â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Packing instructions ─────────────────────────────────────────────────────
 
 const packingSteps = [
   { icon: Cube, title: 'Use a sturdy box', desc: 'Choose a corrugated box that fits your items snugly. Avoid oversized boxes.' },
@@ -122,21 +121,21 @@ const documentPackingSteps = [
   { icon: Scissors, title: 'Label clearly', desc: 'Attach the shipping label on a flat surface. Ensure the address is fully visible and not covered by tape.' },
 ];
 
-// â”€â”€ Component â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Component ────────────────────────────────────────────────────────────────
 
-export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, senderReceiver, onBack, extractedAadhaarNumber, aadhaarFront, aadhaarBack, passportIdentity, passportAddress, passportUploadLater, prescriptionUploadLater, pharmacyBillUploadLater }: GuestSummaryStepProps) {
+export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, senderReceiver, onBack, aadhaarFront, aadhaarBack, passportIdentity, passportAddress, passportUploadLater, prescriptionUploadLater, pharmacyBillUploadLater }: GuestSummaryStepProps) {
   const router = useRouter();
   const { toast } = useToast();
 
   const [phase, setPhase] = useState<SummaryPhase>('review');
-  const [aadhaarInput, setAadhaarInput] = useState(extractedAadhaarNumber || '');
+  const [aadhaarInput, setAadhaarInput] = useState('');
 
-  // â”€â”€ Inline edit state for summary sections â”€â”€
+  // ── Inline edit state for summary sections ──
   type EditModal = 'pickup' | 'recipient' | 'contents' | 'weightdims' | null;
   const [editModal, setEditModal] = useState<EditModal>(null);
   const [editData, setEditData] = useState<Partial<SenderReceiver>>({});
 
-  // â”€â”€ Mutable weight/dims/items (override rateFormData after edits) â”€â”€
+  // ── Mutable weight/dims/items (override rateFormData after edits) ──
   const [editedWeightKg, setEditedWeightKg] = useState<number>(rateFormData?.weightKg ?? 0);
   const [editedLength, setEditedLength] = useState<number>(rateFormData?.lengthCm ?? 0);
   const [editedWidth, setEditedWidth] = useState<number>(rateFormData?.widthCm ?? 0);
@@ -147,7 +146,7 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
     const parts = desc.split(';').map(s => s.trim()).filter(Boolean);
     if (parts.length === 0) return [{ name: '', type: '', qty: 1, unitPrice: 0 }];
     return parts.map(p => {
-      const m = p.match(/^(.+?)\s*\((.+?)\)\s*x(\d+)\s*@\s*₹(\d+)/);
+      const m = p.match(/^(.+?)\s*\((.+?)\)\s*x(\d+)\s*@\s*?(\d+)/);
       if (m) return { name: m[1].trim(), type: m[2].trim(), qty: parseInt(m[3]), unitPrice: parseInt(m[4]) };
       return { name: p, type: '', qty: 1, unitPrice: 0 };
     });
@@ -163,7 +162,7 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
     setEditModal(section);
   };
 
-  // â”€â”€ Edit field validation â”€â”€
+  // ── Edit field validation ──
   const [editErrors, setEditErrors] = useState<Record<string, string>>({});
 
   const validateAndSaveEdit = () => {
@@ -185,7 +184,7 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
     }
     if (Object.keys(errs).length > 0) { setEditErrors(errs); return; }
 
-    // â”€â”€ Same address check across both sections â”€â”€
+    // ── Same address check across both sections ──
     const mergedData = { ...senderReceiver, ...editData };
     const sPin = (mergedData.senderPincode || '').trim();
     const rPin = (mergedData.receiverZipcode || '').trim();
@@ -216,7 +215,7 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
       if (!item.unitPrice || item.unitPrice <= 0) errs[`price_${idx}`] = 'Price is required';
     });
     if (Object.keys(errs).length > 0) { setEditErrors(errs); return; }
-    const desc = editedItems.filter(i => i.name.trim()).map(i => `${i.name} (${i.type || 'other'}) x${i.qty} @ ₹${i.unitPrice}`).join('; ');
+    const desc = editedItems.filter(i => i.name.trim()).map(i => `${i.name} (${i.type || 'other'}) x${i.qty} @ ?${i.unitPrice}`).join('; ');
     senderReceiver.contentDescription = desc;
     setEditModal(null);
     setEditErrors({});
@@ -266,8 +265,8 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
           setAdjustedPrice(newPrice);
           const diff = newPrice - oldPrice;
           setPriceAlertMsg(diff > 0
-            ? `Price increased by ₹${diff.toLocaleString('en-IN')} due to updated weight/dimensions. New total: ₹${newPrice.toLocaleString('en-IN')}.`
-            : `Price decreased by ₹${Math.abs(diff).toLocaleString('en-IN')} due to updated weight/dimensions. New total: ₹${newPrice.toLocaleString('en-IN')}.`
+            ? `Price increased by ?${diff.toLocaleString('en-IN')} due to updated weight/dimensions. New total: ?${newPrice.toLocaleString('en-IN')}.`
+            : `Price decreased by ?${Math.abs(diff).toLocaleString('en-IN')} due to updated weight/dimensions. New total: ?${newPrice.toLocaleString('en-IN')}.`
           );
         } else {
           setAdjustedPrice(null);
@@ -277,12 +276,12 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
     } catch { /* silent */ }
     finally { setRefetchingPrice(false); }
   };
-  const [formattedAadhaar, setFormattedAadhaar] = useState(extractedAadhaarNumber ? formatAadhaar(extractedAadhaarNumber) : '');
+  const [formattedAadhaar, setFormattedAadhaar] = useState('');
   const [aadhaarVerified, setAadhaarVerified] = useState(false);
   const [aadhaarLoading, setAadhaarLoading] = useState(false);
   const [aadhaarError, setAadhaarError] = useState('');
 
-  // â”€â”€ Multi-doc KYC state â”€â”€
+  // ── Multi-doc KYC state ──
   type GuestDocType = 'aadhaar' | 'pan' | 'passport' | 'voter_id';
   type KycMethod = 'digilocker' | 'sandbox_otp';
   const [selectedDocType, setSelectedDocType] = useState<GuestDocType>('aadhaar');
@@ -306,7 +305,7 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
   const [docVerified, setDocVerified] = useState(false);
   const [docVerifiedLabel, setDocVerifiedLabel] = useState('');
   const [termsAccepted, setTermsAccepted] = useState(false);
-  // â”€â”€ Agreement modal (2-step: KYC â†’ Agreement) â”€â”€
+  // ── Agreement modal (2-step: KYC → Agreement) ──
   const [showAgreementModal, setShowAgreementModal] = useState(false);
   const [agreementStep, setAgreementStep] = useState<1 | 2>(1);
   const [verifiedName, setVerifiedName] = useState('');
@@ -314,6 +313,7 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
   const [verifiedAddress, setVerifiedAddress] = useState('');
   const [verifiedDob, setVerifiedDob] = useState('');
   const [verifiedGender, setVerifiedGender] = useState('');
+  const [verifiedPhone, setVerifiedPhone] = useState('');
   const [couponCode, setCouponCode] = useState('');
   const [couponDiscount, setCouponDiscount] = useState(0);
   const [couponApplied, setCouponApplied] = useState(false);
@@ -323,7 +323,7 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
   const [trackingNumber, setTrackingNumber] = useState('');
   const [awbUrl, setAwbUrl] = useState('');
 
-  // â”€â”€ Domestic KYC document upload state â”€â”€
+  // ── Domestic KYC document upload state ──
   const [kycDocType, setKycDocType] = useState<string>('');
   const [kycDocs, setKycDocs] = useState<Record<string, { file: File; previewUrl: string }>>({});
   const [showDocPreview, setShowDocPreview] = useState(false);
@@ -332,7 +332,7 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
 
   const isDomestic = mode === 'domestic';
 
-  // â”€â”€ Abandoned booking notification â”€â”€
+  // ── Abandoned booking notification ──
   // Track whether booking was completed to avoid false positives
   const bookingCompletedRef = useRef(false);
   const abandonNotifiedRef = useRef(false);
@@ -369,7 +369,7 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
     };
   }, [notifyAbandonedBooking]);
 
-  // â”€â”€ KYC doc helpers â”€â”€
+  // ── KYC doc helpers ──
   const kycDocLabel = kycDocType === 'aadhaar' ? 'Aadhaar Card' : kycDocType === 'driving_license' ? 'Driving License' : kycDocType === 'passport' ? 'Passport' : kycDocType === 'voter_id' ? 'Voter ID Card' : '';
 
   // Current doc for selected type
@@ -409,18 +409,7 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
 
   const pickupInfo = useMemo(() => getPickupInfo(), []);
 
-  // â”€â”€ Auto-fill Aadhaar from OCR — but do NOT auto-verify, user must choose method â”€â”€
-  useEffect(() => {
-    if (extractedAadhaarNumber && !docVerified) {
-      const raw = extractedAadhaarNumber.replace(/\D/g, '');
-      if (raw.length === 12) {
-        setAadhaarInput(raw);
-        setFormattedAadhaar(formatAadhaar(raw));
-      }
-    }
-  }, [extractedAadhaarNumber]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // â”€â”€ KYC handlers â”€â”€
+  // ── KYC handlers ──
 
   const handleAadhaarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const raw = e.target.value.replace(/\D/g, '').slice(0, 12);
@@ -446,7 +435,7 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
     return true;
   };
 
-  const markVerified = (label: string, name?: string, address?: string, dob?: string, gender?: string) => {
+  const markVerified = (label: string, name?: string, address?: string, dob?: string, gender?: string, phone?: string) => {
     setDocVerified(true);
     setAadhaarVerified(true);
     setDocVerifiedLabel(label);
@@ -455,11 +444,12 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
     setVerifiedAddress(address || '');
     setVerifiedDob(dob || '');
     setVerifiedGender(gender || '');
+    setVerifiedPhone(phone || senderReceiver?.senderPhone || '');
     // Advance to agreement step
     setAgreementStep(2);
   };
 
-  // â”€â”€ DigiLocker (Aadhaar, PAN, Driving License via Cashfree) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── DigiLocker (Aadhaar, PAN, Driving License via Cashfree) ──────────────
   // DigiLocker only supports: aadhaar, pan, driving_license
   const digilockerDocType = selectedDocType === 'pan' ? 'pan' : 'aadhaar';
   const digilockerSupported = ['aadhaar', 'pan'].includes(selectedDocType);
@@ -507,7 +497,7 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
     finally { setAadhaarLoading(false); }
   }, [digilockerReferenceId, digilockerVerificationId, digilockerDocType, selectedDocType, aadhaarInput, panInput, toast]);
 
-  // â”€â”€ Sandbox OTP (Aadhaar only) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Sandbox OTP (Aadhaar only) ─────────────────────────────────────────────
   const handleSendSandboxOtp = async () => {
     if (!validateDocInput()) return;
     setAadhaarLoading(true); setAadhaarError('');
@@ -547,7 +537,7 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
   // Legacy alias
   const handleVerifyAadhaar = handleSendSandboxOtp;
 
-  // â”€â”€ Coupon handler â”€â”€
+  // ── Coupon handler ──
 
   const handleApplyCoupon = async (codeToValidate?: string) => {
     const codeToApply = (codeToValidate || couponCode).trim().toUpperCase();
@@ -564,11 +554,11 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
       const data = await res.json();
       if (data.valid) {
         setCouponCode(codeToApply);
-        // Cap discount at effectiveBasePrice so 100% coupon always gives ₹0 total
+        // Cap discount at effectiveBasePrice so 100% coupon always gives ?0 total
         const discount = Math.min(data.discountAmount || 0, effectiveBasePrice);
         setCouponDiscount(discount);
         setCouponApplied(true);
-        toast({ title: 'Coupon Applied', description: `You saved ₹${discount}` });
+        toast({ title: 'Coupon Applied', description: `You saved ?${discount}` });
       } else {
         toast({ title: 'Invalid Coupon', description: data.error || 'This coupon is not valid.', variant: 'destructive' });
       }
@@ -579,7 +569,7 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
     }
   };
 
-  // â”€â”€ Payment handler â”€â”€
+  // ── Payment handler ──
 
   const handlePayNow = async () => {
     if (!aadhaarVerified && !docVerified) {
@@ -669,7 +659,7 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
             if (pollData.paid) {
               pollingDetectedPayment = true;
               clearInterval(pollInterval);
-              // Don't update state here — wait for modal to close
+              // Don't update state here � wait for modal to close
             }
           } catch { /* ignore */ }
         }, 5000);
@@ -684,7 +674,7 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
           console.error('[GuestSummary] Cashfree checkout error:', checkoutErr);
         }
 
-        // Modal closed — safe to update React state now
+        // Modal closed � safe to update React state now
         pollingStopped = true;
         clearInterval(pollInterval);
 
@@ -710,7 +700,7 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
             setPhase('success');
             toast({ title: 'Payment Successful', description: 'Your shipment has been booked.' });
           } else if (pollingDetectedPayment) {
-            // Polling said paid but verify failed — still show success
+            // Polling said paid but verify failed � still show success
             bookingCompletedRef.current = true;
             setTrackingNumber(serverTracking);
             setAwbUrl(data.awbUrl || '');
@@ -742,7 +732,7 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
           setPhase('success');
           toast({ title: 'Booking Confirmed', description: 'Your shipment has been booked successfully.' });
         } catch {
-          // Fallback — still show success, shipment will be processed
+          // Fallback � still show success, shipment will be processed
           bookingCompletedRef.current = true;
           setTrackingNumber(serverTracking);
           setAwbUrl('');
@@ -751,7 +741,7 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
         }
       }
     } catch {
-      notifyAbandonedBooking('Payment process failed — possible gateway error or network issue.');
+      notifyAbandonedBooking('Payment process failed � possible gateway error or network issue.');
       toast({ title: 'Error', description: 'Payment failed. Please try again.', variant: 'destructive' });
     } finally {
       setPaymentLoading(false);
@@ -763,7 +753,7 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
     toast({ title: 'Copied', description: 'Tracking number copied to clipboard.' });
   };
 
-  // â”€â”€ Rate breakdown for international (must be before any conditional return to satisfy Rules of Hooks) â”€â”€
+  // ── Rate breakdown for international (must be before any conditional return to satisfy Rules of Hooks) ──
   const rateBreakdown = useMemo(() => {
     if (mode !== 'international' || !rateFormData?.destinationCountry) return null;
     try {
@@ -785,13 +775,13 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
   const frontThumb = useMemo(() => aadhaarFront ? URL.createObjectURL(aadhaarFront) : null, [aadhaarFront]);
   const backThumb = useMemo(() => aadhaarBack ? URL.createObjectURL(aadhaarBack) : null, [aadhaarBack]);
 
-  // Dimensions — use edited values
+  // Dimensions � use edited values
   const dims = { l: editedLength, w: editedWidth, h: editedHeight };
   const weight = rateFormData?.weightGrams ? `${rateFormData.weightGrams}g` : editedWeightKg ? `${editedWeightKg} kg` : '';
 
-  // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+  // ═══════════════════════════════════════════════════════════════════════════
   // SUCCESS PHASE
-  // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+  // ═══════════════════════════════════════════════════════════════════════════
 
   if (phase === 'success') {
     return (
@@ -859,7 +849,7 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
           </div>
         </motion.div>
 
-        {/* â”€â”€ Documents Required (International medicine & gift only) â”€â”€ */}
+        {/* ── Documents Required (International medicine & gift only) ── */}
         {mode === 'international' && shipmentType !== 'document' && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -955,21 +945,21 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
           </h3>
           <ul className="space-y-1.5 text-xs text-muted-foreground">
             {(isDomestic && rateFormData?.shipmentType === 'document' ? [
-              'Use a rigid envelope or stiff cardboard folder — no bending.',
+              'Use a rigid envelope or stiff cardboard folder � no bending.',
               'Seal in a zip-lock bag first to protect from moisture.',
               'Tape all edges firmly. Attach label on a flat, visible surface.',
             ] : isDomestic && rateFormData?.shipmentType === 'laptop' ? [
-              'Power off the laptop completely — not sleep mode.',
+              'Power off the laptop completely � not sleep mode.',
               'Remove the charger and accessories; pack them separately in a padded pouch.',
               'Wrap the laptop in anti-static bubble wrap (at least 3 layers).',
-              'Place in a rigid box with foam padding on all 6 sides — no movement inside.',
+              'Place in a rigid box with foam padding on all 6 sides � no movement inside.',
               'Seal all seams with strong tape. Attach the AWB label on the top surface.',
             ] : [
               'Use a sturdy corrugated box that fits your items snugly.',
               'Wrap each item individually in bubble wrap; fill gaps with packing material.',
               'For liquids/medicines: seal in zip-lock bags, then wrap in bubble wrap.',
               'Seal all seams with strong tape using the H-taping method.',
-              'Attach the AWB label on the largest flat surface — do not cover the barcode.',
+              'Attach the AWB label on the largest flat surface � do not cover the barcode.',
             ]).map((tip, i) => (
               <li key={i} className="flex gap-2">
                 <span className="mt-0.5 w-3.5 h-3.5 rounded-full bg-coke-red/10 text-coke-red flex items-center justify-center shrink-0 text-[9px] font-bold">{i + 1}</span>
@@ -993,13 +983,13 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
   }
 
 
-  // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+  // ═══════════════════════════════════════════════════════════════════════════
   // REVIEW PHASE (default)
-  // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+  // ═══════════════════════════════════════════════════════════════════════════
 
   return (
     <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-5">
-      {/* â”€â”€ Booking Summary â”€â”€ */}
+      {/* ── Booking Summary ── */}
       <div className="bg-card rounded-xl border border-border overflow-hidden">
         <div className="bg-muted/50 px-4 sm:px-5 py-3 border-b border-border">
           <h2 className="font-semibold text-sm sm:text-base flex items-center gap-2">
@@ -1013,14 +1003,14 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
             <div className="min-w-0">
               <p className="font-semibold text-base sm:text-lg truncate">{courierName}</p>
               <p className="text-xs sm:text-sm text-muted-foreground capitalize">
-                {mode} Â· {shipmentType}
+                {mode} · {shipmentType}
                 {destinationCountryInfo && (
-                  <span> Â· {destinationCountryInfo.flag} {destinationCountryInfo.name}</span>
+                  <span> · {destinationCountryInfo.flag} {destinationCountryInfo.name}</span>
                 )}
               </p>
             </div>
             <div className="sm:text-right shrink-0">
-              <p className="text-xl sm:text-2xl font-bold">₹{effectiveBasePrice.toLocaleString('en-IN')}</p>
+              <p className="text-xl sm:text-2xl font-bold">?{effectiveBasePrice.toLocaleString('en-IN')}</p>
               <p className="text-xs text-muted-foreground">all-inclusive</p>
             </div>
           </div>
@@ -1075,19 +1065,19 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
               </div>
               <div>
                 <p className="text-xs text-muted-foreground mb-1 flex items-center gap-1">
-                  <Airplane className="h-3 w-3" /> Receiver {destinationCountryInfo && <span>Â· {destinationCountryInfo.flag} {destinationCountryInfo.name}</span>}
+                  <Airplane className="h-3 w-3" /> Receiver {destinationCountryInfo && <span>· {destinationCountryInfo.flag} {destinationCountryInfo.name}</span>}
                 </p>
                 <p className="text-sm font-medium">{senderReceiver.receiverName}</p>
                 <p className="text-xs text-muted-foreground">{senderReceiver.receiverAddress}</p>
                 <p className="text-xs text-muted-foreground">{senderReceiver.receiverCity} - {senderReceiver.receiverZipcode}</p>
-                <p className="text-xs text-muted-foreground">{senderReceiver.receiverPhone} Â· {senderReceiver.receiverEmail}</p>
+                <p className="text-xs text-muted-foreground">{senderReceiver.receiverPhone} · {senderReceiver.receiverEmail}</p>
               </div>
             </div>
           )}
 
           <div className="h-px bg-border" />
 
-          {/* Package + Dimensions — content left, weight/dims right */}
+          {/* Package + Dimensions � content left, weight/dims right */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <p className="text-xs text-muted-foreground mb-1 flex items-center gap-1 justify-between">
@@ -1104,7 +1094,7 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
               {weight && <p className="text-sm font-medium">{weight}</p>}
               {dims && (
                 <>
-                  <p className="text-xs text-muted-foreground mt-0.5">{dims.l} × {dims.w} × {dims.h} cm</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">{dims.l} � {dims.w} � {dims.h} cm</p>
                   {dims.l && dims.w && dims.h && (rateFormData?.weightGrams || editedWeightKg) && (
                     <p className="text-xs text-muted-foreground mt-0.5">Vol. weight: {((dims.l * dims.w * dims.h) / 5000).toFixed(1)} kg</p>
                   )}
@@ -1137,7 +1127,7 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
         </div>
       </div>
 
-      {/* â”€â”€ Route Map â”€â”€ */}
+      {/* ── Route Map ── */}
       <RouteMap
         pickupAddress={senderReceiver.senderAddress}
         pickupCity={senderReceiver.senderCity}
@@ -1150,11 +1140,11 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
         mode={mode}
       />
 
-      {/* â”€â”€ Price adjustment alert â”€â”€ */}
+      {/* ── Price adjustment alert ── */}
       {refetchingPrice && (
         <div className="rounded-xl border border-blue-200 bg-blue-50 dark:bg-blue-950/20 p-4 flex items-center gap-3">
           <CircleNotch className="h-5 w-5 text-blue-600 animate-spin shrink-0" />
-          <p className="text-sm text-blue-800 dark:text-blue-300">Recalculating price based on updated weight/dimensions…</p>
+          <p className="text-sm text-blue-800 dark:text-blue-300">Recalculating price based on updated weight/dimensions�</p>
         </div>
       )}
       {!refetchingPrice && priceAlertMsg && (
@@ -1163,14 +1153,14 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
           <Warning className={`h-5 w-5 shrink-0 mt-0.5 ${adjustedPrice && adjustedPrice > basePrice ? 'text-amber-600' : 'text-candlestick-green'}`} weight="fill" />
           <div className="space-y-0.5">
             <p className={`text-sm font-semibold ${adjustedPrice && adjustedPrice > basePrice ? 'text-amber-900 dark:text-amber-200' : 'text-candlestick-green'}`}>
-              {adjustedPrice && adjustedPrice > basePrice ? 'Price Updated — Additional Charge' : 'Price Updated — Reduced Charge'}
+              {adjustedPrice && adjustedPrice > basePrice ? 'Price Updated � Additional Charge' : 'Price Updated � Reduced Charge'}
             </p>
             <p className="text-xs text-muted-foreground">{priceAlertMsg}</p>
           </div>
         </motion.div>
       )}
 
-      {/* â”€â”€ Passport Upload Later reminder (medicine flow) â”€â”€ */}
+      {/* ── Passport Upload Later reminder (medicine flow) ── */}
       {passportUploadLater && (
         <div className="rounded-xl border border-amber-200 dark:border-amber-800/40 bg-amber-50 dark:bg-amber-950/20 p-4 flex items-start gap-3">
           <Clock className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" weight="duotone" />
@@ -1181,7 +1171,7 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
         </div>
       )}
 
-      {/* â”€â”€ KYC verified status (shown after agreement modal completes) â”€â”€ */}
+      {/* ── KYC verified status (shown after agreement modal completes) ── */}
       {(aadhaarVerified || docVerified) && (
         <div className="flex items-center gap-3 px-4 py-3 rounded-xl border border-candlestick-green/30 bg-candlestick-green/5">
           <CheckCircle className="h-5 w-5 text-candlestick-green shrink-0" weight="fill" />
@@ -1190,20 +1180,20 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
             <p className="text-xs text-muted-foreground font-mono">{docVerifiedLabel}</p>
           </div>
           <button className="text-xs text-muted-foreground hover:text-foreground underline shrink-0"
-            onClick={() => { setDocVerified(false); setAadhaarVerified(false); setDocVerifiedLabel(''); setVerifiedName(''); setVerifiedAddress(''); setVerifiedDob(''); setVerifiedGender(''); setTermsAccepted(false); setSandboxStep('idle'); setDigilockerStep('idle'); setAadhaarError(''); }}>
+            onClick={() => { setDocVerified(false); setAadhaarVerified(false); setDocVerifiedLabel(''); setVerifiedName(''); setVerifiedAddress(''); setVerifiedDob(''); setVerifiedGender(''); setVerifiedPhone(''); setTermsAccepted(false); setSandboxStep('idle'); setDigilockerStep('idle'); setAadhaarError(''); }}>
             Change
           </button>
         </div>
       )}
 
-      {/* â”€â”€ Coupon Code â”€â”€ */}
+      {/* ── Coupon Code ── */}
       {couponApplied ? (
         <div className="bg-card rounded-xl border border-candlestick-green/30 p-5">
           <div className="flex items-center gap-2 p-2.5 rounded-lg bg-candlestick-green/5 border border-candlestick-green/20">
             <CheckCircle className="h-5 w-5 text-candlestick-green" weight="fill" />
             <div className="flex-1">
               <p className="text-sm font-medium text-candlestick-green">{couponCode.toUpperCase()} Applied</p>
-              <p className="text-xs text-muted-foreground">You saved ₹{couponDiscount.toLocaleString('en-IN')}</p>
+              <p className="text-xs text-muted-foreground">You saved ?{couponDiscount.toLocaleString('en-IN')}</p>
             </div>
             <button
               onClick={() => {
@@ -1220,7 +1210,7 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
         </div>
       ) : (
         <div className="bg-card rounded-xl border border-border p-4 space-y-3">
-          {/* WELCOME10 banner — only show if not in manual mode */}
+          {/* WELCOME10 banner � only show if not in manual mode */}
           {!showManualCoupon && (
             <div className="flex items-center gap-3">
               <div className="flex-1 min-w-0">
@@ -1275,43 +1265,43 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
                 onClick={() => { setShowManualCoupon(false); setCouponCode(''); }}
                 className="text-xs text-muted-foreground hover:text-foreground underline underline-offset-2 transition-colors"
               >
-                â† Back
+                ← Back
               </button>
             </div>
           )}
         </div>
       )}
 
-      {/* â”€â”€ Price Breakdown â”€â”€ */}
+      {/* ── Price Breakdown ── */}
       <div className="bg-card rounded-xl border border-border p-5 space-y-2">
         {/* Show detailed breakdown for international if available */}
         {rateBreakdown?.breakdown ? (
           rateBreakdown.breakdown.map(item => (
             <div key={item.label} className="flex justify-between text-sm">
               <span className="text-muted-foreground">{item.label}</span>
-              <span>₹{item.amount.toLocaleString('en-IN')}</span>
+              <span>?{item.amount.toLocaleString('en-IN')}</span>
             </div>
           ))
         ) : (
           <div className="flex justify-between text-sm">
             <span className="text-muted-foreground">Shipping ({courierName})</span>
-            <span>₹{basePrice.toLocaleString('en-IN')}</span>
+            <span>?{basePrice.toLocaleString('en-IN')}</span>
           </div>
         )}
         {couponDiscount > 0 && (
           <div className="flex justify-between text-sm text-candlestick-green">
             <span>Coupon Discount</span>
-            <span>-₹{couponDiscount.toLocaleString('en-IN')}</span>
+            <span>-?{couponDiscount.toLocaleString('en-IN')}</span>
           </div>
         )}
         <div className="h-px bg-border my-1" />
         <div className="flex justify-between font-bold text-lg">
           <span>Total</span>
-          <span>₹{finalPrice.toLocaleString('en-IN')}</span>
+          <span>?{finalPrice.toLocaleString('en-IN')}</span>
         </div>
       </div>
 
-      {/* â”€â”€ Terms & Conditions â”€â”€ */}
+      {/* ── Terms & Conditions ── */}
       <div
         className={`flex items-start gap-3 p-4 rounded-xl border cursor-pointer transition-all ${termsAccepted ? 'border-candlestick-green/40 bg-candlestick-green/5' : 'border-border bg-card hover:border-coke-red/30'}`}
         onClick={() => { if (!termsAccepted) { setAgreementStep(docVerified ? 2 : 1); setShowAgreementModal(true); } else setTermsAccepted(false); }}
@@ -1325,7 +1315,7 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
         </div>
       </div>
 
-      {/* â”€â”€ Pay Button â”€â”€ */}
+      {/* ── Pay Button ── */}
       <Button
         onClick={() => { feedbackPresets.tap(); handlePayNow(); }}
         disabled={paymentLoading || !termsAccepted}
@@ -1336,7 +1326,7 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
         ) : (
           <>
             <ShieldCheck className="h-5 w-5 shrink-0" weight="bold" />
-            <span className="truncate">Complete Booking — ₹{finalPrice.toLocaleString('en-IN')}</span>
+            <span className="truncate">Complete Booking � ?{finalPrice.toLocaleString('en-IN')}</span>
           </>
         )}
       </Button>
@@ -1345,7 +1335,7 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
         <p className="text-xs text-center text-muted-foreground">Click the checkbox above to verify your identity and agree to the terms before paying.</p>
       )}
 
-      {/* â”€â”€ Full-screen Document Preview Modal â”€â”€ */}
+      {/* ── Full-screen Document Preview Modal ── */}
       <AnimatePresence>
         {showDocPreview && kycDocPreviewUrl && (
           <motion.div
@@ -1376,13 +1366,13 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
                   className="w-full h-auto max-h-[80vh] object-contain"
                 />
               </div>
-              <p className="text-center text-white/60 text-xs mt-3">{kycDocLabel} Â· Tap outside to close</p>
+              <p className="text-center text-white/60 text-xs mt-3">{kycDocLabel} · Tap outside to close</p>
             </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* â”€â”€ Edit Modals â”€â”€ */}
+      {/* ── Edit Modals ── */}
       <AnimatePresence>
         {editModal && (
           <motion.div
@@ -1504,13 +1494,13 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
                           {editErrors[`qty_${idx}`] && <p className="text-[10px] text-destructive mt-0.5">{editErrors[`qty_${idx}`]}</p>}
                         </div>
                         <div>
-                          <label className="text-[10px] font-medium">Unit Price (₹) *</label>
+                          <label className="text-[10px] font-medium">Unit Price (?) *</label>
                           <Input type="number" inputMode="numeric" value={item.unitPrice || ''} onChange={(e) => { const a = [...editedItems]; a[idx].unitPrice = parseInt(e.target.value) || 0; setEditedItems(a); setEditErrors(er => ({ ...er, [`price_${idx}`]: '' })); }} placeholder="Enter value" className={`h-9 mt-0.5 text-sm ${editErrors[`price_${idx}`] ? 'border-destructive' : ''}`} />
                           {editErrors[`price_${idx}`] && <p className="text-[10px] text-destructive mt-0.5">{editErrors[`price_${idx}`]}</p>}
                         </div>
                       </div>
                       {item.name && item.unitPrice > 0 && (
-                        <p className="text-[11px] text-muted-foreground text-right">Item total: ₹{(item.qty * item.unitPrice).toLocaleString('en-IN')}</p>
+                        <p className="text-[11px] text-muted-foreground text-right">Item total: ?{(item.qty * item.unitPrice).toLocaleString('en-IN')}</p>
                       )}
                     </div>
                   ))}
@@ -1521,7 +1511,7 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
                   {editedItems.length > 0 && (
                     <div className="flex justify-between text-sm font-semibold border-t border-border pt-2">
                       <span>Total Declared Value</span>
-                      <span>₹{editedItems.reduce((s, i) => s + i.qty * i.unitPrice, 0).toLocaleString('en-IN')}</span>
+                      <span>?{editedItems.reduce((s, i) => s + i.qty * i.unitPrice, 0).toLocaleString('en-IN')}</span>
                     </div>
                   )}
                 </div>
@@ -1574,9 +1564,9 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
         )}
       </AnimatePresence>
 
-      {/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+      {/* ══════════════════════════════════════════════════════════════
           2-STEP AGREEMENT MODAL (Revamped)
-      â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
+      ══════════════════════════════════════════════════════════════ */}
       <KycAgreementModal
         show={showAgreementModal}
         onClose={() => setShowAgreementModal(false)}
@@ -1623,12 +1613,13 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
         digilockerSupported={digilockerSupported}
         handleStartDigiLocker={handleStartDigiLocker}
         handleCompleteDigiLocker={handleCompleteDigiLocker}
-        resetVerification={() => { setDocVerified(false); setAadhaarVerified(false); setDocVerifiedLabel(''); setVerifiedName(''); setVerifiedAddress(''); setVerifiedDob(''); setVerifiedGender(''); setSandboxStep('idle'); setDigilockerStep('idle'); setAadhaarError(''); }}
+        resetVerification={() => { setDocVerified(false); setAadhaarVerified(false); setDocVerifiedLabel(''); setVerifiedName(''); setVerifiedAddress(''); setVerifiedDob(''); setVerifiedGender(''); setVerifiedPhone(''); setSandboxStep('idle'); setDigilockerStep('idle'); setAadhaarError(''); }}
         senderReceiver={senderReceiver}
         selectedCourier={selectedCourier}
         finalPrice={finalPrice}
+        verifiedPhone={verifiedPhone}
         onAccept={() => { setTermsAccepted(true); setShowAgreementModal(false); feedbackPresets.tap(); }}
-        onKycFormVerified={(label, name) => { setDocVerified(true); setAadhaarVerified(true); setDocVerifiedLabel(label); setVerifiedName(name || senderReceiver?.senderName || ''); setVerifiedDocId(label); setAgreementStep(2); }}
+        onKycFormVerified={(label, name, phone) => { setDocVerified(true); setAadhaarVerified(true); setDocVerifiedLabel(label); setVerifiedName(name || senderReceiver?.senderName || ''); setVerifiedDocId(label); setVerifiedPhone(phone || senderReceiver?.senderPhone || ''); setAgreementStep(2); }}
       />
 
     </motion.div>
