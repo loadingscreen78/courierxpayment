@@ -86,12 +86,12 @@ export function DomesticCourierCard({
 
       {/* Top row: logo + name + mode */}
       <div className="flex items-center gap-3 mb-3">
-        <div className="w-12 h-12 rounded-xl bg-white border border-border/60 flex items-center justify-center shrink-0 overflow-hidden p-1">
+        <div className="w-16 h-16 rounded-xl bg-white border border-border/60 flex items-center justify-center shrink-0 overflow-hidden p-1.5 shadow-sm">
           {logo ? (
             <img src={logo} alt={courier.courier_name} className="w-full h-full object-contain" />
           ) : (
             <div className="w-full h-full flex items-center justify-center bg-muted rounded-lg">
-              <ModeIcon size={22} weight="bold" className="text-muted-foreground" />
+              <ModeIcon size={26} weight="bold" className="text-muted-foreground" />
             </div>
           )}
         </div>

@@ -424,7 +424,8 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
     setDocInputError('');
     if (selectedDocType === 'aadhaar') {
       if (aadhaarInput.length !== 12) { setDocInputError('Enter a valid 12-digit Aadhaar number'); return false; }
-      if (!validateVerhoeff(aadhaarInput)) { setDocInputError('Invalid Aadhaar number (checksum failed)'); return false; }
+      // Verhoeff checksum — soft warning only, don't block
+      if (!validateVerhoeff(aadhaarInput)) { setDocInputError('Aadhaar number may be invalid — please double-check and try again'); return false; }
     } else if (selectedDocType === 'pan') {
       if (!/^[A-Z]{5}[0-9]{4}[A-Z]$/.test(panInput.toUpperCase())) { setDocInputError('Invalid PAN format (e.g. ABCDE1234F)'); return false; }
     } else if (selectedDocType === 'passport') {

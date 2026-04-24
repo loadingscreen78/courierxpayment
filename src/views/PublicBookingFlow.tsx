@@ -1857,7 +1857,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                               {(() => {
                                 const logo = getCourierLogo(option.carrier);
                                 return (
-                                  <div className="w-12 h-12 rounded-xl bg-white border border-border/60 flex items-center justify-center shrink-0 overflow-hidden p-1">
+                                  <div className="w-14 h-14 rounded-xl bg-white border border-border/60 flex items-center justify-center shrink-0 overflow-hidden p-1.5 shadow-sm">
                                     {logo ? (
                                       <img src={logo} alt={option.carrier} className="w-full h-full object-contain" />
                                     ) : (
@@ -2355,7 +2355,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                                     <Input
                                       {...field}
                                       type="email"
-                                      placeholder="sender@email.com"
+                                      placeholder="john@email.com"
                                       className={`h-11 flex-1 ${emailOtpState === 'verified' ? 'border-candlestick-green bg-candlestick-green/5' : ''}`}
                                       readOnly={emailOtpState === 'verified'}
                                       onChange={(e) => {
@@ -2477,7 +2477,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                             <FormField control={detailsForm.control} name="senderPhone" render={({ field }) => (
                               <FormItem>
                                 <FormLabel>Phone</FormLabel>
-                                <FormControl><Input {...field} placeholder="+91 98765 43210" className="h-11" /></FormControl>
+                                <FormControl><Input {...field} placeholder="+91 XXXXX XXXXX" className="h-11" /></FormControl>
                                 <FormMessage />
                               </FormItem>
                             )} />
@@ -2518,7 +2518,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                               <FormField control={detailsForm.control} name="senderPhone" render={({ field }) => (
                                 <FormItem>
                                   <FormLabel>Mobile Number</FormLabel>
-                                  <FormControl><Input {...field} placeholder="+91 98765 43210" className="h-11" /></FormControl>
+                                  <FormControl><Input {...field} placeholder="+91 XXXXX XXXXX" className="h-11" /></FormControl>
                                   <FormMessage />
                                 </FormItem>
                               )} />
@@ -2529,7 +2529,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                             <FormField control={detailsForm.control} name="senderEmail" render={({ field }) => (
                               <FormItem>
                                 <FormLabel>Email <span className="text-muted-foreground font-normal">(optional)</span></FormLabel>
-                                <FormControl><Input {...field} type="email" placeholder="sender@email.com" className="h-11" /></FormControl>
+                                <FormControl><Input {...field} type="email" placeholder="john@email.com" className="h-11" /></FormControl>
                                 <FormMessage />
                               </FormItem>
                             )} />
@@ -2570,7 +2570,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                               <Input
                                 value={pickupPhone}
                                 onChange={e => { setPickupPhone(e.target.value); setPickupPhoneManuallyEdited(true); }}
-                                placeholder="+91 98765 43210"
+                                placeholder="+91 XXXXX XXXXX"
                                 className="h-11"
                               />
                               <p className="text-[11px] text-muted-foreground">Enter the number where our pickup agent should call. Defaults to your shipper number — edit if different.</p>
@@ -2666,7 +2666,7 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
                             )} />
                           </div>
                           <FormField control={detailsForm.control} name="receiverEmail" render={({ field }) => (
-                            <FormItem><FormLabel>Email <span className="text-muted-foreground font-normal">(optional)</span></FormLabel><FormControl><Input {...field} type="email" placeholder="receiver@email.com" className="h-11" /></FormControl><FormMessage /></FormItem>
+                            <FormItem><FormLabel>Email <span className="text-muted-foreground font-normal">(optional)</span></FormLabel><FormControl><Input {...field} type="email" placeholder="john@email.com" className="h-11" /></FormControl><FormMessage /></FormItem>
                           )} />
                           <FormField control={detailsForm.control} name="receiverAddress" render={({ field }) => (
                             <FormItem>

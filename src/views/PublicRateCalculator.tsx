@@ -323,12 +323,12 @@ const DomCourierCard = ({ courier, isSelected, onSelect, index, onBook }: {
 
       {/* Logo + name row */}
       <div className="flex items-center gap-3 mb-3">
-        <div className="w-11 h-11 rounded-xl bg-white border border-border/60 flex items-center justify-center shrink-0 overflow-hidden p-1">
+        <div className="w-14 h-14 rounded-xl bg-white border border-border/60 flex items-center justify-center shrink-0 overflow-hidden p-1.5 shadow-sm">
           {logo ? (
             <img src={logo} alt={courier.courier_name} className="w-full h-full object-contain" />
           ) : (
             <div className="w-full h-full flex items-center justify-center bg-muted rounded-lg">
-              <ModeIcon size={20} weight="bold" className="text-muted-foreground" />
+              <ModeIcon size={22} weight="bold" className="text-muted-foreground" />
             </div>
           )}
         </div>
@@ -403,7 +403,7 @@ const CarrierCard = ({ option, isSelected, onSelect, index }: {
 
       {/* Logo + name row */}
       <div className="flex items-center gap-3 mb-4">
-        <div className="w-14 h-14 rounded-2xl bg-white border border-border/60 flex items-center justify-center shrink-0 overflow-hidden p-1.5">
+        <div className="w-16 h-16 rounded-2xl bg-white border border-border/60 flex items-center justify-center shrink-0 overflow-hidden p-2 shadow-sm">
           {logo ? (
             <img src={logo} alt={info.name} className="w-full h-full object-contain" />
           ) : (

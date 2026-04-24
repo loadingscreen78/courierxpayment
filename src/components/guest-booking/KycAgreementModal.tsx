@@ -440,6 +440,11 @@ export default function KycAgreementModal(props: KycAgreementModalProps) {
                                 value={formattedAadhaar}
                                 onChange={handleAadhaarChange}
                               />
+                              {docInputError && (
+                                <p className="text-xs text-red-600 flex items-center gap-1.5">
+                                  <Warning className="h-3.5 w-3.5 shrink-0" weight="fill" /> {docInputError}
+                                </p>
+                              )}
                             </div>
 
                             {sandboxStep === 'idle' && (
