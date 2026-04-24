@@ -12,6 +12,7 @@ import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
+import { sendFirebaseOtp, verifyFirebaseOtp } from '@/lib/firebase/phoneAuth';
 
 const RESEND_SECONDS = 120;
 
@@ -187,19 +188,9 @@ function ConfirmContent() {
       return;
     }
     setOtpError('');
-    try {
-      const res = await fetch('/api/auth/phone-otp/send', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone: `+91${activePhone}` }),
-      });
-      const json = await res.json();
-      if (!res.ok || !json.success) {
-        toast({ title: 'Error', description: json.error || 'Failed to send OTP', variant: 'destructive' });
-        return;
-      }
-    } catch {
-      toast({ title: 'Error', description: 'Failed to send OTP', variant: 'destructive' });
+    const result = await sendFirebaseOtp(`+91${activePhone}`);
+    if (!result.success) {
+      toast({ title: 'Error', description: result.error || 'Failed to send OTP', variant: 'destructive' });
       return;
     }
     setShowOTP(true);
@@ -207,19 +198,9 @@ function ConfirmContent() {
 
   const handleOTPVerify = async (otp: string) => {
     setOtpError('');
-    try {
-      const res = await fetch('/api/auth/phone-otp/verify', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone: `+91${activePhone}`, code: otp }),
-      });
-      const json = await res.json();
-      if (!json.success) {
-        setOtpError(json.error || 'Invalid OTP. Please try again.');
-        return;
-      }
-    } catch {
-      setOtpError('OTP verification failed. Please try again.');
+    const result = await verifyFirebaseOtp(otp);
+    if (!result.success) {
+      setOtpError(result.error || 'Invalid OTP. Please try again.');
       return;
     }
     setShowOTP(false);
@@ -228,13 +209,7 @@ function ConfirmContent() {
 
   const handleOTPResend = async () => {
     setOtpError('');
-    try {
-      await fetch('/api/auth/phone-otp/send', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone: `+91${activePhone}` }),
-      });
-    } catch { /* silent */ }
+    await sendFirebaseOtp(`+91${activePhone}`);
   };
 
   // ── Verifying phase ──
@@ -309,6 +284,9 @@ function ConfirmContent() {
   // ── Success phase ──
   return (
     <div className="min-h-screen bg-background">
+      {/* Invisible reCAPTCHA container — required by Firebase Phone Auth */}
+      <div id="recaptcha-container" />
+
       <AnimatePresence>
         {showOTP && (
           <OTPModal
@@ -421,19 +399,9 @@ function ConfirmContent() {
                       disabled={manualPhone.length !== 10}
                       onClick={async () => {
                         setShowManualPhone(false);
-                        try {
-                          const res = await fetch('/api/auth/phone-otp/send', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ phone: `+91${manualPhone}` }),
-                          });
-                          const json = await res.json();
-                          if (!res.ok || !json.success) {
-                            toast({ title: 'Error', description: json.error || 'Failed to send OTP', variant: 'destructive' });
-                            return;
-                          }
-                        } catch {
-                          toast({ title: 'Error', description: 'Failed to send OTP', variant: 'destructive' });
+                        const result = await sendFirebaseOtp(`+91${manualPhone}`);
+                        if (!result.success) {
+                          toast({ title: 'Error', description: result.error || 'Failed to send OTP', variant: 'destructive' });
                           return;
                         }
                         setShowOTP(true);
