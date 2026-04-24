@@ -448,8 +448,8 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
 
   // ── DigiLocker (Aadhaar, PAN, Driving License via Cashfree) ──────────────
   // DigiLocker only supports: aadhaar, pan, driving_license
-  const digilockerDocType = selectedDocType === 'pan' ? 'pan' : selectedDocType === 'driving_license' ? 'driving_license' : 'aadhaar';
-  const digilockerSupported = ['aadhaar', 'pan', 'driving_license'].includes(selectedDocType);
+  const digilockerDocType = selectedDocType === 'pan' ? 'pan' : 'aadhaar';
+  const digilockerSupported = ['aadhaar', 'pan'].includes(selectedDocType);
 
   const handleStartDigiLocker = async () => {
     if (!validateDocInput()) return;
