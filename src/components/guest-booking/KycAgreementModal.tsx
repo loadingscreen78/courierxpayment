@@ -818,16 +818,17 @@ export default function KycAgreementModal(props: KycAgreementModalProps) {
                           <p className="font-medium mt-0.5">{verifiedGender === 'M' ? 'Male' : verifiedGender === 'F' ? 'Female' : verifiedGender}</p>
                         </div>
                       )}
-                      <div>
-                        <span className="text-muted-foreground">Phone</span>
-                        <p className="font-medium mt-0.5">{
-                          (() => {
-                            const ph = verifiedPhone || senderReceiver?.senderPhone || '';
-                            const digits = ph.replace(/^\+91/, '').replace(/\D/g, '').slice(-10);
-                            return digits.length === 10 ? `+91 ${digits}` : '—';
-                          })()
-                        }</p>
-                      </div>
+                      {verifiedPhone && (
+                        <div>
+                          <span className="text-muted-foreground">Phone</span>
+                          <p className="font-medium mt-0.5">{
+                            (() => {
+                              const digits = verifiedPhone.replace(/^\+91/, '').replace(/\D/g, '').slice(-10);
+                              return digits.length === 10 ? `+91 ${digits}` : '—';
+                            })()
+                          }</p>
+                        </div>
+                      )}
                       {senderReceiver?.senderEmail && (
                         <div className="col-span-2">
                           <span className="text-muted-foreground">Email</span>
