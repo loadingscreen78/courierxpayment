@@ -2248,30 +2248,75 @@ export default function PublicBookingFlow({ mode }: PublicBookingFlowProps) {
               );
             })()}
 
-            {/* International: simple courier summary */}
-            {selectedCourier && isInternational && (
-              <div className="bg-muted/50 rounded-xl border border-border p-4 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  {(() => {
-                    const logo = getCourierLogo((selectedCourier as any).carrier || (selectedCourier as any).courier_name);
-                    return (
-                      <div className="w-10 h-10 rounded-lg bg-white border border-border/60 flex items-center justify-center shrink-0 overflow-hidden p-1">
-                        {logo ? (
-                          <img src={logo} alt={(selectedCourier as any).carrier} className="w-full h-full object-contain" />
-                        ) : (
-                          <Truck className="h-5 w-5 text-muted-foreground" weight="bold" />
-                        )}
+            {/* International: full courier summary matching domestic format */}
+            {selectedCourier && isInternational && (() => {
+              const intl = rateFormData as InternationalRateValues;
+              const weightKg = intl?.weightGrams ? Number((intl.weightGrams / 1000).toFixed(2)) : 0;
+              const l = intl?.lengthCm ?? 0;
+              const w = intl?.widthCm ?? 0;
+              const h = intl?.heightCm ?? 0;
+              const volWeight = l && w && h ? Number(((l * w * h) / 5000).toFixed(2)) : 0;
+              const chargeableWeight = Math.max(weightKg, volWeight);
+              const shipTypeLabel = intl?.shipmentType === 'medicine' ? 'Medicine' : intl?.shipmentType === 'document' ? 'Document' : 'Gift / Parcel';
+              const courierName = (selectedCourier as any).carrier || (selectedCourier as any).courier_name || '';
+              const price = (selectedCourier as any).price || (selectedCourier as any).customer_price;
+              return (
+                <div className="rounded-xl border border-border bg-muted/30 overflow-hidden">
+                  {/* Courier + price row */}
+                  <div className="flex items-center justify-between px-4 py-3 border-b border-border/60">
+                    <div className="flex items-center gap-3">
+                      {(() => {
+                        const logo = getCourierLogo(courierName);
+                        return (
+                          <div className="w-10 h-10 rounded-lg bg-white border border-border/60 flex items-center justify-center shrink-0 overflow-hidden p-1">
+                            {logo ? (
+                              <img src={logo} alt={courierName} className="w-full h-full object-contain" />
+                            ) : (
+                              <Truck className="h-5 w-5 text-muted-foreground" weight="bold" />
+                            )}
+                          </div>
+                        );
+                      })()}
+                      <div>
+                        <p className="text-xs text-muted-foreground">Selected Courier</p>
+                        <p className="font-semibold text-sm">{courierName}</p>
                       </div>
-                    );
-                  })()}
-                  <div>
-                    <p className="text-sm text-muted-foreground">Selected Courier</p>
-                    <p className="font-semibold">{(selectedCourier as any).carrier || (selectedCourier as any).courier_name}</p>
+                    </div>
+                    <p className="text-xl font-bold text-emerald-600">₹{price?.toLocaleString('en-IN')}</p>
+                  </div>
+                  {/* Shipment details grid */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-px bg-border/40">
+                    <div className="bg-card px-3 py-2.5">
+                      <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Type</p>
+                      <p className="text-xs font-semibold mt-0.5">{shipTypeLabel}</p>
+                    </div>
+                    <div className="bg-card px-3 py-2.5">
+                      <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Actual Weight</p>
+                      <p className="text-xs font-semibold mt-0.5">{weightKg} kg</p>
+                    </div>
+                    {l && w && h ? (
+                      <>
+                        <div className="bg-card px-3 py-2.5">
+                          <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Dimensions</p>
+                          <p className="text-xs font-semibold mt-0.5">{l}×{w}×{h} cm</p>
+                        </div>
+                        <div className="bg-card px-3 py-2.5">
+                          <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Vol. / Chargeable</p>
+                          <p className="text-xs font-semibold mt-0.5">
+                            {volWeight} kg / <span className={chargeableWeight > weightKg ? 'text-amber-600' : ''}>{chargeableWeight} kg</span>
+                          </p>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="bg-card px-3 py-2.5 col-span-2">
+                        <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Chargeable Weight</p>
+                        <p className="text-xs font-semibold mt-0.5">{chargeableWeight} kg</p>
+                      </div>
+                    )}
                   </div>
                 </div>
-                <p className="text-xl font-bold text-emerald-600">₹{((selectedCourier as any).price || (selectedCourier as any).customer_price)?.toLocaleString('en-IN')}</p>
-              </div>
-            )}
+              );
+            })()}
 
             {/* Sub-step indicator — 2 steps for domestic document, 3 for domestic gift, 3 for international */}
             <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto">
