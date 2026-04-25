@@ -22,6 +22,20 @@ const MobileCTALightbox = ({
   const scrollStartY = useRef<number | null>(null);
   const SCROLL_THRESHOLD = 60; // px of scroll to dismiss
 
+  // Check if any input has data or a pincode finder overlay is open — if so, block dismiss
+  const hasInputData = useCallback(() => {
+    // Don't dismiss if a pincode finder bottom sheet is visible
+    if (document.querySelector('[data-pincode-finder]')) return true;
+    // Don't dismiss if any input/select inside the lightbox has a value
+    const inputs = document.querySelectorAll<HTMLInputElement | HTMLSelectElement>(
+      '.mobile-cta-lightbox input, .mobile-cta-lightbox select'
+    );
+    for (const el of Array.from(inputs)) {
+      if (el.value && el.value.trim() !== '') return true;
+    }
+    return false;
+  }, []);
+
   // Track scroll to dismiss lightbox
   useEffect(() => {
     if (!open) return;
@@ -32,6 +46,7 @@ const MobileCTALightbox = ({
 
     const handleTouchMove = (e: TouchEvent) => {
       if (scrollStartY.current === null) return;
+      if (hasInputData()) return; // block dismiss when data entered
       const delta = scrollStartY.current - e.touches[0].clientY;
       if (delta > SCROLL_THRESHOLD) {
         onClose();
@@ -39,6 +54,7 @@ const MobileCTALightbox = ({
     };
 
     const handleWheel = (e: WheelEvent) => {
+      if (hasInputData()) return; // block dismiss when data entered
       if (e.deltaY > 30) onClose();
     };
 
@@ -51,7 +67,7 @@ const MobileCTALightbox = ({
       window.removeEventListener('touchmove', handleTouchMove);
       window.removeEventListener('wheel', handleWheel);
     };
-  }, [open, onClose]);
+  }, [open, onClose, hasInputData]);
 
   // Lock body scroll when open
   useEffect(() => {
@@ -92,7 +108,7 @@ const MobileCTALightbox = ({
             >
               {/* Neumorphism card */}
               <div
-                className="relative rounded-3xl overflow-hidden"
+                className="relative rounded-3xl overflow-hidden mobile-cta-lightbox"
                 style={{
                   background: 'linear-gradient(145deg, #f2f2f2, #c8c8c8)',
                   boxShadow:

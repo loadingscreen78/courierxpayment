@@ -107,83 +107,99 @@ const PincodeFinder = ({ onSelect, onClose }: { onSelect: (pin: string) => void;
     : pincodes;
 
   return (
-    <div ref={ref} className="absolute z-[9999] right-0 top-full mt-1.5 w-80 rounded-2xl border border-border/60 bg-card shadow-2xl shadow-black/15 overflow-hidden">
-      <div className="px-4 pt-4 pb-3 border-b border-border/40 bg-muted/30">
-        <div className="flex items-center justify-between mb-3">
-          <p className="text-sm font-semibold text-foreground">Find Pincode</p>
-          <button onClick={onClose} className="text-xs text-muted-foreground hover:text-foreground">✕</button>
-        </div>
-        {/* State dropdown */}
-        <div className="relative mb-2">
-          <select
-            value={selectedState}
-            onChange={e => { setSelectedState(e.target.value); setSelectedDistrict(''); setPincodes([]); }}
-            className="w-full h-9 px-3 pr-8 rounded-lg border border-border bg-background text-sm appearance-none cursor-pointer focus:outline-none focus:border-coke-red"
-          >
-            <option value="">Select State</option>
-            {STATES.map(s => <option key={s} value={s}>{s}</option>)}
-          </select>
-          <CaretDown className="absolute right-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
-        </div>
-        {/* District dropdown */}
-        <div className="relative">
-          <select
-            value={selectedDistrict}
-            onChange={e => setSelectedDistrict(e.target.value)}
-            disabled={!selectedState}
-            className="w-full h-9 px-3 pr-8 rounded-lg border border-border bg-background text-sm appearance-none cursor-pointer focus:outline-none focus:border-coke-red disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <option value="">Select District</option>
-            {districts.map(d => <option key={d} value={d}>{d}</option>)}
-          </select>
-          <CaretDown className="absolute right-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
-        </div>
-      </div>
-      {/* Results */}
-      <div className="max-h-56 overflow-y-auto">
-        {loading && (
-          <div className="flex items-center justify-center gap-2 py-6 text-sm text-muted-foreground">
-            <CircleNotch className="h-4 w-4 animate-spin" /> Loading pincodes...
-          </div>
+    <>
+      {/* Mobile: full-screen overlay */}
+      <div className="fixed inset-0 z-[9998] bg-black/40 sm:hidden" onClick={onClose} />
+      <div
+        ref={ref}
+        className={cn(
+          // Mobile: fixed bottom sheet
+          'fixed bottom-0 left-0 right-0 z-[9999] rounded-t-2xl border border-border/60 bg-card shadow-2xl overflow-hidden sm:hidden',
+          // Desktop: absolute dropdown
+          'sm:absolute sm:bottom-auto sm:left-auto sm:right-0 sm:top-full sm:mt-1.5 sm:w-80 sm:rounded-2xl'
         )}
-        {!loading && selectedDistrict && pincodes.length > 0 && (
-          <>
-            <div className="px-3 pt-2 pb-1 sticky top-0 bg-card z-10">
-              <Input
-                type="text"
-                placeholder="Filter by pincode or area..."
-                value={filterText}
-                onChange={e => setFilterText(e.target.value)}
-                className="h-8 text-xs rounded-lg"
-              />
-              <p className="text-[11px] text-muted-foreground mt-1">{filtered.length} pincode{filtered.length !== 1 ? 's' : ''} found</p>
+      >
+        <div className="px-4 pt-4 pb-3 border-b border-border/40 bg-muted/30">
+          {/* Mobile drag handle */}
+          <div className="w-10 h-1 rounded-full bg-muted-foreground/30 mx-auto mb-3 sm:hidden" />
+          <div className="flex items-center justify-between mb-3">
+            <p className="text-sm font-semibold text-foreground">Find Pincode</p>
+            <button onClick={onClose} className="p-1.5 rounded-full hover:bg-muted text-muted-foreground hover:text-foreground">✕</button>
+          </div>
+          {/* State dropdown */}
+          <div className="relative mb-2">
+            <select
+              value={selectedState}
+              onChange={e => { setSelectedState(e.target.value); setSelectedDistrict(''); setPincodes([]); }}
+              className="w-full h-10 px-3 pr-8 rounded-lg border border-border bg-background text-sm appearance-none cursor-pointer focus:outline-none focus:border-coke-red"
+            >
+              <option value="">Select State</option>
+              {STATES.map(s => <option key={s} value={s}>{s}</option>)}
+            </select>
+            <CaretDown className="absolute right-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
+          </div>
+          {/* District dropdown */}
+          <div className="relative">
+            <select
+              value={selectedDistrict}
+              onChange={e => setSelectedDistrict(e.target.value)}
+              disabled={!selectedState}
+              className="w-full h-10 px-3 pr-8 rounded-lg border border-border bg-background text-sm appearance-none cursor-pointer focus:outline-none focus:border-coke-red disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <option value="">Select District</option>
+              {districts.map(d => <option key={d} value={d}>{d}</option>)}
+            </select>
+            <CaretDown className="absolute right-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
+          </div>
+        </div>
+        {/* Results */}
+        <div className="max-h-64 sm:max-h-56 overflow-y-auto">
+          {loading && (
+            <div className="flex items-center justify-center gap-2 py-6 text-sm text-muted-foreground">
+              <CircleNotch className="h-4 w-4 animate-spin" /> Loading pincodes...
             </div>
-            {filtered.map(p => (
-              <button
-                key={p.pincode}
-                onClick={() => onSelect(p.pincode)}
-                className="w-full text-left px-4 py-2 hover:bg-muted/50 transition-colors border-b border-border/20 last:border-0"
-              >
-                <span className="text-sm font-semibold text-coke-red">{p.pincode}</span>
-                <span className="text-xs text-muted-foreground ml-2 truncate">{p.offices.slice(0, 3).join(', ')}{p.offices.length > 3 ? ` +${p.offices.length - 3} more` : ''}</span>
-              </button>
-            ))}
-          </>
-        )}
-        {!loading && selectedDistrict && pincodes.length === 0 && (
-          <div className="px-4 py-6 text-center">
-            <p className="text-xs text-muted-foreground">No pincodes found for this district.</p>
-            <p className="text-[11px] text-muted-foreground mt-1">Try a different district or enter the pincode directly.</p>
-          </div>
-        )}
-        {!loading && !selectedDistrict && (
-          <div className="px-4 py-6 text-center">
-            <Info className="h-5 w-5 text-muted-foreground/50 mx-auto mb-2" />
-            <p className="text-xs text-muted-foreground">Select a state and district to see all pincodes.</p>
-          </div>
-        )}
+          )}
+          {!loading && selectedDistrict && pincodes.length > 0 && (
+            <>
+              <div className="px-3 pt-2 pb-1 sticky top-0 bg-card z-10">
+                <Input
+                  type="text"
+                  placeholder="Filter by pincode or area..."
+                  value={filterText}
+                  onChange={e => setFilterText(e.target.value)}
+                  className="h-9 text-xs rounded-lg"
+                />
+                <p className="text-[11px] text-muted-foreground mt-1">{filtered.length} pincode{filtered.length !== 1 ? 's' : ''} found</p>
+              </div>
+              {filtered.map(p => (
+                <button
+                  key={p.pincode}
+                  onClick={() => onSelect(p.pincode)}
+                  className="w-full text-left px-4 py-2.5 hover:bg-muted/50 transition-colors border-b border-border/20 last:border-0"
+                >
+                  <span className="text-sm font-semibold text-coke-red">{p.pincode}</span>
+                  <span className="text-xs text-muted-foreground ml-2 truncate">{p.offices.slice(0, 3).join(', ')}{p.offices.length > 3 ? ` +${p.offices.length - 3} more` : ''}</span>
+                </button>
+              ))}
+            </>
+          )}
+          {!loading && selectedDistrict && pincodes.length === 0 && (
+            <div className="px-4 py-6 text-center">
+              <p className="text-xs text-muted-foreground">No pincodes found for this district.</p>
+              <p className="text-[11px] text-muted-foreground mt-1">Try a different district or enter the pincode directly.</p>
+            </div>
+          )}
+          {!loading && !selectedDistrict && (
+            <div className="px-4 py-6 text-center">
+              <Info className="h-5 w-5 text-muted-foreground/50 mx-auto mb-2" />
+              <p className="text-xs text-muted-foreground">Select a state and district to see all pincodes.</p>
+            </div>
+          )}
+        </div>
+        {/* Safe area padding for mobile */}
+        <div className="h-safe-bottom sm:hidden" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }} />
       </div>
-    </div>
+    </>
   );
 };
 

@@ -138,23 +138,38 @@ export default function KycAgreementModal(props: KycAgreementModalProps) {
   // ── OTP UX state ──
   const [showOtp, setShowOtp] = useState(false);
   const [resendTimer, setResendTimer] = useState(0);
+  const resendEndTimeRef = useRef<number>(0);
   const resendTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const startResendTimer = () => {
-    setResendTimer(120);
+  const startResendTimer = useCallback(() => {
+    // Use wall-clock end time so backgrounding the tab doesn't pause the timer
+    resendEndTimeRef.current = Date.now() + 120_000;
     if (resendTimerRef.current) clearInterval(resendTimerRef.current);
     resendTimerRef.current = setInterval(() => {
-      setResendTimer(prev => {
-        if (prev <= 1) { clearInterval(resendTimerRef.current!); resendTimerRef.current = null; return 0; }
-        return prev - 1;
-      });
-    }, 1000);
-  };
+      const remaining = Math.max(0, Math.ceil((resendEndTimeRef.current - Date.now()) / 1000));
+      setResendTimer(remaining);
+      if (remaining <= 0) {
+        clearInterval(resendTimerRef.current!);
+        resendTimerRef.current = null;
+      }
+    }, 500); // tick every 500ms so it stays accurate
+    setResendTimer(120);
+  }, []);
 
+  // Only start timer when OTP is first sent (idle → otp_sent).
+  // Do NOT restart on every otp_sent transition (e.g. after a failed verify).
+  const prevSandboxStepRef = useRef(sandboxStep);
   useEffect(() => {
-    if (sandboxStep === 'otp_sent') startResendTimer();
-    if (sandboxStep === 'idle') { setResendTimer(0); if (resendTimerRef.current) { clearInterval(resendTimerRef.current); resendTimerRef.current = null; } }
-  }, [sandboxStep]);
+    const prev = prevSandboxStepRef.current;
+    prevSandboxStepRef.current = sandboxStep;
+    if (sandboxStep === 'otp_sent' && prev === 'idle') {
+      startResendTimer();
+    }
+    if (sandboxStep === 'idle') {
+      setResendTimer(0);
+      if (resendTimerRef.current) { clearInterval(resendTimerRef.current); resendTimerRef.current = null; }
+    }
+  }, [sandboxStep, startResendTimer]);
 
   useEffect(() => { return () => { if (resendTimerRef.current) clearInterval(resendTimerRef.current); }; }, []);
 
@@ -804,8 +819,14 @@ export default function KycAgreementModal(props: KycAgreementModalProps) {
                         </div>
                       )}
                       <div>
-                        <span className="text-muted-foreground">Phone (Aadhaar-linked)</span>
-                        <p className="font-medium mt-0.5">{verifiedPhone ? `+91 ${verifiedPhone.replace(/^\+91/, '').slice(-10)}` : '—'}</p>
+                        <span className="text-muted-foreground">Phone</span>
+                        <p className="font-medium mt-0.5">{
+                          (() => {
+                            const ph = verifiedPhone || senderReceiver?.senderPhone || '';
+                            const digits = ph.replace(/^\+91/, '').replace(/\D/g, '').slice(-10);
+                            return digits.length === 10 ? `+91 ${digits}` : '—';
+                          })()
+                        }</p>
                       </div>
                       {senderReceiver?.senderEmail && (
                         <div className="col-span-2">
