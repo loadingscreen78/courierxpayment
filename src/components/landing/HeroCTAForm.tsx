@@ -112,11 +112,12 @@ const PincodeFinder = ({ onSelect, onClose }: { onSelect: (pin: string) => void;
       <div className="fixed inset-0 z-[9998] bg-black/40 sm:hidden" onClick={onClose} />
       <div
         ref={ref}
+        data-pincode-finder
         className={cn(
           // Mobile: fixed bottom sheet
           'fixed bottom-0 left-0 right-0 z-[9999] rounded-t-2xl border border-border/60 bg-card shadow-2xl overflow-hidden sm:hidden',
-          // Desktop: absolute dropdown
-          'sm:absolute sm:bottom-auto sm:left-auto sm:right-0 sm:top-full sm:mt-1.5 sm:w-80 sm:rounded-2xl'
+          // Desktop: plain card (positioned by parent wrapper)
+          'sm:static sm:bottom-auto sm:left-auto sm:right-auto sm:top-auto sm:block sm:w-72 sm:rounded-2xl sm:z-auto'
         )}
       >
         <div className="px-4 pt-4 pb-3 border-b border-border/40 bg-muted/30">
@@ -229,10 +230,10 @@ const PinInput = ({ value, onChange, meta, placeholder, showAssistance }: {
           )}
         </div>
         {showAssistance && (
-          <div className="relative">
+          <div className="relative" style={{ zIndex: finderOpen ? 50 : 'auto' }}>
             <button
               type="button"
-              onClick={() => setFinderOpen(!finderOpen)}
+              onClick={() => setFinderOpen(v => !v)}
               className={cn(
                 "h-11 px-2.5 rounded-xl border text-xs font-medium shrink-0 flex items-center gap-1 transition-all",
                 finderOpen
@@ -244,12 +245,22 @@ const PinInput = ({ value, onChange, meta, placeholder, showAssistance }: {
               <MagnifyingGlass className="h-3.5 w-3.5" weight="bold" />
               <span className="hidden sm:inline">Find</span>
             </button>
-            {finderOpen && (
-              <PincodeFinder
-                onSelect={(pin) => { onChange(pin); setFinderOpen(false); }}
-                onClose={() => setFinderOpen(false)}
-              />
-            )}
+            <AnimatePresence>
+              {finderOpen && (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.95, y: -4 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.95, y: -4 }}
+                  transition={{ duration: 0.15 }}
+                  style={{ position: 'absolute', top: '100%', right: 0, marginTop: 6, zIndex: 9999 }}
+                >
+                  <PincodeFinder
+                    onSelect={(pin) => { onChange(pin); setFinderOpen(false); }}
+                    onClose={() => setFinderOpen(false)}
+                  />
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
         )}
       </div>
@@ -357,7 +368,7 @@ export const HeroCTAForm = ({ defaultTab = 'ship' }: { defaultTab?: 'ship' | 'tr
           </TabsList>
 
           {/* ── Ship Now ── */}
-          <TabsContent value="ship" className="mt-0 p-5 sm:p-6 space-y-4 min-h-[370px]">
+          <TabsContent value="ship" className="mt-0 p-5 sm:p-6 space-y-4 min-h-[370px] overflow-visible">
             {/* Contextual separator */}
             <div className="flex items-center gap-3">
               <div className="flex-1 h-px bg-border/40" />
