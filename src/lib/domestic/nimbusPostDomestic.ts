@@ -66,9 +66,9 @@ async function getToken(): Promise<string> {
 let warehouseNameCache: string | null = null;
 
 async function getWarehouseName(): Promise<string> {
-  // Use env override if set
+  // Use env override if set — always trust it, including 'Primary'
   const envName = process.env.NIMBUS_WAREHOUSE_NAME?.trim();
-  if (envName && envName !== 'default' && envName !== 'Primary') return envName;
+  if (envName && envName !== 'default') return envName;
 
   if (warehouseNameCache) return warehouseNameCache;
 
