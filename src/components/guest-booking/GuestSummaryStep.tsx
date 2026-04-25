@@ -147,7 +147,8 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
     const parts = desc.split(';').map(s => s.trim()).filter(Boolean);
     if (parts.length === 0) return [{ name: '', type: '', qty: 1, unitPrice: 0 }];
     return parts.map(p => {
-      const m = p.match(/^(.+?)\s*\((.+?)\)\s*x(\d+)\s*@\s*[^\d]*(\d+)/);
+      // Format: "Item Name (type) x1 @ ₹100"
+      const m = p.match(/^(.+?)\s*\((.+?)\)\s*x(\d+)\s*@\s*(?:₹|Rs\.?)?\s*(\d+)/);
       if (m) return { name: m[1].trim(), type: m[2].trim(), qty: parseInt(m[3]), unitPrice: parseInt(m[4]) };
       return { name: p, type: '', qty: 1, unitPrice: 0 };
     });
@@ -157,9 +158,23 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
   const [priceAlertMsg, setPriceAlertMsg] = useState<string>('');
   const [refetchingPrice, setRefetchingPrice] = useState(false);
 
+  const parseItemsFromDesc = (desc: string) => {
+    const parts = (desc || '').split(';').map(s => s.trim()).filter(Boolean);
+    if (parts.length === 0) return [{ name: '', type: '', qty: 1, unitPrice: 0 }];
+    return parts.map(p => {
+      const m = p.match(/^(.+?)\s*\((.+?)\)\s*x(\d+)\s*@\s*[^\d]*(\d+)/);
+      if (m) return { name: m[1].trim(), type: m[2].trim(), qty: parseInt(m[3]), unitPrice: parseInt(m[4]) };
+      return { name: p, type: '', qty: 1, unitPrice: 0 };
+    });
+  };
+
   const openEdit = (section: EditModal) => {
     setEditData({ ...senderReceiver });
     setEditErrors({});
+    // Re-parse items fresh from current contentDescription each time the modal opens
+    if (section === 'contents') {
+      setEditedItems(parseItemsFromDesc(senderReceiver?.contentDescription || ''));
+    }
     setEditModal(section);
   };
 
