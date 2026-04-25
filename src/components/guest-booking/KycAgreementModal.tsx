@@ -65,7 +65,7 @@ interface KycAgreementModalProps {
   sandboxOtp: string;
   setSandboxOtp: (v: string) => void;
   handleSendSandboxOtp: () => void;
-  handleVerifySandboxOtp: () => void;
+  handleVerifySandboxOtp: (otpOverride?: string) => void;
   // DigiLocker
   digilockerStep: 'idle' | 'redirect' | 'verifying';
   setDigilockerStep: (s: 'idle' | 'redirect' | 'verifying') => void;
@@ -479,7 +479,7 @@ export default function KycAgreementModal(props: KycAgreementModalProps) {
                                         setSandboxOtp(val);
                                         setAadhaarError('');
                                         if (val.length === 6) {
-                                          setTimeout(() => { feedbackPresets.tap(); handleVerifySandboxOtp(); }, 100);
+                                          feedbackPresets.tap(); handleVerifySandboxOtp(val);
                                         }
                                       }}
                                     />
@@ -805,7 +805,7 @@ export default function KycAgreementModal(props: KycAgreementModalProps) {
                       )}
                       <div>
                         <span className="text-muted-foreground">Phone (Aadhaar-linked)</span>
-                        <p className="font-medium mt-0.5">{verifiedPhone ? `+91 ${verifiedPhone.replace(/^\+91/, '').slice(-10)}` : senderReceiver?.senderPhone || '—'}</p>
+                        <p className="font-medium mt-0.5">{verifiedPhone ? `+91 ${verifiedPhone.replace(/^\+91/, '').slice(-10)}` : '—'}</p>
                       </div>
                       {senderReceiver?.senderEmail && (
                         <div className="col-span-2">

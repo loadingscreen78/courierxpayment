@@ -446,7 +446,7 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
     setVerifiedAddress(address || '');
     setVerifiedDob(dob || '');
     setVerifiedGender(gender || '');
-    setVerifiedPhone(phone || senderReceiver?.senderPhone || '');
+    setVerifiedPhone(phone || '');
     // Advance to agreement step
     setAgreementStep(2);
   };
@@ -518,14 +518,15 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
     finally { setAadhaarLoading(false); }
   };
 
-  const handleVerifySandboxOtp = async () => {
-    if (!sandboxOtp || sandboxOtp.length !== 6) { setAadhaarError('Enter the 6-digit OTP'); return; }
+  const handleVerifySandboxOtp = async (otpOverride?: string) => {
+    const otpValue = otpOverride ?? sandboxOtp;
+    if (!otpValue || otpValue.length !== 6) { setAadhaarError('Enter the 6-digit OTP'); return; }
     setAadhaarLoading(true); setAadhaarError(''); setSandboxStep('verifying');
     try {
       const res = await fetch('/api/kyc/sandbox-otp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'verify', referenceId: sandboxReferenceId, otp: sandboxOtp, aadhaarNumber: aadhaarInput }),
+        body: JSON.stringify({ action: 'verify', referenceId: sandboxReferenceId, otp: otpValue, aadhaarNumber: aadhaarInput }),
       });
       const data = await res.json();
       if (!res.ok || !data.success) { setAadhaarError(data.error || 'OTP verification failed'); setSandboxStep('otp_sent'); return; }
@@ -1635,7 +1636,7 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
         finalPrice={finalPrice}
         verifiedPhone={verifiedPhone}
         onAccept={() => { setTermsAccepted(true); setShowAgreementModal(false); feedbackPresets.tap(); }}
-        onKycFormVerified={(label, name, phone) => { setDocVerified(true); setAadhaarVerified(true); setDocVerifiedLabel(label); setVerifiedName(name || senderReceiver?.senderName || ''); setVerifiedDocId(label); setVerifiedPhone(phone || senderReceiver?.senderPhone || ''); setAgreementStep(2); }}
+        onKycFormVerified={(label, name, phone) => { setDocVerified(true); setAadhaarVerified(true); setDocVerifiedLabel(label); setVerifiedName(name || senderReceiver?.senderName || ''); setVerifiedDocId(label); setVerifiedPhone(phone || ''); setAgreementStep(2); }}
       />
 
     </motion.div>
