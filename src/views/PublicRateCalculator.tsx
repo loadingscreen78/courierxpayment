@@ -127,7 +127,7 @@ const AnimatedBackground = () => (
 // ── Pincode Finder (State → District → Pincodes) ─────────────────────
 interface PincodeResult { pincode: string; offices: string[]; district: string; state: string; }
 
-const PincodeFinder = ({ onSelect, onClose }: { onSelect: (p: string) => void; onClose: () => void }) => {
+const PincodeFinder = ({ onSelect, onClose }: { onSelect: (p: string, district?: string, state?: string) => void; onClose: () => void }) => {
   const [selState, setSelState] = useState('');
   const [selDistrict, setSelDistrict] = useState('');
   const [pincodes, setPincodes] = useState<PincodeResult[]>([]);
@@ -190,7 +190,7 @@ const PincodeFinder = ({ onSelect, onClose }: { onSelect: (p: string) => void; o
                 className="w-full text-xs px-2 py-1.5 rounded-lg border border-border bg-background focus:outline-none focus:border-coke-red" />
             </div>
             {filtered.map((p, i) => (
-              <button key={i} onClick={() => { onSelect(p.pincode); onClose(); }}
+              <button key={i} onClick={() => { onSelect(p.pincode, selDistrict, selState); onClose(); }}
                 className="w-full text-left px-4 py-2.5 hover:bg-coke-red/5 transition-colors border-b border-border/30 last:border-0">
                 <div className="flex items-center justify-between">
                   <span className="font-bold text-sm text-coke-red">{p.pincode}</span>
@@ -212,21 +212,24 @@ const PincodeFinder = ({ onSelect, onClose }: { onSelect: (p: string) => void; o
 const PincodeInput = ({ value, onChange, label }: { value: string; onChange: (v: string) => void; label: string }) => {
   const [showFinder, setShowFinder] = useState(false);
   const [locationInfo, setLocationInfo] = useState<{ state: string; district: string } | null>(null);
+  // Track whether location was set from the finder (skip API re-fetch in that case)
+  const fromFinder = useRef(false);
 
   useEffect(() => {
-    if (/^\d{6}$/.test(value)) {
-      fetch(`/api/public/pincode-lookup?pincode=${value}`)
-        .then(r => r.json())
-        .then(d => { if (d.success) setLocationInfo({ state: d.state, district: d.district }); })
-        .catch(() => {});
-    } else { setLocationInfo(null); }
+    if (!value || !/^\d{6}$/.test(value)) { setLocationInfo(null); fromFinder.current = false; return; }
+    // If the pincode was just selected via the finder, location is already set — skip API call
+    if (fromFinder.current) { fromFinder.current = false; return; }
+    fetch(`/api/public/pincode-lookup?pincode=${value}`)
+      .then(r => r.json())
+      .then(d => { if (d.success) setLocationInfo({ state: d.state, district: d.district }); })
+      .catch(() => {});
   }, [value]);
 
   return (
     <div className="space-y-1.5 relative">
       <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">{label}</Label>
       <Input type="text" inputMode="numeric" maxLength={6} placeholder="e.g. 110001" value={value}
-        onChange={e => onChange(e.target.value.replace(/\D/g, '').slice(0, 6))}
+        onChange={e => { fromFinder.current = false; onChange(e.target.value.replace(/\D/g, '').slice(0, 6)); }}
         className="h-12 text-lg font-bold font-typewriter" />
       {locationInfo && (
         <p className="text-xs text-muted-foreground flex items-center gap-1">
@@ -238,7 +241,17 @@ const PincodeInput = ({ value, onChange, label }: { value: string; onChange: (v:
         className="flex items-center gap-1.5 text-xs text-coke-red font-medium px-3 py-1.5 rounded-lg border border-coke-red/20 hover:bg-coke-red/5 transition-all">
         <MagnifyingGlass size={12} weight="bold" /> Find pincode
       </button>
-      {showFinder && <PincodeFinder onSelect={p => { onChange(p); setShowFinder(false); }} onClose={() => setShowFinder(false)} />}
+      {showFinder && (
+        <PincodeFinder
+          onSelect={(p, district, state) => {
+            // Use the district/state from the finder directly — don't re-fetch from API
+            if (district && state) { fromFinder.current = true; setLocationInfo({ district, state }); }
+            onChange(p);
+            setShowFinder(false);
+          }}
+          onClose={() => setShowFinder(false)}
+        />
+      )}
     </div>
   );
 };

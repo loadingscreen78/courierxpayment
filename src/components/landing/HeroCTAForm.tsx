@@ -28,10 +28,13 @@ const EMPTY_PIN: PincodeMeta = { state: '', district: '', areas: [], loading: fa
 
 // ── Pincode lookup helper ────────────────────────────────────────────────────
 
-function usePinLookup(pincode: string): PincodeMeta {
+function usePinLookup(pincode: string): [PincodeMeta, (m: PincodeMeta) => void] {
   const [meta, setMeta] = useState<PincodeMeta>(EMPTY_PIN);
+  const overrideRef = useRef(false);
   useEffect(() => {
-    if (!pincode || pincode.length !== 6 || !/^\d{6}$/.test(pincode)) { setMeta(EMPTY_PIN); return; }
+    if (!pincode || pincode.length !== 6 || !/^\d{6}$/.test(pincode)) { setMeta(EMPTY_PIN); overrideRef.current = false; return; }
+    // If meta was set directly from the finder, skip the API call
+    if (overrideRef.current) { overrideRef.current = false; return; }
     let cancelled = false;
     setMeta(prev => ({ ...prev, loading: true, error: null }));
     fetch(`/api/public/pincode-lookup?pincode=${pincode}`)
@@ -47,7 +50,9 @@ function usePinLookup(pincode: string): PincodeMeta {
       .catch(() => { if (!cancelled) setMeta({ ...EMPTY_PIN, error: 'This pincode is incorrect. Please enter a valid Indian pincode.' }); });
     return () => { cancelled = true; };
   }, [pincode]);
-  return meta;
+
+  const setMetaFromFinder = (m: PincodeMeta) => { overrideRef.current = true; setMeta(m); };
+  return [meta, setMetaFromFinder];
 }
 
 // ── Sanctioned / restricted country codes ────────────────────────────────────
@@ -68,7 +73,7 @@ const countryOptions = (() => {
 
 interface PincodeResult { pincode: string; offices: string[]; district: string; state: string; }
 
-const PincodeFinder = ({ onSelect, onClose }: { onSelect: (pin: string) => void; onClose: () => void }) => {
+const PincodeFinder = ({ onSelect, onClose }: { onSelect: (pin: string, district?: string, state?: string) => void; onClose: () => void }) => {
   const [selectedState, setSelectedState] = useState('');
   const [selectedDistrict, setSelectedDistrict] = useState('');
   const [pincodes, setPincodes] = useState<PincodeResult[]>([]);
@@ -161,7 +166,7 @@ const PincodeFinder = ({ onSelect, onClose }: { onSelect: (pin: string) => void;
               {filtered.map(p => (
                 <button
                   key={p.pincode}
-                  onClick={() => onSelect(p.pincode)}
+                  onClick={() => onSelect(p.pincode, selectedDistrict, selectedState)}
                   className="w-full text-left px-4 py-2.5 hover:bg-muted/50 transition-colors border-b border-border/20 last:border-0"
                 >
                   <span className="text-sm font-semibold text-coke-red">{p.pincode}</span>
@@ -192,8 +197,8 @@ const PincodeFinder = ({ onSelect, onClose }: { onSelect: (pin: string) => void;
 
 // ── Pin Input ────────────────────────────────────────────────────────────────
 
-const PinInput = ({ value, onChange, meta, placeholder, showAssistance }: {
-  value: string; onChange: (v: string) => void; meta: PincodeMeta; placeholder: string; showAssistance?: boolean;
+const PinInput = ({ value, onChange, onMetaOverride, meta, placeholder, showAssistance }: {
+  value: string; onChange: (v: string) => void; onMetaOverride?: (district: string, state: string) => void; meta: PincodeMeta; placeholder: string; showAssistance?: boolean;
 }) => {
   const [finderOpen, setFinderOpen] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
@@ -256,7 +261,7 @@ const PinInput = ({ value, onChange, meta, placeholder, showAssistance }: {
                   style={{ zIndex: 9999 }}
                 >
                   <PincodeFinder
-                    onSelect={(pin) => { onChange(pin); setFinderOpen(false); }}
+                    onSelect={(pin, district, state) => { if (district && state && onMetaOverride) onMetaOverride(district, state); onChange(pin); setFinderOpen(false); }}
                     onClose={() => setFinderOpen(false)}
                   />
                 </motion.div>
@@ -266,7 +271,7 @@ const PinInput = ({ value, onChange, meta, placeholder, showAssistance }: {
             {finderOpen && (
               <div className="sm:hidden">
                 <PincodeFinder
-                  onSelect={(pin) => { onChange(pin); setFinderOpen(false); }}
+                  onSelect={(pin, district, state) => { if (district && state && onMetaOverride) onMetaOverride(district, state); onChange(pin); setFinderOpen(false); }}
                   onClose={() => setFinderOpen(false)}
                 />
               </div>
@@ -307,8 +312,8 @@ export const HeroCTAForm = ({ defaultTab = 'ship' }: { defaultTab?: 'ship' | 'tr
   const [dropPin, setDropPin] = useState('');
   const [destCountry, setDestCountry] = useState('');
 
-  const pickupMeta = usePinLookup(pickupPin);
-  const dropMeta = usePinLookup(dropPin);
+  const [pickupMeta, setPickupMetaFromFinder] = usePinLookup(pickupPin);
+  const [dropMeta, setDropMetaFromFinder] = usePinLookup(dropPin);
 
   const [trackPhone, setTrackPhone] = useState('');
   const [trackAwb, setTrackAwb] = useState('');
@@ -414,9 +419,9 @@ export const HeroCTAForm = ({ defaultTab = 'ship' }: { defaultTab?: 'ship' | 'tr
               {isDomestic ? (
                 <motion.div key="domestic" initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 8 }} className="space-y-3">
                   <label className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">Pickup</label>
-                  <PinInput value={pickupPin} onChange={setPickupPin} meta={pickupMeta} placeholder="Pincode" showAssistance />
+                  <PinInput value={pickupPin} onChange={setPickupPin} onMetaOverride={(d, s) => setPickupMetaFromFinder({ state: s, district: d, areas: [], loading: false, error: null })} meta={pickupMeta} placeholder="Pincode" showAssistance />
                   <label className="text-xs font-semibold text-muted-foreground uppercase tracking-widest block pt-1">Delivery</label>
-                  <PinInput value={dropPin} onChange={setDropPin} meta={dropMeta} placeholder="Pincode" showAssistance />
+                  <PinInput value={dropPin} onChange={setDropPin} onMetaOverride={(d, s) => setDropMetaFromFinder({ state: s, district: d, areas: [], loading: false, error: null })} meta={dropMeta} placeholder="Pincode" showAssistance />
                   <Button
                     className="w-full h-11 bg-coke-red hover:bg-red-700 text-white font-semibold rounded-xl text-sm gap-2 mt-1 shadow-md shadow-coke-red/15 transition-all hover:shadow-lg hover:shadow-coke-red/25"
                     onClick={handleShipNow}
@@ -428,7 +433,7 @@ export const HeroCTAForm = ({ defaultTab = 'ship' }: { defaultTab?: 'ship' | 'tr
               ) : (
                 <motion.div key="international" initial={{ opacity: 0, x: 8 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -8 }} className="space-y-3">
                   <label className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">Pickup (India)</label>
-                  <PinInput value={pickupPin} onChange={setPickupPin} meta={pickupMeta} placeholder="Pincode" showAssistance />
+                  <PinInput value={pickupPin} onChange={setPickupPin} onMetaOverride={(d, s) => setPickupMetaFromFinder({ state: s, district: d, areas: [], loading: false, error: null })} meta={pickupMeta} placeholder="Pincode" showAssistance />
                   <label className="text-xs font-semibold text-muted-foreground uppercase tracking-widest block pt-1">Destination Country</label>
                   <CountrySelector
                     value={destCountry}

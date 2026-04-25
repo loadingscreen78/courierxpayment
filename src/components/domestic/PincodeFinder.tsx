@@ -14,7 +14,7 @@ interface PincodeResult {
 }
 
 interface PincodeFinderProps {
-  onSelect: (pin: string) => void;
+  onSelect: (pin: string, district?: string, state?: string) => void;
   onClose: () => void;
   align?: 'left' | 'right';
 }
@@ -119,7 +119,7 @@ export function PincodeFinder({ onSelect, onClose, align = 'right' }: PincodeFin
               {filtered.map(p => (
                 <button
                   key={p.pincode}
-                  onClick={() => onSelect(p.pincode)}
+                  onClick={() => onSelect(p.pincode, selectedDistrict, selectedState)}
                   className="w-full text-left px-4 py-2.5 hover:bg-muted/50 transition-colors border-b border-border/20 last:border-0"
                 >
                   <span className="text-sm font-semibold text-coke-red">{p.pincode}</span>
