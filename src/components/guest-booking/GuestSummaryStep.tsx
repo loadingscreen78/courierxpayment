@@ -150,7 +150,7 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
       // Format: "Item Name (type) x1 @ ₹100"
       const m = p.match(/^(.+?)\s*\((.+?)\)\s*x(\d+)\s*@\s*(?:₹|Rs\.?)?\s*(\d+)/);
       if (m) return { name: m[1].trim(), type: m[2].trim(), qty: parseInt(m[3]), unitPrice: parseInt(m[4]) };
-      return { name: p, type: '', qty: 1, unitPrice: 0 };
+      return { name: '', type: '', qty: 1, unitPrice: 0 };
     });
   });
   // Adjusted price after weight/dims edit
@@ -164,7 +164,7 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
     return parts.map(p => {
       const m = p.match(/^(.+?)\s*\((.+?)\)\s*x(\d+)\s*@\s*[^\d]*(\d+)/);
       if (m) return { name: m[1].trim(), type: m[2].trim(), qty: parseInt(m[3]), unitPrice: parseInt(m[4]) };
-      return { name: p, type: '', qty: 1, unitPrice: 0 };
+      return { name: '', type: '', qty: 1, unitPrice: 0 };
     });
   };
 
