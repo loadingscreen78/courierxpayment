@@ -74,15 +74,6 @@ const PincodeFinder = ({ onSelect, onClose }: { onSelect: (pin: string) => void;
   const [pincodes, setPincodes] = useState<PincodeResult[]>([]);
   const [loading, setLoading] = useState(false);
   const [filterText, setFilterText] = useState('');
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) onClose();
-    };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, [onClose]);
 
   const districts = selectedState ? (DISTRICTS_BY_STATE[selectedState] || []) : [];
 
@@ -110,15 +101,10 @@ const PincodeFinder = ({ onSelect, onClose }: { onSelect: (pin: string) => void;
     <>
       {/* Mobile: full-screen overlay */}
       <div className="fixed inset-0 z-[9998] bg-black/40 sm:hidden" onClick={onClose} />
+      {/* Card — mobile: fixed bottom sheet, desktop: sized card (parent positions it) */}
       <div
-        ref={ref}
         data-pincode-finder
-        className={cn(
-          // Mobile: fixed bottom sheet
-          'fixed bottom-0 left-0 right-0 z-[9999] rounded-t-2xl border border-border/60 bg-card shadow-2xl overflow-hidden sm:hidden',
-          // Desktop: plain card (positioned by parent wrapper)
-          'sm:static sm:bottom-auto sm:left-auto sm:right-auto sm:top-auto sm:block sm:w-72 sm:rounded-2xl sm:z-auto'
-        )}
+        className="fixed bottom-0 left-0 right-0 rounded-t-2xl border border-border/60 bg-card shadow-2xl overflow-hidden sm:fixed-none sm:relative sm:bottom-auto sm:left-auto sm:right-auto sm:rounded-2xl sm:w-72 sm:shadow-xl"
       >
         <div className="px-4 pt-4 pb-3 border-b border-border/40 bg-muted/30">
           {/* Mobile drag handle */}
@@ -210,6 +196,20 @@ const PinInput = ({ value, onChange, meta, placeholder, showAssistance }: {
   value: string; onChange: (v: string) => void; meta: PincodeMeta; placeholder: string; showAssistance?: boolean;
 }) => {
   const [finderOpen, setFinderOpen] = useState(false);
+  const wrapperRef = useRef<HTMLDivElement>(null);
+
+  // Close on outside click
+  useEffect(() => {
+    if (!finderOpen) return;
+    const handler = (e: MouseEvent) => {
+      if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) {
+        setFinderOpen(false);
+      }
+    };
+    // Use setTimeout so the click that opened it doesn't immediately close it
+    const t = setTimeout(() => document.addEventListener('mousedown', handler), 0);
+    return () => { clearTimeout(t); document.removeEventListener('mousedown', handler); };
+  }, [finderOpen]);
 
   return (
     <div className="space-y-1">
@@ -230,7 +230,7 @@ const PinInput = ({ value, onChange, meta, placeholder, showAssistance }: {
           )}
         </div>
         {showAssistance && (
-          <div className="relative" style={{ zIndex: finderOpen ? 50 : 'auto' }}>
+          <div ref={wrapperRef} className="relative" style={{ zIndex: finderOpen ? 50 : 'auto' }}>
             <button
               type="button"
               onClick={() => setFinderOpen(v => !v)}
@@ -252,7 +252,8 @@ const PinInput = ({ value, onChange, meta, placeholder, showAssistance }: {
                   animate={{ opacity: 1, scale: 1, y: 0 }}
                   exit={{ opacity: 0, scale: 0.95, y: -4 }}
                   transition={{ duration: 0.15 }}
-                  style={{ position: 'absolute', top: '100%', right: 0, marginTop: 6, zIndex: 9999 }}
+                  className="hidden sm:block absolute right-0 top-full mt-1.5"
+                  style={{ zIndex: 9999 }}
                 >
                   <PincodeFinder
                     onSelect={(pin) => { onChange(pin); setFinderOpen(false); }}
@@ -261,6 +262,15 @@ const PinInput = ({ value, onChange, meta, placeholder, showAssistance }: {
                 </motion.div>
               )}
             </AnimatePresence>
+            {/* Mobile: render outside motion wrapper so fixed positioning works */}
+            {finderOpen && (
+              <div className="sm:hidden">
+                <PincodeFinder
+                  onSelect={(pin) => { onChange(pin); setFinderOpen(false); }}
+                  onClose={() => setFinderOpen(false)}
+                />
+              </div>
+            )}
           </div>
         )}
       </div>
