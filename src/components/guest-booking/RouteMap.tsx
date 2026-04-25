@@ -299,7 +299,7 @@ export default function RouteMap(props: RouteMapProps) {
 
   // ── Initialize inline (small) map ──
   useEffect(() => {
-    if (!token || !mapContainer.current) return;
+    if (!mapContainer.current) return;
 
     if (mapRef.current) {
       cancelAnimationFrame(animRef.current);
@@ -345,7 +345,23 @@ export default function RouteMap(props: RouteMapProps) {
           projection: 'mercator',
         });
 
+        // Fallback: if map style fails to load within 10s, show error
+        const loadTimeout = setTimeout(() => {
+          if (cancelled) return;
+          setError(true);
+          setLoading(false);
+          map.remove();
+        }, 10000);
+
+        map.on('error', () => {
+          clearTimeout(loadTimeout);
+          if (cancelled) return;
+          setError(true);
+          setLoading(false);
+        });
+
         map.on('load', () => {
+          clearTimeout(loadTimeout);
           if (cancelled) return;
 
           const arc = generateArc(pickup, dest, 180);
