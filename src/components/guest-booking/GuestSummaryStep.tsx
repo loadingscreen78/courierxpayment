@@ -147,7 +147,7 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
     const parts = desc.split(';').map(s => s.trim()).filter(Boolean);
     if (parts.length === 0) return [{ name: '', type: '', qty: 1, unitPrice: 0 }];
     return parts.map(p => {
-      const m = p.match(/^(.+?)\s*\((.+?)\)\s*x(\d+)\s*@\s*?(\d+)/);
+      const m = p.match(/^(.+?)\s*\((.+?)\)\s*x(\d+)\s*@\s*[^\d]*(\d+)/);
       if (m) return { name: m[1].trim(), type: m[2].trim(), qty: parseInt(m[3]), unitPrice: parseInt(m[4]) };
       return { name: p, type: '', qty: 1, unitPrice: 0 };
     });
@@ -216,7 +216,7 @@ export default function GuestSummaryStep({ mode, rateFormData, selectedCourier, 
       if (!item.unitPrice || item.unitPrice <= 0) errs[`price_${idx}`] = 'Price is required';
     });
     if (Object.keys(errs).length > 0) { setEditErrors(errs); return; }
-    const desc = editedItems.filter(i => i.name.trim()).map(i => `${i.name} (${i.type || 'other'}) x${i.qty} @ ?${i.unitPrice}`).join('; ');
+    const desc = editedItems.filter(i => i.name.trim()).map(i => `${i.name} (${i.type || 'other'}) x${i.qty} @ ₹${i.unitPrice}`).join('; ');
     senderReceiver.contentDescription = desc;
     setEditModal(null);
     setEditErrors({});
