@@ -27,9 +27,12 @@ export function PincodeFinder({ onSelect, onClose, align = 'right' }: PincodeFin
   const [filterText, setFilterText] = useState('');
   const ref = useRef<HTMLDivElement>(null);
 
-  // Close on outside click (desktop only)
+  // Close on outside click — desktop only, ignore on mobile to avoid
+  // closing when user taps a <select> option (touch fires mousedown on document)
   useEffect(() => {
+    const isMobile = () => window.matchMedia('(max-width: 639px)').matches;
     const handler = (e: MouseEvent) => {
+      if (isMobile()) return; // mobile uses backdrop button instead
       if (ref.current && !ref.current.contains(e.target as Node)) onClose();
     };
     document.addEventListener('mousedown', handler);
@@ -54,11 +57,17 @@ export function PincodeFinder({ onSelect, onClose, align = 'right' }: PincodeFin
 
   return (
     <>
-      {/* Mobile backdrop */}
-      <div className="fixed inset-0 z-[9998] bg-black/40 sm:hidden" onClick={onClose} />
+      {/* Mobile backdrop — only close if tap is strictly on the backdrop, not bubbled from sheet */}
+      <div
+        className="fixed inset-0 z-[9998] bg-black/40 sm:hidden"
+        onMouseDown={e => { if (e.target === e.currentTarget) onClose(); }}
+        onTouchEnd={e => { if (e.target === e.currentTarget) onClose(); }}
+      />
 
       <div
         ref={ref}
+        onMouseDown={e => e.stopPropagation()}
+        onTouchStart={e => e.stopPropagation()}
         className={cn(
           // Mobile: fixed bottom sheet
           'fixed bottom-0 left-0 right-0 z-[9999] rounded-t-2xl border border-border/60 bg-card shadow-2xl overflow-hidden sm:hidden',

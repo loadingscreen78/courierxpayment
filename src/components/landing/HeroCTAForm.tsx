@@ -105,10 +105,16 @@ const PincodeFinder = ({ onSelect, onClose }: { onSelect: (pin: string, district
   return (
     <>
       {/* Mobile: full-screen overlay */}
-      <div className="fixed inset-0 z-[9998] bg-black/40 sm:hidden" onClick={onClose} />
+      <div
+        className="fixed inset-0 z-[9998] bg-black/40 sm:hidden"
+        onMouseDown={e => { if (e.target === e.currentTarget) onClose(); }}
+        onTouchEnd={e => { if (e.target === e.currentTarget) onClose(); }}
+      />
       {/* Card — mobile: fixed bottom sheet, desktop: sized card (parent positions it) */}
       <div
         data-pincode-finder
+        onMouseDown={e => e.stopPropagation()}
+        onTouchStart={e => e.stopPropagation()}
         className="fixed bottom-0 left-0 right-0 rounded-t-2xl border border-border/60 bg-card shadow-2xl overflow-hidden sm:fixed-none sm:relative sm:bottom-auto sm:left-auto sm:right-auto sm:rounded-2xl sm:w-72 sm:shadow-xl"
       >
         <div className="px-4 pt-4 pb-3 border-b border-border/40 bg-muted/30">
