@@ -3,7 +3,7 @@
 Doorstep courier booking platform for domestic and international shipments.
 Send medicines, documents, gifts, and parcels across India and to 150+ countries with real-time tracking and doorstep pickup.
 
-🌐 Live Demo: CourierX
+🌐 Live Demo: https://www.courierx.in/
 
 ✨ Features
 🚪 Doorstep pickup scheduling
